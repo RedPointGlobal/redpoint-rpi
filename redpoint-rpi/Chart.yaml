@@ -6,7 +6,7 @@ dependencies:
   - name: mssql
     version: 0.1.0
     repository: "redpoint-rpi/charts/mssql"
-
+    condition: mssql.enabled
 
 type: application
 version: 1.0.0

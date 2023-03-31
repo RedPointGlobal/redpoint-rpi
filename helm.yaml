@@ -1,0 +1,1304 @@
+---
+# Source: redpoint-rpi/templates/deploy-execution-service.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-execution-service
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/templates/deploy-integration-api.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-integrationapi
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/templates/deploy-interaction-api.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-interactionapi
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/templates/deploy-interaction-config-editor.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-config-editor
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/templates/deploy-interaction-core-docs.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-helpdocs
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+# Source: ingress-nginx/templates/controller-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx-redpoint-rpi
+  namespace: redpoint-rpi
+automountServiceAccountToken: true
+---
+# Source: redpoint-rpi/templates/deploy-node-manager.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-node-manager
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/templates/deploy-secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sql-rpiops-connstring
+  namespace: redpoint-rpi
+data:
+  ConnectionStrings__LoggingDatabase: U2VydmVyPXRjcDpzcWwtcnBpLW9wcywxNDMzO0RhdGFiYXNlPVB1bHNlX0xvZ2dpbmdfY2xpZW50MTtVc2VyIElEPXNhO1Bhc3N3b3JkPU15QzBtOWwmeFBAc3N3MHJkO0VuY3J5cHQ9VHJ1ZTtUcnVzdFNlcnZlckNlcnRpZmljYXRlPVRydWU7Q29ubmVjdGlvbiBUaW1lb3V0PTMwOw== 
+  ConnectionStrings__OperationalDatabase: U2VydmVyPXRjcDpzcWwtcnBpLW9wcywxNDMzO0RhdGFiYXNlPVB1bHNlX2NsaWVudDE7VXNlciBJRD1zYTtQYXNzd29yZD1NeUMwbTlsJnhQQHNzdzByZDtFbmNyeXB0PVRydWU7VHJ1c3RTZXJ2ZXJDZXJ0aWZpY2F0ZT1UcnVlO0Nvbm5lY3Rpb24gVGltZW91dD0zMDs=
+type: Opaque
+---
+# Source: redpoint-rpi/templates/cm-config-editor.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-config-editor
+  namespace: redpoint-rpi
+data:
+  appsettings.overrides.json: |
+    {
+      "ClusterEnvironment": {
+        "OperationalDatabase": {
+          "DatabaseType": "SQLServer",
+          "PulseDatabaseName": "Pulse_Client1",
+          "LoggingDatabaseName": "Pulse_Logging_Client1",
+          "ConnectionSettings": {
+            "SelectedDBType": "SQLServer",
+            "Server": "sql-rpi-ops",
+            "IsUsingCredentials": true,
+            "Username": "sa",
+            "Password": "MyC0m9l&xP@ssw0rd",
+            "SQLServerSettings": {
+              "Encrypt": true,
+              "TrustServerCertificate": true
+            }
+          }
+        }
+      }
+    }
+---
+# Source: redpoint-rpi/templates/cm-execution-service.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-execution-service
+  namespace: redpoint-rpi
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": false,
+        "OpenIdProviders": [
+          {
+            "Name": "Keycloak",
+            "AuthorizationHost": "http://keycloak/auth/realms/RPI",
+            "ClientID": "rpi",
+            "Audience": "account",
+            "RedirectURL": "redirect-url",
+            "EnableRefreshTokens": true,
+            "CustomScopes": [],
+            "LogoutIdTokenParameter": "id_token_hint",
+            "ValidateIssuer": true,
+            "ValidateAudience": true
+          }
+        ]
+      },
+        "DisableHttpRedirect": true
+    }
+---
+# Source: redpoint-rpi/templates/cm-integration-api.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-integrationapi
+  namespace: redpoint-rpi
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": 
+      {
+          "EnableRPIAuthentication": false,
+          "OpenIdProviders": 
+        [
+          {
+            "Name": "rgOne",
+            "AuthorizationHost": "",
+            "ClientID": "rpi",
+            "Audience": "account",
+            "RedirectURL": "",
+            "EnableRefreshTokens": true,
+            "CustomScopes": [],
+            "LogoutIdTokenParameter": "id_token_hint",
+            "ValidateIssuer": true,
+            "MetadataHost": "",
+            "ValidateAudience": true
+          }
+        ]
+      },
+      "DisableHttpRedirect": true,
+      "ConnectionStrings": 
+      {
+        "LoggingDatabase": "",
+        "OperationalDatabase": ""
+      }
+    }
+---
+# Source: redpoint-rpi/templates/cm-interaction-api.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-interactionapi
+  namespace: redpoint-rpi
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": true,
+        "RPIAuthentication": {
+          "AuthorizationHost": "https://rg1-rpi-client.rdpnt.dev",
+          "AuthMetaHttpHost": "http://rpi-interactionapi:80",
+          "TokenSigningCredentials": {
+            "UseTemporaryCredentials": false,
+            "UseCertificateThumbprint": false,
+            "UseCertificateFilePath": "false",
+            "CertificateThumprint": "",
+            "CertificateFilePath": "",
+            "CertificateFilePassword": ""
+          }
+        },
+        "OpenIdProviders": []
+      },
+      "EnableSwagger": true
+    }
+---
+# Source: redpoint-rpi/templates/cm-node-manager.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-node-manager
+  namespace: redpoint-rpi
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": false,
+        "OpenIdProviders": [
+          {
+            "Name": "Keycloak",
+            "AuthorizationHost": "http://keycloak/auth/realms/RPI",
+            "ClientID": "rpi",
+            "Audience": "account",
+            "RedirectURL": "redirect-url",
+            "EnableRefreshTokens": true,
+            "CustomScopes": [],
+            "LogoutIdTokenParameter": "id_token_hint",
+            "ValidateIssuer": true,
+            "ValidateAudience": true
+          }
+        ]
+      },
+      "DisableHttpRedirect": true
+    }
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+# Source: ingress-nginx/templates/controller-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.4.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx-config
+  namespace: redpoint-rpi
+data:
+#  allow-snippet-annotations: 'true'
+#  use-http2: "true"
+#  proxy-body-size: "99m"
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+# Source: ingress-nginx/templates/controller-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.4.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: tcp-services
+  namespace: redpoint-rpi
+data:
+---
+# Source: redpoint-rpi/charts/mssql/templates/deploy-mssql.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: sql-rpi-ops
+  namespace: redpoint-rpi
+  labels:
+    app: sql-rpi-ops
+  annotations:
+    volume.beta.kubernetes.io/storage-class: azure-disk
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+# Source: redpoint-rpi/templates/deploy-volumes.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpi-fileoutputdir
+  namespace: redpoint-rpi
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: rpi-fileoutputdir
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+  name: nginx-redpoint-rpi
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+  - get
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+  name: nginx-redpoint-rpi
+  namespace: redpoint-rpi
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nginx-redpoint-rpi
+subjects:
+- kind: ServiceAccount
+  name: nginx-redpoint-rpi
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+  name: nginx-redpoint-rpi
+  namespace: redpoint-rpi
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resourceNames:
+  - ingress-nginx-leader
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - ingress-nginx-leader
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+  - get
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+  name: nginx-redpoint-rpi
+  namespace: redpoint-rpi
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: nginx-redpoint-rpi
+subjects:
+- kind: ServiceAccount
+  name: nginx-redpoint-rpi
+  namespace: redpoint-rpi
+---
+# Source: redpoint-rpi/charts/mssql/templates/deploy-mssql.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-rpi-ops
+  namespace: redpoint-rpi
+spec:
+  selector:
+    app: sql-rpi-ops
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+# Source: ingress-nginx/templates/controller-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      service.beta.kubernetes.io/azure-load-balancer-internal-subnet: "snet-rgoc-nonprod-eus2-aks"
+  labels:
+    helm.sh/chart: ingress-nginx-4.4.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx-redpoint-rpi
+  namespace: redpoint-rpi
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ipFamilyPolicy: SingleStack
+  ipFamilies:
+    - IPv4
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+      appProtocol: http
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+      appProtocol: https
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/component: controller
+---
+# Source: redpoint-rpi/templates/svc-rpi-config-editor.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-config-editor
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-config-editor
+    env: dev
+    version: "7.1"
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-config-editor
+---
+# Source: redpoint-rpi/templates/svc-rpi-execution-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-execution-service
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-execution-service
+    env: dev
+    version: "7.1"
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-execution-service
+---
+# Source: redpoint-rpi/templates/svc-rpi-helpdocs.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-helpdocs
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-helpdocs
+    env: dev
+    version: "7.1"
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: rpi-helpdocs
+---
+# Source: redpoint-rpi/templates/svc-rpi-integrationapi.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-integrationapi
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-integrationapi
+    env: dev
+    version: "7.1"
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-integrationapi
+---
+# Source: redpoint-rpi/templates/svc-rpi-interactionapi.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-interactionapi
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-interactionapi
+    env: dev
+    version: "7.1"
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-interactionapi
+---
+# Source: redpoint-rpi/templates/svc-rpi-node-manager.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-node-manager
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-node-manager
+    env: dev
+    version: "7.1"
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-node-manager
+---
+# Source: redpoint-rpi/charts/mssql/templates/deploy-mssql.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-rpi-ops
+  namespace: redpoint-rpi
+  labels:
+    app: sql-rpi-ops
+spec:
+  replicas: 1
+  selector:
+     matchLabels:
+       app: sql-rpi-ops
+  template:
+    metadata:
+      labels:
+        app: sql-rpi-ops
+    spec:
+      hostname: mssqlinst
+      securityContext:
+        fsGroup: 10001
+      containers:
+      - name: sql-rpi-ops
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          value: "MyC0m9l&xP@ssw0rd"
+        volumeMounts:
+        - name: sql-rpi-ops
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: sql-rpi-ops
+        persistentVolumeClaim:
+          claimName: sql-rpi-ops
+---
+# Source: redpoint-rpi/templates/deploy-execution-service.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-execution-service
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-execution-service
+    env: dev
+    version: "7.1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-execution-service
+      env: dev
+      version: "7.1"
+  template:
+    metadata:
+      labels:
+        app: rpi-execution-service
+        env: dev
+        version: "7.1"
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/execution-service: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-execution-service
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"     
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:7.1.23086.1756
+        imagePullPolicy: Always
+        name: execution-service
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-execution-service
+            mountPath: /app/appsettings
+          - name: rpi-fileoutputdir
+            mountPath: /fileoutputdir
+      volumes:
+        - name: rpi-execution-service
+          configMap:
+            name: cm-rpi-execution-service
+        - name: rpi-fileoutputdir
+          persistentVolumeClaim:
+            claimName: rpi-fileoutputdir
+---
+# Source: redpoint-rpi/templates/deploy-integration-api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-integrationapi
+    env: dev
+    version: "7.1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+      env: dev
+      version: "7.1"
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+        env: dev
+        version: "7.1"
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/integration-api: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-integrationapi
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:7.1.23086.1756
+        imagePullPolicy: Always
+        name: integration-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-integrationapi
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-integrationapi
+          configMap:
+            name: cm-rpi-integrationapi
+---
+# Source: redpoint-rpi/templates/deploy-interaction-api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-interactionapi
+  namespace: redpoint-rpi
+  labels:
+    app: redpoint-interaction
+    env: dev
+    version: "7.1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-interactionapi
+      env: dev
+      version: "7.1"
+  template:
+    metadata:
+      labels:
+        app: rpi-interactionapi
+        env: dev
+        version: "7.1"
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/interaction-api: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-interactionapi
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      containers:
+      - env:
+        - name: RPIClient__HelpStartPageURL
+          value: "https://rg1-rpi-docs.rdpnt.dev"
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__AllowSavingLoginDetails
+          value: "true"
+        - name: RPIClient__AlwaysShowClientsAtLogin
+          value: "true"
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:7.1.23086.1756
+        imagePullPolicy: Always
+        name: interaction-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-interactionapi
+            mountPath: /app/appsettings
+          - name: rpi-fileoutputdir
+            mountPath: /fileoutputdir
+      hostname: redpoint-interaction-api
+      volumes:
+        - name: rpi-interactionapi
+          configMap:
+            name: cm-rpi-interactionapi
+        - name: rpi-fileoutputdir
+          persistentVolumeClaim:
+            claimName: rpi-fileoutputdir
+---
+# Source: redpoint-rpi/templates/deploy-interaction-config-editor.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-config-editor
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-config-editor
+    env: dev
+    version: "7.1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-config-editor
+      env: dev
+      version: "7.1"
+  template:
+    metadata:
+      labels:
+        app: rpi-config-editor
+        env: dev
+        version: "7.1"
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/config-editor: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-config-editor
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:7.1.23086.1756
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-config-editor
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-config-editor
+          configMap:
+            name: rpi-config-editor
+---
+# Source: redpoint-rpi/templates/deploy-interaction-core-docs.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-helpdocs
+  namespace: redpoint-rpi
+  labels:
+    app: redpoint-interaction
+    env: dev
+    version: "7.1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-helpdocs
+      env: dev
+      version: "7.1"
+  template:
+    metadata:
+      labels:
+        app: rpi-helpdocs
+        env: dev
+        version: "7.1"
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/rpi-helpdocs: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-helpdocs
+      containers:
+      - name: rpi-helpdocs
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-core-help:7.1.22341.1007
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: web-port
+          protocol: TCP
+      hostname: rpi-helpdocs
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+# Source: ingress-nginx/templates/controller-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.4.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: ingress-nginx-controller
+  namespace: redpoint-rpi
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+      app.kubernetes.io/instance: ingress-nginx
+      app.kubernetes.io/component: controller
+  revisionHistoryLimit: 10
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/instance: ingress-nginx
+        app.kubernetes.io/component: controller
+    spec:
+      dnsPolicy: ClusterFirst
+      containers:
+        - name: controller
+          image: registry.k8s.io/ingress-nginx/controller:v1.5.1@sha256:4ba73c697770664c1e00e9f968de14e08f606ff961c76e5d7033a4a9c593c629
+          imagePullPolicy: Always
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /wait-shutdown
+          args:
+            - /nginx-ingress-controller
+            - --publish-service=redpoint-rpi/nginx-redpoint-rpi
+            - --election-id=ingress-nginx-leader
+            - --controller-class=k8s.io/ingress-nginx
+            - --configmap=redpoint-rpi/nginx-config
+            - --tcp-services-configmap=redpoint-rpi/tcp-services
+            - --default-ssl-certificate=redpoint-rpi/ingress-tls
+            - --watch-namespace=redpoint-rpi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+            runAsUser: 101
+            allowPrivilegeEscalation: true
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LD_PRELOAD
+              value: /usr/local/lib/libmimalloc.so
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 90Mi
+      serviceAccountName: nginx-redpoint-rpi
+      terminationGracePeriodSeconds: 300
+      nodeSelector:
+        pool: rgoc-eus2
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal 
+          value: rgoc-eus2
+---
+# Source: redpoint-rpi/templates/deploy-node-manager.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-node-manager
+  namespace: redpoint-rpi
+  labels:
+    app: rpi-node-manager
+    env: dev
+    version: "7.1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-node-manager
+      env: dev
+      version: "7.1"
+  template:
+    metadata:
+      labels:
+        app: rpi-node-manager
+        env: dev
+        version: "7.1"
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/node-manager: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-node-manager
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__applicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:7.1.23086.1756
+        imagePullPolicy: Always
+        name: node-manager
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-node-manager
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-node-manager
+          configMap:
+            name: cm-rpi-node-manager
+---
+# Source: redpoint-rpi/templates/deploy-nginx.yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    helm.sh/chart: ingress-nginx-4.4.0
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.5.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: redpoint-rpi
+spec:
+  controller: k8s.io/ingress-nginx
+---
+# Source: redpoint-rpi/templates/deploy-nginx-rules.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-redpoint-rpi
+  namespace: redpoint-rpi
+  annotations:
+    null
+spec:
+  ingressClassName: redpoint-rpi
+  tls:
+  - secretName: ingress-tls
+  rules:
+    - host: rg1-rpi-client.rdpnt.dev
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: 80
+    - host: rg1-rpi-config.rdpnt.dev
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-config-editor
+              port:
+                number: 80
+    - host: rg1-rpi-integapi.rdpnt.dev
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: 80
+    - host: rg1-rpi-docs.rdpnt.dev
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-helpdocs
+              port:
+                number: 80

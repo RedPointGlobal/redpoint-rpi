@@ -91,7 +91,7 @@ metadata:
     app.kubernetes.io/part-of: ingress-nginx
     app.kubernetes.io/version: 1.5.1
   name: nginx-{{ .Values.application.namespace }}
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 rules:
 - apiGroups:
   - ""
@@ -197,7 +197,7 @@ metadata:
     app.kubernetes.io/part-of: ingress-nginx
     app.kubernetes.io/version: 1.5.1
   name: nginx-{{ .Values.application.namespace }}
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -205,7 +205,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: nginx-{{ .Values.application.namespace }}
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -217,7 +217,7 @@ metadata:
     app.kubernetes.io/part-of: ingress-nginx
     app.kubernetes.io/version: 1.5.1
   name: nginx-{{ .Values.application.namespace }}
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -225,7 +225,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: nginx-{{ .Values.application.namespace }}
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 
 ---
 # Source: ingress-nginx/templates/controller-configmap.yaml
@@ -240,7 +240,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-config
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 data:
 #  allow-snippet-annotations: 'true'
 #  use-http2: "true"
@@ -259,7 +259,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: tcp-services
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 data:
 
 ---
@@ -290,7 +290,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: ingress-nginx-controller
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 spec:
   selector:
     matchLabels:
@@ -401,7 +401,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-{{ .Values.application.namespace }}
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
@@ -436,6 +436,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-{{ .Values.application.namespace }}
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 automountServiceAccountToken: true
 

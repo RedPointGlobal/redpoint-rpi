@@ -2,6 +2,8 @@ application:
   name: redpoint-interaction
   version: "7.1"
   environment: dev
+
+global:
   namespace: redpoint-rpi
 
   replicaCount: 

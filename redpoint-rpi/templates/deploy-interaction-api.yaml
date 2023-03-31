@@ -3,14 +3,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: sa-rpi-interactionapi
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-interactionapi
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
   labels:
     app: {{ .Values.application.name }}
     env: {{ .Values.application.environment }}
@@ -32,6 +32,18 @@ spec:
         container.apparmor.security.beta.kubernetes.io/interaction-api: runtime/default
     spec:
       serviceAccountName: sa-rpi-interactionapi
+      {{- if .Values.mssql.enabled }}
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      {{- end }}
       containers:
       - env:
         - name: RPIClient__HelpStartPageURL

@@ -3,14 +3,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: sa-rpi-config-editor
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-config-editor
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-config-editor
     env: {{ .Values.application.environment }}
@@ -32,6 +32,18 @@ spec:
         container.apparmor.security.beta.kubernetes.io/config-editor: runtime/default
     spec:
       serviceAccountName: sa-rpi-config-editor
+      {{- if .Values.mssql.enabled }}
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      {{- end }}
       containers:
       - env:
         - name: ASPNETCORE_ENVIRONMENT

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cm-rpi-interactionapi
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ .Values.global.namespace }}
 data:
   appsettings.overrides.json: |
     {

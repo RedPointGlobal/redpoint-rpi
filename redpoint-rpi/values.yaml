@@ -41,8 +41,8 @@ appsettings:
       Server: sql-rpi-ops
       Username: sa
       Password: MyC0m9l&xP@ssw0rd
-      LoggingDatabaseName: Pulse_Logging_Clien1
-      PulseDatabaseName: Pulse_Clien1
+      LoggingDatabaseName: Pulse_Logging_Client1
+      PulseDatabaseName: Pulse_Client1
       DatabaseType: SQLServer
       SelectedDBType: SQLServer
       ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging_client1;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;

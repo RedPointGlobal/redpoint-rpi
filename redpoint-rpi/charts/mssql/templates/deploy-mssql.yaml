@@ -3,11 +3,9 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: sql-rpi-ops
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ include "custom.namespace" . }}
   labels:
     app: sql-rpi-ops
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
   annotations:
     volume.beta.kubernetes.io/storage-class: azure-disk
 spec:
@@ -22,24 +20,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sql-rpi-ops
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ include "custom.namespace" . }}
   labels:
     app: sql-rpi-ops
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
 spec:
   replicas: 1
   selector:
      matchLabels:
        app: sql-rpi-ops
-       env: {{ .Values.application.environment }}
-       version: {{ .Values.application.version | quote }}
   template:
     metadata:
       labels:
         app: sql-rpi-ops
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
     spec:
       hostname: mssqlinst
       securityContext:
@@ -69,12 +61,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sql-rpi-ops
-  namespace: {{ .Values.application.namespace }}
+  namespace: {{ include "custom.namespace" . }}
 spec:
   selector:
     app: sql-rpi-ops
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
   ports:
     - protocol: TCP
       port: 1433
