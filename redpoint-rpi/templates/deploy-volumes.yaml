@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpi-fileoutputdir
+  namespace: {{ .Values.application.namespace }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: rpi-fileoutputdir
+  resources:
+    requests:
+      storage: 10Gi
+

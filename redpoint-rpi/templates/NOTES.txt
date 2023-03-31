@@ -1,0 +1,10 @@
+1. AML has successfully been installed in your cluster.
+  - It may take a few minutes for the all the RPI services to start. Please wait about 10 minutes.
+
+  - The following prerequisites are required before running the helm install command
+
+      - A namespace "redpoint-rpi"
+      - A kubernetes secret "sql-rpiops-connstring" containing the mongo database connection string
+      - A kubernetes secret "docker-io" containing your docker hub authentication credentials
+
+2. For application support, please contact support@redpointglobal.com

@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-config-editor
+  namespace: {{ .Values.application.namespace }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-config-editor
+  namespace: {{ .Values.application.namespace }}
+  labels:
+    app: rpi-config-editor
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: {{ .Values.application.replicaCount.config }}
+  selector:
+    matchLabels:
+      app: rpi-config-editor
+      env: {{ .Values.application.environment }}
+      version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-config-editor
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/config-editor: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-config-editor
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.images.tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-config-editor
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-config-editor
+          configMap:
+            name: rpi-config-editor

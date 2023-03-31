@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-config-editor
+  namespace: {{ .Values.application.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "ClusterEnvironment": {
+        "OperationalDatabase": {
+          "DatabaseType": {{ .Values.appsettings.configeditor.ConnectionSettings.DatabaseType | quote }},
+          "PulseDatabaseName": {{ .Values.appsettings.configeditor.PulseDatabaseName | quote }},
+          "LoggingDatabaseName": {{ .Values.appsettings.configeditor.LoggingDatabaseName | quote }},
+          "ConnectionSettings": {
+            "SelectedDBType": {{ .Values.appsettings.configeditor.ConnectionSettings.SelectedDBType | quote }}",
+            "Server": {{ .Values.appsettings.configeditor.ConnectionSettings.Server | quote }},
+            "IsUsingCredentials": true,
+            "Username": {{ .Values.appsettings.configeditor.ConnectionSettings.Username | quote }},
+            "Password": {{ .Values.appsettings.configeditor.ConnectionSettings.Password | quote }},
+            "SQLServerSettings": {
+              "Encrypt": true,
+              "TrustServerCertificate": true
+            }
+          }
+        }
+      }
+    }

@@ -1,0 +1,53 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-{{ .Values.application.namespace }}
+  namespace: {{ .Values.application.namespace }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.application.namespace }}
+  tls:
+  - secretName: ingress-tls
+  rules:
+    - host: {{ .Values.ingress.hosts.client }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.config }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-config-editor
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.integration }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.helpdocs }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-helpdocs
+              port:
+                number: 80

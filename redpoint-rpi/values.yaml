@@ -1,0 +1,139 @@
+application:
+  name: redpoint-interaction
+  version: "7.1"
+  environment: dev
+  namespace: redpoint-rpi
+
+  replicaCount: 
+    config: 1
+    interaction: 1
+    integration: 1
+    node: 1
+    execution: 1
+    helpdocs: 1
+
+images:
+  tag: 7.1.23086.1756
+  tag_helpdocs: 7.1.22341.1007
+  imagePullPolicy: Always
+  imagePullSecret: rpspeastus2acr
+
+
+mssql:
+  enabled: true
+
+appsettings:
+  interactionapi:
+    EnableRPIAuthentication: true 
+    EnableSwagger: true 
+    RPIAuthentication:
+      UseTemporaryCredentials: false
+      UseCertificateFilePath: false 
+      UseCertificateThumbprint: false
+      CertificateThumprint: ""
+      CertificateFilePath: ""
+      CertificateFilePassword: ""
+    OpenIdProviders: {}
+    EnableSwagger: true 
+
+  configeditor:
+    ConnectionSettings:
+      Server: sql-rpi-ops
+      Username: sa
+      Password: MyC0m9l&xP@ssw0rd
+      LoggingDatabaseName: Pulse_Logging_Clien1
+      PulseDatabaseName: Pulse_Clien1
+      DatabaseType: SQLServer
+      SelectedDBType: SQLServer
+      ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging_client1;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+      ConnectionStrings_OperationalDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_client1;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+
+  integrationapi:
+    EnableRPIAuthentication: false
+    DisableHttpRedirect: true 
+    OpenIdProviders:
+      MetadataHost: ""
+      ClientID: rpi
+      Name: rgOne
+      RedirectURL: ""
+      Audience: account
+      AuthorizationHost: ""
+      EnableRefreshTokens: true 
+      CustomScopes: []
+      LogoutIdTokenParameter: id_token_hint
+      ValidateIssuer: true 
+      ValidateAudience: true 
+
+  executionservice:
+    EnableRPIAuthentication: false
+    DisableHttpRedirect: true
+    RPIExecution__QueueListener__IsEnabled: false 
+    RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
+    OpenIdProviders:
+      Name: Keycloak
+      AuthorizationHost: http://keycloak/auth/realms/RPI
+      RedirectURL: redirect-url
+      ClientID: rpi
+      Audience: account
+      CustomScopes: []
+      LogoutIdTokenParameter: id_token_hint
+      EnableRefreshTokens: true
+      ValidateIssuer: true 
+      ValidateAudience: true 
+
+  nodemanager:
+    EnableRPIAuthentication: false
+    DisableHttpRedirect: true
+    OpenIdProviders:
+      Name: Keycloak
+      AuthorizationHost: http://keycloak/auth/realms/RPI
+      ClientID: rpi
+      Audience: account
+      RedirectURL: redirect-url
+      EnableRefreshTokens: true
+      LogoutIdTokenParameter: id_token_hint
+      CustomScopes: []
+      ValidateIssuer: true 
+      ValidateAudience: true 
+
+   
+ingress:
+  internal: true
+  subnet: snet-rgoc-nonprod-eus2-aks
+  annotations:
+  hosts:
+    config: rg1-rpi-config.rdpnt.dev
+    client: rg1-rpi-client.rdpnt.dev
+    integration: rg1-rpi-integapi.rdpnt.dev
+    helpdocs: rg1-rpi-docs.rdpnt.dev
+  
+resources:
+  limits:
+    cpu: "300m"  
+    memory: "384Mi" 
+  requests:
+    cpu: "100m"
+    memory: 192Mi
+
+livenessProbe:
+  periodSeconds: 20
+  timeoutSeconds: 15
+  initialDelaySeconds: 300
+  failureThreshold: 3
+  interaction_api:
+    path: /health/live
+    port: 8080
+  integration_api:
+    path: /health/live
+    port: 8080
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # #targetMemoryUtilizationPercentage: 80 #
+
+affinity: {}
+podAnnotations: {}
+podSecurityContext: {}

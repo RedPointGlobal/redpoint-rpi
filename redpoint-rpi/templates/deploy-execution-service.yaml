@@ -1,0 +1,80 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-execution-service
+  namespace: {{ .Values.application.namespace }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-execution-service
+  namespace: {{ .Values.application.namespace }}
+  labels:
+    app: rpi-execution-service
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: {{ .Values.application.replicaCount.execution }}
+  selector:
+    matchLabels:
+      app: rpi-execution-service
+      env: {{ .Values.application.environment }}
+      version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-execution-service
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/execution-service: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-execution-service
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"     
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.images.tag }}
+        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        name: execution-service
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-execution-service
+            mountPath: /app/appsettings
+          - name: rpi-fileoutputdir
+            mountPath: /fileoutputdir
+      volumes:
+        - name: rpi-execution-service
+          configMap:
+            name: cm-rpi-execution-service
+        - name: rpi-fileoutputdir
+          persistentVolumeClaim:
+            claimName: rpi-fileoutputdir
+
+
+

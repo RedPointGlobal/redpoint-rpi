@@ -1,0 +1,82 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: sql-rpi-ops
+  namespace: {{ .Values.application.namespace }}
+  labels:
+    app: sql-rpi-ops
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+  annotations:
+    volume.beta.kubernetes.io/storage-class: azure-disk
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-rpi-ops
+  namespace: {{ .Values.application.namespace }}
+  labels:
+    app: sql-rpi-ops
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: 1
+  selector:
+     matchLabels:
+       app: sql-rpi-ops
+       env: {{ .Values.application.environment }}
+       version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: sql-rpi-ops
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+    spec:
+      hostname: mssqlinst
+      securityContext:
+        fsGroup: 10001
+      containers:
+      - name: sql-rpi-ops
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          value: "MyC0m9l&xP@ssw0rd"
+        volumeMounts:
+        - name: sql-rpi-ops
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: sql-rpi-ops
+        persistentVolumeClaim:
+          claimName: sql-rpi-ops
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-rpi-ops
+  namespace: {{ .Values.application.namespace }}
+spec:
+  selector:
+    app: sql-rpi-ops
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+

@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-helpdocs
+  namespace: {{ .Values.application.namespace }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-helpdocs
+  namespace: {{ .Values.application.namespace }}
+  labels:
+    app: {{ .Values.application.name }}
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: {{ .Values.application.replicaCount.helpdocs }}
+  selector:
+    matchLabels:
+      app: rpi-helpdocs
+      env: {{ .Values.application.environment }}
+      version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-helpdocs
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/rpi-helpdocs: runtime/default
+    spec:
+      serviceAccountName: sa-rpi-helpdocs
+      containers:
+      - name: rpi-helpdocs
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-core-help:{{ .Values.images.tag_helpdocs }}
+        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        ports:
+        - containerPort: 80
+          name: web-port
+          protocol: TCP
+      hostname: rpi-helpdocs
+
