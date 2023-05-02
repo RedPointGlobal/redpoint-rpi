@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": {{ .Values.appsettings.nodemanager.EnableRPIAuthentication }},
+        "OpenIdProviders": [
+          {
+            "Name": {{ .Values.appsettings.nodemanager.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": {{ .Values.appsettings.nodemanager.OpenIdProviders.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.appsettings.nodemanager.OpenIdProviders.ClientID | quote }},
+            "Audience": {{ .Values.appsettings.nodemanager.OpenIdProviders.Audience | quote }},
+            "RedirectURL": {{ .Values.appsettings.nodemanager.OpenIdProviders.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.appsettings.nodemanager.OpenIdProviders.EnableRefreshTokens }},
+            "CustomScopes": {{ .Values.appsettings.nodemanager.OpenIdProviders.CustomScopes }},
+            "LogoutIdTokenParameter": {{ .Values.appsettings.nodemanager.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "ValidateIssuer": {{ .Values.appsettings.nodemanager.OpenIdProviders.ValidateIssuer }},
+            "ValidateAudience": {{ .Values.appsettings.nodemanager.OpenIdProviders.ValidateAudience }}
+          }
+        ]
+      },
+      "DisableHttpRedirect": {{ .Values.appsettings.nodemanager.DisableHttpRedirect }}
+    }
+

@@ -1,0 +1,166 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+
+---
+{{- if eq .Values.global.deployment_type "internal" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-node-manager
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: {{ .Values.application.replicaCount.node }}
+  selector:
+    matchLabels:
+      app: rpi-node-manager
+      env: {{ .Values.application.environment }}
+      version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-node-manager
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+    spec:
+      imagePullSecrets:
+        - name: docker-io
+      serviceAccountName: sa-rpi-node-manager
+      {{- if .Values.mssql.enabled }}
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      {{- end }}
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__applicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
+        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        name: node-manager
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-node-manager
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-node-manager
+          configMap:
+            name: cm-rpi-node-manager
+{{- end }}
+
+---
+{{- if eq .Values.global.deployment_type "client" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-node-manager
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: {{ .Values.application.replicaCount.node }}
+  selector:
+    matchLabels:
+      app: rpi-node-manager
+      env: {{ .Values.application.environment }}
+      version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-node-manager
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+    spec:
+      imagePullSecrets:
+        - name: docker-io
+      serviceAccountName: sa-rpi-node-manager
+      {{- if .Values.mssql.enabled }}
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      {{- end }}
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__applicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
+        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        name: node-manager
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-node-manager
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-node-manager
+          configMap:
+            name: cm-rpi-node-manager
+{{- end }}

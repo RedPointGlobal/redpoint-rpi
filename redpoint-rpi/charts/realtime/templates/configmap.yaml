@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-realtime
+  namespace: {{ include "custom.namespace" . }}
+data:
+  appsettings.override.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAddress": "",
+                "RealtimeAgentAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
+                "EnableHelpPages": true,
+                "RedPointMLServiceAddress": " http://10.10.12.4:8980",
+                "EnableAuditMetricsInHeaders": true,
+                "EnableEventListening": true
+            },
+            "GeolocationSettings": {
+                "Provider": "Azure",
+                "APIKey": "",
+                "WeatherUnits": "imperial"
+            },
+            "Queues": {
+                "FormQueuePath": "RPIWebFormSubmission",
+                "EventsQueuePath": "RPIWebEvents",
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": "RPIWebCacheData",
+                "RecommendationsQueuePath": "RPIWebRecommendations",
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.AzureQueueAccess",
+                    "Type": "RedPoint.Resonance.AzureQueueAccess.AzureServiceBusQueueFactory",
+                    "Settings": [
+                        {
+                            "Key": "QueueType",
+                            "Value": "ServiceBus"
+                        },
+                        {
+                            "Key": "ConnectionString",
+                            "Value": "myconnection"
+                        },
+                        {
+                            "Key": "ApiCallMaximumRetry",
+                            "Value": "10"
+                        },
+                        {
+                            "Key": "ReceiveOperationTimeout",
+                            "Value": "1"
+                        },
+                        {
+                            "Key": "SendBatchSize",
+                            "Value": "200"
+                        }
+                    ]
+                },
+                "ListenerQueuePath": "RPIListenerQueue",
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.AzureQueueAccess",
+                    "Type": "RedPoint.Resonance.AzureQueueAccess.AzureServiceBusQueueFactory",
+                    "Settings": [
+                        {
+                            "Key": "QueueType",
+                            "Value": "ServiceBus"
+                        },
+                        {
+                            "Key": "ConnectionString",
+                            "Value": "myconnection"
+                        },
+                        {
+                            "Key": "ApiCallMaximumRetry",
+                            "Value": "10"
+                        },
+                        {
+                            "Key": "ReceiveOperationTimeout",
+                            "Value": "1"
+                        },
+                        {
+                            "Key": "SendBatchSize",
+                            "Value": "200"
+                        }
+                    ]
+                }
+            },
+            "CacheSettings": {
+                "Caches": [
+                    {
+                        "Name": "Redis",
+                        "Assembly": "RedPoint.Resonance.AzureRedisCache",
+                        "Class": " RedPoint.Resonance.AzureRedisCache.AzureRedisCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "ConnectionString",
+                                "Value": "myconnection"
+                            }
+                        ]
+                    }
+                ],
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "Redis",
+                        "DaysToPersist": 200,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "Console": {
+                "LogLevel": {
+                    "Default": "Trace"
+                }
+            },
+            "LogLevel": {
+                "Default": "Trace"
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+

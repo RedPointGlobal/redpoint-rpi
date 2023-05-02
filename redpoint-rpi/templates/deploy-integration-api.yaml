@@ -1,0 +1,146 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+
+---
+{{- if eq .Values.global.deployment_type "internal" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-integrationapi
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: {{ .Values.application.replicaCount.integration }}
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+      env: {{ .Values.application.environment }}
+      version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+    spec:
+      imagePullSecrets:
+        - name: docker-io
+      serviceAccountName: sa-rpi-integrationapi
+      {{- if .Values.mssql.enabled }}
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      {{- end }}
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        name: integration-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-integrationapi
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-integrationapi
+          configMap:
+            name: cm-rpi-integrationapi
+{{- end }}
+
+---
+{{- if eq .Values.global.deployment_type "client" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-integrationapi
+    env: {{ .Values.application.environment }}
+    version: {{ .Values.application.version | quote }}
+spec:
+  replicas: {{ .Values.application.replicaCount.integration }}
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+      env: {{ .Values.application.environment }}
+      version: {{ .Values.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+        env: {{ .Values.application.environment }}
+        version: {{ .Values.application.version | quote }}
+    spec:
+      imagePullSecrets:
+        - name: docker-io
+      serviceAccountName: sa-rpi-integrationapi
+      {{- if .Values.mssql.enabled }}
+      initContainers:
+      - name: wait-for-mssql
+        image: busybox:1.33.1
+        command:
+        - /bin/sh
+        - -c
+        - >
+          until nc -zv sql-rpi-ops 1433;
+          do echo "waiting for mssql" && sleep 2;
+          done
+      {{- end }}
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        name: integration-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-integrationapi
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-integrationapi
+          configMap:
+            name: cm-rpi-integrationapi
+{{- end }}

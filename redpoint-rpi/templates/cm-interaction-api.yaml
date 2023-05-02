@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": {{ .Values.appsettings.interactionapi.EnableRPIAuthentication }},
+        "RPIAuthentication": {
+          "AuthorizationHost": "https://{{ .Values.ingress.hosts.client }}",
+          "AuthMetaHttpHost": "http://rpi-interactionapi:80",
+          "TokenSigningCredentials": {
+            "UseTemporaryCredentials": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseTemporaryCredentials }},
+            "UseCertificateThumbprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseCertificateThumbprint }},
+            "UseCertificateFilePath": "false",
+            "CertificateThumprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateThumprint | quote }},
+            "CertificateFilePath": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePath | quote }},
+            "CertificateFilePassword": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePassword | quote }}
+          }
+        },
+        "OpenIdProviders": []
+      },
+      "EnableSwagger": {{ .Values.appsettings.interactionapi.EnableSwagger }}
+    }
+
+

@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": 
+      {
+          "EnableRPIAuthentication": {{ .Values.appsettings.integrationapi.EnableRPIAuthentication }},
+          "OpenIdProviders": 
+        [
+          {
+            "Name": {{ .Values.appsettings.integrationapi.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": {{ .Values.appsettings.integrationapi.OpenIdProviders.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.appsettings.integrationapi.OpenIdProviders.ClientID | quote }},
+            "Audience": {{ .Values.appsettings.integrationapi.OpenIdProviders.Audience | quote }},
+            "RedirectURL": {{ .Values.appsettings.integrationapi.OpenIdProviders.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.appsettings.integrationapi.OpenIdProviders.EnableRefreshTokens }},
+            "CustomScopes": {{ .Values.appsettings.integrationapi.OpenIdProviders.CustomScopes }},
+            "LogoutIdTokenParameter": {{ .Values.appsettings.integrationapi.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "ValidateIssuer": {{ .Values.appsettings.integrationapi.OpenIdProviders.ValidateIssuer }},
+            "MetadataHost": {{ .Values.appsettings.integrationapi.OpenIdProviders.MetadataHost | quote }},
+            "ValidateAudience": {{ .Values.appsettings.integrationapi.OpenIdProviders.ValidateAudience }}
+          }
+        ]
+      },
+      "DisableHttpRedirect": {{ .Values.appsettings.integrationapi.DisableHttpRedirect }},
+      "ConnectionStrings": 
+      {
+        "LoggingDatabase": "",
+        "OperationalDatabase": ""
+      }
+    }

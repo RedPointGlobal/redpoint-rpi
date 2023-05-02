@@ -1,0 +1,156 @@
+global:
+  namespace: redpoint-rpi
+  replicaCount: 1
+  image_tag: 7.1.23116.1539
+  image_tag_docs: 7.1.23117.1547
+  cloudProvider: azure # azure or google or amazon 
+  deployment_type: client # or internal (internal is for Redpoint users only)
+
+application:
+  name: redpoint-interaction
+  version: "7.1"
+  environment: demo
+  replicaCount: 
+    config: 1
+    interaction: 1
+    integration: 1
+    node: 1
+    execution: 1
+    helpdocs: 1
+
+images:
+  imagePullPolicy: Always
+
+mssql:
+  enabled: true
+
+realtime:
+  enabled: true
+
+appsettings:
+  interactionapi:
+    EnableRPIAuthentication: true 
+    EnableSwagger: true 
+    RPIAuthentication:
+      UseTemporaryCredentials: false
+      UseCertificateFilePath: false 
+      UseCertificateThumbprint: false
+      CertificateThumprint: ""
+      CertificateFilePath: ""
+      CertificateFilePassword: ""
+    OpenIdProviders: {}
+    EnableSwagger: true 
+
+  configeditor:
+    ConnectionSettings:
+      Server: sql-rpi-ops
+      Username: sa
+      Password: MyC0m9l&xP@ssw0rd
+      LoggingDatabaseName: Pulse_Logging
+      PulseDatabaseName: Pulse
+      DatabaseType: SQLServer
+      SelectedDBType: SQLServer
+      ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+      ConnectionStrings_OperationalDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+
+  integrationapi:
+    EnableRPIAuthentication: false
+    DisableHttpRedirect: true 
+    OpenIdProviders:
+      MetadataHost: ""
+      ClientID: rpi
+      Name: rgOne
+      RedirectURL: ""
+      Audience: account
+      AuthorizationHost: ""
+      EnableRefreshTokens: true 
+      CustomScopes: []
+      LogoutIdTokenParameter: id_token_hint
+      ValidateIssuer: true 
+      ValidateAudience: true 
+
+  executionservice:
+    EnableRPIAuthentication: false
+    DisableHttpRedirect: true
+    RPIExecution__QueueListener__IsEnabled: false 
+    RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
+    OpenIdProviders:
+      Name: Keycloak
+      AuthorizationHost: http://keycloak/auth/realms/RPI
+      RedirectURL: redirect-url
+      ClientID: rpi
+      Audience: account
+      CustomScopes: []
+      LogoutIdTokenParameter: id_token_hint
+      EnableRefreshTokens: true
+      ValidateIssuer: true 
+      ValidateAudience: true 
+
+  nodemanager:
+    EnableRPIAuthentication: false
+    DisableHttpRedirect: true
+    OpenIdProviders:
+      Name: Keycloak
+      AuthorizationHost: http://keycloak/auth/realms/RPI
+      ClientID: rpi
+      Audience: account
+      RedirectURL: redirect-url
+      EnableRefreshTokens: true
+      LogoutIdTokenParameter: id_token_hint
+      CustomScopes: []
+      ValidateIssuer: true 
+      ValidateAudience: true 
+
+  storage:
+    size:
+      rpi_output_directory: 10Gi
+    class:
+      azure: file.csi.azure.com
+      google: filestore.csi.storage.gke.io
+      amazon:
+        provisioner: smb.csi.k8s.io
+        volumeHandle: example        # make sure it's a unique id in the cluster
+   
+ingress:
+  internal: true
+  subnet: snet-rgoc-nonprod-eus2-aks
+  domain: rdpnt.dev
+  annotations:
+  hosts:
+    config: rg1-rpi-config
+    client: rg1-rpi-client
+    integration: rg1-rpi-integapi
+    helpdocs: rg1-rpi-docs
+    realtime: rg1-rpi-realtime
+      
+resources:
+  limits:
+    cpu: "300m"  
+    memory: "384Mi" 
+  requests:
+    cpu: "100m"
+    memory: 192Mi
+
+livenessProbe:
+  periodSeconds: 20
+  timeoutSeconds: 15
+  initialDelaySeconds: 300
+  failureThreshold: 3
+  interaction_api:
+    path: /health/live
+    port: 8080
+  integration_api:
+    path: /health/live
+    port: 8080
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # #targetMemoryUtilizationPercentage: 80 #
+
+affinity: {}
+podAnnotations: {}
+podSecurityContext: {}
+
