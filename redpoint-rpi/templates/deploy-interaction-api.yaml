@@ -53,6 +53,8 @@ spec:
           value: Production
         - name: RPIClient__AllowSavingLoginDetails
           value: "true"
+        - name: RPI__FileOutput__Directory
+          value: /fileoutputdir
         - name: RPIClient__AlwaysShowClientsAtLogin
           value: "true"
         - name: RPIClient__ApplicationSupportURL

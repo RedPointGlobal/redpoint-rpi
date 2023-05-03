@@ -59,6 +59,8 @@ spec:
           value: "Error"
         - name: Logging__Database__LogLevel__Default
           value: "Error"     
+        - name: RPI__FileOutput__Directory
+          value: /fileoutputdir 
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
