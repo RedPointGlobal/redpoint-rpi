@@ -154,6 +154,8 @@ spec:
           value: "https://support.redpointglobal.com"
         - name: Logging__LogLevel__Default
           value: "Error"
+        - name: RPI__FileOutput__Directory
+          value: /fileoutputdir 
         - name: Logging__LogLevel__Microsoft
           value: "Error"
         - name: Logging__Database__RPITrace
