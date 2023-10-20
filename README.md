@@ -9,6 +9,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Prerequisites ](#prerequisites)
 - [Install Procedure ](#install-procedure)
 - [RPI Endpoints ](#rpi-url-endpoints)
+- [License Activation ](#license-activation)
 - [Customize for Production ](#customize-for-production)
     - [SQL Server ](#sql-server)
     - [Ingress ](#ingress)
@@ -106,16 +107,27 @@ NAMESPACE="redpoint-rpi"; INGRESS_IP=""; while true; do INGRESS_IP=$(kubectl get
 ```NOTE``` The load balancer creation takes a few minutes so you may not see an IP address immediately. Just keep trying the command a few more times and you will eventually you see a single IP address assigned to the endpoints below;
 
 ```
-rg1-rpi-config.example.com                             # Configuration editor
-rg1-rpi-client.example.com                             # RPI Client 
-rg1-rpi-config.example/api/deployment/downloads/Client # RPI Client download link
-rg1-rpi-integapi.example.com                           # Integration API
-rg1-rpi-realtime.example.com                           # RPI Realtime
+rpi-config.example.com                             # Configuration editor
+rpi-client.example.com                             # RPI Client 
+rpi-config.example/api/deployment/downloads/Client # RPI Client download link
+rpi-integapi.example.com                           # Integration API
+rpi-realtime.example.com                           # RPI Realtime
 sql-rpi-ops.example.com                                # Default SQL server name
 ```
 Next you need to create DNS records in your DNS zone or you can create temporary entries in your Windows hosts file located at ```C:\Windows\System32\drivers\etc\hosts```
 
-At this point, the default installation is complete. You can now access the RPI Configuration endpoint ```rg1-rpi-config.example.com``` and install your first RPI cluster and add a client. 
+### License Activation
+Before activation RPI,
+
+1) Contact Redpoint Support and obtain the following files
+   - QLM Settings file
+   - QLM Activated License file
+
+2) Access the configuration editor web UI at https://rpi-config.example.com
+3) Select the ``License Upload``` endpoint
+4) Upload both the QLM Settings file and QLM Activation License file 
+
+At this point, the default installation is complete and you are ready to add your first RPI tenant. 
 
 ### Customize for Production
   ### SQL Server
