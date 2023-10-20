@@ -117,7 +117,7 @@ sql-rpi-ops.example.com                                # Default SQL server name
 Next you need to create DNS records in your DNS zone or you can create temporary entries in your Windows hosts file located at ```C:\Windows\System32\drivers\etc\hosts```
 
 ### License Activation
-Before activation RPI,
+Before using RPI, you need to activate a Licenses. The steps below describe the process
 
 1) Contact Redpoint Support and obtain the following files
    - QLM Settings file
