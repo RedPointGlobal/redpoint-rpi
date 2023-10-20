@@ -1,15 +1,15 @@
 global:
   namespace: redpoint-rpi
   replicaCount: 1
-  image_tag: 7.1.23116.1539
-  image_tag_docs: 7.1.23117.1547
+  image_tag: 7.2.2023-1016-2134
+  image_tag_docs: 7.2.2023-0927-1017
   cloudProvider: azure # azure or google or amazon 
   deployment_type: client # or internal (internal is for Redpoint users only)
 
 application:
   name: redpoint-interaction
   version: "7.1"
-  environment: demo
+  environment: prod 
   replicaCount: 
     config: 1
     interaction: 1
@@ -114,7 +114,7 @@ appsettings:
 ingress:
   internal: true
   subnet: snet-rgoc-nonprod-eus2-aks
-  domain: rdpnt.dev
+  domain: rdpnt.com
   annotations:
   hosts:
     config: rg1-rpi-config

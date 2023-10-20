@@ -1,13 +1,15 @@
 global:
   namespace: redpoint-rpi
   replicaCount: 1
-  image_tag: 7.1.23086.1756
-  cloudProvider: azure # or google or amazon 
+  image_tag: 7.1.23116.1539
+  image_tag_docs: 7.1.23117.1547
+  cloudProvider: azure # azure or google or amazon 
+  deployment_type: client # or internal (internal is for Redpoint users only)
 
 application:
   name: redpoint-interaction
   version: "7.1"
-  environment: demo
+  environment: prod 
   replicaCount: 
     config: 1
     interaction: 1
@@ -17,11 +19,7 @@ application:
     helpdocs: 1
 
 images:
-  tag: 7.1.23086.1756
-  tag_helpdocs: 7.1.22341.1007
   imagePullPolicy: Always
-  imagePullSecret: rpspeastus2acr
-
 
 mssql:
   enabled: true
@@ -112,13 +110,11 @@ appsettings:
       amazon:
         provisioner: smb.csi.k8s.io
         volumeHandle: example        # make sure it's a unique id in the cluster
-        Source: example              # Fsx FQDN
-        nodeStageSecretRef: smbcreds # Fsx connection secret
    
 ingress:
   internal: true
   subnet: snet-rgoc-nonprod-eus2-aks
-  domain: rdpnt.dev
+  domain: rdpnt.com
   annotations:
   hosts:
     config: rg1-rpi-config
@@ -126,7 +122,7 @@ ingress:
     integration: rg1-rpi-integapi
     helpdocs: rg1-rpi-docs
     realtime: rg1-rpi-realtime
-  
+      
 resources:
   limits:
     cpu: "300m"  
@@ -157,3 +153,4 @@ autoscaling:
 affinity: {}
 podAnnotations: {}
 podSecurityContext: {}
+
