@@ -175,6 +175,8 @@ The default installation includes a single replica of each RPI service. In a pro
 global:
   replicaCount: 3
 ``` 
+NOTE: The integration API does not support HA as of this release so you should only run a single replica. This should be resolved in a future release 
+
   ### RPI Storage
 The default installation creates only 10 GiB of persistent storage for the RPI Output directory. In a production setting, you need atleast 100 GiB or more. To change this setting, replace the section below in the ```values.yaml``` file
 ```
