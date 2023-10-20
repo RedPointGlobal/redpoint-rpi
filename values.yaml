@@ -48,6 +48,8 @@ appsettings:
       Password: MyC0m9l&xP@ssw0rd
       LoggingDatabaseName: Pulse_Logging
       PulseDatabaseName: Pulse
+      # The following database types are supported
+      # AzureSQLDatabase, AmazonRDSSQL, PostgreSQL, SQLServer and GoogleCloudSQL 
       DatabaseType: SQLServer
       SelectedDBType: SQLServer
       ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
