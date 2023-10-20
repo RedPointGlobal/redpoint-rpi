@@ -164,10 +164,10 @@ kubectl create secret tls ingress-tls --cert=<your_cert_file> --key=<your_key_fi
 Next, replace the ```example.com``` domain with your certificate domain.
 ```
   hosts:
-    config: rg1-rpi-config.example.com     
-    client: rg1-rpi-client.example.com
-    integration: rg1-rpi-integapi.example.com
-    helpdocs: rg1-rpi-docs.example.com
+    config: rpi-config.example.com     
+    client: rpi-client.example.com
+    integration: rpi-integapi.example.com
+    helpdocs: rpi-docs.example.com
 ```
   ### High Availability
 The default installation includes a single replica of each RPI service. In a production setting, you need high-availability. To do this, set the number of replicas to 2 or more as shown below. You need at least 2 or more worker nodes for the Pods to run on separate nodes.
