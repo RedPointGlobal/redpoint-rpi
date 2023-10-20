@@ -124,8 +124,9 @@ Before activation RPI,
    - QLM Activated License file
 
 2) Access the configuration editor web UI at https://rpi-config.example.com
-3) Select the ``License Upload``` endpoint
-4) Upload both the QLM Settings file and QLM Activation License file 
+![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/ab0f7b97-be6e-457e-8568-5c5a70b0fcc7)
+4) Select the ``License Upload``` endpoint
+5) Upload both the QLM Settings file and QLM Activation License file 
 
 At this point, the default installation is complete and you are ready to add your first RPI tenant. 
 
