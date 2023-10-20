@@ -1,8 +1,8 @@
 global:
   namespace: redpoint-rpi
   replicaCount: 1
-  image_tag: 7.1.23116.1539
-  image_tag_docs: 7.1.23117.1547
+  image_tag: 7.2.2023-1016-2134
+  image_tag_docs: 7.2.2023-0927-1017
   cloudProvider: azure # azure or google or amazon 
   deployment_type: client # or internal (internal is for Redpoint users only)
 
@@ -117,11 +117,11 @@ ingress:
   domain: rdpnt.com
   annotations:
   hosts:
-    config: rg1-rpi-config
-    client: rg1-rpi-client
-    integration: rg1-rpi-integapi
-    helpdocs: rg1-rpi-docs
-    realtime: rg1-rpi-realtime
+    config: rpi-config
+    client: rpi-client
+    integration: rpi-integapi
+    helpdocs: rpi-docs
+    realtime: rpi-realtime
       
 resources:
   limits:
