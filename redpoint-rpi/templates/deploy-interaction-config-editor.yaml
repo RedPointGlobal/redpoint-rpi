@@ -6,7 +6,26 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 
 ---
-{{- if eq .Values.global.deployment_type "internal" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-config-editor
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-config-editor
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-config-editor
+
+---
+{{- if eq .Values.global.deploymentType "internal" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,37 +33,25 @@ metadata:
   namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-config-editor
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.config }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-config-editor
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-config-editor
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
       serviceAccountName: sa-rpi-config-editor
-      {{- if .Values.mssql.enabled }}
-      initContainers:
-      - name: wait-for-mssql
-        image: busybox:1.33.1
-        command:
-        - /bin/sh
-        - -c
-        - >
-          until nc -zv sql-rpi-ops 1433;
-          do echo "waiting for mssql" && sleep 2;
-          done
-      {{- end }}
       containers:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
@@ -86,7 +93,7 @@ spec:
 {{- end }}
 
 ---
-{{- if eq .Values.global.deployment_type "client" }}
+{{- if eq .Values.global.deploymentType "client" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -94,37 +101,25 @@ metadata:
   namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-config-editor
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.config }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-config-editor
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-config-editor
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
       serviceAccountName: sa-rpi-config-editor
-      {{- if .Values.mssql.enabled }}
-      initContainers:
-      - name: wait-for-mssql
-        image: busybox:1.33.1
-        command:
-        - /bin/sh
-        - -c
-        - >
-          until nc -zv sql-rpi-ops 1433;
-          do echo "waiting for mssql" && sleep 2;
-          done
-      {{- end }}
       containers:
       - env:
         - name: ASPNETCORE_ENVIRONMENT

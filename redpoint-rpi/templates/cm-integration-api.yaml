@@ -6,30 +6,23 @@ metadata:
 data:
   appsettings.overrides.json: |
     {
-      "Authentication": 
-      {
-          "EnableRPIAuthentication": {{ .Values.appsettings.integrationapi.EnableRPIAuthentication }},
-          "OpenIdProviders": 
-        [
-          {
-            "Name": {{ .Values.appsettings.integrationapi.OpenIdProviders.Name | quote }},
-            "AuthorizationHost": {{ .Values.appsettings.integrationapi.OpenIdProviders.AuthorizationHost | quote }},
-            "ClientID": {{ .Values.appsettings.integrationapi.OpenIdProviders.ClientID | quote }},
-            "Audience": {{ .Values.appsettings.integrationapi.OpenIdProviders.Audience | quote }},
-            "RedirectURL": {{ .Values.appsettings.integrationapi.OpenIdProviders.RedirectURL | quote }},
-            "EnableRefreshTokens": {{ .Values.appsettings.integrationapi.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.appsettings.integrationapi.OpenIdProviders.CustomScopes }},
-            "LogoutIdTokenParameter": {{ .Values.appsettings.integrationapi.OpenIdProviders.LogoutIdTokenParameter | quote }},
-            "ValidateIssuer": {{ .Values.appsettings.integrationapi.OpenIdProviders.ValidateIssuer }},
-            "MetadataHost": {{ .Values.appsettings.integrationapi.OpenIdProviders.MetadataHost | quote }},
-            "ValidateAudience": {{ .Values.appsettings.integrationapi.OpenIdProviders.ValidateAudience }}
+      "Authentication": {
+        "EnableRPIAuthentication": {{ .Values.appsettings.interactionapi.EnableRPIAuthentication }},
+        "RPIAuthentication": {
+          "AuthorizationHost": "https://{{ .Values.ingress.hosts.integration }}",
+          "EnableTransportSecurityRequirement": false,
+          "TokenSigningCredentials": {
+            "UseTemporaryCredentials": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseTemporaryCredentials }},
+            "UseCertificateThumbprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseCertificateThumbprint }},
+            "UseCertificateFilePath": "false",
+            "CertificateThumprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateThumprint | quote }},
+            "CertificateFilePath": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePath | quote }},
+            "CertificateFilePassword": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePassword | quote }}
           }
-        ]
+        },
+        "OpenIdProviders": []
       },
-      "DisableHttpRedirect": {{ .Values.appsettings.integrationapi.DisableHttpRedirect }},
-      "ConnectionStrings": 
-      {
-        "LoggingDatabase": "",
-        "OperationalDatabase": ""
-      }
+      "EnableSwagger": {{ .Values.appsettings.interactionapi.EnableSwagger }}
     }
+
+

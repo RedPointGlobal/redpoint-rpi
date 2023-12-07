@@ -6,29 +6,48 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 
 ---
-{{- if eq .Values.global.deployment_type "internal" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-interactionapi
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-interactionapi
+    
+---
+{{- if eq .Values.global.deploymentType "internal" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-interactionapi
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: {{ .Values.application.name }}
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    app: {{ .Values.global.application.name }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.interaction }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-interactionapi
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-interactionapi
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
@@ -54,7 +73,7 @@ spec:
         - name: RPIClient__AllowSavingLoginDetails
           value: "true"
         - name: RPI__FileOutput__Directory
-          value: /fileoutputdir
+          value: /rpifileoutputdir
         - name: RPIClient__AlwaysShowClientsAtLogin
           value: "true"
         - name: RPIClient__ApplicationSupportURL
@@ -78,7 +97,7 @@ spec:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
         image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.global.image_tag }}
-        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: interaction-api
         ports:
         - containerPort: 8080
@@ -87,59 +106,47 @@ spec:
         volumeMounts:
           - name: rpi-interactionapi
             mountPath: /app/appsettings
-          - name: rpi-fileoutputdir
-            mountPath: /fileoutputdir
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
       hostname: redpoint-interaction-api
       volumes:
         - name: rpi-interactionapi
           configMap:
             name: cm-rpi-interactionapi
-        - name: rpi-fileoutputdir
+        - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: rpi-fileoutputdir
+            claimName: rpifileoutputdir
 {{- end }}
 
 
 ---
-{{- if eq .Values.global.deployment_type "client" }}
+{{- if eq .Values.global.deploymentType "client" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-interactionapi
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: {{ .Values.application.name }}
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    app: {{ .Values.global.application.name }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.interaction }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-interactionapi
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-interactionapi
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
       serviceAccountName: sa-rpi-interactionapi
-      {{- if .Values.mssql.enabled }}
-      initContainers:
-      - name: wait-for-mssql
-        image: busybox:1.33.1
-        command:
-        - /bin/sh
-        - -c
-        - >
-          until nc -zv sql-rpi-ops 1433;
-          do echo "waiting for mssql" && sleep 2;
-          done
-      {{- end }}
       containers:
       - env:
         - name: RPIClient__HelpStartPageURL
@@ -155,7 +162,7 @@ spec:
         - name: Logging__LogLevel__Default
           value: "Error"
         - name: RPI__FileOutput__Directory
-          value: /fileoutputdir 
+          value: /rpifileoutputdir 
         - name: Logging__LogLevel__Microsoft
           value: "Error"
         - name: Logging__Database__RPITrace
@@ -173,7 +180,7 @@ spec:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.global.image_tag }}
-        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: interaction-api
         ports:
         - containerPort: 8080
@@ -182,14 +189,14 @@ spec:
         volumeMounts:
           - name: rpi-interactionapi
             mountPath: /app/appsettings
-          - name: rpi-fileoutputdir
-            mountPath: /fileoutputdir
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
       hostname: redpoint-interaction-api
       volumes:
         - name: rpi-interactionapi
           configMap:
             name: cm-rpi-interactionapi
-        - name: rpi-fileoutputdir
+        - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: rpi-fileoutputdir
+            claimName: {{ .Values.global.namespace }}
 {{- end }}

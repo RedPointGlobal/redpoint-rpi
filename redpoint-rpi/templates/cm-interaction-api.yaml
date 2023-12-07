@@ -10,7 +10,7 @@ data:
         "EnableRPIAuthentication": {{ .Values.appsettings.interactionapi.EnableRPIAuthentication }},
         "RPIAuthentication": {
           "AuthorizationHost": "https://{{ .Values.ingress.hosts.client }}",
-          "AuthMetaHttpHost": "http://rpi-interactionapi:80",
+          "EnableTransportSecurityRequirement": false,
           "TokenSigningCredentials": {
             "UseTemporaryCredentials": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseTemporaryCredentials }},
             "UseCertificateThumbprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseCertificateThumbprint }},

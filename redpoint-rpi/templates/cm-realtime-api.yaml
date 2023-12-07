@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-realtime
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAddress": "",
+                "RealtimeAgentAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
+                "EnableHelpPages": true,
+                "DecisionCacheDuration": 60,
+                "RPIClientID": "f499b8e1-80dc-4ac6-98ed-2f48eb38d008",
+                "RPIAuthToken": "2697e37d-282f-412a-8ffe-eabd5dd01a2e",
+                "RedPointMLServiceAddress": "",
+                "EnableAuditMetricsInHeaders": true,
+                "EnableEventListening": true
+            },
+            "GeolocationSettings": {
+                "Provider": "Azure",
+                "APIKey": "",
+                "WeatherUnits": "imperial"
+            },
+            "Queues": {
+                "FormQueuePath": "rpiwebformsubmission",
+                "EventsQueuePath": "rpiwebevents",
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": "rpiwebcachedata",
+                "RecommendationsQueuePath": "rpiwebrecommendation",
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Azure.Server",
+                    "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+                    "Settings": [
+                        {
+                            "Key": "EventHubName",
+                            "Value": {{ .Values.appsettings.realtime.caches.eventhub_name | quote }}
+                        },
+                        {
+                            "Key": "EventHubConnectionString",
+                            "Value": {{ .Values.appsettings.realtime.caches.eventhub_connectionstring | quote }}
+                        },
+                        {
+                            "Key": "SendVisibilityTimeout",
+                            "Value": "1"
+                        },
+                        {
+                            "Key": "ReceiveVisibilityTimeout",
+                            "Value": "1"
+                        }
+                    ]
+                },
+                "ListenerQueuePath": "rpiqueuelistener",
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.AzureEventHubsAccess",
+                    "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+                    "Settings": [
+                        {
+                            "Key": "EventHubName",
+                            "Value": {{ .Values.appsettings.realtime.caches.eventhub_name | quote }}
+                        },
+                        {
+                            "Key": "EventHubConnectionString",
+                            "Value": {{ .Values.appsettings.realtime.caches.eventhub_connectionstring | quote }}
+                        },
+                        {
+                            "Key": "SendVisibilityTimeout",
+                            "Value": "1"
+                        },
+                        {
+                            "Key": "ReceiveVisibilityTimeout",
+                            "Value": "1"
+                        }
+                    ]
+                }
+            },
+            "CacheSettings": {
+                "Caches": [
+                    {
+                        "Name": "MongoPrimary",
+                        "Assembly": "RedPoint.Resonance.MongoDBCache",
+                        "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "Database",
+                                "Value": "rpirealtimedb",
+                                "Values": null
+                            },
+                            {
+                                "Key": "ConnectionString",
+                                "Value": {{ .Values.appsettings.realtime.caches.mongodb_connectionstring | quote }},
+                                "Values": null
+                            },
+                            {
+                                "Key": "CollectionName",
+                                "Value": "rpirealtimecache",
+                                "Values": null
+                            }
+                        ]
+                    }
+                ],
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "MongoPrimary",
+                        "DaysToPersist": 200,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "MongoPrimary",
+                        "DaysToPersist": 365,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "MongoPrimary",
+                        "DaysToPersist": 365
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "MongoPrimary",
+                        "DaysToPersist": 365
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "LogLevel": {
+                "Default": "Error"
+            },
+            "Database": {
+                "LogLevel": {
+                    "Default": "Error"
+                },
+                "RPITrace": "Error",
+                "RPIError": "Error"
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+

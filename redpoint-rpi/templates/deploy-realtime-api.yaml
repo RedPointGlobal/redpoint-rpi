@@ -3,19 +3,36 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: sa-rpi-realtime
-  namespace: {{ include "custom.namespace" . }}
+  namespace: {{ .Values.global.namespace }}
 
 ---
-{{- if eq .Values.global.deployment_type "internal" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-realtime
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-realtime
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-realtime
+
+---
+{{- if eq .Values.global.deploymentType "internal" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-realtime
-  namespace: {{ include "custom.namespace" . }}
+  namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-realtime
 spec:
-  replicas: {{ include "custom.replicaCount" . }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-realtime
@@ -55,19 +72,26 @@ spec:
         - name: rpi-realtime
           configMap:
             name: cm-rpi-realtime
+      nodeSelector:
+        pool: rpengshared
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: rpengshared
 {{- end }}
 
 ---
-{{- if eq .Values.global.deployment_type "client" }}
+{{- if eq .Values.global.deploymentType "client" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-realtime
-  namespace: {{ include "custom.namespace" . }}
+  namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-realtime
 spec:
-  replicas: {{ include "custom.replicaCount" . }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-realtime

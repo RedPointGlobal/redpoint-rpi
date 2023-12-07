@@ -1,31 +1,33 @@
 global:
+  application:
+    name: redpoint-interaction
+    version: "7.2"
+    environment: prod 
+  # Define the Kubernetes namespace in which the services will be deployed.
+  # This namespace should already exist or be created prior to deployment.
   namespace: redpoint-rpi
+
+  # Set the number of replicas for the deployment.
+  # This determines how many instances of each pod will be created.
   replicaCount: 1
-  image_tag: 7.2.2023-1016-2134
+
+  # Specify the image tag for the main application.
+  # This tag refers to a specific version of the docker image to be deployed.
+  image_tag: 7.2.2023-1207-1723
+
+  # Specify the image tag for the documentation service.
+  # Similar to 'image_tag', this refers to the docker image version for the docs service.
   image_tag_docs: 7.2.2023-0927-1017
-  cloudProvider: azure # azure or google or amazon 
-  deployment_type: client # or internal (internal is for Redpoint users only)
 
-application:
-  name: redpoint-interaction
-  version: "7.1"
-  environment: prod 
-  replicaCount: 
-    config: 1
-    interaction: 1
-    integration: 1
-    node: 1
-    execution: 1
-    helpdocs: 1
-
-images:
+  # Select the cloud provider where the infrastructure is hosted.
+  # Options include 'azure', 'google', or 'amazon'.
+  # This setting may influence certain cloud-specific configurations.
+  cloudProvider: azure
+  deploymentType: client
+  # Define the deployment type.
+  # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
+  # This may affect access controls and available features.
   imagePullPolicy: Always
-
-mssql:
-  enabled: true
-
-realtime:
-  enabled: true
 
 appsettings:
   interactionapi:
@@ -43,16 +45,35 @@ appsettings:
 
   configeditor:
     ConnectionSettings:
+      # Specify the SQL server address. 
+      # This should be the hostname or IP address of your SQL server instance.
       Server: sql-rpi-ops
+
+      # Define the username for the SQL server connection.
+      # Ensure this user has the necessary permissions for the operations required.
       Username: sa
+
+      # Provide the password for the SQL server connection.
+      # Note: Store passwords securely and avoid hardcoding sensitive information in configuration files.
       Password: MyC0m9l&xP@ssw0rd
+
+      # Name of the database used for logging purposes.
       LoggingDatabaseName: Pulse_Logging
+
+      # Name of the primary operational database.
       PulseDatabaseName: Pulse
-      # The following database types are supported
-      # AzureSQLDatabase, AmazonRDSSQL, PostgreSQL, SQLServer and GoogleCloudSQL 
-      DatabaseType: SQLServer
-      SelectedDBType: SQLServer
+
+      # Specify the type of database being connected to.
+      # Supported types: AzureSQLDatabase, AmazonRDSSQL, PostgreSQL, SQLServer, GoogleCloudSQL
+      DatabaseType: AzureSQLDatabase
+      SelectedDBType: AzureSQLDatabase
+
+      # Connection string for the Logging database.
+      # Ensure this string matches your database's connection requirements, including the correct server address, database name, and credentials.
       ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+
+      # Connection string for the Operational database.
+      # Similar to the Logging database, this string should be configured to match the specific requirements of the Operational database.
       ConnectionStrings_OperationalDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 
   integrationapi:
@@ -70,6 +91,47 @@ appsettings:
       LogoutIdTokenParameter: id_token_hint
       ValidateIssuer: true 
       ValidateAudience: true 
+
+  realtime:
+    caches:
+      # Specify the connection string for MongoDB.
+      # This string is essential for establishing a connection to the MongoDB instance used for caching in real-time operations.
+      # Ensure this string includes the necessary authentication details and the correct address of your MongoDB server.
+      mongodb_connectionstring:
+
+      # Provide the connection string for the Event Hub.
+      # This string is crucial for the real-time service to connect and interact with the Event Hub for event-driven operations.
+      # Note: The connection string should include the Event Hub namespace, name, and access key.
+      eventhub_connectionstring:
+
+      # Set the name of the Event Hub used by the real-time service.
+      # This defines the specific Event Hub instance that the service will use for publishing or subscribing to real-time events.
+      eventhub_name: realtimetest
+
+  callbackapi:
+    config:
+      # Provide the access key for the storage account.
+      # This key is used to authenticate and authorize access to the storage account.
+      # Ensure that this key is kept secure and has the necessary permissions.
+      storage_account_access_key: example-accesskey
+
+      # Specify the name of the storage account.
+      # This account will be used by the callback API for storage operations.
+      storage_account_name: rpicallbackapi
+
+      # Define the name of the blob container within the storage account.
+      # This container is where the callback API will store or retrieve blobs.
+      blob_container_name: rpicallbackapi
+
+      # Provide the connection string for the Event Hub.
+      # This string is essential for the callback API to connect and interact with the Event Hub.
+      # Note: The connection string should include the Event Hub namespace, name, and access key.
+      eventhub_connectionstring:
+
+      # Set the name of the Event Hub.
+      # This is the Event Hub instance that the callback API will use for publishing or subscribing to events.
+      eventhub_name: callbackservice
+
 
   executionservice:
     EnableRPIAuthentication: false
@@ -104,26 +166,53 @@ appsettings:
       ValidateAudience: true 
 
   storage:
-    size:
-      rpi_output_directory: 10Gi
-    class:
-      azure: file.csi.azure.com
-      google: filestore.csi.storage.gke.io
-      amazon:
-        provisioner: smb.csi.k8s.io
-        volumeHandle: example        # make sure it's a unique id in the cluster
+    google: 
+    # Specify the IP address of your Google Cloud File Store instance.
+    # Note: The Google Cloud File Store instance should be created externally and prior to the deployment of this Helm chart.
+      server: 
+    # Define the fileshare path where the files will be stored.
+    # This path should be set to the mount point or directory within the File Store instance
+    # where RPI will read/write files.
+      share_name: rpirpifileoutputdir
+      path: /rpirpifileoutputdir
+    # Set the capacity for the File Store instance.
+      capacity: 2056
    
 ingress:
+  # Specify whether the ingress is internal-only.
+  # Set to 'true' to restrict access to within the internal network.
   internal: true
-  subnet: snet-rgoc-nonprod-eus2-aks
+
+  # Define the subnet used by the ingress controller.
+  # This should correspond to a specific subnet in your network configuration, typically in a VNET or VPC.
+  subnet: snet-aks-workloads
+
+  # Specify the domain name for the ingress resources.
+  # This domain will be used to access the services deployed under this ingress.
   domain: rdpnt.com
-  annotations:
+
+  # Annotations can be used to customize the behavior of the ingress controller.
+  # Add any specific annotations required for your ingress setup here.
+  annotations: {}
+
+  # Define hostnames for different services in your application.
+  # Each entry maps a subdomain of the main domain to a specific service.
   hosts:
+    # Config service - Access configuration-related services at 'rpi-config.rdpnt.com'.
     config: rpi-config
+    
+    # Client service - RPI client login at 'rpi-client.rdpnt.com'.
     client: rpi-client
+
+    # Integration API - Access integration API at 'rpi-integapi.rdpnt.com'.
     integration: rpi-integapi
+
+    # Help Documentation - Access help documents at 'rpi-docs.rdpnt.com'.
     helpdocs: rpi-docs
+
+    # Real-time service - Access real-time services at 'rpi-realtime.rdpnt.com'.
     realtime: rpi-realtime
+
       
 resources:
   limits:

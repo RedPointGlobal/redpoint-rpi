@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": true,
+        "QueueProvider": {
+          "ChannelLabel": "SendGrid",
+          "CallbackServiceQueuePath": {{ .Values.appsettings.callbackapi.config.eventhub_name | quote }},
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Azure.Server",
+            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+            "Settings": [
+              {
+                "Key": "EventHubName",
+                "Value": {{ .Values.appsettings.callbackapi.config.eventhub_name | quote }},
+              },
+              {
+                "Key": "EventHubConnectionString",
+                "Value": {{ .Values.appsettings.callbackapi.config.eventhub_connectionstring | quote }},
+              }
+            ]
+          }
+        },
+        "ExternalContentProvider": {
+          "Folder": {{ .Values.appsettings.callbackapi.config.blob_container_name | quote }},
+          "SaveEmailEvents": false,
+          "ExternalContentSettings": {
+            "Assembly": "RedPoint.Azure.Shared",
+            "Type": "RedPoint.Azure.Shared.AzureStorage.AzureStorageConnector",
+            "Settings": [
+              {
+                "Key": "StorageAccount",
+                "Value": {{ .Values.appsettings.callbackapi.config.storage_account_name | quote }},
+                "Values": null
+              },
+              {
+                "Key": "AccessKey",
+                "Value": {{ .Values.appsettings.callbackapi.config.storage_account_access_key | quote }},
+                "Values": null
+              },
+              {
+                "Key": "EnableCdn",
+                "Value": false,
+                "Values": null
+              },
+              {
+                "Key": "BlobServiceEndpoint",
+                "Value": null,
+                "Values": null
+              },
+              {
+                "Key": "CdnEndpoint",
+                "Value": null,
+                "Values": null
+              }
+            ]
+          }
+        }
+      },
+      "ConfigurationStore": {
+        "ConnectionString": "",
+        "LabelFilter": ""
+      },
+      "EnableHttpsRedirection": false,
+      "AgentConfig": {
+        "TraceLogEnabled": false,
+        "CachedSelectionRuleExpiry": 120
+      },
+      "Logging": {
+        "LogLevel": {
+          "Default": "Error",
+          "Microsoft": "Error",
+          "Microsoft.Hosting.Lifetime": "Error"
+        },
+        "Console": {
+          "LogLevel": {
+            "Default": "Error"
+          }
+        },
+        "Database": {
+          "LogLevel": {
+            "Default": "Error"
+          },
+          "RPITrace": "Error",
+          "RPIError": "Error"
+        },
+        "ApplicationInsights": {
+          "ConnectionString": "",
+          "LogLevel": {
+            "Default": "None"
+          }
+        }
+      },
+      "AllowedHosts": "*"
+    }

@@ -6,7 +6,26 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 
 ---
-{{- if eq .Values.global.deployment_type "internal" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-node-manager
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-node-manager
+    
+---
+{{- if eq .Values.global.deploymentType "internal" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,37 +33,25 @@ metadata:
   namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-node-manager
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.node }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-node-manager
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-node-manager
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
       serviceAccountName: sa-rpi-node-manager
-      {{- if .Values.mssql.enabled }}
-      initContainers:
-      - name: wait-for-mssql
-        image: busybox:1.33.1
-        command:
-        - /bin/sh
-        - -c
-        - >
-          until nc -zv sql-rpi-ops 1433;
-          do echo "waiting for mssql" && sleep 2;
-          done
-      {{- end }}
       containers:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
@@ -70,7 +77,7 @@ spec:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
         image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
-        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: node-manager
         ports:
         - containerPort: 8080
@@ -86,7 +93,7 @@ spec:
 {{- end }}
 
 ---
-{{- if eq .Values.global.deployment_type "client" }}
+{{- if eq .Values.global.deploymentType "client" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -94,37 +101,25 @@ metadata:
   namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-node-manager
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.node }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-node-manager
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-node-manager
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
       serviceAccountName: sa-rpi-node-manager
-      {{- if .Values.mssql.enabled }}
-      initContainers:
-      - name: wait-for-mssql
-        image: busybox:1.33.1
-        command:
-        - /bin/sh
-        - -c
-        - >
-          until nc -zv sql-rpi-ops 1433;
-          do echo "waiting for mssql" && sleep 2;
-          done
-      {{- end }}
       containers:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
@@ -150,7 +145,7 @@ spec:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
-        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: node-manager
         ports:
         - containerPort: 8080

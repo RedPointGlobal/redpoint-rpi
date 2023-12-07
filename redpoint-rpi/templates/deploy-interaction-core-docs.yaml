@@ -6,29 +6,48 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 
 ---
-{{- if eq .Values.global.deployment_type "internal" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-helpdocs
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-helpdocs
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: rpi-helpdocs
+
+---
+{{- if eq .Values.global.deploymentType "internal" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-helpdocs
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: {{ .Values.application.name }}
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    app: {{ .Values.global.application.name }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.helpdocs }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-helpdocs
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-helpdocs
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
@@ -36,7 +55,7 @@ spec:
       containers:
       - name: rpi-helpdocs
         image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-core-help:{{ .Values.global.image_tag_docs }}
-        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         ports:
         - containerPort: 80
           name: web-port
@@ -45,29 +64,29 @@ spec:
 {{- end }}
 
 ---
-{{- if eq .Values.global.deployment_type "client" }}
+{{- if eq .Values.global.deploymentType "client" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-helpdocs
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: {{ .Values.application.name }}
-    env: {{ .Values.application.environment }}
-    version: {{ .Values.application.version | quote }}
+    app: {{ .Values.global.application.name }}
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.application.replicaCount.helpdocs }}
+  replicas: {{ .Values.global.replicaCount }}
   selector:
     matchLabels:
       app: rpi-helpdocs
-      env: {{ .Values.application.environment }}
-      version: {{ .Values.application.version | quote }}
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
   template:
     metadata:
       labels:
         app: rpi-helpdocs
-        env: {{ .Values.application.environment }}
-        version: {{ .Values.application.version | quote }}
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
         - name: docker-io
@@ -75,7 +94,7 @@ spec:
       containers:
       - name: rpi-helpdocs
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-core-help:{{ .Values.global.image_tag_docs }}
-        imagePullPolicy: {{ .Values.images.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         ports:
         - containerPort: 80
           name: web-port

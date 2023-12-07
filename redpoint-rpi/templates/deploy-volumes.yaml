@@ -1,59 +1,66 @@
 {{- if eq .Values.global.cloudProvider "azure" }}
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .Values.global.namespace }}
+provisioner: file.csi.azure.com 
+allowVolumeExpansion: true
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=0
+  - gid=0
+  - mfsymlinks
+  - cache=strict
+  - actimeo=30
+parameters:
+  skuName: Premium_LRS
+
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rpi-fileoutputdir
-  namespace: {{ .Values.global.namespace }}
+  name: {{ .Values.global.namespace }}
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: rpi-fileoutputdir
+  storageClassName: {{ .Values.global.namespace }}
   resources:
     requests:
-      storage: {{ .Values.appsettings.storage.size.rpi_output_directory }}
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: rpi-fileoutputdir
-mountOptions:
-- dir_mode=0777
-- file_mode=0777
-- uid=0
-- gid=0
-- mfsymlinks
-- cache=strict
-- actimeo=30
-parameters:
-  skuName: Premium_LRS
-provisioner: {{ .Values.appsettings.storage.class.azure }}
+      storage: "100"
 {{- end }}
 
 
 {{- if eq .Values.global.cloudProvider "google" }}
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
+apiVersion: v1
+kind: PersistentVolume
 metadata:
-  name: rpi-fileoutputdir
-provisioner: {{ .Values.appsettings.storage.class.google }}
-volumeBindingMode: Immediate
-allowVolumeExpansion: true
-parameters:
-  tier: standard
-  network: default
+  name: {{ .Values.global.namespace }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  capacity:
+    storage: {{ .Values.storage.google.capacity }}
+  accessModes:
+  - ReadWriteMany
+  nfs:
+    path: {{ .Values.storage.google.path }}
+    server: {{ .Values.storage.google.server | quote }}
 
 ---
-kind: PersistentVolumeClaim
 apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: rpi-fileoutputdir
+  name: {{ .Values.global.namespace }}
+  namespace: {{ .Values.global.namespace }}
 spec:
   accessModes:
   - ReadWriteMany
-  storageClassName: rpi-fileoutputdir
+  storageClassName: ""
+  volumeName: {{ .Values.storage.google.share_name }}
+  volumeMode: Filesystem
   resources:
     requests:
-      storage: {{ .Values.appsettings.storage.size.rpi_output_directory }}
+      storage: {{ .Values.storage.google.capacity }}
 {{- end }}
 
 ---
@@ -61,7 +68,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-name: rpi-fileoutputdir
+name: rpi-rpifileoutputdir
 spec:
 capacity:
 storage: {{ .Values.appsettings.storage.size.rpi_output_directory }}
@@ -81,13 +88,13 @@ volumeHandle: {{ .Values.appsettings.storage.class.amazon.volumeHandle }}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: rpi-fileoutputdir
+  name: rpi-rpifileoutputdir
 spec:
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: {{ .Values.appsettings.storage.size.rpi_output_directory }}
-  volumeName: rpi-fileoutputdir
+  volumeName: rpi-rpifileoutputdir
   storageClassName: smb
 {{- end }}
