@@ -68,7 +68,8 @@ In the values.yaml file, under the global application settings, specify the clou
 - Create Kubernetes Namespace:
 
 Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
-```kubectl create namespace redpoint-rpi
+```
+kubectl create namespace redpoint-rpi
 ```
 
 - Create Docker Registry Secret:
