@@ -55,31 +55,29 @@ Before installing RPI, ensure that the following requirements are met:
 | This guide is primarily tailored for deployments on Microsoft Azure. However, RPI is also compatible with Amazon Web Services (AWS) and Google Cloud Platform (GCP). Ensure you select the appropriate cloud provider in the values.yaml file before proceeding with the installation. This setting can be found in the global section of values.yaml.|
 
 ### Install Procedure
-The default installation creates a SQL server for the RPI operations databases. This is fine for a ```DEMO``` environment. However, for production workloads, you must make changes as described in the [Customize for Production ](#customize-for-production) section 
+Before installing RPI, follow these preparatory steps to ensure a smooth setup:
 
-1) Clone this repository and connect to your target Kubernetes Cluster
+- Configure SQL Server Settings:
+
+Ensure you have correctly configured the SQL Server details in the ConfigEditor ConnectionSettings section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
+
+- Select Cloud Provider:
+
+In the values.yaml file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
+
+- Create Kubernetes Namespace:
+
+Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
+```kubectl create namespace redpoint-rpi
 ```
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+
+- Create Docker Registry Secret:
+
+Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
+```kubectl create secret docker-registry docker-io --namespace redpoint-rpi \
+--docker-server=rg1acrpub.azurecr.io --docker-username=<your_username> --docker-password=<your_password>
 ```
-2) Make sure you are inside the ```redpoint-rpi``` directory 
-```
-cd redpoint-rpi
-```
-3) Set your target cloud platform by updating the section below in the ```values.yaml``` file.
-```
-global:
-  cloudProvider: azure # or google or amazon   
-```
-4)  Create a kubernetes secret that contains Redpoint container registry credentials. This credential will provided to you by Redpoint Support.
-```
-kubectl create secret docker-registry docker-io --namespace redpoint-rpi --docker-server=rg1acrpub.azurecr.io \
---docker-username=<your_username> --docker-password=<your_password>
-```
-5) Run the following command to install RPI
-```
-kubectl config set-context --current --namespace=redpoint-rpi \
-&& helm install redpoint-rpi redpoint-rpi/ --values values.yaml --create-namespace
-```
+
 If everything goes well, You should see the output below.
 ```
 NAME: redpoint-rpi
