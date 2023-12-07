@@ -103,10 +103,12 @@ kubectl create secret tls tls-secret \
 After completing the above steps, proceed with the installation:
 
 - Clone the RPI repository to your local machine:
-```git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+```
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git
 ```
 - Change into the cloned repository's directory:
-```cd redpoint-rpi
+```
+cd redpoint-rpi
 ```
 - Execute the following Helm command to install RPI on your Kubernetes cluster, using the configurations set in your values.yaml file:
 ```
