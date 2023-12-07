@@ -69,7 +69,8 @@ Ensure you have correctly configured the SQL Server details in the ConfigEditor.
 
 In the values.yaml file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
 ```
-
+  cloudProvider: azure
+  deploymentType: client
 ```
 
 - Create Kubernetes Namespace:
