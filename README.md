@@ -83,8 +83,12 @@ kubectl create namespace redpoint-rpi
 - Create Docker Registry Secret:
 
 Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
-```kubectl create secret docker-registry docker-io --namespace redpoint-rpi \
---docker-server=rg1acrpub.azurecr.io --docker-username=<your_username> --docker-password=<your_password>
+```
+kubectl create secret docker-registry docker-io \
+--namespace redpoint-rpi \
+--docker-server=rg1acrpub.azurecr.io \
+--docker-username=<your_username> \
+--docker-password=<your_password>
 ```
 
 If everything goes well, You should see the output below.
