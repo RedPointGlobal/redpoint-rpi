@@ -90,6 +90,16 @@ kubectl create secret docker-registry docker-io \
 --docker-username=<your_username> \
 --docker-password=<your_password>
 ```
+- Create TLS Certificate Secret:
+
+If you are using SSL for RPI access endpoints, create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/tls.cert and path/to/tls.key with the actual paths to your certificate files:
+```
+kubectl create secret tls tls-secret \
+--namespace redpoint-rpi \
+--cert=path/to/tls.cert \
+--key=path/to/tls.key
+
+```
 
 If everything goes well, You should see the output below.
 ```
