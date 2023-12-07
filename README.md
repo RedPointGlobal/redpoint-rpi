@@ -42,17 +42,17 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
     - 100 GB or more free disk space per node
     
 ### Prerequisites
-Before you install RPI, you must:
+Before installing RPI, ensure that the following requirements are met:
 
-1. Have a Kubernetes solution available to use. ( https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/ )
-2. Install kubectl. ( https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/ )
-3. Have a SQL Server server available to use for RPI databases
-4. Request access to Redpoint's container registry. Open a ticket with support@redpointglobal.com requesting access to the RPI repository. 
-5. Have a license key to activate RPI. Contact Redpoint support for an activation key
+1. Access to a Kubernetes cluster is essential. If you don't have one, consider setting up a Kubernetes solution following the guidelines provided by Kubernetes for [Production](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/)
+2. Install kubectl, a command-line tool for interacting with your Kubernetes cluster. Detailed installation instructions can be found [Here](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
+3.  Ensure the availability of a SQL Server for hosting RPI databases. This server will be integral for the data storage and management needs of RPI.
+4. To access RPI's container images, request access to Redpoint's container registry. Open a support ticket at support@redpointglobal.com requesting access to the RPI repository.
+5. An activation key is required to use RPI. Contact Redpoint support to obtain your license key
 
 | **NOTE:** Before you Begin!           |
 |---------------------------------------|
-|  This guide assumes Microsoft Azure is the underlying platform for your Kubernetes infrastructure. However RPI can also be deployed on clusters within the Amazon and Google Cloud platforms. Before installing RPI, set the target Cloud platform in the ```values.yaml``` file as shown in step 3 below.|
+| This guide is primarily tailored for deployments on Microsoft Azure. However, RPI is also compatible with Amazon Web Services (AWS) and Google Cloud Platform (GCP). Ensure you select the appropriate cloud provider in the values.yaml file before proceeding with the installation. This setting can be found in the global section of values.yaml.|
 
 ### Install Procedure
 The default installation creates a SQL server for the RPI operations databases. This is fine for a ```DEMO``` environment. However, for production workloads, you must make changes as described in the [Customize for Production ](#customize-for-production) section 
