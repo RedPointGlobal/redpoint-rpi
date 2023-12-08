@@ -163,80 +163,28 @@ After receiving your activation key from Redpoint Support, you can activate your
 
 At this point, the default installation is complete and you are ready to add your first RPI tenant. 
 
-### Customize for Production
-  ### SQL Server
-In a Production setting, you will need to use a production-grade database server.
-- Disable the default SQL server creation in the ```values.yaml``` file
-```
-mssql:
-  enabled: true # Change this to false
-```
-- Replace the following section to reflect your production database server.
-```
-  configeditor:
-    ConnectionSettings:
-      Server: <your server IP or FQDN>
-      Username: <Your sql admin user>
-      Password: <Your sql admin user password>
-      DatabaseType: <Either of SQLServer, AzureSQLDatabase, AmazonRDSQL, GoogleCloudSQL or PostgreSQL>
-      ConnectionStrings_LoggingDatabase: <Your base64 encoded SQL server connection string for Pulse_Logging>
-      ConnectionStrings_OperationalDatabase: <Your base64 encoded SQL server connection string for Pulse>
+### High Availability
+The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
 
-Example connection string
-ConnectionStrings_LoggingDatabase: Server=tcp:<server IP>,1433;Database=Pulse_Logging;User ID=<username>;Password=<password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
-ConnectionStrings_OperationalDatabase: Server=tcp:<server IP>,1433;Database=Pulse_Logging;User ID=<username>;Password=<password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
-```
-  ### Ingress
-In a Production setting, you will need to use a proper domain that is not ```example.com```. You must create a Kubernetes secret that contains your organization's TLS certificate and private key. This secret is used by the nginx ingress controller to terminate TLS. 
+To achieve high availability, adjust the number of replicas for each service to 2 or more. This ensures that in the event of a node failure, another replica can continue providing service without interruption. However, it's important to have at least two or more worker nodes in your Kubernetes cluster to allow pods to run on separate nodes, enhancing reliability.
 
-The secret must be named ```ingress-tls``` and can be created using the following command
-
-```
-kubectl create secret tls ingress-tls --cert=<your_cert_file> --key=<your_key_file> --namespace redpoint-rpi
-```
-Next, replace the ```example.com``` domain with your certificate domain.
-```
-  hosts:
-    config: rpi-config.example.com     
-    client: rpi-client.example.com
-    integration: rpi-integapi.example.com
-    helpdocs: rpi-docs.example.com
-```
-  ### High Availability
-The default installation includes a single replica of each RPI service. In a production setting, you need high-availability. To do this, set the number of replicas to 2 or more as shown below. You need at least 2 or more worker nodes for the Pods to run on separate nodes.
+Here’s how you can set the replica count in the ```values.yaml``` file:
 ```
 global:
-  replicaCount: 3
-``` 
-NOTE: Only the ```Integration API``` service does not support HA as of this release so you should only run a single replica to avoid any weird errors and behaviour. This should be resolved in a future release 
+  replicaCount: 3  # Set the number of replicas for each service
 
-  ### RPI Storage
-The default installation creates only 10 GiB of persistent storage for the RPI Output directory. In a production setting, you need atleast 100 GiB or more. To change this setting, replace the section below in the ```values.yaml``` file
 ```
-appsettings:
-  volumes: 
-    rpi_output_directory: 10Gi # Change this to 100Gi or more
-```
-### Customize for Cloud Provider
-RPI needs an output directroy for storing files. This can be be a fully-managed NFS file service. Follow your target cloud provider documentation to create one and then update the applicable sections in the ```value.yaml``` file as shown below 
-```
-global:
-  cloudProvider: azure # or google or amazon
+```NOTE``` As of the current release, the Integration API service does not support high availability (HA). Therefore, you should maintain only a single replica of this service to avoid unexpected errors and behavior. We plan to address this limitation in a future release, enabling HA for the Integration API service as well."
 
-appsettings:
-  storage:
-    class:
-      google: filestore.csi.storage.gke.io
-      amazon:
-        provisioner: smb.csi.k8s.io
-        volumeHandle: example        # make sure it's a unique id
-        Source: example              # Fsx FQDN
-        nodeStageSecretRef: smbcreds # Fsx connection secret
-```
 ### RPI Documentation
-For detailed RPI documentation and release notes, please visit the official RPI documentation website at the address below
+To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our support site by clicking the link below
 
-https://support.redpointglobal.com
+ [Redpoint Help Center](https://support.redpointglobal.com/hc/en-us/restricted?return_to=https%3A%2F%2Fsupport.redpointglobal.com%2Fhc%2Fen-us)
 
-### Support
-For additional support and guidance, email support@redpointglobal.com with as much detail as possible regarding the issue you are facing.
+### Support 
+If you encounter any challenges specific to the RPI application, our dedicated support team is here to assist you. Please reach out to us with details of the issue for prompt and expert help.
+
+[support@redpointglobal.com](support@redpointglobal.com)
+
+```Note on Scope of Support```
+While we are fully equipped to address issues directly related to the RPI application, please be aware that challenges pertaining to Kubernetes configurations, network connectivity, or other external system issues fall outside our support scope. For these, we recommend consulting with your IT infrastructure team or seeking assistance from relevant technical forums.
