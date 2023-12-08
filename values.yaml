@@ -189,7 +189,7 @@ ingress:
 
   # Specify the domain name for the ingress resources.
   # This domain will be used to access the services deployed under this ingress.
-  domain: rdpnt.com
+  domain: example.com
 
   # Annotations can be used to customize the behavior of the ingress controller.
   # Add any specific annotations required for your ingress setup here.
