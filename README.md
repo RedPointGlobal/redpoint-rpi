@@ -14,24 +14,24 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Support](#support)
 
 ### System Requirements
-
-- SQL Server for RPI Operational Databases
+- SQL Server for RPI Operational Databases:
     - Version: 2019 or later
     - 8 GB Memory or more
-    - 100 GB or more free disk space.
+    - 256 GB or more free disk space.
     - Any of the of the following Database types
        - AzureSQL Database
        - Amazon RDS for SQL Server
        - Google Cloud SQL for SQL Server 
        - Microsoft SQL Server on virtual machine or bare metal
 
-- Kubernetes Cluster
-    - Latest stable version of Kubernetes
-    - Self-hosted or any of the cloud provider offerings (AKS, EKS, GKE)
-    - Nodepool with 2 or more nodes for high availabilty
-    - 4 vCPUs and 8 GB memory per node
-    - 100 GB or more free disk space per node
-    
+- Kubernetes Cluster:
+
+  - Use the latest stable version of Kubernetes for compatibility and security.
+  - Minimum of 2 nodes for high availability.
+  - Each node should have at least 8 vCPUs and 16 GB of memory.
+  - A minimum of 100 GB free disk space per node.
+  - Managed Kubernetes services like Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), or Google Kubernetes Engine (GKE).
+
 ### Prerequisites
 Before installing RPI, ensure that the following requirements are met:
 
