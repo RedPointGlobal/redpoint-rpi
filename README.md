@@ -153,16 +153,9 @@ redpointrpi-integrationapi.example.com                     # Integration API
 redpointrpi-realtime.example.com                           # RPI Realtime
 ```
 ### License Activation
-Before using RPI, you need to activate a License. The steps below describe the process
+After receiving your activation key from Redpoint Support, you can activate your RPI instance. Follow these steps to access the Configuration Editor and enter your license key:
 
-1) Contact Redpoint Support and obtain the following files
-   - QLM Settings file
-   - QLM Activated License file
-
-2) Access the configuration editor web UI at https://rpi-config.example.com
-![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/ab0f7b97-be6e-457e-8568-5c5a70b0fcc7)
-4) Select the ```Licensing Upload``` endpoint
-5) Upload both the QLM Settings file and QLM Activation License file 
+- Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
 
 At this point, the default installation is complete and you are ready to add your first RPI tenant. 
 
