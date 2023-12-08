@@ -115,7 +115,6 @@ cd redpoint-rpi
 helm install redpoint-rpi redpoint-rpi/ --values values.yaml
 
 ```
-
 If everything goes well, You should see the output below.
 ```
 NAME: redpoint-rpi
@@ -126,32 +125,33 @@ REVISION: 1
 TEST SUITE: None
 NOTES:
 ********************************* SUCCESS! *********************************
-
-1. RPI has been successfully installed in your cluster.
-  - It may take a few minutes for the all the RPI services to start. Please wait about 10 minutes.
 ```
+It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. This patience is crucial for the successful retrieval of ingress endpoints in the subsequent step.
+
 ### RPI Endpoints
-The default installation includes an Nginx ingress controller that exposes the relevant RPI endpoints based on the domain specified in the ingress section within the ```values.yaml```domain. 
+To view the RPI endpoints, use the following kubectl command. This command lists all the ingress resources in the redpoint-rpi namespace, showing you the configured endpoints.
 ```
-ingress:
-  domain: example.com
+kubectl get ingress --namespace redpoint-rpi
 ```
-Run the command below to retrieve all the endpoints. This command will keep checking the ingress IP address every 10 seconds until it finds one. Once an IP address is found, it will display the IP and the corresponding ingress hostname.
+Initially, you might not see an IP address for your endpoints. This delay is normal and occurs because it takes some time for the ingress load balancer to be provisioned. If no IP address is displayed, wait a few minutes and then re-run the command. Once the load balancer is ready, you should see output similar to the following, where <Load Balancer IP> will be replaced with the actual IP address:
 ```
-NAMESPACE="redpoint-rpi"; INGRESS_IP=""; while true; do INGRESS_IP=$(kubectl get ingress --namespace $NAMESPACE -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}"); if [ -n "$INGRESS_IP" ]; then echo "IP address found: $INGRESS_IP"; kubectl get ingress --namespace $NAMESPACE; break; else echo "No IP address found, waiting for 10 seconds before checking again..."; sleep 10; fi; done
+redpoint-rpi   redpointrpi-config.example.com          <Load Balancer IP>   80, 443   32d
+redpoint-rpi   redpointrpi.example.com                 <Load Balancer IP>   80, 443   32d
+redpoint-rpi   redpointrpi-integrationapi.example.com  <Load Balancer IP>   80, 443   32d
+redpoint-rpi   redpointrpi-realtime.example.com        <Load Balancer IP>   80, 443   32d
 ```
-```NOTE``` The load balancer creation takes a few minutes so you may not see an IP address immediately. Just keep trying the command a few more times and you will eventually you see a single IP address assigned to the endpoints below;
+After completing the default installation, the next crucial step involves setting up your DNS:
 
-```
-rpi-config.example.com                             # Configuration editor
-rpi-client.example.com                             # RPI Client 
-rpi-config.example/api/deployment/downloads/Client # RPI Client download link
-rpi-integapi.example.com                           # Integration API
-rpi-realtime.example.com                           # RPI Realtime
-sql-rpi-ops.example.com                                # Default SQL server name
-```
-Next you need to create DNS records in your DNS zone or you can create temporary entries in your Windows hosts file located at ```C:\Windows\System32\drivers\etc\hosts```
+Add a DNS record in your DNS zone. This record should point to the IP address of the load balancer provided by your Kubernetes ingress. This setup ensures that the domain names you use (like redpointmercury.example.com) correctly route to your RPI instance.
 
+With the DNS configuration in place, you're ready to access the Mercury interfaces:
+```
+redpointrpi-config.example.com                             # Configuration editor
+redpointrpi.example.com                                    # RPI Client 
+redpointrpi.example/api/deployment/downloads/Client        # RPI Client Executable Download
+redpointrpi-integrationapi.example.com                     # Integration API
+redpointrpi-realtime.example.com                           # RPI Realtime
+```
 ### License Activation
 Before using RPI, you need to activate a License. The steps below describe the process
 

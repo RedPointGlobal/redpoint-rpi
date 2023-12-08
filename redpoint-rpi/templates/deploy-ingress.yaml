@@ -228,7 +228,6 @@ subjects:
   namespace: {{ .Values.global.namespace }}
 
 ---
-# Source: ingress-nginx/templates/controller-configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -243,7 +242,6 @@ metadata:
 data:
 
 ---
-# Source: ingress-nginx/templates/controller-configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -272,7 +270,6 @@ spec:
   controller: k8s.io/ingress-nginx
 
 ---
-# Source: ingress-nginx/templates/controller-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -416,7 +413,6 @@ spec:
     app.kubernetes.io/component: controller
 
 ---
-# Source: ingress-nginx/templates/controller-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -434,7 +430,7 @@ automountServiceAccountToken: true
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Values.global.namespace }}
+  name: redpoint-rpi
   namespace: {{ .Values.global.namespace }}
   annotations:
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
@@ -726,7 +722,6 @@ subjects:
   namespace: {{ .Values.global.namespace }}
 
 ---
-# Source: ingress-nginx/templates/controller-configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -741,7 +736,6 @@ metadata:
 data:
 
 ---
-# Source: ingress-nginx/templates/controller-configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -770,7 +764,6 @@ spec:
   controller: k8s.io/ingress-nginx
 
 ---
-# Source: ingress-nginx/templates/controller-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -907,7 +900,6 @@ spec:
     app.kubernetes.io/component: controller
 
 ---
-# Source: ingress-nginx/templates/controller-serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -925,7 +917,7 @@ automountServiceAccountToken: true
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Values.global.namespace }}
+  name: redpoint-rpi
   namespace: {{ .Values.global.namespace }}
   annotations:
     {{- toYaml .Values.ingress.annotations | nindent 4 }}

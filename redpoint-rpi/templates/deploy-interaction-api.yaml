@@ -52,18 +52,6 @@ spec:
       imagePullSecrets:
         - name: docker-io
       serviceAccountName: sa-rpi-interactionapi
-      {{- if .Values.mssql.enabled }}
-      initContainers:
-      - name: wait-for-mssql
-        image: busybox:1.33.1
-        command:
-        - /bin/sh
-        - -c
-        - >
-          until nc -zv sql-rpi-ops 1433;
-          do echo "waiting for mssql" && sleep 2;
-          done
-      {{- end }}
       containers:
       - env:
         - name: RPIClient__HelpStartPageURL
