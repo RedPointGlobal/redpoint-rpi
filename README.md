@@ -98,12 +98,6 @@ git clone https://github.com/RedPointGlobal/redpoint-rpi.git
 - Change into the cloned repository's directory:
 ```
 cd redpoint-rpi
-````
-You should see the directory structure below
-````
--rw-rw-r-- 1 redpointops redpointops 10504 Dec  9 00:25 README.md
-drwxrwxr-x 3 redpointops redpointops  4096 Dec  7 20:21 redpoint-rpi
--rw-rw-r-- 1 redpointops redpointops 10337 Dec  9 00:08 values.yam
 ```
 - Execute the following Helm command to install RPI on your Kubernetes cluster, using the configurations set in your values.yaml file:
 ```
