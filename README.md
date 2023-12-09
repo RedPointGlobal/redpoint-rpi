@@ -102,7 +102,6 @@ cd redpoint-rpi
 - Execute the following Helm command to install RPI on your Kubernetes cluster, using the configurations set in your values.yaml file:
 ```
 helm install redpoint-rpi redpoint-rpi/ --values values.yaml
-
 ```
 If everything goes well, You should see the output below.
 ```
