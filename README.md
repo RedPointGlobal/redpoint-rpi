@@ -50,7 +50,7 @@ Before installing RPI, follow these preparatory steps to ensure a smooth setup:
 
 - Configure SQL Server Settings:
 
-Ensure you have correctly configured the SQL Server details in the ConfigEditor.ConnectionSettings section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
+Ensure you have correctly configured the SQL Server details in the ```Configeditor``` section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
 ```
   configeditor:
     ConnectionSettings:
@@ -61,9 +61,7 @@ Ensure you have correctly configured the SQL Server details in the ConfigEditor.
 In the values.yaml file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
 ```
   cloudProvider: azure
-  deploymentType: client
 ```
-
 - Create Kubernetes Namespace:
 
 Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
