@@ -104,6 +104,13 @@ spec:
         - name: rpifileoutputdir
           persistentVolumeClaim:
             claimName: rpifileoutputdir
+      nodeSelector:
+        pool: rpinternal
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: rpinternal
 {{- end }}
 
 
@@ -187,4 +194,12 @@ spec:
         - name: rpifileoutputdir
           persistentVolumeClaim:
             claimName: {{ .Values.global.namespace }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}

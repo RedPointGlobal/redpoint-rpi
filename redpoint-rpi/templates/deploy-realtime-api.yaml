@@ -73,12 +73,12 @@ spec:
           configMap:
             name: cm-rpi-realtime
       nodeSelector:
-        pool: rpengshared
+        pool: rpinternal
       tolerations:
         - effect: NoSchedule
           key: pool
           operator: Equal
-          value: rpengshared
+          value: rpinternal
 {{- end }}
 
 ---
@@ -131,4 +131,12 @@ spec:
         - name: rpi-realtime
           configMap:
             name: cm-rpi-realtime
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}

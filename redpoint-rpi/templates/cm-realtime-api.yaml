@@ -85,7 +85,7 @@ data:
                         "Settings": [
                             {
                                 "Key": "Database",
-                                "Value": "rpirealtimedb",
+                                "Value": "redpoint-rpi-db",
                                 "Values": null
                             },
                             {
@@ -95,7 +95,7 @@ data:
                             },
                             {
                                 "Key": "CollectionName",
-                                "Value": "rpirealtimecache",
+                                "Value": "redpoint-rpi-cache",
                                 "Values": null
                             }
                         ]

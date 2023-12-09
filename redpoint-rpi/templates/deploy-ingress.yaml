@@ -861,6 +861,14 @@ spec:
               memory: 90Mi
       serviceAccountName: nginx-{{ .Values.global.namespace }}
       terminationGracePeriodSeconds: 300
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 
 ---
 apiVersion: v1

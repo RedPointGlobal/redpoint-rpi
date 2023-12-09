@@ -83,12 +83,12 @@ spec:
           configMap:
             name: cm-rpi-callbackapi
       nodeSelector:
-        pool: rpengshared
+        pool: rpinternal
       tolerations:
         - effect: NoSchedule
           key: pool
           operator: Equal
-          value: rpengshared
+          value: rpinternal
 {{- end }}
 
 
@@ -148,4 +148,12 @@ spec:
         - name: rpi-callback-api
           configMap:
             name: cm-rpi-callbackapi
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}
