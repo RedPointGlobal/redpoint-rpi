@@ -116,6 +116,8 @@ spec:
         env: {{ .Values.global.application.environment }}
         version: {{ .Values.global.application.version | quote }}
     spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
       serviceAccountName: sa-rpi-callback-api
       securityContext:
         runAsNonRoot: true

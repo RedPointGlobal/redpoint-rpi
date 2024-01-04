@@ -101,7 +101,7 @@ spec:
         app: rpi-realtime
     spec:
       imagePullSecrets:
-        - name: docker-io
+        - name: redpoint-rpi
       serviceAccountName: sa-rpi-realtime
       containers:
         - name: rpi-realtime

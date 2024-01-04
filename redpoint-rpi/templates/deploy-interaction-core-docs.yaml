@@ -96,7 +96,7 @@ spec:
         version: {{ .Values.global.application.version | quote }}
     spec:
       imagePullSecrets:
-        - name: docker-io
+        - name: redpoint-rpi
       serviceAccountName: sa-rpi-helpdocs
       containers:
       - name: rpi-helpdocs
