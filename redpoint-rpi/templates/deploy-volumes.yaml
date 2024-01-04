@@ -63,38 +63,41 @@ spec:
       storage: {{ .Values.storage.google.capacity }}
 {{- end }}
 
----
+
 {{- if eq .Values.global.cloudProvider "amazon" }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: rpifileoutputdir
+provisioner: {{ .Values.appsettings.storage.amazon.driver }}
+
+---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-name: rpi-rpifileoutputdir
+  name: rpifileoutputdir
 spec:
-capacity:
-storage: {{ .Values.appsettings.storage.size.rpi_output_directory }}
-accessModes:
-- ReadWriteMany
-persistentVolumeReclaimPolicy: Retain
-mountOptions:
-- dir_mode=0777
-- file_mode=0777
-- vers=3.0
-csi:
-driver: {{ .Values.appsettings.storage.class.amazon.provisioner }}
-readOnly: false
-volumeHandle: {{ .Values.appsettings.storage.class.amazon.volumeHandle }} 
+  capacity:
+    storage: {{ .Values.appsettings.storage.amazon.capacity }}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rpifileoutputdir
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: {{ .Values.appsettings.storage.amazon.driver }}
+    volumeHandle: {{ .Values.appsettings.storage.amazon.fileSystemId }}
 
 ---
-kind: PersistentVolumeClaim
 apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: rpi-rpifileoutputdir
+  name: rpifileoutputdir
 spec:
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
+  storageClassName: rpifileoutputdir
   resources:
     requests:
-      storage: {{ .Values.appsettings.storage.size.rpi_output_directory }}
-  volumeName: rpi-rpifileoutputdir
-  storageClassName: smb
+      storage: {{ .Values.appsettings.storage.amazon.capacity }} 
 {{- end }}

@@ -193,6 +193,10 @@ appsettings:
       path: /rpirpifileoutputdir
     # Set the capacity for the File Store instance.
       capacity: 2056
+    amazon:
+      fileSystemId: fs-92107410
+      capacity: 100Gi
+      driver: efs.csi.aws.com
    
 ingress:
   # Specify whether the ingress is internal-only.
