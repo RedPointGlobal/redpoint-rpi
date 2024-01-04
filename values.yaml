@@ -182,21 +182,29 @@ appsettings:
       ValidateAudience: true 
 
   storage:
+    # Google Cloud Storage Configuration
     google: 
-    # Specify the IP address of your Google Cloud File Store instance.
-    # Note: The Google Cloud File Store instance should be created externally and prior to the deployment of this Helm chart.
+      # Specify the IP address of your Google Cloud File Store instance.
+      # Note: The Google Cloud File Store instance should be created externally 
+      # and prior to the deployment of this Helm chart.
       server: 
-    # Define the fileshare path where the files will be stored.
-    # This path should be set to the mount point or directory within the File Store instance
-    # where RPI will read/write files.
-      share_name: rpirpifileoutputdir
-      path: /rpirpifileoutputdir
-    # Set the capacity for the File Store instance.
-      capacity: 2056
+      # Define the fileshare path where the files will be stored.
+      # This path should be set to the mount point or directory within the File Store instance
+      # where RPI will read/write files.
+        share_name: rpirpifileoutputdir
+        path: /rpirpifileoutputdir
+      # Set the capacity for the File Store instance.
+        capacity: 2056
+
+    # Amazon EFS Configuration
     amazon:
+      # Specify the File System ID of your Amazon EFS instance.
       fileSystemId: fs-92107410
+      # Set the capacity for the EFS instance.
       capacity: 100Gi
+      # Specify the driver for Amazon EFS CSI (Container Storage Interface).
       driver: efs.csi.aws.com
+
    
 ingress:
   # Specify whether the ingress is internal-only.
