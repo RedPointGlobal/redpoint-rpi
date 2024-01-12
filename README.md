@@ -57,7 +57,7 @@ Ensure you have correctly configured the SQL Server details in the ```Configedit
 ```
 For quick Demo installations, you can use a pre-configured Demo SQL server. To do this, set the ```EnableDemoSQLServer``` to ```true``` in the values.yaml file
 
-By enabling ```EnableDemoSQLServer```, you can skip configuring the detailed SQL Server settings under configeditor.ConnectionSettings. The Helm chart will use the default settings for the Demo SQL server.
+By enabling ```EnableDemoSQLServer```, you can skip configuring the SQL Server settings under ```configeditor.ConnectionSettings```. The Helm chart will use the default settings for the Demo SQL server.
 ```
   configeditor:
     EnableDemoSQLServer: true
