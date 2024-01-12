@@ -70,14 +70,14 @@ In the values.yaml file, under the global application settings, specify the clou
 ```
   cloudProvider: azure
 ```
-- 3) Create Kubernetes Namespace:
+3) Create Kubernetes Namespace:
 
 Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
 ```
 kubectl create namespace redpoint-rpi
 ```
 
-- 4) Create Docker Registry Secret:
+4) Create Docker Registry Secret:
 
 Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
 ```
@@ -87,7 +87,7 @@ kubectl create secret docker-registry docker-io \
 --docker-username=<your_username> \
 --docker-password=<your_password>
 ```
-- 5) Create TLS Certificate Secret:
+5) Create TLS Certificate Secret:
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/tls.cert and path/to/tls.key with the actual paths to your certificate files:
 ```
