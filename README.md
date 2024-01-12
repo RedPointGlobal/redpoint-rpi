@@ -48,7 +48,7 @@ Before installing RPI, ensure that the following requirements are met:
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
 
-- Configure SQL Server Settings:
+- 1) Configure SQL Server Settings:
 
 Ensure you have correctly configured the SQL Server details in the ```Configeditor``` section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
 ```
@@ -64,20 +64,20 @@ By enabling ```EnableDemoSQLServer```, you can skip configuring the detailed SQL
 ```
 Note: This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in the first section.
 
-- Select Cloud Provider:
+- 2) Select Cloud Provider:
 
 In the values.yaml file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
 ```
   cloudProvider: azure
 ```
-- Create Kubernetes Namespace:
+- 3) Create Kubernetes Namespace:
 
 Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
 ```
 kubectl create namespace redpoint-rpi
 ```
 
-- Create Docker Registry Secret:
+- 4) Create Docker Registry Secret:
 
 Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
 ```
@@ -87,7 +87,7 @@ kubectl create secret docker-registry docker-io \
 --docker-username=<your_username> \
 --docker-password=<your_password>
 ```
-- Create TLS Certificate Secret:
+- 5) Create TLS Certificate Secret:
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/tls.cert and path/to/tls.key with the actual paths to your certificate files:
 ```
