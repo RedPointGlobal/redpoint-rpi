@@ -60,6 +60,7 @@ appsettings:
     EnableSwagger: true 
 
   configeditor:
+    EnableDemoSQLServer: false
     ConnectionSettings:
       # Specify the SQL server address. 
       # This should be the hostname or IP address of your SQL server instance.
@@ -83,7 +84,7 @@ appsettings:
       # Supported types: AzureSQLDatabase, AmazonRDSSQL, PostgreSQL, SQLServer, GoogleCloudSQL
       DatabaseType: AzureSQLDatabase
       SelectedDBType: AzureSQLDatabase
-
+      
       # Connection string for the Logging database.
       # Ensure this string matches your database's connection requirements, including the correct server address, database name, and credentials.
       ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
