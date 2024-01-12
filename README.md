@@ -66,7 +66,7 @@ Note: This is recommended for quick demos only. For production or customized ins
 
 2) Select Cloud Provider:
 
-In the values.yaml file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
+In the ```values.yaml``` file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
 ```
   cloudProvider: azure
 ```
