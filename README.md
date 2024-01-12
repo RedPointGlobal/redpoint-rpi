@@ -48,7 +48,7 @@ Before installing RPI, ensure that the following requirements are met:
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
 
-- 1) Configure SQL Server Settings:
+1) Configure SQL Server Settings:
 
 Ensure you have correctly configured the SQL Server details in the ```Configeditor``` section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
 ```
@@ -64,7 +64,7 @@ By enabling ```EnableDemoSQLServer```, you can skip configuring the detailed SQL
 ```
 Note: This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in the first section.
 
-- 2) Select Cloud Provider:
+2) Select Cloud Provider:
 
 In the values.yaml file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
 ```
