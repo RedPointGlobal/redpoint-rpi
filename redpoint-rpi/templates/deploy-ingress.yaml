@@ -380,8 +380,8 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-      service.beta.kubernetes.io/azure-load-balancer-internal: {{.Values.ingress.internal | quote }}
-      service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{.Values.ingress.subnet | quote }}
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      service.beta.kubernetes.io/azure-load-balancer-internal-subnet: snet-rgoc-nonprod-eus2-aks
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
@@ -439,7 +439,7 @@ spec:
   tls:
   - secretName: ingress-tls
   rules:
-    - host: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+    - host: rpiclient.rg1cloud.com
       http:
         paths:
         - path: /
@@ -449,7 +449,7 @@ spec:
               name: rpi-interactionapi
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.config }}.{{ .Values.ingress.domain }}
+    - host: rpiconfig.rg1cloud.com
       http:
         paths:
         - path: /
@@ -459,7 +459,7 @@ spec:
               name: rpi-config-editor
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
+    - host: rpintegrationapi.rg1cloud.com
       http:
         paths:
         - path: /
@@ -469,7 +469,7 @@ spec:
               name: rpi-integrationapi
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.helpdocs }}.{{ .Values.ingress.domain }}
+    - host: rpihelpdocs.rg1cloud.com
       http:
         paths:
         - path: /
@@ -479,7 +479,7 @@ spec:
               name: rpi-helpdocs
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
+    - host: rpirealtime.rg1cloud.com
       http:
         paths:
         - path: /

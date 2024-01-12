@@ -210,11 +210,11 @@ appsettings:
 ingress:
   # Specify whether the ingress is internal-only.
   # Set to 'true' to restrict access to within the internal network.
-  internal: true
+  internal: false
 
   # Define the subnet used by the ingress controller.
   # This should correspond to a specific subnet in your network configuration, typically in a VNET or VPC.
-  subnet: snet-aks-workloads
+  subnet: example-subnet-name
 
   # Specify the domain name for the ingress resources.
   # This domain will be used to access the services deployed under this ingress.
