@@ -8,7 +8,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [System Requirements ](#system-requirements)
 - [Prerequisites ](#prerequisites)
 - [Install Procedure ](#install-procedure)
-- [RPI Endpoints ](#rpi-url-endpoints)
+- [RPI Endpoints ](#rpi-endpoints)
 - [License Activation ](#license-activation)
 - [RPI Documentation](#rpi-documentation)
 - [Support](#support)
