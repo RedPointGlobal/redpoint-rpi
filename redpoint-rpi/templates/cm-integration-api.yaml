@@ -20,7 +20,20 @@ data:
             "CertificateFilePassword": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePassword | quote }}
           }
         },
-        "OpenIdProviders": []
+        "OpenIdProviders": [
+          {
+            "Name": {{ .Values.appsettings.executionservice.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": {{ .Values.appsettings.executionservice.OpenIdProviders.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.appsettings.executionservice.OpenIdProviders.ClientID | quote }},
+            "Audience": {{ .Values.appsettings.executionservice.OpenIdProviders.Audience | quote }},
+            "RedirectURL": {{ .Values.appsettings.executionservice.OpenIdProviders.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.appsettings.executionservice.OpenIdProviders.EnableRefreshTokens }},
+            "CustomScopes": {{ .Values.appsettings.executionservice.OpenIdProviders.CustomScopes }},
+            "LogoutIdTokenParameter": {{ .Values.appsettings.executionservice.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "ValidateIssuer": {{ .Values.appsettings.executionservice.OpenIdProviders.ValidateIssuer }},
+            "ValidateAudience": {{ .Values.appsettings.executionservice.OpenIdProviders.ValidateAudience }}
+          }
+        ]
       },
       "EnableSwagger": {{ .Values.appsettings.interactionapi.EnableSwagger }}
     }
