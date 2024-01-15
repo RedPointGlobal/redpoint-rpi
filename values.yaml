@@ -144,6 +144,7 @@ appsettings:
     EnableRPIAuthentication: false
     DisableHttpRedirect: true
     RPIExecution__QueueListener__IsEnabled: false 
+    RPIExecution_MaxThreadsPerExecutionService: 50
     RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
 
 
@@ -209,6 +210,17 @@ appsettings:
       # Specify the driver for Amazon EFS CSI (Container Storage Interface).
       driver: efs.csi.aws.com
 
+SMTPSettings:
+  SMTP_SenderAddress: noreply-rpi@example.com
+  SMTP_Address: smtp-host.example.com
+  SMTP_Port: 587
+  SMTP_Username: example-smtp-username
+  SMTP_Password: example-smtp-password
+
+MercurySettings:
+  Mercury_Address: mercury.example.com
+  Mercury_Username: example-mercury-password
+  Mercury_Password: example-mercury-password
    
 ingress:
   # Specify whether the ingress is internal-only.

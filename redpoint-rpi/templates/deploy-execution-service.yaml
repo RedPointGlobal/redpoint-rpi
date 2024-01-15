@@ -56,6 +56,28 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: Mercury__Address
+          value: {{ .Values.MercurySettings.Mercury_Address | quote }}
+        - name: Mercury__Username
+          value: {{ .Values.MercurySettings.Mercury_Username | quote }}
+        - name: Mercury__Password
+          value: {{ .Values.MercurySettings.Mercury_Password | quote }}
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: {{ .Values.appsettings.executionservice.RPIExecution_MaxThreadsPerExecutionService }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
         - name: Logging__LogLevel__Default
@@ -139,6 +161,28 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: Mercury__Address
+          value: {{ .Values.MercurySettings.Mercury_Address | quote }}
+        - name: Mercury__Username
+          value: {{ .Values.MercurySettings.Mercury_Username | quote }}
+        - name: Mercury__Password
+          value: {{ .Values.MercurySettings.Mercury_Password | quote }}
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: {{ .Values.appsettings.executionservice.RPIExecution_MaxThreadsPerExecutionService }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
         - name: Logging__LogLevel__Default
