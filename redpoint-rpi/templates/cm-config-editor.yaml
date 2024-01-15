@@ -8,11 +8,21 @@ data:
     {
       "ClusterEnvironment": {
         "OperationalDatabase": {
+          {{- if not .Values.appsettings.configeditor.EnableDemoSQLServer }}
           "DatabaseType": {{ .Values.appsettings.configeditor.ConnectionSettings.DatabaseType | quote }},
+          {{- end }}
+          {{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
+          "DatabaseType": "SQLServer",
+          {{- end }}
           "PulseDatabaseName": {{ .Values.appsettings.configeditor.ConnectionSettings.PulseDatabaseName | quote }},
           "LoggingDatabaseName": {{ .Values.appsettings.configeditor.ConnectionSettings.LoggingDatabaseName | quote }},
           "ConnectionSettings": {
+            {{- if not .Values.appsettings.configeditor.EnableDemoSQLServer }}
             "SelectedDBType": {{ .Values.appsettings.configeditor.ConnectionSettings.DatabaseType | quote }},
+            {{- end }}
+            {{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
+            "SelectedDBType": "SQLServer",
+            {{- end }}
             "Server": {{ .Values.appsettings.configeditor.ConnectionSettings.Server | quote }},
             "IsUsingCredentials": true,
             "Username": {{ .Values.appsettings.configeditor.ConnectionSettings.Username | quote }},
