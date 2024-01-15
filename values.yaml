@@ -56,7 +56,6 @@ appsettings:
       CertificateThumprint: ""
       CertificateFilePath: ""
       CertificateFilePassword: ""
-    OpenIdProviders: {}
     EnableSwagger: true 
 
   configeditor:
@@ -94,20 +93,11 @@ appsettings:
       ConnectionStrings_OperationalDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 
   integrationapi:
-    EnableRPIAuthentication: false
-    DisableHttpRedirect: true 
-    OpenIdProviders:
-      MetadataHost: ""
-      ClientID: rpi
-      Name: rgOne
-      RedirectURL: ""
-      Audience: account
-      AuthorizationHost: ""
-      EnableRefreshTokens: true 
-      CustomScopes: []
-      LogoutIdTokenParameter: id_token_hint
-      ValidateIssuer: true 
-      ValidateAudience: true 
+    # Enable or disable RPI authentication
+    EnableRPIAuthentication: true
+
+    # Disable HTTP redirect for integration API
+    DisableHttpRedirect: true
 
   realtime:
     caches:
@@ -155,32 +145,45 @@ appsettings:
     DisableHttpRedirect: true
     RPIExecution__QueueListener__IsEnabled: false 
     RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
-    OpenIdProviders:
-      Name: Keycloak
-      AuthorizationHost: http://keycloak/auth/realms/RPI
-      RedirectURL: redirect-url
-      ClientID: rpi
-      Audience: account
-      CustomScopes: []
-      LogoutIdTokenParameter: id_token_hint
-      EnableRefreshTokens: true
-      ValidateIssuer: true 
-      ValidateAudience: true 
+
 
   nodemanager:
     EnableRPIAuthentication: false
     DisableHttpRedirect: true
-    OpenIdProviders:
-      Name: Keycloak
-      AuthorizationHost: http://keycloak/auth/realms/RPI
-      ClientID: rpi
-      Audience: account
-      RedirectURL: redirect-url
-      EnableRefreshTokens: true
-      LogoutIdTokenParameter: id_token_hint
-      CustomScopes: []
-      ValidateIssuer: true 
-      ValidateAudience: true 
+
+  OpenIdProviders:
+    # Host for OpenID Connect Metadata
+    MetadataHost: ""
+
+    # Client ID for OpenID Connect
+    ClientID: rpi
+
+    # Name of the OpenID Connect provider
+    Name: rgOne
+
+    # Redirect URL after authentication
+    RedirectURL: ""
+
+    # Audience for the OpenID Connect authentication request
+    Audience: account
+
+    # Authorization host for OpenID Connect
+    AuthorizationHost: ""
+
+    # Enable or disable refresh tokens
+    EnableRefreshTokens: true
+
+    # Custom scopes for OpenID Connect
+    CustomScopes: []
+
+    # Parameter for id_token_hint during logout
+    LogoutIdTokenParameter: id_token_hint
+
+    # Validate issuer of the OpenID Connect provider
+    ValidateIssuer: true
+
+    # Validate audience of the OpenID Connect provider
+    ValidateAudience: true
 
   storage:
     # Google Cloud Storage Configuration

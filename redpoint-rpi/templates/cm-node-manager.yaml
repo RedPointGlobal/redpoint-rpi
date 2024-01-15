@@ -10,16 +10,16 @@ data:
         "EnableRPIAuthentication": {{ .Values.appsettings.nodemanager.EnableRPIAuthentication }},
         "OpenIdProviders": [
           {
-            "Name": {{ .Values.appsettings.nodemanager.OpenIdProviders.Name | quote }},
-            "AuthorizationHost": {{ .Values.appsettings.nodemanager.OpenIdProviders.AuthorizationHost | quote }},
-            "ClientID": {{ .Values.appsettings.nodemanager.OpenIdProviders.ClientID | quote }},
-            "Audience": {{ .Values.appsettings.nodemanager.OpenIdProviders.Audience | quote }},
-            "RedirectURL": {{ .Values.appsettings.nodemanager.OpenIdProviders.RedirectURL | quote }},
-            "EnableRefreshTokens": {{ .Values.appsettings.nodemanager.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.appsettings.nodemanager.OpenIdProviders.CustomScopes }},
-            "LogoutIdTokenParameter": {{ .Values.appsettings.nodemanager.OpenIdProviders.LogoutIdTokenParameter | quote }},
-            "ValidateIssuer": {{ .Values.appsettings.nodemanager.OpenIdProviders.ValidateIssuer }},
-            "ValidateAudience": {{ .Values.appsettings.nodemanager.OpenIdProviders.ValidateAudience }}
+            "Name": {{ .Values.appsettings.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": {{ .Values.appsettings.OpenIdProviders.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.appsettings.OpenIdProviders.ClientID | quote }},
+            "Audience": {{ .Values.appsettings.OpenIdProviders.Audience | quote }},
+            "RedirectURL": {{ .Values.appsettings.OpenIdProviders.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.appsettings.OpenIdProviders.EnableRefreshTokens }},
+            "CustomScopes": {{ .Values.appsettings.OpenIdProviders.CustomScopes }},
+            "LogoutIdTokenParameter": {{ .Values.appsettings.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "ValidateIssuer": {{ .Values.appsettings.OpenIdProviders.ValidateIssuer }},
+            "ValidateAudience": {{ .Values.appsettings.OpenIdProviders.ValidateAudience }}
           }
         ]
       },
