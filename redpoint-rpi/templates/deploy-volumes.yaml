@@ -1,4 +1,4 @@
-{{- if eq .Values.global.cloudProvider "azure" }}
+{{- if eq .Values.global.deploymentType "internal" }}
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
@@ -20,7 +20,7 @@ parameters:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Values.global.namespace }}
+  name: rpifileoutputdir
 spec:
   accessModes:
     - ReadWriteMany
@@ -30,74 +30,3 @@ spec:
       storage: "100"
 {{- end }}
 
-
-{{- if eq .Values.global.cloudProvider "google" }}
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: {{ .Values.global.namespace }}
-  namespace: {{ .Values.global.namespace }}
-spec:
-  capacity:
-    storage: {{ .Values.storage.google.capacity }}
-  accessModes:
-  - ReadWriteMany
-  nfs:
-    path: {{ .Values.storage.google.path }}
-    server: {{ .Values.storage.google.server | quote }}
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ .Values.global.namespace }}
-  namespace: {{ .Values.global.namespace }}
-spec:
-  accessModes:
-  - ReadWriteMany
-  storageClassName: ""
-  volumeName: {{ .Values.storage.google.share_name }}
-  volumeMode: Filesystem
-  resources:
-    requests:
-      storage: {{ .Values.storage.google.capacity }}
-{{- end }}
-
-
-{{- if eq .Values.global.cloudProvider "amazon" }}
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: rpifileoutputdir
-provisioner: {{ .Values.appsettings.storage.amazon.driver }}
-
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: rpifileoutputdir
-spec:
-  capacity:
-    storage: {{ .Values.appsettings.storage.amazon.capacity }}
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: rpifileoutputdir
-  persistentVolumeReclaimPolicy: Retain
-  csi:
-    driver: {{ .Values.appsettings.storage.amazon.driver }}
-    volumeHandle: {{ .Values.appsettings.storage.amazon.fileSystemId }}
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: rpifileoutputdir
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: rpifileoutputdir
-  resources:
-    requests:
-      storage: {{ .Values.appsettings.storage.amazon.capacity }} 
-{{- end }}

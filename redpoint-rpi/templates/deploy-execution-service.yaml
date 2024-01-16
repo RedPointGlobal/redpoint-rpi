@@ -215,15 +215,19 @@ spec:
         volumeMounts:
           - name: rpi-execution-service
             mountPath: /app/appsettings
+          {{- if .Values.appsettings.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
+          {{- end }}
       volumes:
         - name: rpi-execution-service
           configMap:
             name: cm-rpi-execution-service
+        {{- if .Values.appsettings.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: {{ .Values.global.namespace }}
+            claimName: {{ .Values.appsettings.storage.persistentVolumeClaim }}
+        {{- end }}
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

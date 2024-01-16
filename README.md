@@ -9,6 +9,8 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Prerequisites ](#prerequisites)
 - [Install Procedure ](#install-procedure)
 - [RPI Endpoints ](#rpi-endpoints)
+- [RPI Storage ](#rpi-storage)
+- [RPI High Availability ](#rpi-high-availability)
 - [License Activation ](#license-activation)
 - [RPI Documentation](#rpi-documentation)
 - [Support](#support)
@@ -172,6 +174,22 @@ global:
 ```
 ```NOTE``` As of the current release, the Integration API service does not support high availability (HA). Therefore, you should maintain only a single replica of this service to avoid unexpected errors and behavior. We plan to address this limitation in a future release, enabling HA for the Integration API service as well."
 
+### RPI Storage
+RPI requires the following for it's Storage requirements
+
+ - File Share storage (SMB or NFS) used as a File Output directory for storing any file assets exported via interactions or selection rules
+ - Cloud Storage (Blob or S3) used to support an RPI external content provider (ECP)
+
+To enable this storage, update the ```values.yaml``` as shown below
+```
+  # Define storage configuration
+  storage:
+    # Set whether storage is enabled or not (false means disabled)
+    enabled: false
+    # Specify the persistent volume claim for the directory
+    persistentVolumeClaim: rpifileoutputdir
+
+```
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our support site by clicking the link below
 
