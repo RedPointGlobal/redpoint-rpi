@@ -155,34 +155,24 @@ appsettings:
   OpenIdProviders:
     # Host for OpenID Connect Metadata
     MetadataHost: ""
-
-    # Client ID for OpenID Connect
-    ClientID: rpi
-
-    # Name of the OpenID Connect provider
-    Name: rgOne
-
+    # Microsoft Entra ID App registration Client ID
+    ClientID: xxxxxx-xxxx-xxxx-xxxx-xxxxxxxx
+    # Name of the OpenID Connect provider. Azure AD in this example
+    Name: AzureAD
     # Redirect URL after authentication
-    RedirectURL: ""
-
+    RedirectURL: "https://redpointrpi.example.com"
     # Audience for the OpenID Connect authentication request
-    Audience: account
-
+    Audience: api://xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     # Authorization host for OpenID Connect
-    AuthorizationHost: ""
-
+    AuthorizationHost: "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
     # Enable or disable refresh tokens
     EnableRefreshTokens: true
-
     # Custom scopes for OpenID Connect
-    CustomScopes: []
-
+    CustomScopes: ["api://xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/Interaction.Clients"]
     # Parameter for id_token_hint during logout
     LogoutIdTokenParameter: id_token_hint
-
     # Validate issuer of the OpenID Connect provider
-    ValidateIssuer: true
-
+    ValidateIssuer: false
     # Validate audience of the OpenID Connect provider
     ValidateAudience: true
 
