@@ -180,6 +180,8 @@ RPI requires the following for it's Storage requirements
  - File Share storage (SMB or NFS) used as a File Output directory for storing any file assets exported via interactions or selection rules
  - Cloud Storage (Blob or S3) used to support an RPI external content provider (ECP)
 
+The RPI Helm chart is intentionally non-opinionated on storage solutions. Users are expected to create their own storage configurations based on their provider's requirements. Simply provide the name of the persistent volume in the `values.yaml` file:
+
 To enable this storage, update the ```values.yaml``` as shown below
 ```
   # Define storage configuration
