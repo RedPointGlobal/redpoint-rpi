@@ -67,7 +67,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
-        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:

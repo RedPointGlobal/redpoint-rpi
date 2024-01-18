@@ -16,7 +16,7 @@ data:
             "Audience": {{ .Values.appsettings.OpenIdProviders.Audience | quote }},
             "RedirectURL": {{ .Values.appsettings.OpenIdProviders.RedirectURL | quote }},
             "EnableRefreshTokens": {{ .Values.appsettings.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.appsettings.OpenIdProviders.CustomScopes }},
+            "CustomScopes": {{ .Values.appsettings.OpenIdProviders.CustomScopes | quote }},
             "LogoutIdTokenParameter": {{ .Values.appsettings.OpenIdProviders.LogoutIdTokenParameter | quote }},
             "ValidateIssuer": {{ .Values.appsettings.OpenIdProviders.ValidateIssuer }},
             "ValidateAudience": {{ .Values.appsettings.OpenIdProviders.ValidateAudience }}

@@ -77,7 +77,7 @@ spec:
         - name: Mercury__Password
           value: {{ .Values.MercurySettings.Mercury_Password | quote }}
         - name: RPIExecution__MaxThreadsPerExecutionService
-          value: {{ .Values.appsettings.executionservice.RPIExecution_MaxThreadsPerExecutionService }}
+          value: {{ .Values.appsettings.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
         - name: Logging__LogLevel__Default

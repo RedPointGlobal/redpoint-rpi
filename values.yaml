@@ -13,20 +13,20 @@ global:
 
   # Specify the image tag for the main application.
   # This tag refers to a specific version of the docker image to be deployed.
-  image_tag: 7.2.2023-1208-1914
+  image_tag: 7.1.2023-0613-1231
 
   # Specify the image tag for the documentation service.
   # Similar to 'image_tag', this refers to the docker image version for the docs service.
-  image_tag_docs: 7.2.2023-0927-1017
+  image_tag_docs: 7.2.23130.2013
 
   # Select the cloud provider where the infrastructure is hosted.
   # Options include 'azure', 'google', or 'amazon'.
   # This setting may influence certain cloud-specific configurations.
   cloudProvider: azure
-  deploymentType: client
   # Define the deployment type.
   # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
   # This may affect access controls and available features.
+  deploymentType: internal
   imagePullPolicy: Always
   nodeSelector: {}
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
@@ -104,12 +104,12 @@ appsettings:
       # Specify the connection string for MongoDB.
       # This string is essential for establishing a connection to the MongoDB instance used for caching in real-time operations.
       # Ensure this string includes the necessary authentication details and the correct address of your MongoDB server.
-      mongodb_connectionstring:
+      mongodb_connectionstring: example-mongodb-connection-string
 
       # Provide the connection string for the Event Hub.
       # This string is crucial for the real-time service to connect and interact with the Event Hub for event-driven operations.
       # Note: The connection string should include the Event Hub namespace, name, and access key.
-      eventhub_connectionstring:
+      eventhub_connectionstring: example-eventhub-connection-string
 
       # Set the name of the Event Hub used by the real-time service.
       # This defines the specific Event Hub instance that the service will use for publishing or subscribing to real-time events.
@@ -133,7 +133,7 @@ appsettings:
       # Provide the connection string for the Event Hub.
       # This string is essential for the callback API to connect and interact with the Event Hub.
       # Note: The connection string should include the Event Hub namespace, name, and access key.
-      eventhub_connectionstring:
+      eventhub_connectionstring: example-eventhub-connection-string
 
       # Set the name of the Event Hub.
       # This is the Event Hub instance that the callback API will use for publishing or subscribing to events.
