@@ -73,12 +73,12 @@ spec:
           configMap:
             name: cm-rpi-realtime
       nodeSelector:
-        pool: rpinternal
+        pool: rgoc-eus2
       tolerations:
         - effect: NoSchedule
           key: pool
           operator: Equal
-          value: rpinternal
+          value: rgoc-eus2
 {{- end }}
 
 ---

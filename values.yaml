@@ -59,7 +59,7 @@ appsettings:
     EnableSwagger: true 
 
   configeditor:
-    EnableDemoSQLServer: false
+    EnableDemoSQLServer: true
     ConnectionSettings:
       # Specify the SQL server address. 
       # This should be the hostname or IP address of your SQL server instance.

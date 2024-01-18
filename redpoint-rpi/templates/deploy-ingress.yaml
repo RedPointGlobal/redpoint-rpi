@@ -368,12 +368,12 @@ spec:
       serviceAccountName: nginx-{{ .Values.global.namespace }}
       terminationGracePeriodSeconds: 300
       nodeSelector:
-        pool: rpinternal
+        pool: rgoc-eus2
       tolerations:
         - effect: NoSchedule
           key: pool
           operator: Equal 
-          value: rpinternal
+          value: rgoc-eus2
 
 ---
 apiVersion: v1
