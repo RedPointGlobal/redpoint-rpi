@@ -24,9 +24,10 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: {{ .Values.global.namespace }}
+  storageClassName: rpifileoutputdir
   resources:
     requests:
       storage: "100"
 {{- end }}
+
 
