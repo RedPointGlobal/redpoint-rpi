@@ -114,16 +114,20 @@ spec:
         volumeMounts:
           - name: rpi-interactionapi
             mountPath: /app/appsettings
+          {{- if .Values.appsettings.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
+          {{- end }}
       hostname: redpoint-interaction-api
       volumes:
         - name: rpi-interactionapi
           configMap:
             name: cm-rpi-interactionapi
+        {{- if .Values.appsettings.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
             claimName: rpifileoutputdir
+        {{- end }}
       nodeSelector:
         pool: rgoc-eus2
       tolerations:

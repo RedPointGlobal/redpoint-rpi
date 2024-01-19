@@ -110,15 +110,19 @@ spec:
         volumeMounts:
           - name: rpi-execution-service
             mountPath: /app/appsettings
+          {{- if .Values.appsettings.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
+          {{- end }}
       volumes:
         - name: rpi-execution-service
           configMap:
             name: cm-rpi-execution-service
+        {{- if .Values.appsettings.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
             claimName: rpifileoutputdir
+        {{- end }}
       nodeSelector:
         pool: rgoc-eus2
       tolerations:
