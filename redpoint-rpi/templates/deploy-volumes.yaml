@@ -21,6 +21,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: rpifileoutputdir
+  namespace: {{ .Values.global.namespace }}
 spec:
   accessModes:
     - ReadWriteMany
