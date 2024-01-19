@@ -1,0 +1,142 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-realtime
+  namespace: {{ .Values.global.namespace }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-realtime
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-realtime
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-realtime
+
+---
+{{- if eq .Values.global.deploymentType "internal" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-realtime
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-realtime
+spec:
+  replicas: {{ .Values.global.replicaCount }}
+  selector:
+    matchLabels:
+      app: rpi-realtime
+  template:
+    metadata:
+      labels:
+        app: rpi-realtime
+    spec:
+      imagePullSecrets:
+        - name: docker-io
+      serviceAccountName: sa-rpi-realtime
+      containers:
+        - name: rpi-realtime
+          image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8080
+            name: web-port
+            protocol: TCP
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+            valueFrom:
+              secretKeyRef:
+                key: ConnectionStrings__LoggingDatabase
+                name: sql-rpiops-connstring
+          - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+            valueFrom:
+              secretKeyRef:
+                key: ConnectionStrings__OperationalDatabase
+                name: sql-rpiops-connstring
+          volumeMounts:
+            - name: rpi-realtime
+              mountPath: /app/appsettings
+      volumes:
+        - name: rpi-realtime
+          configMap:
+            name: cm-rpi-realtime
+      nodeSelector:
+        pool: rpinternal
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: rpinternal
+{{- end }}
+
+---
+{{- if eq .Values.global.deploymentType "client" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-realtime
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-realtime
+spec:
+  replicas: {{ .Values.global.replicaCount }}
+  selector:
+    matchLabels:
+      app: rpi-realtime
+  template:
+    metadata:
+      labels:
+        app: rpi-realtime
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-rpi-realtime
+      containers:
+        - name: rpi-realtime
+          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 8080
+            name: web-port
+            protocol: TCP
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+            valueFrom:
+              secretKeyRef:
+                key: ConnectionStrings__LoggingDatabase
+                name: sql-rpiops-connstring
+          - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+            valueFrom:
+              secretKeyRef:
+                key: ConnectionStrings__OperationalDatabase
+                name: sql-rpiops-connstring
+          volumeMounts:
+            - name: rpi-realtime
+              mountPath: /app/appsettings
+      volumes:
+        - name: rpi-realtime
+          configMap:
+            name: cm-rpi-realtime
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
