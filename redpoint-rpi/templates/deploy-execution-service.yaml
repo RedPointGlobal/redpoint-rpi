@@ -121,7 +121,7 @@ spec:
         {{- if .Values.appsettings.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: rpifileoutputdir
+            claimName: {{ .Values.appsettings.storage.persistentVolumeClaim }}
         {{- end }}
       nodeSelector:
         pool: rgoc-eus2
