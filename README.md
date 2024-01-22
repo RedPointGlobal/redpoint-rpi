@@ -142,7 +142,7 @@ After completing the default installation, the next crucial step involves settin
 
 Add a DNS record in your DNS zone. This record should point to the IP address of the load balancer provided by your Kubernetes ingress. This setup ensures that the domain names you use (like redpointrpi.example.com) correctly route to your RPI instance.
 
-With the DNS configuration in place, you're ready to access the Mercury interfaces:
+With the DNS configuration in place, you're ready to access the RPI interfaces:
 ```
 redpointrpi-config.example.com                             # Configuration editor
 redpointrpi.example.com                                    # RPI Client 
