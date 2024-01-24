@@ -13,11 +13,11 @@ global:
 
   # Specify the image tag for the main application.
   # This tag refers to a specific version of the docker image to be deployed.
-  image_tag: 7.1.2023-0613-1231
+  image_tag: 7.2.2024-0117-1748
 
   # Specify the image tag for the documentation service.
   # Similar to 'image_tag', this refers to the docker image version for the docs service.
-  image_tag_docs: 7.2.23130.2013
+  image_tag_docs: 7.2.23130.2100
 
   # Select the cloud provider where the infrastructure is hosted.
   # Options include 'azure', 'google', or 'amazon'.
