@@ -44,7 +44,7 @@ spec:
       serviceAccountName: sa-rpi-realtime
       containers:
         - name: rpi-realtime
-          image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
+          image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
           imagePullPolicy: Always
           ports:
           - containerPort: 8080

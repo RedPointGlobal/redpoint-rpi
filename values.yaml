@@ -13,7 +13,7 @@ global:
 
   # Specify the image tag for the main application.
   # This tag refers to a specific version of the docker image to be deployed.
-  image_tag: 7.2.2023-1208-1908
+  image_tag: 7.2.2024-0117-1748
 
   # Specify the image tag for the documentation service.
   # Similar to 'image_tag', this refers to the docker image version for the docs service.

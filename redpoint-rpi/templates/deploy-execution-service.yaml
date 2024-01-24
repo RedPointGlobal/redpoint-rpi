@@ -49,8 +49,6 @@ spec:
         env: {{ .Values.global.application.environment }}
         version: {{ .Values.global.application.version | quote }}
     spec:
-      imagePullSecrets:
-        - name: docker-io
       serviceAccountName: sa-rpi-execution-service
       containers:
       - env:
@@ -100,7 +98,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
-        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag }}
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: execution-service
         ports:
