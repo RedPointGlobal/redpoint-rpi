@@ -64,7 +64,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
-        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-integration-api:{{ .Values.global.image_tag_internal }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: integration-api
         ports:
@@ -129,7 +129,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag_client }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: integration-api
         ports:
