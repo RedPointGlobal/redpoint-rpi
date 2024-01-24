@@ -12,6 +12,7 @@ spec:
       port: 1433
       targetPort: 1433
   type: ClusterIP
+  internalTrafficPolicy: Local
 
 ---
 apiVersion: apps/v1
@@ -60,3 +61,5 @@ spec:
        requests:
         storage: 8Gi
 {{- end }}
+
+
