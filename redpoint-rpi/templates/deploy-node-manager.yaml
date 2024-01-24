@@ -1,0 +1,176 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-node-manager
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-node-manager
+    
+---
+{{- if eq .Values.global.deploymentType "internal" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-node-manager
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
+spec:
+  replicas: {{ .Values.global.replicaCount }}
+  selector:
+    matchLabels:
+      app: rpi-node-manager
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-node-manager
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
+    spec:
+      imagePullSecrets:
+        - name: docker-io
+      serviceAccountName: sa-rpi-node-manager
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__applicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        name: node-manager
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-node-manager
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-node-manager
+          configMap:
+            name: cm-rpi-node-manager
+      nodeSelector:
+        pool: rgoc-eus2
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: rgoc-eus2
+{{- end }}
+
+---
+{{- if eq .Values.global.deploymentType "client" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-node-manager
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-node-manager
+    env: {{ .Values.global.application.environment }}
+    version: {{ .Values.global.application.version | quote }}
+spec:
+  replicas: {{ .Values.global.replicaCount }}
+  selector:
+    matchLabels:
+      app: rpi-node-manager
+      env: {{ .Values.global.application.environment }}
+      version: {{ .Values.global.application.version | quote }}
+  template:
+    metadata:
+      labels:
+        app: rpi-node-manager
+        env: {{ .Values.global.application.environment }}
+        version: {{ .Values.global.application.version | quote }}
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-rpi-node-manager
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RPIClient__applicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sql-rpiops-connstring
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sql-rpiops-connstring
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        name: node-manager
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-node-manager
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-node-manager
+          configMap:
+            name: cm-rpi-node-manager
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

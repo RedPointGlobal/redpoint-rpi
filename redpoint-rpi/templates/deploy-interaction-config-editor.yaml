@@ -49,8 +49,6 @@ spec:
         env: {{ .Values.global.application.environment }}
         version: {{ .Values.global.application.version | quote }}
     spec:
-      imagePullSecrets:
-        - name: docker-io
       serviceAccountName: sa-rpi-config-editor
       containers:
       - env:
