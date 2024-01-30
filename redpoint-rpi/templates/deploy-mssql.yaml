@@ -1,4 +1,4 @@
-{{- if .Values.appsettings.configeditor.EnableSQLServerService }}
+{{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -15,24 +15,6 @@ spec:
   internalTrafficPolicy: Local
 
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: sqlserver
-  namespace: redpoint-rpi
-  labels:
-    app: mssql
-spec:
-  ports:
-  - port: 1433
-    name: mssql
-  clusterIP: None 
-  selector:
-    app: mssql
-{{- end }}
-
----
-{{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
