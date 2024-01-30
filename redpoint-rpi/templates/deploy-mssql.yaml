@@ -1,4 +1,4 @@
-{{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
+{{- if .Values.appsettings.configeditor.EnableSQLServerService }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,8 +13,10 @@ spec:
       targetPort: 1433
   type: ClusterIP
   internalTrafficPolicy: Local
+{{- end }}
 
 ---
+{{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

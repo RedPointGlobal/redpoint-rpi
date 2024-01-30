@@ -62,6 +62,7 @@ appsettings:
 
   configeditor:
     EnableDemoSQLServer: true
+    EnableSQLServerService: false
     ConnectionSettings:
       # Specify the SQL server address. 
       # This should be the hostname or IP address of your SQL server instance.
