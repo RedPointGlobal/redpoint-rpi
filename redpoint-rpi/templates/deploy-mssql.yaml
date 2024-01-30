@@ -29,7 +29,6 @@ spec:
   clusterIP: None 
   selector:
     app: mssql
-
 {{- end }}
 
 ---
