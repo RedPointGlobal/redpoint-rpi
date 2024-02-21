@@ -489,6 +489,16 @@ spec:
               name: rpi-realtime
               port:
                 number: 80
+    - host: rpicallbackapi.rg1cloud.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callback-api
+              port:
+                number: 80
 {{- end }}
 
 
@@ -982,6 +992,16 @@ spec:
           backend:
             service:
               name: rpi-realtime
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callback-api
               port:
                 number: 80
 {{- end }}

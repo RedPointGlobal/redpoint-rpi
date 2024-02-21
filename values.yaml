@@ -182,7 +182,7 @@ appsettings:
   storage:
     # Set whether storage is enabled or not (false means disabled)
     enabled: false
-    # Specify the persistent volume claim for the directory
+    # Specify the persistent volume claim for the File output directory
     persistentVolumeClaim: rpifileoutputdir
 
 SMTPSettings:
@@ -217,20 +217,23 @@ ingress:
   # Define hostnames for different services in your application.
   # Each entry maps a subdomain of the main domain to a specific service.
   hosts:
-    # Config service - Access configuration-related services at 'rpi-config.rdpnt.com'.
+    # Config service - Access configuration-related services at 'rpi-config.example.com'.
     config: redpointrpi-config
     
-    # Client service - RPI client login at 'rpi-client.rdpnt.com'.
+    # Client service - RPI client login at 'rpi-client.example.com'.
     client: redpointrpi
 
-    # Integration API - Access integration API at 'rpi-integapi.rdpnt.com'.
+    # Integration API - Access integration API at 'rpi-integapi.example.com'.
     integration: redpointrpi-integrationapi
 
-    # Help Documentation - Access help documents at 'rpi-docs.rdpnt.com'.
+    # Help Documentation - Access help documents at 'rpi-docs.example.com'.
     helpdocs: redpointrpi-docs
 
-    # Real-time service - Access real-time services at 'rpi-realtime.rdpnt.com'.
+    # Real-time service - Access real-time services at 'rpi-realtime.example.com'.
     realtime: redpointrpi-realtime
+
+    # Callback API - Access the callback API at 'redpointrpi-callbackapi.example.com'.
+    callbackapi: redpointrpi-callbackapi
 
       
 resources:
