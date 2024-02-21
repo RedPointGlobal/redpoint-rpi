@@ -1,3 +1,4 @@
+{{- if eq .Values.global.deploymentType "client" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -35,3 +36,4 @@ data:
         }
       }
     }
+{{- end }}
