@@ -52,7 +52,7 @@ spec:
       serviceAccountName: sa-rpi-helpdocs
       containers:
       - name: rpi-helpdocs
-        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-interaction-core-help:{{ .Values.global.image_tag_docs_internal }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-interaction-core-help:{{ .Values.global.image_tag_docs_internal }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         ports:
         - containerPort: 80
