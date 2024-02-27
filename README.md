@@ -79,7 +79,7 @@ Run the following command to create a Kubernetes namespace where the RPI service
 kubectl create namespace redpoint-rpi 
 ```
 
-Configures the current context to use this namespace for subsequent commands
+Configure the current context to use this namespace for subsequent commands
 ```
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
