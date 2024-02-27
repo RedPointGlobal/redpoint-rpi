@@ -76,7 +76,12 @@ In the ```values.yaml``` file, under the global application settings, specify th
 
 Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
 ```
-kubectl create namespace redpoint-rpi
+kubectl create namespace redpoint-rpi 
+```
+
+Configures the current context to use this namespace for subsequent commands
+```
+kubectl config set-context --current --namespace=redpoint-rpi
 ```
 
 4) Create Docker Registry Secret:
