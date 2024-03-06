@@ -201,7 +201,7 @@ To enable this storage, update the ```values.yaml``` as shown below
 ### RPI v6 Upgrade Assistant
 If you are upgrading from a lower version of RPI, use the [Interaction Upgrade Helper](https://github.com/RedPointGlobal/redpoint-rpi/blob/main/UpgradeAssistant.zip) prior to upgrade to check availability of plugins in the v7 version. Download and extract the zip from the link above and execute the ```RedPoint.Interaction.UpgradeHelper```application. When executed, the Helper requests that a v6 Pulse database connection string be entered.  Assuming that it is able to connect, it checks for v7 compatibility of all plugins currently in use.  If one or more incompatible plugins is found, their details are displayed, and the option to output the same to a file is provided.
 
-The resultant file contains details of the plugins in question, along with a series of v7 environment variables, which can serve as a starting point for the new v7 cluster.  An example is provided below:
+The resultant file contains details of the plugins in question, along with a series of v7 environment variables, which can serve as a starting point for customizing the Helm Chart ```values.yaml``` prior to deploying the new v7 cluster.  An example is provided below:
 ```
 {
   "General": {
