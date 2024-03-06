@@ -202,7 +202,7 @@ To enable this storage, update the ```values.yaml``` as shown below
 If you are upgrading from a lower version of RPI, use the [Interaction Upgrade Helper](https://github.com/RedPointGlobal/redpoint-rpi/blob/main/UpgradeAssistant.zip) prior to upgrade to check availability of plugins in the v7 version. Download and extract the zip from the link above and execute the ```RedPoint.Interaction.UpgradeHelper```application. When executed, the Helper requests that a v6 Pulse database connection string be entered.  Assuming that it is able to connect, it checks for v7 compatibility of all plugins currently in use.  If one or more incompatible plugins is found, their details are displayed, and the option to output the same to a file is provided.
 
 The resultant file contains details of the plugins in question, along with a series of v7 environment variables, which can serve as a starting point for the new v7 cluster.  An example is provided below:
-
+```
 {
   "General": {
     "ConnectionStrings__OperationalDatabase": "Server=localhost,2433;Database=Pulse;UID=[x];PWD=[x];ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=false",
@@ -222,7 +222,7 @@ The resultant file contains details of the plugins in question, along with a ser
     "RPIClient__HelpStartPageURL": "[x]"
   }
 }
-
+```
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our support site by clicking the link below
 
