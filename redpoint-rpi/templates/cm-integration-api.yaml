@@ -10,6 +10,7 @@ data:
         "EnableRPIAuthentication": {{ .Values.appsettings.interactionapi.EnableRPIAuthentication }},
         "RPIAuthentication": {
           "AuthorizationHost": "https://{{ .Values.ingress.hosts.integration }}",
+          "AuthMetaHttpHost": "http://rpi-integrationapi",
           "EnableTransportSecurityRequirement": false,
           "TokenSigningCredentials": {
             "UseTemporaryCredentials": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseTemporaryCredentials }},
