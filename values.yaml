@@ -27,7 +27,7 @@ global:
   # Define the deployment type.
   # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
   # This may affect access controls and available features.
-  deploymentType: client
+  deploymentType: internal
   imagePullPolicy: Always
   nodeSelector: {}
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
@@ -55,8 +55,8 @@ appsettings:
       UseCertificateFilePath: false 
       UseCertificateThumbprint: false
       CertificateThumprint: ""
-      CertificateFilePath: ""
-      CertificateFilePassword: ""
+      CertificateFilePath: "/var/azure/secrets/rg1cloud.pfx"
+      CertificateFilePassword: "rdpntcom_2023"
     EnableSwagger: true 
 
   configeditor:
@@ -217,22 +217,22 @@ ingress:
   # Each entry maps a subdomain of the main domain to a specific service.
   hosts:
     # Config service - Access configuration-related services at 'rpi-config.example.com'.
-    config: rpiconfig
+    config: rpiconfigeditor
     
     # Client service - RPI client login at 'rpi-client.example.com'.
     client: rpiclient
 
     # Integration API - Access integration API at 'rpi-integapi.example.com'.
-    integration: rpiintegration
+    integration: rpiintegrationapi
 
     # Help Documentation - Access help documents at 'rpi-docs.example.com'.
     helpdocs: rpidocs
 
     # Real-time service - Access real-time services at 'rpi-realtime.example.com'.
-    realtime: rpirealtime
+    realtime: rpirealtimeapi
 
     # Callback API - Access the callback API at 'redpointrpi-callbackapi.example.com'.
-    callbackapi: rpicallbackapi
+    callbackapi: rpicallbackapiapi
 
       
 resources:

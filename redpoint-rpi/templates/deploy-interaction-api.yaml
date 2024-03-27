@@ -53,7 +53,7 @@ spec:
       containers:
       - env:
         - name: RPIClient__HelpStartPageURL
-          value: "https://{{ .Values.ingress.hosts.helpdocs }}"
+          value: "https://{{ .Values.ingress.hosts.helpdocs }}.{{ .Values.ingress.domain }}"
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
         - name: RPI__SMTP__EmailSenderAddress
