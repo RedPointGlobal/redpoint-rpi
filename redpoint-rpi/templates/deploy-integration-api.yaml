@@ -74,10 +74,15 @@ spec:
         volumeMounts:
           - name: rpi-integrationapi
             mountPath: /app/appsettings
+          - name: rpi-auth-cert
+            mountPath: /var/azure/secrets
       volumes:
         - name: rpi-integrationapi
           configMap:
             name: cm-rpi-integrationapi
+        - name: rpi-auth-cert
+          secret:
+            secretName: rpi-auth-cert
       nodeSelector:
         pool: rgoc-eus2
       tolerations:
@@ -139,10 +144,15 @@ spec:
         volumeMounts:
           - name: rpi-integrationapi
             mountPath: /app/appsettings
+          - name: rpi-auth-cert
+            mountPath: /var/azure/secrets
       volumes:
         - name: rpi-integrationapi
           configMap:
             name: cm-rpi-integrationapi
+        - name: rpi-auth-cert
+          secret:
+            secretName: rpi-auth-cert
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

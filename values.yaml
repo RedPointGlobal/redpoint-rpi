@@ -55,7 +55,7 @@ appsettings:
       UseCertificateFilePath: false 
       UseCertificateThumbprint: false
       CertificateThumprint: ""
-      CertificateFilePath: "/var/azure/secrets/rg1cloud.pfx"
+      CertificateFilePath: "/var/azure/secrets/rpi-auth-cert.pfx"
       CertificateFilePassword: "rdpntcom_2023"
     EnableSwagger: true 
 
