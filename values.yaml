@@ -27,7 +27,7 @@ global:
   # Define the deployment type.
   # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
   # This may affect access controls and available features.
-  deploymentType: internal
+  deploymentType: client
   imagePullPolicy: Always
   nodeSelector: {}
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
