@@ -98,7 +98,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: sql-rpiops-connstring
-        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag_internal }}
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-3/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag_internal }}
         imagePullPolicy: {{ .Values.global.imagePullPolicy }}
         name: execution-service
         ports:

@@ -1,7 +1,7 @@
 global:
   application:
     name: redpoint-interaction
-    version: "7.2"
+    version: "7.3"
     environment: prod 
   # Define the Kubernetes namespace in which the services will be deployed.
   # This namespace should already exist or be created prior to deployment.
@@ -13,8 +13,8 @@ global:
 
   # Specify the image tag for the main application.
   # This tag refers to a specific version of the docker image to be deployed.
-  image_tag_internal: 7.2.2024-0117-1748
-  image_tag_client: 7.2.2024-0214-1356
+  image_tag_internal: 7.3.2024-0326-1428
+  image_tag_client: 7.3.2024-0326-1433
   # Specify the image tag for the documentation service.
   # Similar to 'image_tag', this refers to the docker image version for the docs service.
   image_tag_docs_internal: latest

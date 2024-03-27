@@ -74,7 +74,7 @@ spec:
             secretKeyRef:
               key: Password
               name: sql-config-editor
-        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-2/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag_internal }}
+        image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-3/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag_internal }}
         imagePullPolicy: Always
         name: config-editor
         ports:
