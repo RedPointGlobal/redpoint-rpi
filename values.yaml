@@ -52,7 +52,7 @@ appsettings:
     EnableSwagger: true 
     RPIAuthentication:
       UseTemporaryCredentials: false
-      UseCertificateFilePath: false 
+      UseCertificateFilePath: true 
       UseCertificateThumbprint: false
       CertificateThumprint: ""
       CertificateFilePath: "/var/azure/secrets/rpi-auth-cert.pfx"
