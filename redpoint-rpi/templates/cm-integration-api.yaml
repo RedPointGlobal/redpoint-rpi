@@ -15,7 +15,7 @@ data:
           "TokenSigningCredentials": {
             "UseTemporaryCredentials": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseTemporaryCredentials }},
             "UseCertificateThumbprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseCertificateThumbprint }},
-            "UseCertificateFilePath": "false",
+            "UseCertificateFilePath": false,
             "CertificateThumprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateThumprint | quote }},
             "CertificateFilePath": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePath | quote }},
             "CertificateFilePassword": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePassword | quote }}
