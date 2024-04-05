@@ -142,7 +142,7 @@ appsettings:
 
 
   executionservice:
-    EnableRPIAuthentication: false
+    EnableRPIAuthentication: true
     DisableHttpRedirect: true
     RPIExecution__QueueListener__IsEnabled: false 
     RPIExecution_MaxThreadsPerExecutionService: 50
@@ -150,7 +150,7 @@ appsettings:
 
 
   nodemanager:
-    EnableRPIAuthentication: false
+    EnableRPIAuthentication: true
     DisableHttpRedirect: true
 
   OpenIdProviders:
