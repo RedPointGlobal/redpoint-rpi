@@ -89,7 +89,7 @@ Configure the current context to use this namespace for subsequent commands
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
 
-4) Create Docker Registry Secret:
+4) Create Container Registry Secret:
 
 Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
 ```
