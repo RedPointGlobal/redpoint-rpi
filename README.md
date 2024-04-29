@@ -35,6 +35,10 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
   - A minimum of 100 GB free disk space per node.
   - Managed Kubernetes services like Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), or Google Kubernetes Engine (GKE).
 
+- TLS Certificate Files:
+  - A certificate (.crt) and certificate key (.key) file for Ingress TLS.
+  - A pfx file for RPI service-to-service authentication when running multiple replicas.
+
 ### Prerequisites
 Before installing RPI, ensure that the following requirements are met:
 
@@ -99,11 +103,24 @@ kubectl create secret docker-registry redpoint-rpi \
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/tls.cert and path/to/tls.key with the actual paths to your certificate files:
 ```
-kubectl create secret tls tls-secret \
+kubectl create secret tls ingress-tls \
 --namespace redpoint-rpi \
---cert=path/to/tls.cert \
---key=path/to/tls.key
+--cert=path/to/your_cert.cert \
+--key=path/to/your_cert.key
 
+```
+Create a Kubernetes secret containing your TLS pfx.
+```
+kubectl create secret generic rpi-auth-cert \
+--from-file=your_cert.pfx
+
+```
+Update the values.yaml file with your pfx password 
+```
+appsettings:
+  interactionapi:
+    RPIAuthentication:
+      CertificateFilePassword: "your pfx password"
 ```
 After completing the above steps, proceed with the installation:
 
