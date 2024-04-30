@@ -243,7 +243,7 @@ The resultant file contains details of the plugins in question, along with a ser
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our support site by clicking the link below
 
- [Redpoint Help Center](https://support.redpointglobal.com/hc/en-us/restricted?return_to=https%3A%2F%2Fsupport.redpointglobal.com%2Fhc%2Fen-us)
+ [Redpoint Help Center](https://docs.redpointglobal.com/rpi/)
 
 ### Support 
 If you encounter any challenges specific to the RPI application, our dedicated support team is here to assist you. Please reach out to us with details of the issue for prompt and expert help.
