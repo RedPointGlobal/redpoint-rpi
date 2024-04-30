@@ -1,4 +1,4 @@
-![rg1_SMALL](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/82840420-4b88-473c-99d6-e5cef130d17c)
+![rpg_logo](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/72699780-f0f1-4ead-872e-f78f86519249)
 ## Redpoint Interaction (RPI) | Deployment on Kubernetes
 With RedPoint Interaction™ you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
 
