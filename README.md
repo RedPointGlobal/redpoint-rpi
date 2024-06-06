@@ -195,8 +195,6 @@ global:
   replicaCount: 3  # Set the number of replicas for each service
 
 ```
-```NOTE``` As of the current release, the Integration API service does not support high availability (HA). Therefore, you should maintain only a single replica of this service to avoid unexpected errors and behavior. We plan to address this limitation in a future release, enabling HA for the Integration API service as well."
-
 ### RPI Storage
 RPI requires the following for it's Storage requirements
 
