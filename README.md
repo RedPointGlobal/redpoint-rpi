@@ -187,7 +187,7 @@ At this point, the default installation is complete and you are ready to add you
 ### High Availability
 The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
 
-To achieve high availability, adjust the number of replicas for each service to 2 or more. This ensures that in the event of a node failure, another replica can continue providing service without interruption. However, it's important to have at least two or more worker nodes in your Kubernetes cluster to allow pods to run on separate nodes, enhancing reliability. Additionally, the cluster admin could also create a Horizontal Pod Autoscaler (HPA) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. This not only maintains high availability but also optimizes resource usage by scaling the number of replicas dynamically according to the workload.
+To achieve high availability, adjust the number of replicas for each service to 2 or more. Additionally, the cluster admin could also create a [Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. This not only maintains high availability but also optimizes resource usage by scaling the number of replicas dynamically according to the workload.
 
 Here’s how you can set the replica count in the ```values.yaml``` file:
 ```
