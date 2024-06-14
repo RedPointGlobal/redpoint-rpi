@@ -231,8 +231,6 @@ spec:
         volumeMounts:
           - name: rpi-interactionapi
             mountPath: /app/appsettings
-          - name: rpi-auth-cert
-            mountPath: /var/azure/secrets
           {{- if .Values.appsettings.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
@@ -242,9 +240,6 @@ spec:
         - name: rpi-interactionapi
           configMap:
             name: cm-rpi-interactionapi
-        - name: rpi-auth-cert
-          secret:
-            secretName: rpi-auth-cert
         {{- if .Values.appsettings.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
