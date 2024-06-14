@@ -35,7 +35,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
   - A minimum of 100 GB free disk space per node.
   - Managed Kubernetes services like Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), or Google Kubernetes Engine (GKE).
 
-If you don't have an existing Kubernetes cluster, take a look at the ```./kubernetes/``` directory. It includes official cloud provider quickstart guides for deploying Kubernetes using Terraform.
+**If you don't have an existing Kubernetes cluster, take a look at the ```./kubernetes/``` directory. It includes official cloud provider quickstart guides for deploying Kubernetes using Terraform.**
 
 - TLS Certificate Files:
   - A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key.
