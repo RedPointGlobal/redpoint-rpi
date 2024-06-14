@@ -45,7 +45,7 @@ Before installing RPI, ensure that the following requirements are met:
 1. You have access to your Kubernetes..
 2. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
 
-```While this guide defaults to a deployment on Microsoft Azure. It's also compatible with Amazon Web Services (AWS) and Google Cloud Platform (GCP). Ensure you select the appropriate cloud provider in the values.yaml file before proceeding with the installation. This setting can be found in the global section of values.yaml```
+```While this guide assumes Microsoft Azure as the deployment platform. It's also compatible with Amazon Web Services (AWS) and Google Cloud Platform (GCP). Ensure you select the appropriate cloud provider in the values.yaml file before proceeding with the installation. This setting can be found in the global section of values.yaml```
 
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
