@@ -50,7 +50,7 @@ Before installing RPI, ensure that the following requirements are met:
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
 
-1) Configure SQL Server Settings:
+**1)** Configure SQL Server Settings:
 
 Ensure you have correctly configured the SQL Server details in the ```Configeditor``` section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
 ```
@@ -66,13 +66,13 @@ By enabling ```EnableDemoSQLServer```, you can skip configuring the SQL Server s
 ```
 **Note:** This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in the first section.
 
-2) Select the target Cloud Platform:
+**2)** Select the target Cloud Platform:
 
 In the ```values.yaml``` file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
 ```
   cloudProvider: azure
 ```
-3) Create Kubernetes Namespace:
+**3)** Create Kubernetes Namespace:
 
 Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
 ```
@@ -84,7 +84,7 @@ Configure the current context to use this namespace for subsequent commands
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
 
-4) Create the Container Registry Secret:
+**4)** Create the Container Registry Secret:
 
 Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
 ```
@@ -94,7 +94,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=<your_username> \
 --docker-password=<your_password>
 ```
-5) Create the TLS Certificate Secrets:
+**5)** Create the TLS Certificate Secrets:
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
