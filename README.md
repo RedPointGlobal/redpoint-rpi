@@ -64,7 +64,7 @@ By enabling ```EnableDemoSQLServer```, you can skip configuring the SQL Server s
   configeditor:
     EnableDemoSQLServer: true
 ```
-Note: This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in the first section.
+**Note:** This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in the first section.
 
 2) Select Cloud Provider:
 
