@@ -17,7 +17,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Support](#support)
 
 ### System Requirements
-- SQL Server for RPI Operational Databases:
+- **SQL Server for RPI Operational Databases:**
     - Version: 2019 or later
     - 8 GB Memory or more
     - 256 GB or more free disk space.
@@ -27,15 +27,9 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
        - Google Cloud SQL for SQL Server 
        - Microsoft SQL Server on virtual machine or bare metal
 
-- Kubernetes Cluster:
+- **Kubernetes Cluster:**
 
-  - Use the latest stable version of Kubernetes for compatibility and security.
-  - Minimum of 2 nodes for high availability.
-  - Each node should have at least 8 vCPUs and 16 GB of memory.
-  - A minimum of 100 GB free disk space per node.
-  - Managed Kubernetes services like Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), or Google Kubernetes Engine (GKE).
-
-**If you don't have an existing Kubernetes cluster, take a look at the ```./kubernetes/``` directory. It includes official cloud provider quickstart guides for deploying Kubernetes using Terraform.**
+  - Use the latest stable version of Kubernetes. This can be self-hosted or Managed such as Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), or Google Kubernetes Engine (GKE). If you don't have an existing Kubernetes cluster, take a look at the ```./kubernetes/``` directory. It includes official cloud provider quickstart guides for 
 
 - TLS Certificate Files:
   - A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key.
