@@ -28,7 +28,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
        - Microsoft SQL Server on virtual machine or bare metal
 
 - **Kubernetes Cluster:**
-Use the latest stable version of Kubernetes. This can be self-hosted or Managed such as Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), or Google Kubernetes Engine (GKE). If you don't have an existing Kubernetes cluster, take a look at the ```./kubernetes/``` directory. It includes official cloud provider quickstart guides for 
+Ensure you use the latest stable version of Kubernetes, which can be either self-hosted or managed. Managed options include Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), and Google Kubernetes Engine (GKE). If you don't already have a Kubernetes cluster, refer to the ./kubernetes/ directory. This directory contains official quickstart guides for the managed options.
 
 - **TLS Certificate Files:**
 A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key.
