@@ -1,3 +1,3 @@
-## Quickstart: Create a GKE cluster and deploy a workload using Terraform
+## Quickstart: Create a GKE cluster using Terraform
 
 https://cloud.google.com/kubernetes-engine/docs/quickstarts/create-cluster-using-terraform
