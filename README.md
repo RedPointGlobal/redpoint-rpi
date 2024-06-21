@@ -162,6 +162,7 @@ After receiving your activation key from Redpoint Support, you can activate your
 
 ![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/a75f0e1f-cf3f-4900-b2ef-922c6feaa8b0)
 
+
 ![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/ed78c121-4ac6-40e2-9d54-e4851b78e0d2)
 
 At this point, the default installation is complete and you are ready to add your first RPI tenant. 
