@@ -223,7 +223,7 @@ The resultant file contains details of the plugins in question, along with a ser
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our documentation site by clicking the link below
 
- [Redpoint Help Center](https://docs.redpointglobal.com/rpi/)
+ [Redpoint Documentation Site ](https://docs.redpointglobal.com/rpi/)
 
 ### Support 
 If you encounter any challenges specific to the RPI application, our dedicated support team is here to assist you. Please reach out to us with details of the issue for prompt and expert help.
