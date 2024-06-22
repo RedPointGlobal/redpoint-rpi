@@ -160,10 +160,9 @@ After receiving your activation key from Redpoint Support, you can activate your
 
 - Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
 
-![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/a75f0e1f-cf3f-4900-b2ef-922c6feaa8b0)
+![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/c75433f0-7e65-45f6-841e-8c6bf51b3f71)
 
-
-![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/ed78c121-4ac6-40e2-9d54-e4851b78e0d2)
+![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/cc407181-162a-4860-b191-4f7c6746720e)
 
 At this point, the default installation is complete and you are ready to add your first RPI tenant. 
 
