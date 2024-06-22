@@ -160,7 +160,7 @@ After receiving your activation key from Redpoint Support, you can activate your
 
 - Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
 
-![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/c75433f0-7e65-45f6-841e-8c6bf51b3f71)
+![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/9947e054-b527-434c-8c44-ac551b560a3f)
 
 ![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/cc407181-162a-4860-b191-4f7c6746720e)
 
