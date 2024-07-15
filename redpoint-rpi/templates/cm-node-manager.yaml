@@ -7,7 +7,7 @@ data:
   appsettings.overrides.json: |
     {
       "Authentication": {
-        "EnableRPIAuthentication": {{ .Values.appsettings.nodemanager.EnableRPIAuthentication }},
+        "EnableRPIAuthentication": true,
         "OpenIdProviders": [
           {
             "Name": {{ .Values.appsettings.OpenIdProviders.Name | quote }},
@@ -23,6 +23,6 @@ data:
           }
         ]
       },
-      "DisableHttpRedirect": {{ .Values.appsettings.nodemanager.DisableHttpRedirect }}
+      "DisableHttpRedirect": true
     }
 

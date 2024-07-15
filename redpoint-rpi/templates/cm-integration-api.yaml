@@ -7,19 +7,11 @@ data:
   appsettings.overrides.json: |
     {
       "Authentication": {
-        "EnableRPIAuthentication": {{ .Values.appsettings.interactionapi.EnableRPIAuthentication }},
+        "EnableRPIAuthentication": true,
         "RPIAuthentication": {
           "AuthorizationHost": "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}",
           "AuthMetaHttpHost": "http://rpi-integrationapi",
-          "EnableTransportSecurityRequirement": false,
-          "TokenSigningCredentials": {
-            "UseTemporaryCredentials": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseTemporaryCredentials }},
-            "UseCertificateThumbprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseCertificateThumbprint }},
-            "UseCertificateFilePath": {{ .Values.appsettings.interactionapi.RPIAuthentication.UseCertificateFilePath }},
-            "CertificateThumprint": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateThumprint | quote }},
-            "CertificateFilePath": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePath | quote }},
-            "CertificateFilePassword": {{ .Values.appsettings.interactionapi.RPIAuthentication.CertificateFilePassword | quote }}
-          }
+          "EnableTransportSecurityRequirement": false
         },
         "OpenIdProviders": [
           {
@@ -36,7 +28,7 @@ data:
           }
         ]
       },
-      "EnableSwagger": {{ .Values.appsettings.interactionapi.EnableSwagger }}
+      "EnableSwagger": true
     }
 
 

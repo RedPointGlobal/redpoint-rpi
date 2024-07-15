@@ -13,18 +13,16 @@ global:
 
   # Specify the image tag for the main application.
   # This tag refers to a specific version of the docker image to be deployed.
-  image_tag_internal: 7.3.2024-0328-0232
-  image_tag_client: 7.3.2024-0429-1428
+  image_tag_internal: 7.3.2024-0703-1351
+  image_tag_client: 7.3.2024-0703-1351
   # Specify the image tag for the documentation service.
   # Similar to 'image_tag', this refers to the docker image version for the docs service.
-  image_tag_docs_internal: latest
-  image_tag_docs_client: latest
 
   # Select the cloud provider where the infrastructure is hosted.
   # Options include 'azure', 'google', or 'amazon'.
   # This setting may influence certain cloud-specific configurations.
-  cloudProvider: azure
-  # Define the deployment type..
+  cloudProvider: azure # amazon
+  # Define the deployment type.
   # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
   # This may affect access controls and available features.
   deploymentType: client
@@ -48,16 +46,6 @@ global:
 
 appsettings:
   interactionapi:
-    EnableRPIAuthentication: true 
-    EnableSwagger: true 
-    RPIAuthentication:
-      UseTemporaryCredentials: false
-      UseCertificateFilePath: true 
-      UseCertificateThumbprint: false
-      CertificateThumprint: ""
-      CertificateFilePath: "/var/azure/secrets/rpi-auth-cert.pfx"
-      CertificateFilePassword: "rdpntcom_2023"
-    EnableSwagger: true 
 
   configeditor:
     EnableDemoSQLServer: true
@@ -93,14 +81,39 @@ appsettings:
       # Similar to the Logging database, this string should be configured to match the specific requirements of the Operational database.
       ConnectionStrings_OperationalDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 
-  integrationapi:
-    # Enable or disable RPI authentication
-    EnableRPIAuthentication: true
-
-    # Disable HTTP redirect for integration API
-    DisableHttpRedirect: true
-
   realtime:
+    rpiClientID: "1111111-1111-1111-1111-1111111111"
+    rpiAuthToken: "03eda994-5d39-4886-99df-9ccafd40a181"
+    enableHelpPages: true 
+    enableEventListening: true
+    realtimeProcessingEnabled: true
+    decisionCacheDuration: 60
+    enableAuditMetricsInHeaders: true
+    cacheOutputQueueEnabled: true
+    
+    amazon:
+      accessKey: <your_aws_iam_access_key>
+      secretKey: <your_aws_iam_secret_access_key>
+      region: us-east-1
+      mongoConnectionString: mongodb+srv://<username>:<password>@<your mongo server fqdn>?retryWrites=true
+      mongoDatabaseName: realtime_db
+      mongoCollectionName: realtime_cache
+
+    azure:
+      eventHubName: <your_event_hub_name>
+      eventHubConnectionString: <your_event_hub_connectionstring>
+      mongoConnectionString: mongodb+srv://<username>:<password>@<your mongo server fqdn>?retryWrites=true
+      mongoDatabaseName: realtime_db
+      mongoCollectionName: realtime_cache
+
+    queue_names:
+      formQueuePath: rpiwebformsubmission
+      eventsQueuePath: rpiwebevents
+      cacheOutputQueuePath: rpiwebcachedata
+      recommendationsQueuePath: rpiwebrecommendation
+      listenerQueuePath: rpiqueuelistener
+
+
     caches:
       # Specify the connection string for MongoDB.
       # This string is essential for establishing a connection to the MongoDB instance used for caching in real-time operations.
@@ -142,16 +155,9 @@ appsettings:
 
 
   executionservice:
-    EnableRPIAuthentication: true
-    DisableHttpRedirect: true
     RPIExecution__QueueListener__IsEnabled: false 
     RPIExecution_MaxThreadsPerExecutionService: 50
     RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
-
-
-  nodemanager:
-    EnableRPIAuthentication: true
-    DisableHttpRedirect: true
 
   OpenIdProviders:
     # Host for OpenID Connect Metadata
