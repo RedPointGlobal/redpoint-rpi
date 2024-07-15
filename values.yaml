@@ -21,7 +21,7 @@ global:
   # Select the cloud provider where the infrastructure is hosted.
   # Options include 'azure', 'google', or 'amazon'.
   # This setting may influence certain cloud-specific configurations.
-  cloudProvider: azure # amazon
+  cloudProvider: azure 
   # Define the deployment type.
   # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
   # This may affect access controls and available features.

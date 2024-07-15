@@ -21,11 +21,11 @@ data:
             },
             {{- if eq .Values.global.cloudProvider "azure" }}
             "Queues": {
-                "FormQueuePath": "rpiwebformsubmission",
-                "EventsQueuePath": "rpiwebevents",
+                "FormQueuePath": {{ .Values.appsettings.realtime.queue_names.formQueuePath | quote }},
+                "EventsQueuePath": {{ .Values.appsettings.realtime.queue_names.eventsQueuePath | quote }},
                 "CacheOutputQueueEnabled": true,
-                "CacheOutputQueuePath": "rpiwebcachedata",
-                "RecommendationsQueuePath": "rpiwebrecommendation",
+                "CacheOutputQueuePath": {{ .Values.appsettings.realtime.queue_names.cacheOutputQueuePath | quote }},
+                "RecommendationsQueuePath": {{ .Values.appsettings.realtime.queue_names.recommendationsQueuePath | quote }},
                 "ClientQueueSettings": {
                     "Assembly": "RedPoint.Azure.Server",
                     "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
@@ -48,7 +48,7 @@ data:
                         }
                     ]
                 },
-                "ListenerQueuePath": "rpiqueuelistener",
+                "ListenerQueuePath": {{ .Values.appsettings.realtime.queue_names.listenerQueuePath | quote }},
                 "ListenerQueueSettings": {
                     "Assembly": "RedPoint.Resonance.AzureEventHubsAccess",
                     "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
@@ -101,11 +101,11 @@ data:
             {{- end }}
             {{- if eq .Values.global.cloudProvider "amazon" }}
             "Queues": {
-                "FormQueuePath": {{ .Values.appsettings.queue_names.formQueuePath | quote }},
-                "EventsQueuePath": {{ .Values.appsettings.queue_names.eventsQueuePath | quote }},
+                "FormQueuePath": {{ .Values.appsettings.realtime.queue_names.formQueuePath | quote }},
+                "EventsQueuePath": {{ .Values.appsettings.realtime.queue_names.eventsQueuePath | quote }},
                 "CacheOutputQueueEnabled": true,
-                "CacheOutputQueuePath": {{ .Values.appsettings.queue_names.cacheOutputQueuePath | quote }},
-                "RecommendationsQueuePath": {{ .Values.appsettings.queue_names.recommendationsQueuePath | quote }},
+                "CacheOutputQueuePath": {{ .Values.appsettings.realtime.queue_names.cacheOutputQueuePath | quote }},
+                "RecommendationsQueuePath": {{ .Values.appsettings.realtime.queue_names.recommendationsQueuePath | quote }},
                 "ClientQueueSettings": {
                     "Assembly": "RedPoint.Resonance.AWSQueueAccess",
                     "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
@@ -128,7 +128,7 @@ data:
                         }
                     ]
                 },
-                "ListenerQueuePath": {{ .Values.appsettings.queue_names.listenerQueuePath | quote }},
+                "ListenerQueuePath": {{ .Values.appsettings.realtime.queue_names.listenerQueuePath | quote }},
                 "ListenerQueueSettings": {
                     "Assembly": "RedPoint.Resonance.AWSQueueAccess",
                     "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
