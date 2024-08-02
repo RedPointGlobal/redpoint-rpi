@@ -18,18 +18,10 @@ global:
   # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
   deploymentType: client
   imagePullPolicy: Always
-  nodeSelector: {}
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
-  # In this case, 'app: {{ .Values.global.nodeSelector.app }}' label is used to ensure RPI is deployed on nodes labeled for Redpoint RPI.
-  # This can be particularly useful for directing RPI to specific types of hardware or nodes with certain capabilities.
-#    app: redpoint-rpi
+  nodeSelector: {}
+  # tolerations ensures that RPI is deployed on nodes specifically designated for Redpoint RPI,
   tolerations: {}
-  # Tolerations are used in Kubernetes to allow (or 'tolerate') pods to be scheduled on nodes with matching taints.
-  # They are key to ensuring that pods are deployed on appropriate nodes.
-  # Here, the toleration is set to allow the RPI to be scheduled on nodes with a taint of 'app: {{ .Values.global.nodeSelector.app }}'.
-  # The effect 'NoSchedule' indicates that the RPI should not be scheduled on nodes without this specific taint.
-  # This configuration ensures that RPI is deployed on nodes specifically designated for Redpoint RPI,
-  # possibly for reasons such as specific hardware, security policies, or network configurations.
 #    - effect: NoSchedule
 #      key: app
 #      operator: Equal
