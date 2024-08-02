@@ -98,10 +98,14 @@ kubectl create secret docker-registry redpoint-rpi \
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
+CERT_FILE=cert.crt
+KEY_FILE=cert.key
+NAMESPACE=redpoint-rpi
+
 kubectl create secret tls ingress-tls \
---namespace redpoint-rpi \
---cert=path/to/your_cert.crt \
---key=path/to/your_cert.key
+--namespace $NAMESPACE \
+--cert=$CERT_FILE \
+--key=$KEY_FILE
 
 ```
 After completing the above steps, proceed with the installation:
