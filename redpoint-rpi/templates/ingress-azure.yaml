@@ -1,4 +1,4 @@
-{{- if eq .Values.global.deploymentType "internal" }}
+{{- if eq .Values.ingress.cloud "amazon" }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
 rules:
 - apiGroups:
@@ -89,7 +89,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
   namespace: {{ .Values.global.namespace }}
 rules:
@@ -195,7 +195,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
   namespace: {{ .Values.global.namespace }}
 roleRef:
@@ -215,7 +215,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
   namespace: {{ .Values.global.namespace }}
 roleRef:
@@ -234,7 +234,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-config
@@ -248,7 +248,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: tcp-services
@@ -262,7 +262,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: {{ .Values.global.namespace }}
@@ -276,7 +276,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: ingress-nginx-controller
@@ -299,7 +299,7 @@ spec:
       dnsPolicy: ClusterFirst
       containers:
         - name: controller
-          image: rpspeastus2acr.azurecr.io/docker/cloudengineering/ingress-nginx/controller:1.9.3
+          image: registry.k8s.io/ingress-nginx/controller:v1.11.1@sha256:e6439a12b52076965928e83b7b56aae6731231677b01e81818bce7fa5c60161a
           imagePullPolicy: Always
           lifecycle:
             preStop:
@@ -385,7 +385,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-{{ .Values.global.namespace }}
@@ -419,7 +419,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-{{ .Values.global.namespace }}
@@ -469,16 +469,6 @@ spec:
               name: rpi-integrationapi
               port:
                 number: 80
-    - host: rpihelpdocs.rg1cloud.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-helpdocs
-              port:
-                number: 80
     - host: rpirealtime.rg1cloud.com
       http:
         paths:
@@ -510,7 +500,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
 rules:
 - apiGroups:
@@ -593,7 +583,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
   namespace: {{ .Values.global.namespace }}
 rules:
@@ -699,7 +689,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
   namespace: {{ .Values.global.namespace }}
 roleRef:
@@ -719,7 +709,7 @@ metadata:
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
   name: nginx-{{ .Values.global.namespace }}
   namespace: {{ .Values.global.namespace }}
 roleRef:
@@ -738,7 +728,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-config
@@ -752,7 +742,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: tcp-services
@@ -766,7 +756,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: {{ .Values.global.namespace }}
@@ -780,7 +770,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: ingress-nginx-controller
@@ -803,7 +793,7 @@ spec:
       dnsPolicy: ClusterFirst
       containers:
         - name: controller
-          image: registry.k8s.io/ingress-nginx/controller:v1.9.3@sha256:8fd21d59428507671ce0fb47f818b1d859c92d2ad07bb7c947268d433030ba98
+          image: registry.k8s.io/ingress-nginx/controller:v1.11.1@sha256:e6439a12b52076965928e83b7b56aae6731231677b01e81818bce7fa5c60161a
           imagePullPolicy: Always
           lifecycle:
             preStop:
@@ -890,7 +880,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-{{ .Values.global.namespace }}
@@ -924,7 +914,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.9.3
+    app.kubernetes.io/version: 1.11.1
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: nginx-{{ .Values.global.namespace }}
@@ -972,16 +962,6 @@ spec:
           backend:
             service:
               name: rpi-integrationapi
-              port:
-                number: 80
-    - host: {{ .Values.ingress.hosts.helpdocs }}.{{ .Values.ingress.domain }}
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-helpdocs
               port:
                 number: 80
     - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}

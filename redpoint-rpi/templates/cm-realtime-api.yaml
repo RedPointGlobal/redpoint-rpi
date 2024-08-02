@@ -6,216 +6,183 @@ metadata:
 data:
   appsettings.overrides.json: |-
     {
-        "RealtimeAPIConfiguration": {
-            "AppSettings": {
-                "RealtimeAgentInProcessEnabled": true,
-                "RealtimeAgentAddress": "",
-                "RealtimeAgentAuthToken": "{{ .Values.appsettings.realtime.rpiAuthToken }}",
-                "EnableHelpPages": {{ .Values.appsettings.realtime.enableHelpPages }},
-                "DecisionCacheDuration": {{ .Values.appsettings.realtime.decisionCacheDuration }},
-                "RPIClientID": "{{ .Values.appsettings.realtime.rpiClientID }}",
-                "RPIAuthToken": "{{ .Values.appsettings.realtime.rpiAuthToken }}",
-                "RedPointMLServiceAddress": "",
-                "EnableAuditMetricsInHeaders": {{ .Values.appsettings.realtime.enableAuditMetricsInHeaders }},
-                "EnableEventListening": {{ .Values.appsettings.realtime.enableEventListening }}
-            },
-            {{- if eq .Values.global.cloudProvider "azure" }}
-            "Queues": {
-                "FormQueuePath": {{ .Values.appsettings.realtime.queue_names.formQueuePath | quote }},
-                "EventsQueuePath": {{ .Values.appsettings.realtime.queue_names.eventsQueuePath | quote }},
-                "CacheOutputQueueEnabled": true,
-                "CacheOutputQueuePath": {{ .Values.appsettings.realtime.queue_names.cacheOutputQueuePath | quote }},
-                "RecommendationsQueuePath": {{ .Values.appsettings.realtime.queue_names.recommendationsQueuePath | quote }},
-                "ClientQueueSettings": {
-                    "Assembly": "RedPoint.Azure.Server",
-                    "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
-                    "Settings": [
-                        {
-                            "Key": "EventHubName",
-                            "Value": {{ .Values.appsettings.realtime.azure.eventHubName | quote }}
-                        },
-                        {
-                            "Key": "EventHubConnectionString",
-                            "Value": {{ .Values.appsettings.realtime.azure.eventHubConnectionString | quote }}
-                        },
-                        {
-                            "Key": "SendVisibilityTimeout",
-                            "Value": "1"
-                        },
-                        {
-                            "Key": "ReceiveVisibilityTimeout",
-                            "Value": "1"
-                        }
-                    ]
-                },
-                "ListenerQueuePath": {{ .Values.appsettings.realtime.queue_names.listenerQueuePath | quote }},
-                "ListenerQueueSettings": {
-                    "Assembly": "RedPoint.Resonance.AzureEventHubsAccess",
-                    "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
-                    "Settings": [
-                        {
-                            "Key": "EventHubName",
-                            "Value": {{ .Values.appsettings.realtime.azure.eventHubName | quote }}
-                        },
-                        {
-                            "Key": "EventHubConnectionString",
-                            "Value": {{ .Values.appsettings.realtime.azure.eventHubConnectionString | quote }}
-                        },
-                        {
-                            "Key": "SendVisibilityTimeout",
-                            "Value": "1"
-                        },
-                        {
-                            "Key": "ReceiveVisibilityTimeout",
-                            "Value": "1"
-                        }
-                    ]
-                }
-            },
-            "CacheSettings": {
-                "Caches": [
-                    {
-                        "Name": "MongoPrimary",
-                        "Assembly": "RedPoint.Resonance.MongoDBCache",
-                        "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
-                        "Settings": [
-                            {
-                                "Key": "Database",
-                                "Value": {{ .Values.appsettings.realtime.azure.mongoDatabaseName | quote }},
-                                "Values": null
-                            },
-                            {
-                                "Key": "ConnectionString",
-                                "Value": {{ .Values.appsettings.realtime.azure.mongoConnectionString | quote }},
-                                "Values": null
-                            },
-                            {
-                                "Key": "CollectionName",
-                                "Value": {{ .Values.appsettings.realtime.azure.mongoCollectionName | quote }},
-                                "Values": null
-                            }
-                        ]
-                    }
-                ]
-            },
-            {{- end }}
-            {{- if eq .Values.global.cloudProvider "amazon" }}
-            "Queues": {
-                "FormQueuePath": {{ .Values.appsettings.realtime.queue_names.formQueuePath | quote }},
-                "EventsQueuePath": {{ .Values.appsettings.realtime.queue_names.eventsQueuePath | quote }},
-                "CacheOutputQueueEnabled": true,
-                "CacheOutputQueuePath": {{ .Values.appsettings.realtime.queue_names.cacheOutputQueuePath | quote }},
-                "RecommendationsQueuePath": {{ .Values.appsettings.realtime.queue_names.recommendationsQueuePath | quote }},
-                "ClientQueueSettings": {
-                    "Assembly": "RedPoint.Resonance.AWSQueueAccess",
-                    "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
-                    "Settings": [
-                        {
-                            "Key": "AccessKey",
-                            "Value": {{ .Values.appsettings.realtime.amazon.accessKey | quote }}
-                        },
-                        {
-                            "Key": "SecretKey",
-                            "Value": {{ .Values.appsettings.realtime.amazon.secretKey | quote }}
-                        },
-                        {
-                            "Key": "RegionEndpoint",
-                            "Value": {{ .Values.appsettings.realtime.amazon.region | quote }}
-                        },
-                        {
-                            "Key": "ReceiveVisibilityTimeout",
-                            "Value": "1"
-                        }
-                    ]
-                },
-                "ListenerQueuePath": {{ .Values.appsettings.realtime.queue_names.listenerQueuePath | quote }},
-                "ListenerQueueSettings": {
-                    "Assembly": "RedPoint.Resonance.AWSQueueAccess",
-                    "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
-                    "Settings": [
-                        {
-                            "Key": "AccessKey",
-                            "Value": {{ .Values.appsettings.realtime.amazon.accessKey | quote }}
-                        },
-                        {
-                            "Key": "SecretKey",
-                            "Value": {{ .Values.appsettings.realtime.amazon.secretKey | quote }}
-                        },
-                        {
-                            "Key": "RegionEndpoint",
-                            "Value": {{ .Values.appsettings.realtime.amazon.region | quote }}
-                        },
-                        {
-                            "Key": "ReceiveVisibilityTimeout",
-                            "Value": "1"
-                        }
-                    ]
-                }
-            },
-            "CacheSettings": {
-                "Caches": [
-                    {
-                        "Name": "MongoPrimary",
-                        "Assembly": "RedPoint.Resonance.MongoDBCache",
-                        "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
-                        "Settings": [
-                            {
-                                "Key": "Database",
-                                "Value": {{ .Values.appsettings.realtime.amazon.mongoDatabaseName | quote }}
-                            },
-                            {
-                                "Key": "ConnectionString",
-                                "Value": {{ .Values.appsettings.realtime.amazon.mongoConnectionString | quote }},
-                            },
-                            {
-                                "Key": "CollectionName",
-                                "Value": {{ .Values.appsettings.realtime.amazon.mongoCollectionName | quote }},
-                            }
-                        ]
-                    }
-                ]
-            },
-            {{- end }}
-            "DataMaps": [
-                {
-                    "Type": "Visitor Profile",
-                    "Cache": "MongoPrimary",
-                    "DaysToPersist": 200,
-                    "CompressData": false
-                },
-                {
-                    "Type": "Visitor History",
-                    "Cache": "MongoPrimary",
-                    "DaysToPersist": 365,
-                    "CompressData": false
-                },
-                {
-                    "Type": "Non Visitor Data",
-                    "Cache": "MongoPrimary",
-                    "DaysToPersist": 365
-                },
-                {
-                    "Type": "Product Recommendations",
-                    "Cache": "MongoPrimary",
-                    "DaysToPersist": 365
-                }
+      "RealtimeAPIConfiguration": {
+        "AppSettings": {
+          "RealtimeAgentInProcessEnabled": true,
+          "RealtimeAgentAuthToken": "{{ .Values.appsettings.realtime.rpiAuthToken }}",
+          "EnableHelpPages": {{ .Values.appsettings.realtime.enableHelpPages }},
+          "DecisionCacheDuration": {{ .Values.appsettings.realtime.decisionCacheDuration }},
+          "RPIClientID": "{{ .Values.appsettings.realtime.rpiClientID }}",
+          "RPIAuthToken": "{{ .Values.appsettings.realtime.rpiAuthToken }}",
+          "EnableAuditMetricsInHeaders": {{ .Values.appsettings.realtime.enableAuditMetricsInHeaders }},
+          "EnableEventListening": {{ .Values.appsettings.realtime.enableEventListening }}
+        },
+        {{- if eq .Values.appsettings.realtime.queueProvider.type "eventhub" }}
+        "Queues": {
+          "FormQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.formQueuePath | quote }},
+          "EventsQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.eventsQueuePath | quote }},
+          "CacheOutputQueueEnabled": true,
+          "CacheOutputQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.cacheOutputQueuePath | quote }},
+          "RecommendationsQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.recommendationsQueuePath | quote }},
+          "ClientQueueSettings": {
+            "Assembly": "RedPoint.Azure.Server",
+            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+            "Settings": [
+              {
+                "Key": "EventHubName",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.eventHub.eventHubName | quote }}
+              },
+              {
+                "Key": "EventHubConnectionString",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.eventHub.connectionString | quote }}
+              }
             ]
+          },
+          "ListenerQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.listenerQueuePath | quote }},
+          "ListenerQueueSettings": {
+            "Assembly": "RedPoint.Resonance.AzureEventHubsAccess",
+            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+            "Settings": [
+              {
+                "Key": "EventHubName",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.eventHub.eventHubName | quote }}
+              },
+              {
+                "Key": "EventHubConnectionString",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.eventHub.connectionString | quote }}
+              }
+            ]
+          }
         },
-        "Logging": {
-            "IncludeScopes": false,
-            "LogLevel": {
-                "Default": "Error"
-            },
-            "Database": {
-                "LogLevel": {
-                    "Default": "Error"
+        {{- end }}
+        {{- if eq .Values.appsettings.realtime.queueProvider.type "sqs" }}
+        "Queues": {
+          "FormQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.formQueuePath | quote }},
+          "EventsQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.eventsQueuePath | quote }},
+          "CacheOutputQueueEnabled": true,
+          "CacheOutputQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.cacheOutputQueuePath | quote }},
+          "RecommendationsQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.recommendationsQueuePath | quote }},
+          "ClientQueueSettings": {
+            "Assembly": "RedPoint.Resonance.AWSQueueAccess",
+            "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
+            "Settings": [
+              {
+                "Key": "AccessKey",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.sqs.accessKey | quote }}
+              },
+              {
+                "Key": "SecretKey",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.sqs.secretKey | quote }}
+              },
+              {
+                "Key": "RegionEndpoint",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.sqs.regionEndpoint | quote }}
+              }
+            ]
+          },
+          "ListenerQueuePath": {{ .Values.appsettings.realtime.queueProvider.queueNames.listenerQueuePath | quote }},
+          "ListenerQueueSettings": {
+            "Assembly": "RedPoint.Resonance.AWSQueueAccess",
+            "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
+            "Settings": [
+              {
+                "Key": "AccessKey",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.sqs.accessKey | quote }}
+              },
+              {
+                "Key": "SecretKey",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.sqs.secretKey | quote }}
+              },
+              {
+                "Key": "RegionEndpoint",
+                "Value": {{ .Values.appsettings.realtime.queueProvider.sqs.regionEndpoint | quote }}
+              }
+            ]
+          }
+        },
+        {{- end }}
+        {{- if eq .Values.appsettings.realtime.cacheProvider.type "mongodb" }}
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "MongoPrimary",
+              "Assembly": "RedPoint.Resonance.MongoDBCache",
+              "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
+              "Settings": [
+                {
+                  "Key": "Database",
+                  "Value": {{ .Values.appsettings.realtime.cacheProvider.mongodb.databaseName | quote }}
                 },
-                "RPITrace": "Error",
-                "RPIError": "Error"
+                {
+                  "Key": "ConnectionString",
+                  "Value": {{ .Values.appsettings.realtime.cacheProvider.mongodb.ConnectionString | quote }}
+                },
+                {
+                  "Key": "CollectionName",
+                  "Value": {{ .Values.appsettings.realtime.cacheProvider.mongodb.CollectionName | quote }}
+                }
+              ]
             }
+          ]
         },
-        "Authentication": {
-            "DisableHttpRedirect": true,
-            "EnableOAuth": false
+        {{- end }}
+        {{- if eq .Values.appsettings.realtime.cacheProvider.type "redis" }}
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "Redis",
+              "Assembly": "RedPoint.Resonance.RedisCache",
+              "Class": "RedPoint.Resonance.RedisCache.RedisCacheHandler",
+              "Settings": [
+                {
+                  "Key": "IPAddress",
+                  "Value": {{ .Values.appsettings.realtime.cacheProvider.redis.hostName | quote }}
+                }
+              ]
+            }
+          ]
+        },
+        {{- end }}
+        "DataMaps": [
+          {
+            "Type": "Visitor Profile",
+            "Cache": "MongoPrimary",
+            "DaysToPersist": 200,
+            "CompressData": false
+          },
+          {
+            "Type": "Visitor History",
+            "Cache": "MongoPrimary",
+            "DaysToPersist": 365,
+            "CompressData": false
+          },
+          {
+            "Type": "Non Visitor Data",
+            "Cache": "MongoPrimary",
+            "DaysToPersist": 365
+          },
+          {
+            "Type": "Product Recommendations",
+            "Cache": "MongoPrimary",
+            "DaysToPersist": 365
+          }
+        ]
+      },
+      "Logging": {
+        "IncludeScopes": false,
+        "LogLevel": {
+          "Default": "Error"
+        },
+        "Database": {
+          "LogLevel": {
+            "Default": "Error"
+          },
+          "RPITrace": "Error",
+          "RPIError": "Error"
         }
+      },
+      "Authentication": {
+        "DisableHttpRedirect": true,
+        "EnableOAuth": false
+      }
     }

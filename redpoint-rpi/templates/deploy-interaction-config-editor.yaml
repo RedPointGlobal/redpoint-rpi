@@ -54,26 +54,6 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseType
-          valueFrom:
-            secretKeyRef:
-              key: DatabaseType
-              name: sql-config-editor
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
-          valueFrom:
-            secretKeyRef:
-              key: Server
-              name: sql-config-editor
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
-          valueFrom:
-            secretKeyRef:
-              key: Username
-              name: sql-config-editor
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
-          valueFrom:
-            secretKeyRef:
-              key: Password
-              name: sql-config-editor
         image: rpspeastus2acr.azurecr.io/docker/redpointinteraction/7-3/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag_internal }}
         imagePullPolicy: Always
         name: config-editor
@@ -129,26 +109,6 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseType
-          valueFrom:
-            secretKeyRef:
-              key: DatabaseType
-              name: sql-config-editor
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
-          valueFrom:
-            secretKeyRef:
-              key: Server
-              name: sql-config-editor
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
-          valueFrom:
-            secretKeyRef:
-              key: Username
-              name: sql-config-editor
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
-          valueFrom:
-            secretKeyRef:
-              key: Password
-              name: sql-config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag_client }}
         imagePullPolicy: Always
         name: config-editor

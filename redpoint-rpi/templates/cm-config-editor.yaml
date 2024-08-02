@@ -1,4 +1,3 @@
-{{- if eq .Values.global.deploymentType "client" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,75 +5,155 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 data:
   appsettings.overrides.json: |
+    {{- if eq .Values.appsettings.configeditor.sqlServer.type "demo" }}
     {
-      "ClusterEnvironment": {
-        "OperationalDatabase": {
-          {{- if not .Values.appsettings.configeditor.EnableDemoSQLServer }}
-          "DatabaseType": {{ .Values.appsettings.configeditor.ConnectionSettings.DatabaseType | quote }},
-          {{- end }}
-          {{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
-          "DatabaseType": "SQLServer",
-          {{- end }}
-          "PulseDatabaseName": {{ .Values.appsettings.configeditor.ConnectionSettings.PulseDatabaseName | quote }},
-          "LoggingDatabaseName": {{ .Values.appsettings.configeditor.ConnectionSettings.LoggingDatabaseName | quote }},
-          "ConnectionSettings": {
-            {{- if not .Values.appsettings.configeditor.EnableDemoSQLServer }}
-            "SelectedDBType": {{ .Values.appsettings.configeditor.ConnectionSettings.DatabaseType | quote }},
-            {{- end }}
-            {{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
-            "SelectedDBType": "SQLServer",
-            {{- end }}
-            "Server": {{ .Values.appsettings.configeditor.ConnectionSettings.Server | quote }},
-            "IsUsingCredentials": true,
-            "Username": {{ .Values.appsettings.configeditor.ConnectionSettings.Username | quote }},
-            "Password": {{ .Values.appsettings.configeditor.ConnectionSettings.Password | quote }},
-            "SQLServerSettings": {
-              "Encrypt": true,
-              "TrustServerCertificate": true
-            }
+      "OperationalDatabase": {
+        "DatabaseType": "SQLServer",
+        "PulseDatabaseName": "Pulse",
+        "LoggingDatabaseName": "Pulse_Logging",
+        "ConnectionSettings": {
+          "SelectedDBType": "SQLServer",
+          "Server": "sql-rpi-ops",
+          "IsUsingCredentials": true,
+          "Username": "sa",
+          "Password": "MyC0m9l&xP@ssw0rd",
+          "DatabaseSchema": "dbo",
+          "SQLServerSettings": {
+            "Encrypt": true,
+            "TrustServerCertificate": true
           }
+        },
+        "DeploymentSettings": {
+          "IsUsingCustomDataFolder": false
         }
+      },
+      "UserManagement": {
+        "UseNativeUserManagement": true,
+        "UseExternalUserManagement": false
       }
     }
-{{- end }}
-
----
-{{- if eq .Values.global.deploymentType "internal" }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-config-editor
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
+    {{- end }}
+    {{- if eq .Values.appsettings.configeditor.sqlServer.type "sqlserver" }}
     {
-      "ClusterEnvironment": {
-        "OperationalDatabase": {
-          {{- if not .Values.appsettings.configeditor.EnableDemoSQLServer }}
-          "DatabaseType": {{ .Values.appsettings.configeditor.ConnectionSettings.DatabaseType | quote }},
-          {{- end }}
-          {{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
-          "DatabaseType": "SQLServer",
-          {{- end }}
-          "PulseDatabaseName": {{ .Values.appsettings.configeditor.ConnectionSettings.PulseDatabaseName | quote }},
-          "LoggingDatabaseName": {{ .Values.appsettings.configeditor.ConnectionSettings.LoggingDatabaseName | quote }},
-          "ConnectionSettings": {
-            {{- if not .Values.appsettings.configeditor.EnableDemoSQLServer }}
-            "SelectedDBType": {{ .Values.appsettings.configeditor.ConnectionSettings.DatabaseType | quote }},
-            {{- end }}
-            {{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
-            "SelectedDBType": "SQLServer",
-            {{- end }}
-            "Server": {{ .Values.appsettings.configeditor.ConnectionSettings.Server | quote }},
-            "IsUsingCredentials": true,
-            "Username": {{ .Values.appsettings.configeditor.ConnectionSettings.Username | quote }},
-            "Password": {{ .Values.appsettings.configeditor.ConnectionSettings.Password | quote }},
-            "SQLServerSettings": {
-              "Encrypt": true,
-              "TrustServerCertificate": true
-            }
+      "OperationalDatabase": {
+        "DatabaseType": "SQLServer",
+        "PulseDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.pulseDatabaseName | quote }},
+        "LoggingDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.loggingDatabaseName | quote }},
+        "ConnectionSettings": {
+          "SelectedDBType": "SQLServer",
+          "Server": {{ .Values.appsettings.configeditor.sqlServer.serverName | quote }},
+          "IsUsingCredentials": true,
+          "Username": {{ .Values.appsettings.configeditor.sqlServer.username | quote }},
+          "Password": {{ .Values.appsettings.configeditor.sqlServer.password | quote }},
+          "DatabaseSchema": "dbo",
+          "SQLServerSettings": {
+            "Encrypt": true,
+            "TrustServerCertificate": true
           }
+        },
+        "DeploymentSettings": {
+          "IsUsingCustomDataFolder": false
         }
+      },
+      "UserManagement": {
+        "UseNativeUserManagement": true,
+        "UseExternalUserManagement": false
       }
     }
-{{- end }}
+    {{- end }}
+    {{- if eq .Values.appsettings.configeditor.sqlServer.type "azuresql" }}
+    {
+      "OperationalDatabase": {
+        "DatabaseType": "AzureSQLDatabase",
+        "PulseDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.pulseDatabaseName | quote }},
+        "LoggingDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.loggingDatabaseName | quote }},
+        "ConnectionSettings": {
+          "SelectedDBType": "AzureSQLDatabase",
+          "Server": {{ .Values.appsettings.configeditor.sqlServer.serverName | quote }},
+          "IsUsingCredentials": true,
+          "Username": {{ .Values.appsettings.configeditor.sqlServer.username | quote }},
+          "Password": {{ .Values.appsettings.configeditor.sqlServer.password | quote }},
+          "DatabaseSchema": "dbo",
+          "SQLServerSettings": {
+            "Encrypt": true,
+            "TrustServerCertificate": true
+          }
+        }
+      },
+      "UserManagement": {
+        "UseNativeUserManagement": true,
+        "UseExternalUserManagement": false
+      }
+    }
+    {{- end }}
+    {{- if eq .Values.appsettings.configeditor.sqlServer.type "amazonrds" }}
+    {
+      "OperationalDatabase": {
+        "DatabaseType": "AmazonRDSSQL",
+        "PulseDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.pulseDatabaseName | quote }},
+        "LoggingDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.loggingDatabaseName | quote }},
+        "ConnectionSettings": {
+          "SelectedDBType": "AmazonRDSSQL",
+          "Server": {{ .Values.appsettings.configeditor.sqlServer.serverName | quote }},
+          "IsUsingCredentials": true,
+          "Username": {{ .Values.appsettings.configeditor.sqlServer.username | quote }},
+          "Password": {{ .Values.appsettings.configeditor.sqlServer.password | quote }},
+          "DatabaseSchema": "dbo",
+          "SQLServerSettings": {
+            "Encrypt": true,
+            "TrustServerCertificate": true
+          }
+        }
+      },
+      "UserManagement": {
+        "UseNativeUserManagement": true,
+        "UseExternalUserManagement": false
+      }
+    }
+    {{- end }}
+    {{- if eq .Values.appsettings.configeditor.sqlServer.type "cloudsql" }}
+    {
+      "OperationalDatabase": {
+        "DatabaseType": "GoogleCloudSQL",
+        "PulseDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.pulseDatabaseName | quote }},
+        "LoggingDatabaseName": {{ .Values.appsettings.configeditor.sqlServer.loggingDatabaseName | quote }},
+        "ConnectionSettings": {
+          "SelectedDBType": "GoogleCloudSQL",
+          "Server": {{ .Values.appsettings.configeditor.sqlServer.serverName | quote }},
+          "IsUsingCredentials": true,
+          "Username": {{ .Values.appsettings.configeditor.sqlServer.username | quote }},
+          "Password": {{ .Values.appsettings.configeditor.sqlServer.password | quote }},
+          "DatabaseSchema": "dbo",
+          "SQLServerSettings": {
+            "Encrypt": true,
+            "TrustServerCertificate": true
+          }
+        }
+      },
+      "UserManagement": {
+        "UseNativeUserManagement": true,
+        "UseExternalUserManagement": false
+      }
+    }
+    {{- end }}
+    {{- if eq .Values.appsettings.configeditor.sqlServer.type "postgresql" }}
+    {
+      "OperationalDatabase": {
+        "DatabaseType": "PostgreSQL",
+        "PulseDatabaseName": "Pulse",
+        "LoggingDatabaseName": "Pulse_Logging",
+        "ConnectionSettings": {
+          "SelectedDBType": "PostgreSQL",
+          "Server": {{ .Values.appsettings.configeditor.sqlServer.serverName | quote }},
+          "IsUsingCredentials": true,
+          "Username": {{ .Values.appsettings.configeditor.sqlServer.username | quote }},
+          "Password": {{ .Values.appsettings.configeditor.sqlServer.password | quote }},
+          "Port": 5432
+        }
+      },
+      "UserManagement": {
+        "UseNativeUserManagement": true,
+        "UseExternalUserManagement": false
+      }
+    }
+    {{- end }}

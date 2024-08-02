@@ -48,31 +48,14 @@ appsettings:
   interactionapi:
 
   configeditor:
-    EnableDemoSQLServer: true
-    ConnectionSettings:
-      # Specify the SQL server address. 
-      # This should be the hostname or IP address of your SQL server instance.
-      Server: sql-rpi-ops
+    sqlServer: 
+      type: demo # Allowed values are demo, sqlserver, azuresql, amazonrds, cloudsql and postgresql
+      serverName: sql-rpi-ops
+      username: sa
+      password: MyC0m9l&xP@ssw0rd
+      pulseDatabaseName: Pulse
+      loggingDatabaseName: Pulse_Logging
 
-      # Define the username for the SQL server connection.
-      # Ensure this user has the necessary permissions for the operations required.
-      Username: sa
-
-      # Provide the password for the SQL server connection.
-      # Note: Store passwords securely and avoid hardcoding sensitive information in configuration files.
-      Password: MyC0m9l&xP@ssw0rd
-
-      # Name of the database used for logging purposes.
-      LoggingDatabaseName: Pulse_Logging
-
-      # Name of the primary operational database.
-      PulseDatabaseName: Pulse
-
-      # Specify the type of database being connected to.
-      # Supported types: AzureSQLDatabase, AmazonRDSSQL, PostgreSQL, SQLServer, GoogleCloudSQL
-      DatabaseType: AzureSQLDatabase
-      SelectedDBType: AzureSQLDatabase
-      
       # Connection string for the Logging database.
       # Ensure this string matches your database's connection requirements, including the correct server address, database name, and credentials.
       ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
@@ -90,68 +73,49 @@ appsettings:
     decisionCacheDuration: 60
     enableAuditMetricsInHeaders: true
     cacheOutputQueueEnabled: true
-    
-    amazon:
-      accessKey: <your_aws_iam_access_key>
-      secretKey: <your_aws_iam_secret_access_key>
-      region: us-east-1
-      mongoConnectionString: mongodb+srv://<username>:<password>@<your mongo server fqdn>?retryWrites=true
-      mongoDatabaseName: realtime_db
-      mongoCollectionName: realtime_cache
 
-    azure:
-      eventHubName: <your_event_hub_name>
-      eventHubConnectionString: <your_event_hub_connectionstring>
-      mongoConnectionString: mongodb+srv://<username>:<password>@<your mongo server fqdn>?retryWrites=true
-      mongoDatabaseName: realtime_db
-      mongoCollectionName: realtime_cache
+    queueProvider: 
+      type: sqs # Allowed values are sqs, servicebus, rabbitmq, pubsub, eventhub
+      queueNames: 
+        formQueuePath: dev-rpiwebformsubmission
+        eventsQueuePath: dev-rpiwebevents
+        cacheOutputQueuePath: dev-rpiwebcachedata
+        recommendationsQueuePath: dev-rpiwebrecommendation
+        listenerQueuePath: dev-rpiqueuelistener
+      eventHub: 
+        eventHubName: dev-evh-realtime
+        connectionString: Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<your_shared_access_key>
+      sqs: 
+        accessKey: youraccesskey
+        secretKey: yoursecretkey
+        regionEndpoint: your_aws_sqs_region
 
-    queue_names:
-      formQueuePath: rpiwebformsubmission
-      eventsQueuePath: rpiwebevents
-      cacheOutputQueuePath: rpiwebcachedata
-      recommendationsQueuePath: rpiwebrecommendation
-      listenerQueuePath: rpiqueuelistener
+    cacheProvider: 
+      type: mongodb # Allowed values are mongodb and redis
+      mongodb: 
+        databaseName: DevRealtimeCache
+        ConnectionString: 
+        CollectionName: DevRealtimeCache
 
-
-    caches:
-      # Specify the connection string for MongoDB.
-      # This string is essential for establishing a connection to the MongoDB instance used for caching in real-time operations.
-      # Ensure this string includes the necessary authentication details and the correct address of your MongoDB server.
-      mongodb_connectionstring: example-mongodb-connection-string
-
-      # Provide the connection string for the Event Hub.
-      # This string is crucial for the real-time service to connect and interact with the Event Hub for event-driven operations.
-      # Note: The connection string should include the Event Hub namespace, name, and access key.
-      eventhub_connectionstring: example-eventhub-connection-string
-
-      # Set the name of the Event Hub used by the real-time service.
-      # This defines the specific Event Hub instance that the service will use for publishing or subscribing to real-time events.
-      eventhub_name: realtimetest
+      redis: 
+        hostName: redis.example.com
+        
 
   callbackapi:
-    config:
-      # Provide the access key for the storage account.
-      # This key is used to authenticate and authorize access to the storage account.
-      # Ensure that this key is kept secure and has the necessary permissions.
-      storage_account_access_key: example-accesskey
-
-      # Specify the name of the storage account.
-      # This account will be used by the callback API for storage operations.
-      storage_account_name: rpicallbackapi
-
-      # Define the name of the blob container within the storage account.
-      # This container is where the callback API will store or retrieve blobs.
-      blob_container_name: rpicallbackapi
-
-      # Provide the connection string for the Event Hub.
-      # This string is essential for the callback API to connect and interact with the Event Hub.
-      # Note: The connection string should include the Event Hub namespace, name, and access key.
-      eventhub_connectionstring: example-eventhub-connection-string
-
-      # Set the name of the Event Hub.
-      # This is the Event Hub instance that the callback API will use for publishing or subscribing to events.
-      eventhub_name: callbackservice
+    queueProvider: 
+      type: eventhub # Allowed values are eventhub, servicebus and rabbitmq
+      ChannelLabel: SendGrid
+      callbackServiceQueuePath: dev-sendgridcallback
+    eventHub:
+      eventHubName: dev-sendgridcallback
+      eventHubConnectionString: Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<your_shared_access_key>
+    externalContentProvider:
+      type: azureblob
+      storageAccountName: sasendgridcallback
+      storageAccountKey: your_storage_account_access_key
+      enabled: false 
+      containerName: dev-sendgridcallbackecp
+      saveEmailEvents: true
 
 
   executionservice:
@@ -203,13 +167,12 @@ MercurySettings:
   Mercury_Password: example-mercury-password
    
 ingress:
-  # Specify whether the ingress is internal-only.
-  # Set to 'true' to restrict access to within the internal network.
-  internal: false
-
-  # Define the subnet used by the ingress controller.
-  # This should correspond to a specific subnet in your network configuration, typically in a VNET or VPC.
+  enabled: false
+  type: nginx 
+  networking: public # Allowed values are public or internal
+  cloud: amazon # Allowe values are internal, amazon google and azure
   subnet: example-subnet-name
+  aws_cert_manager_arn: arn:aws:acm:us-west-2:XXXXXXXX:certificate/XXXXXX-XXXXXXX-XXXXXXX-XXXXXXXX
 
   # Specify the domain name for the ingress resources.
   # This domain will be used to access the services deployed under this ingress.
@@ -217,57 +180,25 @@ ingress:
 
   # Annotations can be used to customize the behavior of the ingress controller.
   # Add any specific annotations required for your ingress setup here.
-  annotations: {}
-
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 99m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   # Define hostnames for different services in your application.
   # Each entry maps a subdomain of the main domain to a specific service.
   hosts:
     # Config service - Access configuration-related services at 'rpi-config.example.com'.
-    config: rpiconfig
+    config: dev-configeditor
     
     # Client service - RPI client login at 'rpi-client.example.com'.
-    client: rpiclient
+    client: dev-interactionapi
 
     # Integration API - Access integration API at 'rpi-integapi.example.com'.
-    integration: rpiintegration
-
-    # Help Documentation - Access help documents at 'rpi-docs.example.com'.
-    helpdocs: rpidocs
+    integration: dev-integrationapi
 
     # Real-time service - Access real-time services at 'rpi-realtime.example.com'.
-    realtime: rpirealtimeapi
+    realtime: dev-realtimeapi
 
     # Callback API - Access the callback API at 'redpointrpi-callbackapi.example.com'.
-    callbackapi: rpicallback
+    callbackapi: dev-callbackapi
 
-      
-resources:
-  limits:
-    cpu: "300m"  
-    memory: "384Mi" 
-  requests:
-    cpu: "100m"
-    memory: 192Mi
-
-livenessProbe:
-  periodSeconds: 20
-  timeoutSeconds: 15
-  initialDelaySeconds: 300
-  failureThreshold: 3
-  interaction_api:
-    path: /health/live
-    port: 8080
-  integration_api:
-    path: /health/live
-    port: 8080
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # #targetMemoryUtilizationPercentage: 80 #
-
-affinity: {}
-podAnnotations: {}
-podSecurityContext: {}

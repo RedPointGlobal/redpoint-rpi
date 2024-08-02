@@ -8,60 +8,47 @@ data:
     {
       "CallbackServiceConfig": {
         "QueueEnabled": true,
+        {{- if eq .Values.appsettings.callbackapi.queueProvider.type "eventhub" }}
         "QueueProvider": {
-          "ChannelLabel": "SendGrid",
-          "CallbackServiceQueuePath": {{ .Values.appsettings.callbackapi.config.eventhub_name | quote }},
+          "ChannelLabel": {{ .Values.appsettings.callbackapi.queueProvider.ChannelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.appsettings.callbackapi.queueProvider.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Azure.Server",
             "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
             "Settings": [
               {
                 "Key": "EventHubName",
-                "Value": {{ .Values.appsettings.callbackapi.config.eventhub_name | quote }},
+                "Value": {{ .Values.appsettings.callbackapi.eventHub.eventHubName | quote }},
               },
               {
                 "Key": "EventHubConnectionString",
-                "Value": {{ .Values.appsettings.callbackapi.config.eventhub_connectionstring | quote }},
+                "Value": {{ .Values.appsettings.callbackapi.eventHub.eventHubConnectionString | quote }},
               }
             ]
           }
         },
+        {{- end }}
+        {{- if eq .Values.appsettings.callbackapi.externalContentProvider.type "azureblob" }}
         "ExternalContentProvider": {
-          "Folder": {{ .Values.appsettings.callbackapi.config.blob_container_name | quote }},
-          "SaveEmailEvents": false,
+          "Folder": {{ .Values.appsettings.callbackapi.externalContentProvider.containerName | quote }},
+          "SaveEmailEvents": {{ .Values.appsettings.callbackapi.externalContentProvider.saveEmailEvents }},
           "ExternalContentSettings": {
             "Assembly": "RedPoint.Azure.Shared",
             "Type": "RedPoint.Azure.Shared.AzureStorage.AzureStorageConnector",
             "Settings": [
               {
                 "Key": "StorageAccount",
-                "Value": {{ .Values.appsettings.callbackapi.config.storage_account_name | quote }},
-                "Values": null
+                "Value": {{ .Values.appsettings.callbackapi.externalContentProvider.storageAccountName | quote }},
               },
               {
                 "Key": "AccessKey",
-                "Value": {{ .Values.appsettings.callbackapi.config.storage_account_access_key | quote }},
-                "Values": null
-              },
-              {
-                "Key": "EnableCdn",
-                "Value": false,
-                "Values": null
-              },
-              {
-                "Key": "BlobServiceEndpoint",
-                "Value": null,
-                "Values": null
-              },
-              {
-                "Key": "CdnEndpoint",
-                "Value": null,
-                "Values": null
+                "Value": {{ .Values.appsettings.callbackapi.externalContentProvider.storageAccountKey | quote }},
               }
             ]
           }
         }
       },
+      {{- end }}
       "ConfigurationStore": {
         "ConnectionString": "",
         "LabelFilter": ""
