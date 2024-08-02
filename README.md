@@ -49,8 +49,8 @@ Prior to RPI install, open a support ticket at support@redpointglobal.com reques
 Prior to RPI install, open a support ticket at support@redpointglobal.com to obtain your License activation key. 
 
 - **Cluster Access:** 
-1. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
-2. Gain command-line access to your Kubernetes cluster to interact with it using kubectl.
+  - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
+  - Gain command-line access to your Kubernetes cluster to interact with it using kubectl.
 
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
