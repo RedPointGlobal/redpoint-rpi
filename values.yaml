@@ -46,13 +46,9 @@ appsettings:
       password: MyC0m9l&xP@ssw0rd
       pulseDatabaseName: Pulse
       loggingDatabaseName: Pulse_Logging
-
       # Connection string for the Logging database.
-      # Ensure this string matches your database's connection requirements, including the correct server address, database name, and credentials.
       ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
-
       # Connection string for the Operational database.
-      # Similar to the Logging database, this string should be configured to match the specific requirements of the Operational database.
       ConnectionStrings_OperationalDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 
   realtime:
@@ -166,30 +162,26 @@ ingress:
   aws_cert_manager_arn: arn:aws:acm:us-west-2:XXXXXXXX:certificate/XXXXXX-XXXXXXX-XXXXXXX-XXXXXXXX
 
   # Specify the domain name for the ingress resources.
-  # This domain will be used to access the services deployed under this ingress.
   domain: example.com
-
-  # Annotations can be used to customize the behavior of the ingress controller.
   # Add any specific annotations required for your ingress setup here.
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 99m
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   # Define hostnames for different services in your application.
-  # Each entry maps a subdomain of the main domain to a specific service.
   hosts:
-    # Config service - Access configuration-related services at 'rpi-config.example.com'.
+    # Config service
     config: dev-configeditor
     
-    # Client service - RPI client login at 'rpi-client.example.com'.
+    # Client service
     client: dev-interactionapi
 
-    # Integration API - Access integration API at 'rpi-integapi.example.com'.
+    # Integration API
     integration: dev-integrationapi
 
-    # Real-time service - Access real-time services at 'rpi-realtime.example.com'.
+    # Real-time service 
     realtime: dev-realtimeapi
 
-    # Callback API - Access the callback API at 'redpointrpi-callbackapi.example.com'.
+    # Callback API
     callbackapi: dev-callbackapi
 
