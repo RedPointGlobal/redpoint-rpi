@@ -3,28 +3,19 @@ global:
     name: redpoint-interaction
     version: "7.3"
     environment: prod 
+
   # Define the Kubernetes namespace in which the services will be deployed.
-  # This namespace should already exist or be created prior to deployment.
   namespace: redpoint-rpi
 
   # Set the number of replicas for the deployment.
-  # This determines how many instances of each pod will be created.
   replicaCount: 1
 
-  # Specify the image tag for the main application.
   # This tag refers to a specific version of the docker image to be deployed.
   image_tag_internal: 7.3.2024-0703-1351
   image_tag_client: 7.3.2024-0703-1351
-  # Specify the image tag for the documentation service.
-  # Similar to 'image_tag', this refers to the docker image version for the docs service.
 
-  # Select the cloud provider where the infrastructure is hosted.
-  # Options include 'azure', 'google', or 'amazon'.
-  # This setting may influence certain cloud-specific configurations.
-  cloudProvider: azure 
   # Define the deployment type.
   # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
-  # This may affect access controls and available features.
   deploymentType: client
   imagePullPolicy: Always
   nodeSelector: {}
