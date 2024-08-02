@@ -60,7 +60,18 @@ Before installing RPI, follow these preparatory steps to ensure a smooth setup:
 Ensure you have correctly configured the SQL Server details in the ```Configeditor``` section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
 ```
   configeditor:
-    ConnectionSettings:
+    sqlServer: 
+      # Allowed values are demo, sqlserver, azuresql, amazonrds, cloudsql and postgresql
+      type: demo 
+      serverName: your_sql_server_host
+      username: your_sql_server_username
+      password: your_sql_server_password
+      pulseDatabaseName: operations_database_name (defaults to Pulse)
+      loggingDatabaseName: logging_database_name (defaults to Pulse_Logging)
+      # Connection string for the Logging database.
+      ConnectionStrings_LoggingDatabase: Server=tcp:$SERVER_NAME,1433;Database=Pulse_Logging;User ID=$USERNAME;Password=$PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+      # Connection string for the Operational database.
+      ConnectionStrings_OperationalDatabase: Server=tcp:$SERVER_NAME,1433;Database=Pulse;User ID=$USERNAME;Password=$PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 ```
 For quick Demo installations, you can use a pre-configured Demo SQL server. To do this, set the ```EnableDemoSQLServer``` to ```true``` in the values.yaml file
 
