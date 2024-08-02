@@ -8,7 +8,14 @@ global:
   namespace: redpoint-rpi
 
   # Set the number of replicas for the deployment.
-  replicaCount: 1
+replicas:
+  interactionapi: 1
+  integrationapi: 1
+  configeditor: 1
+  callbackapi: 1
+  nodemanager: 1
+  executionservice: 1
+  realtimeapi: 1
 
   # This tag refers to a specific version of the docker image to be deployed.
   image_tag_internal: 7.3.2024-0703-1351
@@ -82,19 +89,24 @@ appsettings:
 
   callbackapi:
     queueProvider: 
-      type: eventhub # Allowed values are eventhub, servicebus and rabbitmq
+      type: sqs # Allowed values are sqs, eventhub, servicebus and rabbitmq
       ChannelLabel: SendGrid
-      callbackServiceQueuePath: dev-sendgridcallback
-    eventHub:
-      eventHubName: dev-sendgridcallback
-      eventHubConnectionString: Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<your_shared_access_key>
-    externalContentProvider:
-      type: azureblob
-      storageAccountName: sasendgridcallback
-      storageAccountKey: your_storage_account_access_key
-      enabled: false 
-      containerName: dev-sendgridcallbackecp
-      saveEmailEvents: true
+    settings:
+      sqs: 
+        accessKey: youraccesskey
+        secretKey: yoursecretkey
+        regionEndpoint: your_aws_sqs_region
+        callbackServiceQueuePath: dev-sendgridcallback
+      eventHub:
+        eventHubName: dev-sendgridcallback
+        eventHubConnectionString: Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<your_shared_access_key>
+      externalContentProvider:
+        type: azureblob
+        storageAccountName: sasendgridcallback
+        storageAccountKey: your_storage_account_access_key
+        enabled: false 
+        containerName: dev-sendgridcallbackecp
+        saveEmailEvents: true
 
 
   executionservice:
@@ -165,17 +177,17 @@ ingress:
   # Define hostnames for different services in your application.
   hosts:
     # Config service
-    config: dev-configeditor
+    config: rpi-configeditor
     
     # Client service
-    client: dev-interactionapi
+    client: rpi-interactionapi
 
     # Integration API
-    integration: dev-integrationapi
+    integration: rpi-integrationapi
 
     # Real-time service 
-    realtime: dev-realtimeapi
+    realtime: rpi-realtimeapi
 
     # Callback API
-    callbackapi: dev-callbackapi
+    callbackapi: rpi-callbackapi
 

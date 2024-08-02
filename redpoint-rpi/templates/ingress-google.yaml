@@ -1,4 +1,4 @@
-{{- if eq .Values.ingress.cloud "amazon" }}
+{{- if eq .Values.ingress.cloud "google" }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

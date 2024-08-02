@@ -1,11 +1,3 @@
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: sa-rpi-node-manager
-  namespace: {{ .Values.global.namespace }}
-
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -36,7 +28,7 @@ metadata:
     env: {{ .Values.global.application.environment }}
     version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.global.replicaCount }}
+  replicas: {{ .Values.replicas.nodemanager }}
   selector:
     matchLabels:
       app: rpi-node-manager
@@ -109,7 +101,7 @@ metadata:
     env: {{ .Values.global.application.environment }}
     version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.global.replicaCount }}
+  replicas: {{ .Values.replicas.nodemanager }}
   selector:
     matchLabels:
       app: rpi-node-manager
@@ -124,7 +116,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-rpi-node-manager
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - env:
         - name: ASPNETCORE_ENVIRONMENT

@@ -1,11 +1,3 @@
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: sa-rpi-callback-api
-  namespace: {{ .Values.global.namespace }}
-
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -37,7 +29,7 @@ metadata:
     env: {{ .Values.global.application.environment }}
     version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.global.replicaCount }}
+  replicas: {{ .Values.replicas.callbackapi }}
   selector:
     matchLabels:
       app: rpi-callback-api
@@ -50,7 +42,7 @@ spec:
         env: {{ .Values.global.application.environment }}
         version: {{ .Values.global.application.version | quote }}
     spec:
-      serviceAccountName: sa-rpi-callback-api
+      serviceAccountName: sa-redpoint-rpi
       securityContext:
         runAsNonRoot: true
         runAsUser: 7777
@@ -103,7 +95,7 @@ metadata:
     env: {{ .Values.global.application.environment }}
     version: {{ .Values.global.application.version | quote }}
 spec:
-  replicas: {{ .Values.global.replicaCount }}
+  replicas: {{ .Values.replicas.callbackapi }}
   selector:
     matchLabels:
       app: rpi-callback-api

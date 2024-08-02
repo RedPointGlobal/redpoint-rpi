@@ -1,87 +1,37 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cm-rpi-callbackapi
+  name: cm-rpi-callback-api
   namespace: {{ .Values.global.namespace }}
 data:
   appsettings.overrides.json: |
+  {{- if eq .Values.appsettings.callbackapi.type "sqs" }}
     {
       "CallbackServiceConfig": {
         "QueueEnabled": true,
-        {{- if eq .Values.appsettings.callbackapi.queueProvider.type "eventhub" }}
         "QueueProvider": {
-          "ChannelLabel": {{ .Values.appsettings.callbackapi.queueProvider.ChannelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.appsettings.callbackapi.queueProvider.callbackServiceQueuePath | quote }},
+          "ChannelLabel": {{ .Values.appsettings.callbackapi.settings.queueProvider.ChannelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.appsettings.callbackapi.settings.sqs.CallbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
-            "Assembly": "RedPoint.Azure.Server",
-            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+            "Assembly": "RedPoint.Resonance.AWSQueueAccess",
+            "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
             "Settings": [
-              {
-                "Key": "EventHubName",
-                "Value": {{ .Values.appsettings.callbackapi.eventHub.eventHubName | quote }},
-              },
-              {
-                "Key": "EventHubConnectionString",
-                "Value": {{ .Values.appsettings.callbackapi.eventHub.eventHubConnectionString | quote }},
-              }
-            ]
-          }
-        },
-        {{- end }}
-        {{- if eq .Values.appsettings.callbackapi.externalContentProvider.type "azureblob" }}
-        "ExternalContentProvider": {
-          "Folder": {{ .Values.appsettings.callbackapi.externalContentProvider.containerName | quote }},
-          "SaveEmailEvents": {{ .Values.appsettings.callbackapi.externalContentProvider.saveEmailEvents }},
-          "ExternalContentSettings": {
-            "Assembly": "RedPoint.Azure.Shared",
-            "Type": "RedPoint.Azure.Shared.AzureStorage.AzureStorageConnector",
-            "Settings": [
-              {
-                "Key": "StorageAccount",
-                "Value": {{ .Values.appsettings.callbackapi.externalContentProvider.storageAccountName | quote }},
-              },
               {
                 "Key": "AccessKey",
-                "Value": {{ .Values.appsettings.callbackapi.externalContentProvider.storageAccountKey | quote }},
+                "Value": {{ .Values.appsettings.callbackapi.settings.sqs.accessKey | quote }}
+              },
+              {
+                "Key": "SecretKey",
+                "Value": {{ .Values.appsettings.callbackapi.settings.sqs.secretKey | quote }}
+              },
+              {
+                "Key": "RegionEndpoint",
+                "Value": {{ .Values.appsettings.callbackapi.settings.sqs.regionEndpoint | quote }}
               }
             ]
           }
-        }
-      },
-      {{- end }}
-      "ConfigurationStore": {
-        "ConnectionString": "",
-        "LabelFilter": ""
-      },
-      "EnableHttpsRedirection": false,
-      "AgentConfig": {
-        "TraceLogEnabled": false,
-        "CachedSelectionRuleExpiry": 120
-      },
-      "Logging": {
-        "LogLevel": {
-          "Default": "Error",
-          "Microsoft": "Error",
-          "Microsoft.Hosting.Lifetime": "Error"
         },
-        "Console": {
-          "LogLevel": {
-            "Default": "Error"
-          }
-        },
-        "Database": {
-          "LogLevel": {
-            "Default": "Error"
-          },
-          "RPITrace": "Error",
-          "RPIError": "Error"
-        },
-        "ApplicationInsights": {
-          "ConnectionString": "",
-          "LogLevel": {
-            "Default": "None"
-          }
-        }
-      },
-      "AllowedHosts": "*"
+        "AllowedHosts": "*"
+      }
     }
+  {{- end }}

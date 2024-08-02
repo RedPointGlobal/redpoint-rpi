@@ -98,8 +98,8 @@ kubectl create secret docker-registry redpoint-rpi \
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
-CERT_FILE=cert.crt
-KEY_FILE=cert.key
+CERT_FILE=path/to/your_cert.crt
+KEY_FILE=path/to/your_cert.key
 NAMESPACE=redpoint-rpi
 
 kubectl create secret tls ingress-tls \
@@ -108,7 +108,7 @@ kubectl create secret tls ingress-tls \
 --key=$KEY_FILE
 
 ```
-After completing the above steps, proceed with the installation:
+After completing the above steps, you are now ready to proceed with the installation as follows:
 
 - Clone the RPI repository to your local machine:
 ```
@@ -125,7 +125,7 @@ helm install redpoint-rpi redpoint-rpi/ --values values.yaml
 If everything goes well, You should see the output below.
 ```
 NAME: redpoint-rpi
-LAST DEPLOYED: Sat Apr  1 02:31:46 2023
+LAST DEPLOYED: Sat July  1 02:31:46 2024
 NAMESPACE: redpoint-rpi
 STATUS: deployed
 REVISION: 1
@@ -153,14 +153,14 @@ Add a DNS record in your DNS zone. This record should point to the IP address of
 
 With the DNS configuration in place, you're ready to access the RPI interfaces:
 ```
-redpointrpi-config.example.com                             # Configuration editor
-redpointrpi.example.com                                    # RPI Client 
-redpointrpi.example/api/deployment/downloads/Client        # RPI Client Executable Download
-redpointrpi-integrationapi.example.com                     # Integration API
-redpointrpi-realtime.example.com                           # RPI Realtime
+rpi-configeditor.example.com                              # Configuration editor
+rpi-client.example.com                                    # RPI Client 
+rpi-configeditor.example/api/deployment/downloads/Client  # RPI Client Executable Download
+rpi-integrationapi.example.com                            # Integration API
+rpi-realtime.example.com                                  # RPI Realtime
 ```
 ### License Activation
-After receiving your activation key from Redpoint Support, you can activate your RPI instance. Follow these steps to access the Configuration Editor and enter your license key:
+After installing RPI, you need to apply a license. This license is obtained from Redpoint Support. Follow the steps below to access the Configuration Editor and enter your license key:
 
 - Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
 
