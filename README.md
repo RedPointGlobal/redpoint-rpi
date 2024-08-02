@@ -73,22 +73,9 @@ Within the ```values.yaml``` file, locate the ```configeditor``` section under `
       # Connection string for the Operational database.
       ConnectionStrings_OperationalDatabase: Server=tcp:$SERVER_NAME,1433;Database=Pulse;User ID=$USERNAME;Password=$PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 ```
-For quick Demo installations, you can use a pre-configured Demo SQL server. To do this, set the ```EnableDemoSQLServer``` to ```true``` in the values.yaml file
+For quick Demo installations, you can use simply set SQL Server ```type``` to ```demo``` and skip configuring the rest of the settings within the ```configeditor``` section. The Helm chart will deploy a pre-configured SQL Server container. **Note:** This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in section above.
 
-By enabling ```EnableDemoSQLServer```, you can skip configuring the SQL Server settings under ```configeditor.ConnectionSettings```. The Helm chart will use the default settings for the Demo SQL server.
-```
-  configeditor:
-    EnableDemoSQLServer: true
-```
-**Note:** This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in the first section.
-
-**2)** Select the target Cloud Platform:
-
-In the ```values.yaml``` file, under the global application settings, specify the cloud provider where your infrastructure is hosted. Supported providers include Azure, AWS, and GCP. This setting ensures that RPI aligns with your cloud infrastructure.
-```
-  cloudProvider: azure
-```
-**3)** Create Kubernetes Namespace:
+**2)** Create Kubernetes Namespace:
 
 Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
 ```
@@ -100,7 +87,7 @@ Configure the current context to use this namespace for subsequent commands
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
 
-**4)** Create the Container Registry Secret:
+**3)** Create the Container Registry Secret:
 
 Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
 ```
@@ -110,7 +97,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=<your_username> \
 --docker-password=<your_password>
 ```
-**5)** Create the TLS Certificate Secrets:
+**4)** Create the TLS Certificate Secrets:
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
