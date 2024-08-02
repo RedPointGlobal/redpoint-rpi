@@ -72,14 +72,14 @@ Within the ```values.yaml``` file, locate the ```configeditor``` section under `
 ```
 For quick Demo installations, you can use simply set SQL Server ```type``` to ```demo``` and skip configuring the rest of the settings within the ```configeditor``` section. The Helm chart will deploy a pre-configured SQL Server container. **Note:** This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in section above.
 
-**2)** Create Kubernetes Namespace:
+**2) Create Kubernetes Namespace:**
 
 Run the command below to create the Kubernetes namespace for deploying RPI services and set it as the default context for subsequent CLI commands.
 ```
 kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
-**3)** Create the Container Registry Secret:
+**3) Create the Container Registry Secret:**
 
 Create a Kubernetes Secret with the credentials required to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace <your_username> and <your_password> with your actual credentials:
 ```
@@ -94,7 +94,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=$DOCKER_USERNAME \
 --docker-password=$DOCKER_PASSWORD
 ```
-**4)** Create the TLS Certificate Secrets:
+**4) Create the TLS Certificate Secrets:**
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
