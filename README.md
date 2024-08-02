@@ -61,41 +61,38 @@ Within the ```values.yaml``` file, locate the ```configeditor``` section under `
 ```
   configeditor:
     sqlServer: 
-      # Allowed values are demo, sqlserver, azuresql, amazonrds, cloudsql and postgresql
       type: demo 
       serverName: your_sql_server_host
       username: your_sql_server_username
       password: your_sql_server_password
       pulseDatabaseName: operations_database_name (defaults to Pulse)
       loggingDatabaseName: logging_database_name (defaults to Pulse_Logging)
-      # Connection string for the Logging database.
-      ConnectionStrings_LoggingDatabase: Server=tcp:$SERVER_NAME,1433;Database=Pulse_Logging;User ID=$USERNAME;Password=$PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
-      # Connection string for the Operational database.
-      ConnectionStrings_OperationalDatabase: Server=tcp:$SERVER_NAME,1433;Database=Pulse;User ID=$USERNAME;Password=$PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+      ConnectionStrings_LoggingDatabase: Server=tcp:$YOUR_SQL_SERVER_NAME,1433;Database=Pulse_Logging;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+      ConnectionStrings_OperationalDatabase: Server=tcp:$YOUR_SQL_SERVER_NAME,1433;Database=Pulse;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 ```
 For quick Demo installations, you can use simply set SQL Server ```type``` to ```demo``` and skip configuring the rest of the settings within the ```configeditor``` section. The Helm chart will deploy a pre-configured SQL Server container. **Note:** This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in section above.
 
 **2)** Create Kubernetes Namespace:
 
-Run the following command to create a Kubernetes namespace where the RPI services will be deployed:
+Run the command below to create the Kubernetes namespace for deploying RPI services and set it as the default context for subsequent CLI commands.
 ```
-kubectl create namespace redpoint-rpi 
-```
-
-Configure the current context to use this namespace for subsequent commands
-```
+kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
-
 **3)** Create the Container Registry Secret:
 
-Create a Kubernetes secret containing the image pull credentials for the Redpoint container registry. These credentials are provided by Redpoint Support. Replace <your_username> and <your_password> with your actual credentials:
+Create a Kubernetes Secret with the credentials required to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace <your_username> and <your_password> with your actual credentials:
 ```
+DOCKER_USERNAME=<your_username> 
+DOCKER_PASSWORD=<your_password>
+DOCKER_SERVER=rg1acrpub.azurecr.io
+NAMESPACE=redpoint-rpi
+
 kubectl create secret docker-registry redpoint-rpi \
---namespace redpoint-rpi \
---docker-server=rg1acrpub.azurecr.io \
---docker-username=<your_username> \
---docker-password=<your_password>
+--namespace $NAMESPACE \
+--docker-server=$DOCKER_SERVER \
+--docker-username=$DOCKER_USERNAME \
+--docker-password=$DOCKER_PASSWORD
 ```
 **4)** Create the TLS Certificate Secrets:
 
