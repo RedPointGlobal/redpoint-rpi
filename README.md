@@ -62,11 +62,11 @@ Within the ```values.yaml``` file, locate the ```configeditor``` section under `
   configeditor:
     sqlServer: 
       type: demo 
-      serverName: your_sql_server_host
-      username: your_sql_server_username
-      password: your_sql_server_password
-      pulseDatabaseName: operations_database_name (defaults to Pulse)
-      loggingDatabaseName: logging_database_name (defaults to Pulse_Logging)
+      serverName: YOUR_SQL_SERVER_NAME
+      username: YOUR_SQL_USERNAME
+      password: YOUR_SQL_PASSWORD
+      pulseDatabaseName: Pulse
+      loggingDatabaseName: Pulse_Logging
       ConnectionStrings_LoggingDatabase: Server=tcp:$YOUR_SQL_SERVER_NAME,1433;Database=Pulse_Logging;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
       ConnectionStrings_OperationalDatabase: Server=tcp:$YOUR_SQL_SERVER_NAME,1433;Database=Pulse;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 ```
