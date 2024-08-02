@@ -70,7 +70,9 @@ Within the ```values.yaml``` file, locate the ```configeditor``` section under `
       ConnectionStrings_LoggingDatabase: Server=tcp:$YOUR_SQL_SERVER_HOST,1433;Database=Pulse_Logging;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
       ConnectionStrings_OperationalDatabase: Server=tcp:$YOUR_SQL_SERVER_HOST,1433;Database=Pulse;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
 ```
-For quick Demo installations, you can use simply set SQL Server ```type``` to ```demo``` and skip configuring the rest of the settings within the ```configeditor``` section. The Helm chart will deploy a pre-configured SQL Server container. **Note:** This is recommended for quick demos only. For production or customized installations, it's advised to provide specific SQL Server details as mentioned in section above.
+For quick DEMO installations, set the SQL Server ```type``` to ```demo``` and skip configuring the rest of the settings within the ```configeditor``` section. The Helm chart will deploy a pre-configured SQL Server container. 
+
+**DO NOT USE**  ```demo``` type for production or customized installations. You should provide your specific SQL Server details as mentioned in above.
 
 **2) Create Kubernetes Namespace:**
 
