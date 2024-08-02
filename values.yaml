@@ -148,8 +148,10 @@ MercurySettings:
 ingress:
   enabled: false
   type: nginx 
-  networking: public # Allowed values are public or internal
-  cloud: amazon # Allowe values are internal, amazon google and azure
+  # Allowed values are public or internal
+  networking: public 
+  # Allowed values are internal, amazon google and azure
+  cloud: amazon 
   subnet: example-subnet-name
   aws_cert_manager_arn: arn:aws:acm:us-west-2:XXXXXXXX:certificate/XXXXXX-XXXXXXX-XXXXXXX-XXXXXXXX
 
