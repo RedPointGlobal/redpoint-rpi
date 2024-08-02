@@ -27,8 +27,10 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
        - Google Cloud SQL for SQL Server 
        - Microsoft SQL Server on virtual machine or bare metal
 - **CPU & Memory requirements for Kubernetes Nodepools**
-    - 8 vCPUs and 16 GB of RAM per node
-
+    - CPU: 8 vCPUs per node
+    - Memory: 16 GB of RAM per node
+    - Node Count: Minimum of 2 nodes for high availability
+    
 ### Prerequisites
 - **Kubernetes Cluster:**
 Ensure you use the latest stable version of Kubernetes, which can be either self-hosted or managed. Managed options include Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), and Google Kubernetes Engine (GKE). If you don't already have a Kubernetes cluster, refer to the ```./kubernetes/``` directory. This directory contains official quickstart guides for the managed options.
