@@ -26,8 +26,8 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
        - Amazon RDS for SQL Server
        - Google Cloud SQL for SQL Server 
        - Microsoft SQL Server on virtual machine or bare metal
-- **CPU & Memory requirements**
-   - Kubernetes Nodepools
+- **Kubernetes Nodepools**
+    - Node Sizing
        - CPU: 8 vCPUs per node
        - Memory: 16 GB of RAM per node
        - Node Count: Minimum of 2 nodes for high availability
