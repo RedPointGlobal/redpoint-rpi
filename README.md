@@ -17,7 +17,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Support](#support)
 
 ### System Requirements
-- **SQL Server for RPI Operational Databases:**
+- **SQL Server**
     - Version: 2019 or later
     - 8 GB Memory or more
     - 256 GB or more free disk space.
