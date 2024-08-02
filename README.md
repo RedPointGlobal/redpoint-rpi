@@ -28,8 +28,8 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
        - Microsoft SQL Server on virtual machine or bare metal
 - **Kubernetes Nodepools**
     - Node Sizing
-       - CPU: 8 vCPUs per node
-       - Memory: 16 GB of RAM per node
+       - 8 vCPUs per node
+       - 16 GB of Memory per node
        - Node Count: Minimum of 2 nodes for high availability
 
 ### Prerequisites
