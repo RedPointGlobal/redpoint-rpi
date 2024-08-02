@@ -26,15 +26,17 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
        - Amazon RDS for SQL Server
        - Google Cloud SQL for SQL Server 
        - Microsoft SQL Server on virtual machine or bare metal
-- **Kubernetes Nodepools**
-    - Node Sizing
-       - 8 vCPUs per node
-       - 16 GB of Memory per node
-       - Node Count: Minimum of 2 nodes for high availability
-
-### Prerequisites
 - **Kubernetes Cluster:**
 Ensure you use the latest stable version of Kubernetes, which can be either self-hosted or managed. Managed options include Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), and Google Kubernetes Engine (GKE). If you don't already have a Kubernetes cluster, refer to the ```./kubernetes/``` directory. This directory contains official quickstart guides for the managed options.
+
+- **Kubernetes Nodepools**
+    - Node Sizing for RPI Workloads
+       - 8 vCPUs per node
+       - 16 GB of Memory per node
+       - Minimum of 2 nodes for high availability
+
+### Before you begin
+Before installing RPI, ensure that the following requirements are met:
 
 - **TLS Certificate Files:**
 A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key.
@@ -45,13 +47,9 @@ Prior to RPI install, open a support ticket at support@redpointglobal.com reques
 - **RPI License:** 
 Prior to RPI install, open a support ticket at support@redpointglobal.com to obtain your License activation key. 
 
-### Before you begin
-Before installing RPI, ensure that the following requirements are met:
-
-1. You have access to your Kubernetes..
-2. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
-
-```While this guide assumes Microsoft Azure as the deployment platform. It's also compatible with Amazon Web Services (AWS) and Google Cloud Platform (GCP). Ensure you select the appropriate cloud provider in the values.yaml file before proceeding with the installation. This setting can be found in the global section of values.yaml```
+- **Cluster Access:** 
+1. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
+2. Gain command-line access to your Kubernetes cluster to interact with it using kubectl.
 
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
