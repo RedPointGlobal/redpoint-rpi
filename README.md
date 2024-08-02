@@ -57,7 +57,7 @@ Before installing RPI, follow these preparatory steps to ensure a smooth setup:
 
 **1)** Configure SQL Server Settings:
 
-Ensure you have correctly configured the SQL Server details in the ```Configeditor``` section of the values.yaml file. This includes setting the correct server address, username, password, database names, and other relevant SQL settings.
+Within the ```values.yaml``` file, locate the ```configeditor``` section under ```appsettings``` and provide the correct values for your SQL Server. This includes setting the correct server address, username, password, database names, and connection strings for the operations and logging databases. Refer to the example below for guidance
 ```
   configeditor:
     sqlServer: 
