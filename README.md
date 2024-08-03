@@ -94,6 +94,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-password=$DOCKER_PASSWORD
 ```
 - **5) Create the TLS Certificate Secrets:**
+
 A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key. Run the following command to create the Kubernetes secret, replacing ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
 ```
 CERT_FILE=path/to/your_cert.crt
