@@ -73,14 +73,14 @@ databases:
 ```
 - **3) Create Kubernetes Namespace:**
 
-Run the command below to create the Kubernetes namespace for deploying RPI services and set it as the default context for subsequent CLI commands.
+Run the following command to create the Kubernetes namespace for deploying RPI services and set it as the default context for future CLI commands
 ```
 kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
 - **4) Create the Container Registry Secret:**
 
-Create a Kubernetes Secret with the credentials required to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
+Run the following command to create a Kubernetes Secret containing the credentials needed to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
 DOCKER_USERNAME=<your_username> 
 DOCKER_PASSWORD=<your_password>
@@ -94,7 +94,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-password=$DOCKER_PASSWORD
 ```
 - **5) Create the TLS Certificate Secrets:**
-A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key. Once you have those two files, create the Kubernetes secret. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
+A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key. Run the following command to create the Kubernetes secret, replacing ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
 ```
 CERT_FILE=path/to/your_cert.crt
 KEY_FILE=path/to/your_cert.key
