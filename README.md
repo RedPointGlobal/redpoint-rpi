@@ -51,9 +51,9 @@ Ensure that the following requirements are met:
   - Ensure you obtain the necessary permissions to install applications in your Kubernetes cluster.
 
 ### Install Procedure
-Before installing RPI, follow these preparatory steps to ensure a smooth setup:
+Follow the following steps to install RPI:
 
-- **1) Set the Target Cloud Provider:**
+- **1) Set your target Cloud Provider:**
 
 Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google``` and ```demo```
 ```
