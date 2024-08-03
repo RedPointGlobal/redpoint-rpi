@@ -50,13 +50,14 @@ Prior to installing RPI, install [kubectl](https://kubernetes.io/docs/tasks/tool
 
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
-**1) Set the Target Cloud Provider**
+
+- **1) Set the Target Cloud Provider:**
 
 Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google``` and ```demo```
 ```
   cloud: amazon
 ```
-**2) Configure SQL Server Settings:**
+- **2) Configure SQL Server Settings:**
 
 Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresql```, ```amazonrds```, ```postgresql```, and  ```googlecloudsql```
 ```
