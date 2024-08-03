@@ -40,9 +40,11 @@ Ensure you use the latest stable version of Kubernetes, which can be either self
 Before installing RPI, ensure that the following requirements are met:
 
 - **Redpoint Container Registry access:** 
+
 Prior to installing RPI, open a support ticket at support@redpointglobal.com requesting access to the RPI repository.
 
 - **RPI License:** 
+
 Prior to installing RPI, open a support ticket at support@redpointglobal.com to obtain your License activation key. 
 
 - **Commandline Tools:** 
