@@ -37,7 +37,7 @@ Ensure you use the latest stable version of Kubernetes, which can be either self
        - Minimum of 2 nodes for high availability
 
 ### Before you begin
-Before installing RPI, ensure that the following requirements are met:
+Ensure that the following requirements are met:
 
 - **Redpoint Container Registry access:** 
   - Prior to installing RPI, open a support ticket at support@redpointglobal.com requesting access to the RPI repository.
