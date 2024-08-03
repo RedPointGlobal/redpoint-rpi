@@ -18,7 +18,7 @@ data:
           "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
           "EnableEventListening": {{ .Values.realtime.enableEventListening }}
         },
-        {{- if eq .Values.queueProviders.type "eventhub" }}
+        {{- if eq .Values.queueProviders.type "azureeventhubs" }}
         "Queues": {
           "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
           "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
@@ -31,11 +31,11 @@ data:
             "Settings": [
               {
                 "Key": "EventHubName",
-                "Value": {{ .Values.queueProviders.eventHub.eventHubName | quote }}
+                "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote }}
               },
               {
                 "Key": "EventHubConnectionString",
-                "Value": {{ .Values.queueProviders.eventHub.connectionString | quote }}
+                "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote }}
               }
             ]
           },
@@ -46,17 +46,17 @@ data:
             "Settings": [
               {
                 "Key": "EventHubName",
-                "Value": {{ .Values.queueProviders.eventHub.eventHubName | quote }}
+                "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote }}
               },
               {
                 "Key": "EventHubConnectionString",
-                "Value": {{ .Values.queueProviders.eventHub.connectionString | quote }}
+                "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote }}
               }
             ]
           }
         },
         {{- end }}
-        {{- if eq .Values.queueProviders.type "sqs" }}
+        {{- if eq .Values.queueProviders.type "amazonsqs" }}
         "Queues": {
           "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
           "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
@@ -69,15 +69,15 @@ data:
             "Settings": [
               {
                 "Key": "AccessKey",
-                "Value": {{ .Values.queueProviders.sqs.accessKey | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
               },
               {
                 "Key": "SecretKey",
-                "Value": {{ .Values.queueProviders.sqs.secretKey | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
               },
               {
                 "Key": "RegionEndpoint",
-                "Value": {{ .Values.queueProviders.sqs.regionEndpoint | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
               }
             ]
           },
@@ -88,15 +88,15 @@ data:
             "Settings": [
               {
                 "Key": "AccessKey",
-                "Value": {{ .Values.queueProviders.sqs.accessKey | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
               },
               {
                 "Key": "SecretKey",
-                "Value": {{ .Values.queueProviders.sqs.secretKey | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
               },
               {
                 "Key": "RegionEndpoint",
-                "Value": {{ .Values.queueProviders.sqs.regionEndpoint | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
               }
             ]
           }
@@ -114,16 +114,20 @@ data:
             "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
             "Settings": [
               {
-                "Key": "AccessKey",
-                "Value": {{ .Values.queueProviders.sqs.accessKey | quote }}
+                "Key": "HostName",
+                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
               },
               {
-                "Key": "SecretKey",
-                "Value": {{ .Values.queueProviders.sqs.secretKey | quote }}
+                "Key": "VirtualHost",
+                "Value": "/"
               },
               {
-                "Key": "RegionEndpoint",
-                "Value": {{ .Values.queueProviders.sqs.regionEndpoint | quote }}
+                "Key": "UserName",
+                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+              },
+              {
+                "Key": "Password",
+                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
               }
             ]
           },

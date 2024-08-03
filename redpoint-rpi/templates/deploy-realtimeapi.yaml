@@ -36,7 +36,7 @@ spec:
       serviceAccountName: sa-redpoint-rpi
       containers:
         - name: rpi-realtimeapi
-          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.image_tag }}
+          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
           imagePullPolicy: Always
           ports:
           - containerPort: 8080
@@ -86,7 +86,7 @@ spec:
       serviceAccountName: sa-redpoint-rpi
       containers:
         - name: rpi-realtimeapi
-          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.image_tag }}
+          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
           imagePullPolicy: Always
           ports:
           - containerPort: 8080
@@ -144,7 +144,7 @@ spec:
       serviceAccountName: sa-redpoint-rpi
       containers:
         - name: rpi-realtimeapi
-          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.image_tag }}
+          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
           imagePullPolicy: Always
           ports:
           - containerPort: 8080
@@ -202,7 +202,7 @@ spec:
       serviceAccountName: sa-redpoint-rpi
       containers:
         - name: rpi-realtimeapi
-          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.image_tag }}
+          image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
           imagePullPolicy: Always
           ports:
           - containerPort: 8080

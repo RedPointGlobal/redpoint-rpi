@@ -56,7 +56,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
         ports:
@@ -116,7 +116,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
         ports:
@@ -184,7 +184,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
         ports:
@@ -252,7 +252,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
         ports:

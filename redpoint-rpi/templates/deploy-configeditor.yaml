@@ -38,7 +38,7 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:
@@ -80,7 +80,7 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:
@@ -130,7 +130,7 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:
@@ -180,7 +180,7 @@ spec:
       - env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Production
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:

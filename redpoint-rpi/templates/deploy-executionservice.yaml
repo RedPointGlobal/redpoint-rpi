@@ -76,7 +76,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: execution-service
         ports:
@@ -164,7 +164,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: execution-service
         ports:
@@ -259,7 +259,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: execution-service
         ports:
@@ -354,7 +354,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: execution-service
         ports:

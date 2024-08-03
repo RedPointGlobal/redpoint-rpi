@@ -9,7 +9,7 @@ global:
   namespace: redpoint-rpi
   # This tag refers to a specific version of the docker image to be deployed.
   image_tag: 7.3.2024-0703-1351
-
+  
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
   nodeSelector: {}
   # tolerations ensures that RPI is deployed on nodes specifically designated for Redpoint RPI,
@@ -60,14 +60,14 @@ queueNames:
   listenerQueuePath: dev-rpiqueuelistener
   
 queueProviders: 
-  # Supported queue providers sqs, servicebus, pubsub, rabbitmq, eventhub
-  type: sqs 
+  # Supported queue providers sqs, azureservicebus, googlepubsub, rabbitmq, azureeventhubs
+  type: amazonsqs 
 
-  eventHub: 
+  azureeventhubs: 
     eventHubName: RealtimeTest
     connectionString: your_event_hub_connection_string
   
-  sqs: 
+  amazonsqs: 
     accessKey: your_aws_iam_accesskey
     secretKey: your_aws_iam_secretkey
     regionEndpoint: us-east-1
@@ -77,10 +77,10 @@ queueProviders:
     username: redpointdev
     password: .RedPoint2021
   
-  servicebus: 
+  azureservicebus: 
     connectionString: your_service_bus_connection_string 
   
-  pubsub: 
+  googlepubsub: 
 
 cacheProviders: 
   # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis

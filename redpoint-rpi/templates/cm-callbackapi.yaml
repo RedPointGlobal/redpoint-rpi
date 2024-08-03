@@ -19,15 +19,15 @@ data:
             "Settings": [
               {
                 "Key": "AccessKey",
-                "Value": {{ .Values.queueProviders.sqs.accessKey | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
               },
               {
                 "Key": "SecretKey",
-                "Value": {{ .Values.queueProviders.sqs.secretKey | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
               },
               {
                 "Key": "RegionEndpoint",
-                "Value": {{ .Values.queueProviders.sqs.regionEndpoint | quote }}
+                "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
               }
             ]
           }
@@ -98,7 +98,7 @@ data:
               },
               {
                 "Key": "ConnectionString",
-                "Value": {{ .Values.queueProviders.servicebus.connectionString | quote }}
+                "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
               }
             ]
           }
@@ -120,11 +120,11 @@ data:
             "Settings": [
               {
                 "Key": "EventHubName",
-                "Value": {{ .Values.queueProviders.eventhub.eventHubName | quote}}
+                "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote}}
               },
               {
                 "Key": "EventHubConnectionString",
-                "Value": {{ .Values.queueProviders.eventhub.connectionString | quote}}
+                "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote}}
               }
             ]
           }

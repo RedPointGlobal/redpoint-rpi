@@ -14,8 +14,6 @@ spec:
   selector:
     app: rpi-callbackapi
 
-
----
 {{- if eq .Values.global.cloud "demo" }}
 apiVersion: apps/v1
 kind: Deployment
@@ -51,7 +49,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:
@@ -68,7 +66,6 @@ spec:
             name: rpi-callbackapi
 {{- end }}
 
----
 {{- if eq .Values.global.cloud "amazon" }}
 apiVersion: apps/v1
 kind: Deployment
@@ -106,7 +103,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:
@@ -131,7 +128,6 @@ spec:
       {{- end }}
 {{- end }}
 
----
 {{- if eq .Values.global.cloud "azure" }}
 apiVersion: apps/v1
 kind: Deployment
@@ -169,7 +165,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:
@@ -232,7 +228,7 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.image_tag }}
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
         ports:
