@@ -69,14 +69,14 @@ databases:
   operationsDatabaseName: Pulse
   loggingDatabaseName: Pulse_Logging
 ```
-**3) Create Kubernetes Namespace:**
+- **3) Create Kubernetes Namespace:**
 
 Run the command below to create the Kubernetes namespace for deploying RPI services and set it as the default context for subsequent CLI commands.
 ```
 kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
-**4) Create the Container Registry Secret:**
+- **4) Create the Container Registry Secret:**
 
 Create a Kubernetes Secret with the credentials required to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
@@ -91,7 +91,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=$DOCKER_USERNAME \
 --docker-password=$DOCKER_PASSWORD
 ```
-**5) Create the TLS Certificate Secrets:**
+- **5) Create the TLS Certificate Secrets:**
 A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key. Once you have those two files, create the Kubernetes secret. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
 CERT_FILE=path/to/your_cert.crt
@@ -104,7 +104,7 @@ kubectl create secret tls ingress-tls \
 --key=$KEY_FILE
 
 ```
-**6) Install RPI:**
+- **6) Install RPI:**
 After completing the above steps, you are now ready to proceed with the installation as follows:
 
 - Clone the RPI repository to your local machine:
@@ -132,7 +132,7 @@ NOTES:
 ```
 It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. This patience is crucial for the successful retrieval of ingress endpoints in the subsequent step.
 
-### RPI Endpoints
+- ### RPI Endpoints
 To view the RPI endpoints, use the following kubectl command. This command lists all the ingress resources in the redpoint-rpi namespace, showing you the configured endpoints.
 ```
 kubectl get ingress --namespace redpoint-rpi
@@ -157,7 +157,7 @@ rpi-configeditor.example/api/deployment/downloads/Client  # RPI Client Executabl
 rpi-integrationapi.example.com                            # Integration API
 rpi-realtime.example.com                                  # RPI Realtime
 ```
-### License Activation
+- ### License Activation
 After installing RPI, you need to apply a license. This license is obtained from Redpoint Support. Follow the steps below to access the Configuration Editor and enter your license key:
 
 - Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
