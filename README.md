@@ -108,6 +108,7 @@ kubectl create secret tls ingress-tls \
 
 ```
 **6) Install RPI:**
+
 After completing the above steps, you are now ready to proceed with the installation as follows:
 
 - Clone the RPI repository to your local machine:
@@ -136,6 +137,7 @@ NOTES:
 It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. This patience is crucial for the successful retrieval of ingress endpoints in the subsequent step.
 
 ### RPI Endpoints
+
 To view the RPI endpoints, use the following kubectl command. This command lists all the ingress resources in the redpoint-rpi namespace, showing you the configured endpoints.
 ```
 kubectl get ingress --namespace redpoint-rpi
@@ -161,6 +163,7 @@ rpi-integrationapi.example.com                            # Integration API
 rpi-realtime.example.com                                  # RPI Realtime
 ```
 ### License Activation
+
 After installing RPI, you need to apply a license. This license is obtained from Redpoint Support. Follow the steps below to access the Configuration Editor and enter your license key:
 
 - Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
@@ -172,17 +175,24 @@ After installing RPI, you need to apply a license. This license is obtained from
 At this point, the default installation is complete and you are ready to add your first RPI tenant. 
 
 ### High Availability
+
 The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
 
 To achieve high availability, adjust the number of replicas for each service to 2 or more. Additionally, the cluster admin could also create a [Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. This not only maintains high availability but also optimizes resource usage by scaling the number of replicas dynamically according to the workload.
 
 Here’s how you can set the replica count in the ```values.yaml``` file:
 ```
-global:
-  replicaCount: 3  # Set the number of replicas for each service
-
+replicas:
+  interactionapi: 2
+  integrationapi: 2
+  configeditor: 2
+  callbackapi: 2
+  nodemanager: 2
+  executionservice: 2
+  realtimeapi: 2
 ```
 ### RPI Storage
+
 RPI requires the following for it's Storage requirements
 
  - File Share storage (SMB or NFS) used as a File Output directory for storing any file assets exported via interactions or selection rules
