@@ -119,7 +119,7 @@ git clone https://github.com/RedPointGlobal/redpoint-rpi.git
 ```
 cd redpoint-rpi
 ```
-- Execute the following Helm command to install RPI on your Kubernetes cluster, using the configurations set in your values.yaml file:
+- Run the following Helm command to install RPI on your Kubernetes cluster, using the configurations set in your values.yaml file:
 ```
 helm install redpoint-rpi redpoint-rpi/ --values values.yaml
 ```
@@ -178,9 +178,7 @@ At this point, the default installation is complete and you are ready to add you
 
 The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
 
-To achieve high availability, adjust the number of replicas for each service to 2 or more. Additionally, the cluster admin could also create a [Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. This not only maintains high availability but also optimizes resource usage by scaling the number of replicas dynamically according to the workload.
-
-Here’s how you can set the replica count in the ```values.yaml``` file:
+To achieve high availability, adjust the number of replicas for each service to 2 or more. Additionally, the cluster admin could also create a [Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. Here’s how you can set the replica count in the ```values.yaml``` file:
 ```
 replicas:
   interactionapi: 2
