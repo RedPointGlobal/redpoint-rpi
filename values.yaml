@@ -2,20 +2,14 @@ global:
   application:
     name: redpointcdp-interaction
     version: "7"
-  # Supported cloud providers are
-  # azure  (Azure)
-  # amazon (AWS)
-  # google (GCP)
-  # internal (Redpoint Internal)
+  # Supported cloud providers are azure, amazon, google, and demo
   cloud: amazon
 
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
   # This tag refers to a specific version of the docker image to be deployed.
   image_tag: 7.3.2024-0703-1351
-  
-  # Define the deployment type.
-  # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
+
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
   nodeSelector: {}
   # tolerations ensures that RPI is deployed on nodes specifically designated for Redpoint RPI,
@@ -66,12 +60,7 @@ queueNames:
   listenerQueuePath: dev-rpiqueuelistener
   
 queueProviders: 
-  # Supported queue providers are 
-  # sqs        for Amazon SQS
-  # servicebus for Azure Servicebus
-  # pubsub     for Google PubSub
-  # rabbitmq   for RabbitMQ
-  # eventhub   for Azure Event Hubs
+  # Supported queue providers sqs, servicebus, pubsub, rabbitmq, eventhub
   type: sqs 
 
   eventHub: 
@@ -94,9 +83,8 @@ queueProviders:
   pubsub: 
 
 cacheProviders: 
-  # Supported Cache providers are 
-  # mongodb        for MongoDB 
-  # redis          for Redis Cache
+  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis
+  # cosmosdb
   type: mongodb
 
   mongodb: 
@@ -106,6 +94,11 @@ cacheProviders:
 
   redis: 
     hostName: rpi-rediscache
+  
+  cassandra:
+  googlebigtable:
+  azureredis:
+  cosmosdb:
 
 callbackapi:
   queueEnabled: true
