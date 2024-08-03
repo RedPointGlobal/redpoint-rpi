@@ -40,14 +40,13 @@ Ensure you use the latest stable version of Kubernetes, which can be either self
 Before installing RPI, ensure that the following requirements are met:
 
 - **Redpoint Container Registry access:** 
-Prior to RPI install, open a support ticket at support@redpointglobal.com requesting access to the RPI repository.
+Prior to installing RPI, open a support ticket at support@redpointglobal.com requesting access to the RPI repository.
 
 - **RPI License:** 
-Prior to RPI install, open a support ticket at support@redpointglobal.com to obtain your License activation key. 
+Prior to installing RPI, open a support ticket at support@redpointglobal.com to obtain your License activation key. 
 
 - **Cluster Access:** 
-  - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
-  - Gain command-line access to your Kubernetes cluster to interact with it using kubectl.
+Prior to installing RPI, install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster and ensure you have access to interact with the target Kubeenetes cluster.
 
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
