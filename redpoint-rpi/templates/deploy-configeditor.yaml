@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-configeditor
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-configeditor
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-configeditor
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-configeditor
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-configeditor
+spec:
+  replicas: {{ .Values.replicas.configeditor }}
+  selector:
+    matchLabels:
+      app: rpi-configeditor
+  template:
+    metadata:
+      labels:
+        app: rpi-configeditor
+    spec:
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-configeditor
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-configeditor
+          configMap:
+            name: rpi-configeditor
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-configeditor
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-configeditor
+spec:
+  replicas: {{ .Values.replicas.configeditor }}
+  selector:
+    matchLabels:
+      app: rpi-configeditor
+  template:
+    metadata:
+      labels:
+        app: rpi-configeditor
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-configeditor
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-configeditor
+          configMap:
+            name: rpi-configeditor
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-configeditor
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-configeditor
+spec:
+  replicas: {{ .Values.replicas.configeditor }}
+  selector:
+    matchLabels:
+      app: rpi-configeditor
+  template:
+    metadata:
+      labels:
+        app: rpi-configeditor
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-configeditor
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-configeditor
+          configMap:
+            name: rpi-configeditor
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-configeditor
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-configeditor
+spec:
+  replicas: {{ .Values.replicas.configeditor }}
+  selector:
+    matchLabels:
+      app: rpi-configeditor
+  template:
+    metadata:
+      labels:
+        app: rpi-configeditor
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-configeditor
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-configeditor
+          configMap:
+            name: rpi-configeditor
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

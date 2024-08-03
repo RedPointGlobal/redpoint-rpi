@@ -456,7 +456,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-config-editor
+              name: rpi-configeditor
               port:
                 number: 80
     - host: rpintegrationapi.rg1cloud.com
@@ -476,7 +476,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-realtime
+              name: rpi-realtimeapi
               port:
                 number: 80
     - host: rpicallbackapi.rg1cloud.com
@@ -486,13 +486,13 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-callback-api
+              name: rpi-callbackapi
               port:
                 number: 80
 {{- end }}
 
 
-{{- if eq .Values.global.deploymentType "client" }}
+{{- if eq .Values.global.deploymentMode "client" }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -951,7 +951,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-config-editor
+              name: rpi-configeditor
               port:
                 number: 80
     - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
@@ -971,7 +971,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-realtime
+              name: rpi-realtimeapi
               port:
                 number: 80
     - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
@@ -981,7 +981,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-callback-api
+              name: rpi-callbackapi
               port:
                 number: 80
 {{- end }}

@@ -1,4 +1,4 @@
-{{- if .Values.appsettings.configeditor.EnableDemoSQLServer }}
+{{- if eq .Values.global.cloud "demo" }}
 apiVersion: v1
 kind: Service
 metadata:

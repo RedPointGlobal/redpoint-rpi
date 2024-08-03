@@ -1,0 +1,397 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-interactionapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-interactionapi
+    
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-interactionapi
+spec:
+  replicas: {{ .Values.replicas.interactionapi }}
+  selector:
+    matchLabels:
+      app: rpi-interactionapi
+  template:
+    metadata:
+      labels:
+        app: rpi-interactionapi
+    spec:
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIClient__AllowSavingLoginDetails
+          value: "true"
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: RPIClient__AlwaysShowClientsAtLogin
+          value: "true"
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.image_tag }}
+        name: interaction-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-interactionapi
+            mountPath: /app/appsettings
+          {{- if .Values.appsettings.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      hostname: redpoint-interaction-api
+      volumes:
+        - name: rpi-interactionapi
+          configMap:
+            name: rpi-interactionapi
+        {{- if .Values.appsettings.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.appsettings.storage.persistentVolumeClaim }}
+        {{- end }}
+{{- end }}
+
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-interactionapi
+spec:
+  replicas: {{ .Values.replicas.interactionapi }}
+  selector:
+    matchLabels:
+      app: rpi-interactionapi
+  template:
+    metadata:
+      labels:
+        app: rpi-interactionapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIClient__AllowSavingLoginDetails
+          value: "true"
+        - name: RPIClient__AlwaysShowClientsAtLogin
+          value: "true"
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir 
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.image_tag }}
+        imagePullPolicy: Always
+        name: interaction-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-interactionapi
+            mountPath: /app/appsettings
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      hostname: redpoint-interaction-api
+      volumes:
+        - name: rpi-interactionapi
+          configMap:
+            name: rpi-interactionapi
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-interactionapi
+spec:
+  replicas: {{ .Values.replicas.interactionapi }}
+  selector:
+    matchLabels:
+      app: rpi-interactionapi
+  template:
+    metadata:
+      labels:
+        app: rpi-interactionapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIClient__AllowSavingLoginDetails
+          value: "true"
+        - name: RPIClient__AlwaysShowClientsAtLogin
+          value: "true"
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir 
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.image_tag }}
+        imagePullPolicy: Always
+        name: interaction-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-interactionapi
+            mountPath: /app/appsettings
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      hostname: redpoint-interaction-api
+      volumes:
+        - name: rpi-interactionapi
+          configMap:
+            name: rpi-interactionapi
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-interactionapi
+spec:
+  replicas: {{ .Values.replicas.interactionapi }}
+  selector:
+    matchLabels:
+      app: rpi-interactionapi
+  template:
+    metadata:
+      labels:
+        app: rpi-interactionapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIClient__AllowSavingLoginDetails
+          value: "true"
+        - name: RPIClient__AlwaysShowClientsAtLogin
+          value: "true"
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir 
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.image_tag }}
+        imagePullPolicy: Always
+        name: interaction-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-interactionapi
+            mountPath: /app/appsettings
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      hostname: redpoint-interaction-api
+      volumes:
+        - name: rpi-interactionapi
+          configMap:
+            name: rpi-interactionapi
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

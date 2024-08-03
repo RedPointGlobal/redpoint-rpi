@@ -1,0 +1,170 @@
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {{- if eq .Values.queueProviders.type "sqs" }}
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "queueProviders": {
+          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.callbackapi.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Resonance.AWSQueueAccess",
+            "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
+            "Settings": [
+              {
+                "Key": "AccessKey",
+                "Value": {{ .Values.queueProviders.sqs.accessKey | quote }}
+              },
+              {
+                "Key": "SecretKey",
+                "Value": {{ .Values.queueProviders.sqs.secretKey | quote }}
+              },
+              {
+                "Key": "RegionEndpoint",
+                "Value": {{ .Values.queueProviders.sqs.regionEndpoint | quote }}
+              }
+            ]
+          }
+        },
+        "AllowedHosts": "*"
+      }
+    }
+    {{- end }}
+    {{- if eq .Values.queueProviders.type "rabbitmq" }}
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "queueProviders": {
+          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+              },
+              {
+                "Key": "Password",
+                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
+              }
+            ]
+          }
+        },
+        "AllowedHosts": "*"
+      }
+    }
+    {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {{- if eq .Values.queueProviders.type "servicebus" }}
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "queueProviders": {
+          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Azure.Server",
+            "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
+            "Settings": [
+              {
+                "Key": "QueueType",
+                "Value": "ServiceBus"
+              },
+              {
+                "Key": "ConnectionString",
+                "Value": {{ .Values.queueProviders.servicebus.connectionString | quote }}
+              }
+            ]
+          }
+        },
+        "AllowedHosts": "*"
+      }
+    }
+    {{- end }}
+    {{- if eq .Values.queueProviders.type "eventhub" }}
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "queueProviders": {
+          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Azure.Server",
+            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+            "Settings": [
+              {
+                "Key": "EventHubName",
+                "Value": {{ .Values.queueProviders.eventhub.eventHubName | quote}}
+              },
+              {
+                "Key": "EventHubConnectionString",
+                "Value": {{ .Values.queueProviders.eventhub.connectionString | quote}}
+              }
+            ]
+          }
+        },
+        "AllowedHosts": "*"
+      }
+    }
+    {{- end }}
+    {{- if eq .Values.queueProviders.type "rabbitmq" }}
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "queueProviders": {
+          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+              },
+              {
+                "Key": "Password",
+                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
+              }
+            ]
+          }
+        },
+        "AllowedHosts": "*"
+      }
+    }
+    {{- end }}
+{{- end }}

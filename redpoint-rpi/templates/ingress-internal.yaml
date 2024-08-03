@@ -456,7 +456,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-config-editor
+              name: rpi-configeditor
               port:
                 number: 80
     - host: rpintegrationapi.rg1cloud.com
@@ -476,7 +476,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-realtime
+              name: rpi-realtimeapi
               port:
                 number: 80
     - host: rpicallbackapi.rg1cloud.com
@@ -486,7 +486,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-callback-api
+              name: rpi-callbackapi
               port:
                 number: 80
 {{- end }}

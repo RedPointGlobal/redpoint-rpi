@@ -54,34 +54,34 @@ Prior to RPI install, open a support ticket at support@redpointglobal.com to obt
 
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
+**1) Set the Target Cloud Provider**
 
-**1) Configure SQL Server Settings:**
-
-Within the ```values.yaml``` file, locate the ```configeditor``` section under ```appsettings``` and provide the correct values for your SQL Server. This includes setting the correct server address, username, password, database names, and connection strings for the operations and logging databases. Refer to the example below for guidance
+Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google``` and ```demo```
 ```
-  configeditor:
-    sqlServer: 
-      type: demo 
-      serverName: YOUR_SQL_SERVER_HOST
-      username: YOUR_SQL_USERNAME
-      password: YOUR_SQL_PASSWORD
-      pulseDatabaseName: Pulse
-      loggingDatabaseName: Pulse_Logging
-      ConnectionStrings_LoggingDatabase: Server=tcp:$YOUR_SQL_SERVER_HOST,1433;Database=Pulse_Logging;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
-      ConnectionStrings_OperationalDatabase: Server=tcp:$YOUR_SQL_SERVER_HOST,1433;Database=Pulse;User ID=$YOUR_SQL_USERNAME;Password=$YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+  cloud: amazon
 ```
-For quick demo installations, set the SQL Server ```type``` to ```demo``` and skip configuring the rest of the settings within the ```configeditor``` section. The Helm chart will deploy a pre-configured SQL Server container. **DO NOT USE**  ```demo``` type for production or customized installations. You should provide your specific SQL Server details as mentioned in above.
+**2) Configure SQL Server Settings:**
 
-**2) Create Kubernetes Namespace:**
+Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresql```, ```amazonrds```, ```postgresql```, and  ```googlecloudsql```
+```
+databases: 
+  type: amazonrds
+  serverhost: your_sql_server_host
+  username: your_sql_username
+  password: your_sql_password
+  operationsDatabaseName: Pulse
+  loggingDatabaseName: Pulse_Logging
+```
+**3) Create Kubernetes Namespace:**
 
 Run the command below to create the Kubernetes namespace for deploying RPI services and set it as the default context for subsequent CLI commands.
 ```
 kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
-**3) Create the Container Registry Secret:**
+**4) Create the Container Registry Secret:**
 
-Create a Kubernetes Secret with the credentials required to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace <your_username> and <your_password> with your actual credentials:
+Create a Kubernetes Secret with the credentials required to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
 DOCKER_USERNAME=<your_username> 
 DOCKER_PASSWORD=<your_password>
@@ -94,7 +94,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=$DOCKER_USERNAME \
 --docker-password=$DOCKER_PASSWORD
 ```
-**4) Create the TLS Certificate Secrets:**
+**5) Create the TLS Certificate Secrets:**
 
 Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
@@ -108,6 +108,7 @@ kubectl create secret tls ingress-tls \
 --key=$KEY_FILE
 
 ```
+**6) Install RPI:**
 After completing the above steps, you are now ready to proceed with the installation as follows:
 
 - Clone the RPI repository to your local machine:

@@ -1,11 +1,29 @@
 global:
   application:
-    name: redpoint-interaction
-    version: "7.3"
-    environment: prod 
+    name: redpointcdp-interaction
+    version: "7"
+  # Supported cloud providers are
+  # azure  (Azure)
+  # amazon (AWS)
+  # google (GCP)
+  # internal (Redpoint Internal)
+  cloud: amazon
 
-  # Define the Kubernetes namespace in which the services will be deployed.
+  # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
+  # This tag refers to a specific version of the docker image to be deployed.
+  image_tag: 7.3.2024-0703-1351
+  
+  # Define the deployment type.
+  # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
+  # The nodeSelector is used to specify the nodes where RPI should be deployed.
+  nodeSelector: {}
+  # tolerations ensures that RPI is deployed on nodes specifically designated for Redpoint RPI,
+  tolerations: {}
+#    - effect: NoSchedule
+#      key: app
+#      operator: Equal
+#      value: redpoint-rpi
 
   # Set the number of replicas for the deployment.
 replicas:
@@ -16,134 +34,131 @@ replicas:
   nodemanager: 1
   executionservice: 1
   realtimeapi: 1
+  redis: 1
+  queueservice: 1
+  queuereader: 1
+  
+databases: 
+  # The Supported options for database type are 
+  # sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
+  type: amazonrds
+  serverhost: your_sql_server_host
+  username: your_sql_username
+  password: your_sql_password
+  operationsDatabaseName: Pulse
+  loggingDatabaseName: Pulse_Logging
 
-  # This tag refers to a specific version of the docker image to be deployed.
-  image_tag_internal: 7.3.2024-0703-1351
-  image_tag_client: 7.3.2024-0703-1351
+realtime:
+  rpiClientID: "00000000-0000-0000-0000-000000000000"
+  rpiAuthToken: "00000000-0000-0000-0000-000000000000" 
+  enableHelpPages: true 
+  enableEventListening: true
+  realtimeProcessingEnabled: true
+  decisionCacheDuration: 60
+  enableAuditMetricsInHeaders: true
+  cacheOutputQueueEnabled: true
 
-  # Define the deployment type.
-  # 'client' is for external clients, while 'internal' is reserved for Redpoint users.
-  deploymentType: client
-  imagePullPolicy: Always
-  # The nodeSelector is used to specify the nodes where RPI should be deployed.
-  nodeSelector: {}
-  # tolerations ensures that RPI is deployed on nodes specifically designated for Redpoint RPI,
-  tolerations: {}
-#    - effect: NoSchedule
-#      key: app
-#      operator: Equal
-#      value: redpoint-rpi
+queueNames: 
+  formQueuePath: dev-rpiwebformsubmission
+  eventsQueuePath: dev-rpiwebevents
+  cacheOutputQueuePath: dev-rpiwebcachedata
+  recommendationsQueuePath: dev-rpiwebrecommendation
+  listenerQueuePath: dev-rpiqueuelistener
+  
+queueProviders: 
+  # Supported queue providers are 
+  # sqs        for Amazon SQS
+  # servicebus for Azure Servicebus
+  # pubsub     for Google PubSub
+  # rabbitmq   for RabbitMQ
+  # eventhub   for Azure Event Hubs
+  type: sqs 
 
-appsettings:
-  interactionapi:
+  eventHub: 
+    eventHubName: RealtimeTest
+    connectionString: your_event_hub_connection_string
+  
+  sqs: 
+    accessKey: your_aws_iam_accesskey
+    secretKey: your_aws_iam_secretkey
+    regionEndpoint: us-east-1
+  
+  rabbitmq: 
+    hostName: rpi-queueservice
+    username: redpointdev
+    password: .RedPoint2021
+  
+  servicebus: 
+    connectionString: your_service_bus_connection_string 
+  
+  pubsub: 
 
-  configeditor:
-    sqlServer: 
-      type: demo # Allowed values are demo, sqlserver, azuresql, amazonrds, cloudsql and postgresql
-      serverName: sql-rpi-ops
-      username: sa
-      password: MyC0m9l&xP@ssw0rd
-      pulseDatabaseName: Pulse
-      loggingDatabaseName: Pulse_Logging
-      # Connection string for the Logging database.
-      ConnectionStrings_LoggingDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse_Logging;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
-      # Connection string for the Operational database.
-      ConnectionStrings_OperationalDatabase: Server=tcp:sql-rpi-ops,1433;Database=Pulse;User ID=sa;Password=MyC0m9l&xP@ssw0rd;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;
+cacheProviders: 
+  # Supported Cache providers are 
+  # mongodb        for MongoDB 
+  # redis          for Redis Cache
+  type: mongodb
 
-  realtime:
-    rpiClientID: "1111111-1111-1111-1111-1111111111"
-    rpiAuthToken: "03eda994-5d39-4886-99df-9ccafd40a181"
-    enableHelpPages: true 
-    enableEventListening: true
-    realtimeProcessingEnabled: true
-    decisionCacheDuration: 60
-    enableAuditMetricsInHeaders: true
-    cacheOutputQueueEnabled: true
+  mongodb: 
+    databaseName: rpiCacheDB
+    ConnectionString: your_mongodb_connection_string
+    CollectionName: rpiCacheCollection
 
-    queueProvider: 
-      type: sqs # Allowed values are sqs, servicebus, rabbitmq, pubsub, eventhub
-      queueNames: 
-        formQueuePath: dev-rpiwebformsubmission
-        eventsQueuePath: dev-rpiwebevents
-        cacheOutputQueuePath: dev-rpiwebcachedata
-        recommendationsQueuePath: dev-rpiwebrecommendation
-        listenerQueuePath: dev-rpiqueuelistener
-      eventHub: 
-        eventHubName: dev-evh-realtime
-        connectionString: Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<your_shared_access_key>
-      sqs: 
-        accessKey: youraccesskey
-        secretKey: yoursecretkey
-        regionEndpoint: your_aws_sqs_region
+  redis: 
+    hostName: rpi-rediscache
 
-    cacheProvider: 
-      type: mongodb # Allowed values are mongodb and redis
-      mongodb: 
-        databaseName: DevRealtimeCache
-        ConnectionString: 
-        CollectionName: DevRealtimeCache
+callbackapi:
+  queueEnabled: true
+  channelLabel: SendGrid
+  callbackServiceQueuePath: sendgridcallbackqueue
 
-      redis: 
-        hostName: redis.example.com
-        
+externalContentProvider:
+  type: azureblob
+  storageAccountName: saredpointrpiecp
+  storageAccountKey: your_storage_account_access_key
+  enabled: false 
+  containerName: sendgridcallbackapi
+  saveEmailEvents: true
 
-  callbackapi:
-    queueProvider: 
-      type: sqs # Allowed values are sqs, eventhub, servicebus and rabbitmq
-      ChannelLabel: SendGrid
-    settings:
-      sqs: 
-        accessKey: youraccesskey
-        secretKey: yoursecretkey
-        regionEndpoint: your_aws_sqs_region
-        callbackServiceQueuePath: dev-sendgridcallback
-      eventHub:
-        eventHubName: dev-sendgridcallback
-        eventHubConnectionString: Endpoint=sb://example.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<your_shared_access_key>
-      externalContentProvider:
-        type: azureblob
-        storageAccountName: sasendgridcallback
-        storageAccountKey: your_storage_account_access_key
-        enabled: false 
-        containerName: dev-sendgridcallbackecp
-        saveEmailEvents: true
+executionservice:
+  RPIExecution__QueueListener__IsEnabled: false 
+  RPIExecution_MaxThreadsPerExecutionService: 50
+  RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
 
+interactionapi: 
+  enableSwagger: true
 
-  executionservice:
-    RPIExecution__QueueListener__IsEnabled: false 
-    RPIExecution_MaxThreadsPerExecutionService: 50
-    RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
+integrationapi:
+  enableSwagger: true
 
-  OpenIdProviders:
-    # Host for OpenID Connect Metadata
-    MetadataHost: ""
-    # Microsoft Entra ID App registration Client ID
-    ClientID: xxxxxx-xxxx-xxxx-xxxx-xxxxxxxx
-    # Name of the OpenID Connect provider. Azure AD in this example
-    Name: AzureAD
-    # Redirect URL after authentication
-    RedirectURL: "https://redpointrpi.example.com"
-    # Audience for the OpenID Connect authentication request
-    Audience: api://xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    # Authorization host for OpenID Connect
-    AuthorizationHost: "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
-    # Enable or disable refresh tokens
-    EnableRefreshTokens: true
-    # Custom scopes for OpenID Connect
-    CustomScopes: ["api://xxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/Interaction.Clients"]
-    # Parameter for id_token_hint during logout
-    LogoutIdTokenParameter: id_token_hint
-    # Validate issuer of the OpenID Connect provider
-    ValidateIssuer: false
-    # Validate audience of the OpenID Connect provider
-    ValidateAudience: true
+OpenIdProviders:
+  # Host for OpenID Connect Metadata
+  MetadataHost: ""
+  # Microsoft Entra ID App registration Client ID
+  ClientID: 00000000-0000-0000-0000-000000000000
+  # Name of the OpenID Connect provider. Azure AD in this example
+  Name: AzureAD
+  # Audience for the OpenID Connect authentication request
+  Audience: api://00000000-0000-0000-0000-000000000000
+  # Authorization host for OpenID Connect
+  AuthorizationHost: "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/v2.0/authorize"
+  # Enable or disable refresh tokens
+  EnableRefreshTokens: true
+  # Custom scopes for OpenID Connect
+  CustomScopes: ["api://00000000-0000-0000-0000-000000000000/Interaction.Clients"]
+  # Parameter for id_token_hint during logout
+  LogoutIdTokenParameter: id_token_hint
+  # Validate issuer of the OpenID Connect provider
+  ValidateIssuer: false
+  # Validate audience of the OpenID Connect provider
+  ValidateAudience: true
 
-  # Define storage configuration
-  storage:
-    # Set whether storage is enabled or not (false means disabled)
-    enabled: false
-    # Specify the persistent volume claim for the File output directory
-    persistentVolumeClaim: rpifileoutputdir
+# Define storage configuration
+storage:
+  # Set whether storage is enabled or not (false means disabled)
+  enabled: false
+  # Specify the persistent volume claim for the File output directory
+  persistentVolumeClaim: rpifileoutputdir
 
 SMTPSettings:
   SMTP_SenderAddress: noreply-rpi@example.com
@@ -152,11 +167,6 @@ SMTPSettings:
   SMTP_Username: example-smtp-username
   SMTP_Password: example-smtp-password
 
-MercurySettings:
-  Mercury_Address: mercury.example.com
-  Mercury_Username: example-mercury-password
-  Mercury_Password: example-mercury-password
-   
 ingress:
   enabled: false
   type: nginx 

@@ -1,0 +1,35 @@
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": true,
+        "RPIAuthentication": {
+          "AuthorizationHost": "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}",
+          "AuthMetaHttpHost": "http://rpi-interactionapi",
+          "EnableTransportSecurityRequirement": false
+        },
+        "OpenIdProviders": [
+          {
+            "Name": {{ .Values.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
+            "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes | quote }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }}
+          }
+        ]
+      },
+      "EnableSwagger": {{ .Values.interactionapi.enableSwagger }}
+    }
+{{- end }}
+
