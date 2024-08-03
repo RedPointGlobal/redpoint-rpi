@@ -47,9 +47,9 @@ Prior to installing RPI, open a support ticket at support@redpointglobal.com to 
 
 - **Commandline Tools:** 
 Prior to installing RPI
- - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
- - Install [Helm](https://helm.sh/docs/helm/helm_install/), a package manager for Kubernetes.
- - Ensure you obtain the necessary permissions to install applications in your Kubernetes cluster.
+  - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
+  - Install [Helm](https://helm.sh/docs/helm/helm_install/), a package manager for Kubernetes.
+  - Ensure you obtain the necessary permissions to install applications in your Kubernetes cluster.
 
 ### Install Procedure
 Before installing RPI, follow these preparatory steps to ensure a smooth setup:
