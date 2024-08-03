@@ -221,7 +221,7 @@ The Queue connectors allow RPI access to inbound collection of data from sources
 
 ```
 queueProviders: 
-  type: sqs 
+  type: amazonsqs 
 ```
 
  - ### Cache Providers
