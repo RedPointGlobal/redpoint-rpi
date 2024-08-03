@@ -10,6 +10,9 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Install Procedure ](#install-procedure)
 - [RPI Endpoints ](#rpi-endpoints)
 - [RPI Storage ](#rpi-storage)
+- [RPI Realtime ](#rpi-realtime)
+  - [Queue Providers ](#queue-providers)
+  - [Cache Providers ](#queue-providers)
 - [RPI High Availability ](#rpi-high-availability)
 - [License Activation ](#license-activation)
 - [RPI v6 Upgrade Assistant](#rpi-v6-upgrade-assistant)
@@ -208,6 +211,14 @@ To enable this storage, update the ```values.yaml``` as shown below
     persistentVolumeClaim: rpifileoutputdir
 
 ```
+### RPI Realtime
+
+RPI Realtime consists of the Realtime webservice and Realtime Agent. 
+ - The Realtime webservice facilitates the making of content applicability decisions, and the recording of events undertaken by e.g. a site visitor. 
+ - The Realtime Agent provides access for the RPI Realtime service to the RPI operational and data databases.
+
+ - ### Queue Providers
+ - ### Cache Providers
 ### RPI v6 Upgrade Assistant
 If you are upgrading from a lower version of RPI, use the [Interaction Upgrade Helper](https://github.com/RedPointGlobal/redpoint-rpi/blob/main/UpgradeAssistant.zip) prior to upgrade to check availability of plugins in the v7 version. Download and extract the zip from the link above and execute the ```RedPoint.Interaction.UpgradeHelper```application. When executed, the Helper requests that a v6 Pulse database connection string be entered.  Assuming that it is able to connect, it checks for v7 compatibility of all plugins currently in use.  If one or more incompatible plugins is found, their details are displayed, and the option to output the same to a file is provided.
 
