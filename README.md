@@ -217,7 +217,7 @@ RPI Realtime consists of the Realtime webservice and Realtime Agent. The ```Real
 
  - ### Queue Providers
 
-The Queue connectors allow RPI access to inbound collection of data from sources like a web form submission. RPI can then act on this information in several ways, such as sending a follow up email after a purchase, executing Realtime decisions to display personalized landing page content, etc. Open the ```values.yaml``` file and locate the ```queueProviders``` section. Here, specify the Queue provider you intend to use. Supported options are: ```amazonsqs```, ```rabbitmq ```, ```azureservicebus```, ```googlepubsub```,```azureeventhubs ```, ```azureservicebus```,```azurestoragequeues```
+The Queue connectors allow RPI access to inbound collection of data from sources like a web form submission. RPI can then act on this information in several ways, such as sending a follow up email after a purchase, executing Realtime decisions to display personalized landing page content, etc. Open the ```values.yaml``` file and locate the ```queueProviders``` section. Here, specify the Queue provider you intend to use. Supported options are: ```amazonsqs```, ```rabbitmq ```, ```googlepubsub```,```azureeventhubs ```, ```azureservicebus```,```azurestoragequeues```
 
 ```
 queueProviders: 
