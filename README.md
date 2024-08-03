@@ -39,9 +39,6 @@ Ensure you use the latest stable version of Kubernetes, which can be either self
 ### Before you begin
 Before installing RPI, ensure that the following requirements are met:
 
-- **TLS Certificate Files:**
-A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key.
-
 - **Redpoint Container Registry access:** 
 Prior to RPI install, open a support ticket at support@redpointglobal.com requesting access to the RPI repository.
 
@@ -95,8 +92,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-password=$DOCKER_PASSWORD
 ```
 **5) Create the TLS Certificate Secrets:**
-
-Create a Kubernetes secret containing your TLS certificate's private and public keys. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
+A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key. Once you have those two files, create the Kubernetes secret. Replace path/to/your_cert.crt and path/to/your_cert.key with the actual paths to your certificate files:
 ```
 CERT_FILE=path/to/your_cert.crt
 KEY_FILE=path/to/your_cert.key
