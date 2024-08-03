@@ -104,7 +104,7 @@ kubectl create secret tls ingress-tls \
 --key=$KEY_FILE
 
 ```
-- **6) Install RPI:**
+**6) Install RPI:**
 After completing the above steps, you are now ready to proceed with the installation as follows:
 
 - Clone the RPI repository to your local machine:
@@ -132,7 +132,7 @@ NOTES:
 ```
 It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. This patience is crucial for the successful retrieval of ingress endpoints in the subsequent step.
 
-- ### RPI Endpoints
+### RPI Endpoints
 To view the RPI endpoints, use the following kubectl command. This command lists all the ingress resources in the redpoint-rpi namespace, showing you the configured endpoints.
 ```
 kubectl get ingress --namespace redpoint-rpi
@@ -157,7 +157,7 @@ rpi-configeditor.example/api/deployment/downloads/Client  # RPI Client Executabl
 rpi-integrationapi.example.com                            # Integration API
 rpi-realtime.example.com                                  # RPI Realtime
 ```
-- ### License Activation
+### License Activation
 After installing RPI, you need to apply a license. This license is obtained from Redpoint Support. Follow the steps below to access the Configuration Editor and enter your license key:
 
 - Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
