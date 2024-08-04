@@ -10,7 +10,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Greenfield Installation ](#greenfield-installation)
 - [Upgrade Installation ](#upgrade-installation)
 - [Demo Installation ](#demo-installation)
-- [RPI Endpoints ](#rpi-endpoints)
+- [RPI Services Access URLs ](#rpi-services-access-urls)
 - [RPI Storage ](#rpi-storage)
 - [RPI Realtime ](#rpi-realtime)
   - [Queue Providers ](#queue-providers)
@@ -146,7 +146,7 @@ NOTES:
 ```
 It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. 
 
-### RPI Endpoints
+### RPI Services Access URLs
 
 To view the RPI endpoints, use the following kubectl command. This command lists all the ingress resources in the redpoint-rpi namespace, showing you the configured endpoints.
 ```
