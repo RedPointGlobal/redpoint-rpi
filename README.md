@@ -51,7 +51,7 @@ Ensure that the following requirements are met:
 - Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluste
 
 ### Greenfield Installation
-In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: A new cluster, A new tenant, New operations and logging databases, New cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing systems. 
+In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: a new RPI cluster, new RPI tenant, new operations and logging databases, new cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing deployments. 
 
 Follow the following steps to get started
 
