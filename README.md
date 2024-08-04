@@ -148,23 +148,22 @@ It may take some time for all the RPI services to fully initialize. We recommend
 
 ### RPI Services Access URLs
 
-To view the RPI endpoints, use the following kubectl command. This command lists all the ingress resources in the redpoint-rpi namespace, showing you the configured endpoints.
+To interact with RPI services, such as client login or using the integration API, you need to obtain the URL endpoints exposed by the ingress. Use the following command to list the ingresses in the redpoint-rpi namespace
 ```
 kubectl get ingress --namespace redpoint-rpi
 ```
-Initially, you might not see an IP address for your endpoints. This delay is normal and occurs because it takes some time for the ingress load balancer to be provisioned. If no IP address is displayed, wait a few minutes and then re-run the command. Once the load balancer is ready, you should see output similar to the following, where ```<Load Balancer IP>``` will be replaced with the actual IP address:
+Initially, you might not see an IP address for your endpoints. This is normal and occurs because provisioning the ingress load balancer takes some time. If no IP address is displayed, wait a few minutes and then re-run the command. Once the load balancer is ready, you should see output similar to the following, where ```<Load Balancer IP>``` will be replaced with the actual IP address:
 ```
 NAME           HOSTS                                   ADDRESS              PORTS     AGE
-redpoint-rpi   redpointrpi-config.example.com          <Load Balancer IP>   80, 443   32d
-redpoint-rpi   redpointrpi.example.com                 <Load Balancer IP>   80, 443   32d
-redpoint-rpi   redpointrpi-integrationapi.example.com  <Load Balancer IP>   80, 443   32d
-redpoint-rpi   redpointrpi-realtime.example.com        <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-configeditor.example.com           <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-client.example.com                 <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-integrationapi.example.com         <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-realtime.example.com               <Load Balancer IP>   80, 443   32d
 ```
-After completing the default installation, the next crucial step involves setting up your DNS:
 
-Add a DNS record in your DNS zone. This record should point to the IP address of the load balancer provided by your Kubernetes ingress. This setup ensures that the domain names you use (like redpointrpi.example.com) correctly route to your RPI instance.
+Add DNS records for the above hosts in your DNS zone. This ensures that the domain names you use for example ```rpi-client.example.com``` correctly route to your RPI instance.
 
-With the DNS configuration in place, you're ready to access the RPI interfaces:
+With the DNS configuration in place, RPI Services can be accessed at the follwing addresses:
 ```
 rpi-configeditor.example.com                              # Configuration editor
 rpi-client.example.com                                    # RPI Client 
