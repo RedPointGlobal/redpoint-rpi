@@ -90,7 +90,7 @@ kubectl config set-context --current --namespace=redpoint-rpi
 ```
 - **Create the Container Registry Secret:**
 
-Run the following command to create the ```imagePull``` Kubernetes secret. This secret contains the credentials needed to pull RPI docker images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
+Run the following command to create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI Docker images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
 DOCKER_USERNAME=<your_username> 
 DOCKER_PASSWORD=<your_password>
