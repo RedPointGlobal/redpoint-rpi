@@ -7,9 +7,9 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 ### Table of Contents
 - [System Requirements ](#system-requirements)
 - [Prerequisites ](#prerequisites)
-- [Greenfield Installattion ](#greenfield-installattion)
-- [Upgrade Installattion ](#upgrade-installattion)
-- [Demo Installattion ](#demo-installattion)
+- [Greenfield Installation ](#greenfield-installation)
+- [Upgrade Installation ](#upgrade-installation)
+- [Demo Installation ](#demo-installation)
 - [RPI Endpoints ](#rpi-endpoints)
 - [RPI Storage ](#rpi-storage)
 - [RPI Realtime ](#rpi-realtime)
