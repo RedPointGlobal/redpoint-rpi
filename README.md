@@ -65,7 +65,7 @@ Follow the following steps to get started
 
 - **Set your target Cloud Provider:**
 
-Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon``` and ```google```
+Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google``` and ```selfhosted```
 ```
   cloud: amazon
 ```
