@@ -59,7 +59,9 @@ Ensure that the following requirements are met:
 ### Install Procedure
 
  - ### Greenfield Installation
-In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: A new cluster, A new tenant, New operations and logging databases, New cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing systems. Follow the following steps to install RPI:
+In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: A new cluster, A new tenant, New operations and logging databases, New cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing systems. 
+
+Follow the following steps to get started
 
 - **Set your target Cloud Provider:**
 
