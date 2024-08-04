@@ -33,25 +33,63 @@ spec:
       labels:
         app: rpi-configeditor
     spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
       serviceAccountName: sa-redpoint-rpi
       containers:
-      - env:
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Production
+      - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
-        name: config-editor
+        env:
+        {{- if eq .Values.databases.type "sqlserver" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrds" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operationsDatabaseName | quote }}
+        - name: OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.loggingDatabaseName | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.serverhost | quote }}
+        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.username | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Password
+          value: {{ .Values.databases.password | quote }}
+        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: "dbo"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-configeditor
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-configeditor
-          configMap:
-            name: rpi-configeditor
+#        volumeMounts:
+#          - name: rpi-configeditor
+#           mountPath: /app/appsettings
+#      volumes:
+#        - name: rpi-configeditor
+#          configMap:
+#            name: rpi-configeditor
 {{- end }}
 
 ---
@@ -77,23 +115,52 @@ spec:
         - name: redpoint-rpi
       serviceAccountName: sa-redpoint-rpi
       containers:
-      - env:
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Production
+      - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
-        name: config-editor
+        env:
+        {{- if eq .Values.databases.type "sqlserver" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrds" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operationsDatabaseName | quote }}
+        - name: OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.loggingDatabaseName | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.serverhost | quote }}
+        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.username | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Password
+          value: {{ .Values.databases.password | quote }}
+        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: "dbo"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-configeditor
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-configeditor
-          configMap:
-            name: rpi-configeditor
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -127,23 +194,52 @@ spec:
         - name: redpoint-rpi
       serviceAccountName: sa-redpoint-rpi
       containers:
-      - env:
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Production
+      - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
-        name: config-editor
+        env:
+        {{- if eq .Values.databases.type "sqlserver" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrds" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operationsDatabaseName | quote }}
+        - name: OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.loggingDatabaseName | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.serverhost | quote }}
+        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.username | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Password
+          value: {{ .Values.databases.password | quote }}
+        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: "dbo"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-configeditor
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-configeditor
-          configMap:
-            name: rpi-configeditor
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -177,23 +273,52 @@ spec:
         - name: redpoint-rpi
       serviceAccountName: sa-redpoint-rpi
       containers:
-      - env:
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Production
+      - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
-        name: config-editor
+        env:
+        {{- if eq .Values.databases.type "sqlserver" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrds" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operationsDatabaseName | quote }}
+        - name: OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.loggingDatabaseName | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.serverhost | quote }}
+        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.username | quote }}
+        - name: OperationalDatabase__ConnectionSettings__Password
+          value: {{ .Values.databases.password | quote }}
+        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: "dbo"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-configeditor
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-configeditor
-          configMap:
-            name: rpi-configeditor
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
