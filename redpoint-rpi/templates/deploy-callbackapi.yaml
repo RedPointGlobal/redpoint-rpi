@@ -14,6 +14,7 @@ spec:
   selector:
     app: rpi-callbackapi
 
+---
 {{- if eq .Values.global.cloud "demo" }}
 apiVersion: apps/v1
 kind: Deployment
@@ -55,8 +56,6 @@ spec:
         ports:
         - name: http
           containerPort: 8080
-        - name: https
-          containerPort: 8443
         volumeMounts:
           - name: rpi-callbackapi
             mountPath: /app/appsettings
@@ -66,6 +65,7 @@ spec:
             name: rpi-callbackapi
 {{- end }}
 
+---
 {{- if eq .Values.global.cloud "amazon" }}
 apiVersion: apps/v1
 kind: Deployment
@@ -109,8 +109,6 @@ spec:
         ports:
         - name: http
           containerPort: 8080
-        - name: https
-          containerPort: 8443
         volumeMounts:
           - name: rpi-callbackapi
             mountPath: /app/appsettings
@@ -128,6 +126,7 @@ spec:
       {{- end }}
 {{- end }}
 
+---
 {{- if eq .Values.global.cloud "azure" }}
 apiVersion: apps/v1
 kind: Deployment
@@ -171,8 +170,6 @@ spec:
         ports:
         - name: http
           containerPort: 8080
-        - name: https
-          containerPort: 8443
         volumeMounts:
           - name: rpi-callbackapi
             mountPath: /app/appsettings
@@ -234,8 +231,6 @@ spec:
         ports:
         - name: http
           containerPort: 8080
-        - name: https
-          containerPort: 8443
         volumeMounts:
           - name: rpi-callbackapi
             mountPath: /app/appsettings

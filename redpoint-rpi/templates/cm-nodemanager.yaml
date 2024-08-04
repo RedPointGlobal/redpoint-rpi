@@ -15,7 +15,7 @@ data:
             "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
             "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
             "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
-            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
+            "RedirectURL": "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}",
             "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
             "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes | quote }},
             "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},

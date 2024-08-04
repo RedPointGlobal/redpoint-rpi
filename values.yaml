@@ -1,6 +1,6 @@
 global:
   application:
-    name: redpointcdp-interaction
+    name: redpoint-interaction
     version: "7"
   # Supported cloud providers are azure, amazon, google, and demo
   cloud: amazon
@@ -36,9 +36,9 @@ databases:
   # The Supported options for database type are 
   # sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
   type: amazonrds
-  serverhost: your_sql_server_host
-  username: your_sql_username
-  password: your_sql_password
+  serverhost: rpiopsmssqlserver
+  username: mssqladmin
+  password: .RedPoint2024
   operationsDatabaseName: Pulse
   loggingDatabaseName: Pulse_Logging
 
@@ -53,18 +53,18 @@ realtime:
   cacheOutputQueueEnabled: true
 
 queueNames: 
-  formQueuePath: dev-rpiwebformsubmission
-  eventsQueuePath: dev-rpiwebevents
-  cacheOutputQueuePath: dev-rpiwebcachedata
-  recommendationsQueuePath: dev-rpiwebrecommendation
-  listenerQueuePath: dev-rpiqueuelistener
+  formQueuePath: rpiwebformsubmission
+  eventsQueuePath: rpiwebevents
+  cacheOutputQueuePath: rpiwebcachedata
+  recommendationsQueuePath: rpiwebrecommendation
+  listenerQueuePath: rpiqueuelistener
   
 queueProviders: 
   # Supported queue providers sqs, azureservicebus, googlepubsub, rabbitmq, azureeventhubs
   type: amazonsqs 
 
   azureeventhubs: 
-    eventHubName: RealtimeTest
+    eventHubName: your_event_hub_name
     connectionString: your_event_hub_connection_string
   
   amazonsqs: 
@@ -73,9 +73,9 @@ queueProviders:
     regionEndpoint: us-east-1
   
   rabbitmq: 
-    hostName: rpi-queueservice
-    username: redpointdev
-    password: .RedPoint2021
+    hostName: your_rabbitmq_host
+    username: your_rabbitmq_username
+    password: your_rabbitmq_password
   
   azureservicebus: 
     connectionString: your_service_bus_connection_string 
@@ -88,16 +88,25 @@ cacheProviders:
   type: mongodb
 
   mongodb: 
-    databaseName: rpiCacheDB
+    databaseName: rpiCache
     ConnectionString: your_mongodb_connection_string
     CollectionName: rpiCacheCollection
 
   redis: 
-    hostName: rpi-rediscache
-  
+    hostName: your_redis_cache_host
+    
   cassandra:
+    keyspace: rpi
+    contactpoints: server1,server2
+    username: your_cassandra_username
+    password: your_cassandra_password
+
   googlebigtable:
+
   azureredis:
+    connectionString: your_redis_connection_string
+    disableMGET: true
+
   cosmosdb:
 
 callbackapi:
@@ -161,17 +170,25 @@ SMTPSettings:
   SMTP_Password: example-smtp-password
 
 ingress:
-  enabled: false
-  type: nginx 
-  # Allowed values are public or internal
-  networking: public 
-  # Allowed values are internal, amazon google and azure
-  cloud: amazon 
-  subnet: example-subnet-name
-  aws_cert_manager_arn: arn:aws:acm:us-west-2:XXXXXXXX:certificate/XXXXXX-XXXXXXX-XXXXXXX-XXXXXXXX
-
+  controller:
+    # Set enabled to false if you want to disable the creation of the ingress controller
+    enabled: true 
+  # Set mode to private for internal ingress and public for public ingress
+  mode: public #private 
+  # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
+  # If you set it to k8ssecret, you must create a kubernetes secret containing your certificates
+  certificateSource: k8ssecret # acm
+  tlsSecretName: ingress-tls
+  className: nginx-redpoint-rpi
+  azure: 
+    # Subnet name is only required if you set the ingress mode to private
+    subnetName: your_ingress_vpc_or_vnet_subnet 
+  amazon:
+    # Certificate Arn is only required if you set the certificateSource to acm
+    certificateArn: arn:aws:acm:us-east-1:005309590283:certificate/a6a30363-5c06-4d16-9ec1-0516e0e0e3b1
+  
   # Specify the domain name for the ingress resources.
-  domain: example.com
+  domain: rg1cloud.com
   # Add any specific annotations required for your ingress setup here.
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 99m

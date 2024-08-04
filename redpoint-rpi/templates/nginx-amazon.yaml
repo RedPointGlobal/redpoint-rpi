@@ -1,4 +1,5 @@
-{{- if eq .Values.ingress.cloud "amazon" }}
+{{- if eq .Values.global.cloud "amazon" }}
+{{- if .Values.ingress.controller.enabled }}
 apiVersion: v1
 automountServiceAccountToken: true
 kind: ServiceAccount
@@ -235,17 +236,23 @@ metadata:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
     app.kubernetes.io/version: 1.11.1
-  name: ingress-nginx-controller
+  name: nginx-config
   namespace: {{ .Values.global.namespace }}
 data:
-  allow-snippet-annotations: "false"
-  http-snippet: |
-    server {
-      listen 2443;
-      return 308 https://$host$request_uri;
-    }
-  proxy-real-ip-cidr: XXX.XXX.XXX/XX
-  use-forwarded-headers: "true"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.11.1
+  name: nginx-config-tcp
+  namespace: {{ .Values.global.namespace }}
+data:
 
 ---
 apiVersion: v1
@@ -254,16 +261,25 @@ metadata:
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
     service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
-    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.ingress.aws_cert_manager_arn | quote }}
-    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: https
+    {{- if eq .Values.ingress.mode "public" }}
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    {{- end }}
+    {{- if eq .Values.ingress.certificateSource "acm" }}
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.ingress.tlsSecretName | quote }}
+    {{- end }}
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    {{- if eq .Values.ingress.mode "private" }}
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    {{- end }}
   labels:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
     app.kubernetes.io/version: 1.11.1
-  name: ingress-nginx-controller
+  name: nginx-{{ .Values.global.namespace }}
   namespace: {{ .Values.global.namespace }}
 spec:
   externalTrafficPolicy: Local
@@ -271,16 +287,16 @@ spec:
   - IPv4
   ipFamilyPolicy: SingleStack
   ports:
-  - appProtocol: http
-    name: http
-    port: 80
-    protocol: TCP
-    targetPort: tohttps
-  - appProtocol: https
-    name: https
-    port: 443
-    protocol: TCP
-    targetPort: http
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+      appProtocol: http
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+      appProtocol: https
   selector:
     app.kubernetes.io/component: controller
     app.kubernetes.io/instance: ingress-nginx
@@ -323,12 +339,17 @@ spec:
       containers:
       - args:
         - /nginx-ingress-controller
-        - --publish-service=$(POD_NAMESPACE)/ingress-nginx-controller
+        - --publish-service={{ .Values.global.namespace }}/nginx-{{ .Values.global.namespace }}
         - --election-id=nginx-{{ .Values.global.namespace }}
         - --controller-class=k8s.io/ingress-nginx
-        - --ingress-class=nginx-{{ .Values.global.namespace }}
-        - --configmap=$(POD_NAMESPACE)/ingress-nginx-controller
+        - --ingress-class={{ .Values.ingress.className }}
+        - --configmap={{ .Values.global.namespace }}/nginx-config
         - --enable-metrics=false
+        - --tcp-services-configmap={{ .Values.global.namespace }}/nginx-config-tcp
+        {{- if eq .Values.ingress.certificateSource "k8ssecret" }}
+        - --default-ssl-certificate={{ .Values.global.namespace }}/{{ .Values.ingress.tlsSecretName }}
+        {{- end }}
+        - --watch-namespace={{ .Values.global.namespace }}
         env:
         - name: POD_NAME
           valueFrom:
@@ -400,7 +421,7 @@ spec:
       dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux
-      serviceAccountName: ingress-nginx
+      serviceAccountName: nginx-{{ .Values.global.namespace }}
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -412,7 +433,8 @@ metadata:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
     app.kubernetes.io/version: 1.11.1
-  name: nginx-{{ .Values.global.namespace }}
+  name: {{ .Values.ingress.className }}
 spec:
   controller: k8s.io/ingress-nginx
+{{- end }}
 {{- end }}

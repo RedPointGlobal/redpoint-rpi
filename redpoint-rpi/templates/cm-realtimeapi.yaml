@@ -181,6 +181,35 @@ data:
           ]
         },
         {{- end }}
+        {{- if eq .Values.cacheProviders.type "cassandra" }}
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "Default",
+              "Assembly": "Redpoint.Resonance.CassandraCachehe",
+              "Class": "Redpoint.CassandraCache.CassandraCacheHandler",
+              "Settings": [
+                {
+                  "Key": "Keyspace",
+                  "Value": {{ .Values.cacheProviders.cassandra.keyspace | quote }}
+                },
+                {
+                  "Key": "ContactPoints",
+                  "Value": {{ .Values.cacheProviders.cassandra.contactpoints | quote }}
+                },
+                {
+                  "Key": "UserName",
+                  "Value": {{ .Values.cacheProviders.cassandra.username | quote }}
+                },
+                {
+                  "Key": "Password",
+                  "Value": {{ .Values.cacheProviders.cassandra.password | quote }}
+                }
+              ]
+            }
+          ]
+        },
+        {{- end }}
         {{- if eq .Values.cacheProviders.type "redis" }}
         "CacheSettings": {
           "Caches": [
@@ -194,6 +223,27 @@ data:
                   "Value": {{ .Values.cacheProviders.redis.hostName | quote }}
                 }
               ]
+            }
+          ]
+        },
+        {{- end }}
+        {{- if eq .Values.cacheProviders.type "azureredis" }}
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "AzureRedis",
+              "Assembly": "RedPoint.Azure.Server",
+              "Class": "RedPoint.Azure.Server.AzureRedisCache.AzureRedisCacheHandler",
+              "Settings": [
+                {
+                  "Key": "ConnectionString",
+                  "Value": {{ .Values.cacheProviders.azureredis.connectionString | quote }}
+                },
+                "Key": "DisableMGET",
+                "Value": {{ .Values.cacheProviders.azureredis.disableMGET}}
+                }
+              ]
+            }
             }
           ]
         },
@@ -225,36 +275,90 @@ data:
         ]
       },
       {{- end }}
-        {{- if eq .Values.cacheProviders.type "redis" }}
-        "DataMaps": [
-          {
-            "Type": "Visitor Profile",
-            "Cache": "Redis",
-            "DaysToPersist": 200,
-            "CompressData": false
-          },
-          {
-            "Type": "Visitor History",
-            "Cache": "Redis",
-            "DaysToPersist": 365,
-            "CompressData": false
-          },
-          {
-            "Type": "Non Visitor Data",
-            "Cache": "Redis",
-            "DaysToPersist": 365
-          },
-          {
-            "Type": "Product Recommendations",
-            "Cache": "Redis",
-            "DaysToPersist": 365
-          }
-        ]
-      },
-      {{- end }}
-      "Authentication": {
-        "DisableHttpRedirect": true,
-        "EnableOAuth": false
-      }
+      {{- if eq .Values.cacheProviders.type "redis" }}
+      "DataMaps": [
+        {
+          "Type": "Visitor Profile",
+          "Cache": "Redis",
+          "DaysToPersist": 200,
+          "CompressData": false
+        },
+        {
+          "Type": "Visitor History",
+          "Cache": "Redis",
+          "DaysToPersist": 365,
+          "CompressData": false
+        },
+        {
+          "Type": "Non Visitor Data",
+          "Cache": "Redis",
+          "DaysToPersist": 365
+        },
+        {
+          "Type": "Product Recommendations",
+          "Cache": "Redis",
+          "DaysToPersist": 365
+        }
+      ]
+    },
+    {{- end }}
+    {{- if eq .Values.cacheProviders.type "azureredis" }}
+      "DataMaps": [
+        {
+          "Type": "Visitor Profile",
+          "Cache": "AzureRedis",
+          "DaysToPersist": 200,
+          "CompressData": false
+        },
+        {
+          "Type": "Visitor History",
+          "Cache": "AzureRedis",
+          "DaysToPersist": 365,
+          "CompressData": false
+        },
+        {
+          "Type": "Non Visitor Data",
+          "Cache": "AzureRedis",
+          "DaysToPersist": 365
+        },
+        {
+          "Type": "Product Recommendations",
+          "Cache": "AzureRedis",
+          "DaysToPersist": 365
+        }
+      ]
+    },
+    {{- end }}
+    {{- if eq .Values.cacheProviders.type "cassandra" }}
+      "DataMaps": [
+        {
+          "Type": "Visitor Profile",
+          "Cache": "Default",
+          "DaysToPersist": 200,
+          "CompressData": false
+        },
+        {
+          "Type": "Visitor History",
+          "Cache": "Default",
+          "DaysToPersist": 365,
+          "CompressData": false
+        },
+        {
+          "Type": "Non Visitor Data",
+          "Cache": "Default",
+          "DaysToPersist": 365
+        },
+        {
+          "Type": "Product Recommendations",
+          "Cache": "Default",
+          "DaysToPersist": 365
+        }
+      ]
+    },
+    {{- end }}
+    "Authentication": {
+      "DisableHttpRedirect": true,
+      "EnableOAuth": false
+    }
     }
 {{- end }}

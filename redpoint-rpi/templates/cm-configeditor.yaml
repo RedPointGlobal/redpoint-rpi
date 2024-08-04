@@ -13,10 +13,10 @@ data:
         "LoggingDatabaseName": "Pulse_Logging",
         "ConnectionSettings": {
           "SelectedDBType": "SQLServer",
-          "Server": "sql-rpi-ops",
+          "Server": "rpiopsmssqlserver",
           "IsUsingCredentials": true,
           "Username": "sa",
-          "Password": "MyC0m9l&xP@ssw0rd",
+          "Password": ".RedPoint2021",
           "DatabaseSchema": "dbo",
           "SQLServerSettings": {
             "Encrypt": true,

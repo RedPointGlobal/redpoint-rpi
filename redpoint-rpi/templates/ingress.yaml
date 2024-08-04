@@ -1,0 +1,63 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redpoint-rpi
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+  - secretName: ingress-tls
+  rules:
+    - host: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.config }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-configeditor
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-realtimeapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callbackapi
+              port:
+                number: 80

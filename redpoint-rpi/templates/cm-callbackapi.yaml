@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 data:
   appsettings.overrides.json: |
-    {{- if eq .Values.queueProviders.type "sqs" }}
+    {{- if eq .Values.queueProviders.type "amazonsqs" }}
     {
       "CallbackServiceConfig": {
         "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
@@ -81,7 +81,7 @@ metadata:
   namespace: {{ .Values.global.namespace }}
 data:
   appsettings.overrides.json: |
-    {{- if eq .Values.queueProviders.type "servicebus" }}
+    {{- if eq .Values.queueProviders.type "azureservicebus" }}
     {
       "CallbackServiceConfig": {
         "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
@@ -107,7 +107,7 @@ data:
       }
     }
     {{- end }}
-    {{- if eq .Values.queueProviders.type "eventhub" }}
+    {{- if eq .Values.queueProviders.type "azureeventhubs" }}
     {
       "CallbackServiceConfig": {
         "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},

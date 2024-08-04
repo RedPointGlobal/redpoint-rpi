@@ -8,6 +8,9 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [System Requirements ](#system-requirements)
 - [Prerequisites ](#prerequisites)
 - [Install Procedure ](#install-procedure)
+  - [Greenfield Installattion ](#greenfield-installattion)
+  - [Upgrade Installattion ](#upgrade-installattion)
+  - [Demo Installattion ](#demo-installattion)
 - [RPI Endpoints ](#rpi-endpoints)
 - [RPI Storage ](#rpi-storage)
 - [RPI Realtime ](#rpi-realtime)
@@ -56,13 +59,16 @@ Ensure that the following requirements are met:
 ### Install Procedure
 Follow the following steps to install RPI:
 
-- **1) Set your target Cloud Provider:**
+ - ### Greenfield Installation
+In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: A new cluster, A new tenant, New operations and logging databases, New cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing systems.
 
-Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google``` and ```demo```
+- **Set your target Cloud Provider:**
+
+Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon``` and ```google```
 ```
   cloud: amazon
 ```
-- **2) Configure SQL Server Settings:**
+- **Configure SQL Server Settings:**
 
 Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresql```, ```amazonrds```, ```postgresql```, and  ```googlecloudsql```
 ```
@@ -74,14 +80,14 @@ databases:
   operationsDatabaseName: Pulse
   loggingDatabaseName: Pulse_Logging
 ```
-- **3) Create Kubernetes Namespace:**
+- **Create Kubernetes Namespace:**
 
 Run the following command to create the Kubernetes namespace for deploying RPI services and set it as the default context for future CLI commands
 ```
 kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
-- **4) Create the Container Registry Secret:**
+- **Create the Container Registry Secret:**
 
 Run the following command to create a Kubernetes Secret containing the credentials needed to pull images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
@@ -96,9 +102,10 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=$DOCKER_USERNAME \
 --docker-password=$DOCKER_PASSWORD
 ```
-- **5) Create the TLS Certificate Secrets:**
+- **Create the TLS Certificate Secrets:**
+The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
 
-A certificate (.crt) and certificate key (.key) file are needed for Ingress TLS. The certificate file ```(.crt)``` contains the public key , while the certificate key file ```(.key)``` contains the private key. Run the following command to create the Kubernetes secret, replacing ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
+To add the certificate, run the following command to create a Kubernetes secret. Replace ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
 ```
 CERT_FILE=path/to/your_cert.crt
 KEY_FILE=path/to/your_cert.key
@@ -108,6 +115,13 @@ kubectl create secret tls ingress-tls \
 --namespace $NAMESPACE \
 --cert=$CERT_FILE \
 --key=$KEY_FILE
+
+```
+If you prefer to use a custom ingress controller rather than the NGINX ingress controller provided by the chart, you can disable the built-in controller by modifying the ```values.yaml``` file. Set the ```ingress.controller.enabled``` setting to false as shown below:
+```
+ingress:
+  controller:
+    enabled: false
 
 ```
 **6) Install RPI:**

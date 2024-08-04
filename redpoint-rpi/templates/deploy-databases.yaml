@@ -1,0 +1,100 @@
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpiopsmssqlserver
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: rpiopsmssqlserver
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpiopsmssqlserver
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpiopsmssqlserver
+  template:
+    metadata:
+      labels:
+        app: rpiopsmssqlserver
+    spec:
+      containers:
+      - name: rpiopsmssqlserver
+        image: rpiclouddev.azurecr.io/dockerenvbuilder/rpi-7-4/sql/mssql-2022-opsdatabases
+        ports:
+        - name: mssql
+          containerPort: 1433
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          value: ".RedPoint2021"
+        volumeMounts:
+        - name: mssqldb
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: mssqldb
+        hostPath:
+          path: /mnt/data/mssql
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpimongodbserver
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector:
+    app: rpimongodbserver
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpimongodbserver
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpimongodbserver
+  template:
+    metadata:
+      labels:
+        app: rpimongodbserver
+    spec:
+      containers:
+      - name: rpimongodbserver
+        image: rpicloudprod.azurecr.io/dockerenvbuilder/rpi-7-3/nosql/mongodb-6-0-seeded
+        ports:
+        - name: mongo
+          containerPort: 27017
+        env:
+        - name: MONGO_INITDB_DATABASE
+          value: "rpi_cdp_nosql"
+        volumeMounts:
+        - name: mssqldb
+          mountPath: /data/db
+      volumes:
+      - name: mongodata
+        hostPath:
+          path: /mnt/data/mongodb
+{{- end }}
