@@ -124,9 +124,9 @@ ingress:
 
 ```
 - **Install RPI:**
-- Clone the RPI repository to your local machine
-- Change into the cloned repository's directory
-- Execute the Helm install command
+  - Clone the RPI repository to your local machine
+  - Change into the cloned repository's directory
+  - Execute the Helm install command
 ```
 git clone https://github.com/RedPointGlobal/redpoint-rpi.git && \
 cd redpoint-rpi && \
