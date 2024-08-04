@@ -166,11 +166,54 @@ Add DNS records for the above hosts in your DNS zone. This ensures that the doma
 With the DNS configuration in place, RPI Services can be accessed at the follwing addresses:
 ```
 rpi-configeditor.example.com                              # Configuration editor
-rpi-client.example.com                                    # RPI Client 
+rpi-client.example.com                                    # RPI Client hostname
 rpi-configeditor.example/api/deployment/downloads/Client  # RPI Client Executable Download
 rpi-integrationapi.example.com                            # Integration API
 rpi-realtime.example.com                                  # RPI Realtime
 ```
+### Upgrade Installation
+
+In an Upgrade installation, you will set up RPI in an existing version 6.x environment, which includes an existing cluster, tenant, operations and logging databases, cache, and queue providers.
+
+Before performing the upgrade, use the ```Interaction Upgrade``` Helper to check the v7 compatibility of all plugins currently used in your version 6 installation. Follow these steps:
+
+  - Download and extract the [Upgrade Helper](https://github.com/RedPointGlobal/redpoint-rpi/blob/main/UpgradeAssistant.zip)
+  - Execute the ```RedPoint.Interaction.UpgradeHelper```application. 
+  
+When running the Helper, you will be prompted to enter a v6 Pulse database connection string. Once connected, the Helper will check the compatibility of all currently used plugins with v7. If any incompatible plugins are found, their details will be displayed, and you will have the option to output this information to a file.
+
+The resulting file will contain details about the incompatible plugins along with a set of v7 environment variables. An example output is shown below:
+```
+{
+  "General": {
+    "ConnectionStrings__OperationalDatabase": "Server=localhost,2433;Database=Pulse;UID=[x];PWD=[x];ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=false",
+    "ConnectionStrings__LoggingDatabase": "[not set]",
+    "RPI__ServiceHostName": "local.rphelios.net",
+    "RPI__SMTP__EmailSenderAddress": "[x]",
+    "RPI__SMTP__Address": "[x]",
+    "RPI__SMTP__Port": 587,
+    "RPI__SMTP__EnableSSL": false,
+    "RPI__SMTP__UseCredentials": false
+  },
+  "Execution": {
+    "RPIExecution__QueueListener__IsEnabled": true,
+    "RPIExecution__QueueListener__QueuePath": "RPIListenerQueue"
+  },
+  "InteractionAPI": {
+    "RPIClient__HelpStartPageURL": "[x]"
+  }
+}
+```
+Use the contents of this file as a reference to customize the ```values.yaml``` file for the Helm Chart before deploying the new v7 cluster. For instance, you will need to update the SMTP and database connection strings in the values.yaml based on the information provided in the example.
+
+To perform the upgrade, follow the same steps outlined in the [Greenfield Installation](#greenfield-installation) section. The key differences are
+
+  - **SQL Server Configuration:** Ensure your SQL server configuration points to your existing databases, caches, and queues from your current RPI version 6 environment.
+
+  - **Helm Chart Customization:** Modify the Helm Chart to incorporate the details provided in the Upgrade Assistant output. Update the ```values.yaml``` file with the relevant environment variables and configuration settings from the output to ensure compatibility with v7.
+
+### Demo Installation
+
 ### License Activation
 
 After installing RPI, you need to apply a license. This license is obtained from Redpoint Support. Follow the steps below to access the Configuration Editor and enter your license key:
@@ -238,31 +281,6 @@ cacheProviders:
   type: mongodb
 ```
 
-### RPI v6 Upgrade Assistant
-If you are upgrading from a lower version of RPI, use the [Interaction Upgrade Helper](https://github.com/RedPointGlobal/redpoint-rpi/blob/main/UpgradeAssistant.zip) prior to upgrade to check availability of plugins in the v7 version. Download and extract the zip from the link above and execute the ```RedPoint.Interaction.UpgradeHelper```application. When executed, the Helper requests that a v6 Pulse database connection string be entered.  Assuming that it is able to connect, it checks for v7 compatibility of all plugins currently in use.  If one or more incompatible plugins is found, their details are displayed, and the option to output the same to a file is provided.
-
-The resultant file contains details of the plugins in question, along with a series of v7 environment variables, which can serve as a starting point for customizing the Helm Chart ```values.yaml``` prior to deploying the new v7 cluster.  An example is provided below:
-```
-{
-  "General": {
-    "ConnectionStrings__OperationalDatabase": "Server=localhost,2433;Database=Pulse;UID=[x];PWD=[x];ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=false",
-    "ConnectionStrings__LoggingDatabase": "[not set]",
-    "RPI__ServiceHostName": "local.rphelios.net",
-    "RPI__SMTP__EmailSenderAddress": "[x]",
-    "RPI__SMTP__Address": "[x]",
-    "RPI__SMTP__Port": 587,
-    "RPI__SMTP__EnableSSL": false,
-    "RPI__SMTP__UseCredentials": false
-  },
-  "Execution": {
-    "RPIExecution__QueueListener__IsEnabled": true,
-    "RPIExecution__QueueListener__QueuePath": "RPIListenerQueue"
-  },
-  "InteractionAPI": {
-    "RPIClient__HelpStartPageURL": "[x]"
-  }
-}
-```
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our documentation site by clicking the link below
 
