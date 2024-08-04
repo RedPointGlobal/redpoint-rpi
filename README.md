@@ -211,6 +211,13 @@ To perform the upgrade, follow the same steps outlined in the [Greenfield Instal
   - **Helm Chart Customization:** Modify the Helm Chart to incorporate the details provided in the Upgrade Assistant output. Update the ```values.yaml``` file with the relevant environment variables and configuration settings from the output to ensure compatibility with v7.
 
 ### Demo Installation
+In a Demo installation, RPI is set up using the default configurations provided by the Helm Chart. This includes:
+
+  - Containerized SQL Server for the Operations databases
+  - MongoDB as the Cache Provider
+  - RabbitMQ as the Queue Provider
+  
+These components are pre-configured and deployed automatically, allowing you to quickly get started with a fully functional setup.
 
 ### License Activation
 
