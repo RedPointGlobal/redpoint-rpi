@@ -12,12 +12,9 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Demo Installation ](#demo-installation)
 - [RPI Services Access URLs ](#rpi-services-access-urls)
 - [RPI Storage ](#rpi-storage)
-- [RPI Realtime ](#rpi-realtime)
-  - [Queue Providers ](#queue-providers)
-  - [Cache Providers ](#queue-providers)
+- [RPI Realtime Cache and Queue Providers](#rpi-realtime-cache-and-queue-providers)
 - [RPI High Availability ](#rpi-high-availability)
-- [License Activation ](#license-activation)
-- [RPI v6 Upgrade Assistant](#rpi-v6-upgrade-assistant)
+- [RPI License Activation ](#license-activation)
 - [RPI Documentation](#rpi-documentation)
 - [Support](#support)
 
@@ -263,21 +260,22 @@ To enable this storage, update the ```values.yaml``` as shown below
     enabled: true
     persistentVolumeClaim: rpifileoutputdir
 ```
-### RPI Realtime
+### RPI Realtime Cache and Queue Providers
 
-RPI Realtime consists of the Realtime webservice and Realtime Agent. The ```Realtime webservice``` facilitates the making of content applicability decisions, and the recording of events undertaken by e.g. a site visitor. The ```Realtime Agent``` provides access for the RPI Realtime service to the RPI operational and data databases.
+RPI Realtime consists of the Realtime webservice and Realtime Agent. The ```Realtime webservice``` facilitates the making of content applicability decisions, and the recording of events undertaken by e.g. a site visitor - whiel the ```Realtime Agent``` provides access for the RPI Realtime service to the RPI operational and data databases.
 
- - ### Queue Providers
+The Queue connectors allow RPI access to inbound collection of data from sources like a web form submission. RPI can then act on this information in several ways, such as sending a follow up email after a purchase, executing Realtime decisions to display personalized landing page content, etc. 
 
-The Queue connectors allow RPI access to inbound collection of data from sources like a web form submission. RPI can then act on this information in several ways, such as sending a follow up email after a purchase, executing Realtime decisions to display personalized landing page content, etc. Open the ```values.yaml``` file and locate the ```queueProviders``` section. Here, specify the Queue provider you intend to use. Supported options are: ```amazonsqs```, ```rabbitmq ```, ```googlepubsub```,```azureeventhubs ```, ```azureservicebus```,```azurestoragequeues```
+To configure a Queue Provider, Open the ```values.yaml``` file and locate the ```queueProviders``` section. Here, specify the Queue provider you intend to use. Supported options are: ```amazonsqs```, ```rabbitmq ```, ```googlepubsub```,```azureeventhubs ```, ```azureservicebus```,```azurestoragequeues```
 
 ```
 queueProviders: 
   type: amazonsqs 
 ```
 
- - ### Cache Providers
-In order for RPI realtime decisions to be used, a caching mechanism must be made available, and configuration performed to ensure that the RPI Realtime application can make use of the same. Open the ```values.yaml``` file and locate the ```cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```cassandra ```, ```redis``` ,```googlebigtable```
+In order for RPI realtime decisions to be used, a caching mechanism must be made available, and configuration performed to ensure that the RPI Realtime application can make use of the same. 
+
+To configure a Cache Provider, Open the ```values.yaml``` file and locate the ```cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```cassandra ```, ```redis``` ,```googlebigtable```
 
 ```
 cacheProviders: 
