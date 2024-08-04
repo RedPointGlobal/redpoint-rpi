@@ -227,7 +227,7 @@ After installing RPI, you need to apply a license. You have two options for appl
  ```
 ACTIVATION_KEY="your_license_activation_key"
 ACTIVATION_URL=rpi-configeditor.example.com
-SYSTEM_NAME="your_rpi_system_name"
+SYSTEM_NAME="my_dev_rpi_system"
 
  curl -X 'POST' \
   'https://$ACTIVATION_URL/api/deployment/installcluster?waitTimeoutSeconds=360' \
@@ -235,10 +235,10 @@ SYSTEM_NAME="your_rpi_system_name"
   -H 'Content-Type: application/json' \
   -d '{
   "UseExistingDatabases": false,
-  "CoreUserInitialPassword": "Password",
+  "CoreUserInitialPassword": ".Admin123",
   "SystemAdministrator": {
-    "Username": "AdminUser",
-    "EmailAddress": "adminuser@noemail.com"
+    "Username": "coreuser",
+    "EmailAddress": "coreuser@noemail.com"
   },
   "LicenseInfo": {
     "ActivationKey": "'"${ACTIVATION_KEY}"'",
@@ -251,7 +251,7 @@ SYSTEM_NAME="your_rpi_system_name"
 ```
 ACTIVATION_KEY="your_license_activation_key"
 ACTIVATION_URL=rpi-configeditor.example.com
-SYSTEM_NAME="your_rpi_system_name"
+SYSTEM_NAME="my_dev_rpi_system"
 
 curl -X 'POST' \
   'https://$ACTIVATION_URL/api/licensing/activatelicense' \
