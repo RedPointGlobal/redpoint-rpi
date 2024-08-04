@@ -7,10 +7,9 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 ### Table of Contents
 - [System Requirements ](#system-requirements)
 - [Prerequisites ](#prerequisites)
-- [Install Procedure ](#install-procedure)
-  - [Greenfield Installattion ](#greenfield-installattion)
-  - [Upgrade Installattion ](#upgrade-installattion)
-  - [Demo Installattion ](#demo-installattion)
+- [Greenfield Installattion ](#greenfield-installattion)
+- [Upgrade Installattion ](#upgrade-installattion)
+- [Demo Installattion ](#demo-installattion)
 - [RPI Endpoints ](#rpi-endpoints)
 - [RPI Storage ](#rpi-storage)
 - [RPI Realtime ](#rpi-realtime)
@@ -56,9 +55,7 @@ Ensure that the following requirements are met:
   - Install [Helm](https://helm.sh/docs/helm/helm_install/), a package manager for Kubernetes.
   - Ensure you obtain the necessary permissions to install applications in your Kubernetes cluster.
 
-### Install Procedure
-
- - ### Greenfield Installation
+### Greenfield Installation
 In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: A new cluster, A new tenant, New operations and logging databases, New cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing systems. 
 
 Follow the following steps to get started
