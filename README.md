@@ -260,7 +260,7 @@ The RPI Helm chart is intentionally non-opinionated on storage solutions. Users 
 To enable this storage, update the ```values.yaml``` as shown below
 ```
   storage:
-    enabled: false
+    enabled: true
     persistentVolumeClaim: rpifileoutputdir
 ```
 ### RPI Realtime
