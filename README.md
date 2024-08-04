@@ -220,15 +220,50 @@ cloud: demo
 
 ### License Activation
 
-After installing RPI, you need to apply a license. This license is obtained from Redpoint Support. Follow the steps below to access the Configuration Editor and enter your license key:
+After installing RPI, you need to apply a license. You have two options for applying the license:
 
-- Navigate to the RPI Configuration Editor using your web browser. This interface is where you will enter the provided activation key.
+ - **During Cluster Installation:** In a [Greenfield Installation](#greenfield-installation) where you need to call the ```/api/deployment/installCluster``` endpoint to install the operational databases as shown in the example below
 
-![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/9947e054-b527-434c-8c44-ac551b560a3f)
+ ```
+ACTIVATION_KEY="your_license_activation_key"
+ACTIVATION_URL=rpi-configeditor.example.com
+SYSTEM_NAME="your_rpi_system_name"
 
-![image](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/cc407181-162a-4860-b191-4f7c6746720e)
+ curl -X 'POST' \
+  'https://$ACTIVATION_URL/api/deployment/installcluster?waitTimeoutSeconds=360' \
+  -H 'accept: text/plain' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "UseExistingDatabases": false,
+  "CoreUserInitialPassword": "Password",
+  "SystemAdministrator": {
+    "Username": "AdminUser",
+    "EmailAddress": "adminuser@noemail.com"
+  },
+  "LicenseInfo": {
+    "ActivationKey": "'"${ACTIVATION_KEY}"'",
+    "SystemName": "'"${SYSTEM_NAME}"'"
+  }
+}'
+ ```
+ - **Directly via the License API:** In an [Upgrade Installation](#greenfield-installation) where you need to call the ```/api/licensing/activatelicense``` endpoint to activate your existing RPI cluster as shown in the example below
 
-At this point, the default installation is complete and you are ready to add your first RPI tenant. 
+```
+ACTIVATION_KEY="your_license_activation_key"
+ACTIVATION_URL=rpi-configeditor.example.com
+SYSTEM_NAME="your_rpi_system_name"
+
+curl -X 'POST' \
+  'https://$ACTIVATION_URL/api/licensing/activatelicense' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "ActivationKey": "'"${ACTIVATION_KEY}"'",
+  "SystemName": "'"${SYSTEM_NAME}"'"
+}'
+```
+
+With RPI installed and license activated, you are ready to use the application. 
 
 ### High Availability
 
