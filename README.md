@@ -184,9 +184,9 @@ The resulting file will contain details about the incompatible plugins along wit
 ```
 {
   "General": {
-    "ConnectionStrings__OperationalDatabase": "Server=localhost,2433;Database=Pulse;UID=[x];PWD=[x];ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=false",
-    "ConnectionStrings__LoggingDatabase": "[not set]",
-    "RPI__ServiceHostName": "local.rphelios.net",
+    "ConnectionStrings__OperationalDatabase": "[your_v6_connection_string],
+    "ConnectionStrings__LoggingDatabase": "[your_v6_connection_string]",
+    "RPI__ServiceHostName": "your_v6_rpi_hostname",
     "RPI__SMTP__EmailSenderAddress": "[x]",
     "RPI__SMTP__Address": "[x]",
     "RPI__SMTP__Port": 587,
