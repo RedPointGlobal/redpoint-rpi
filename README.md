@@ -44,16 +44,13 @@ Ensure you use the latest stable version of Kubernetes, which can be either self
 ### Before you begin
 Ensure that the following requirements are met:
 
-- **Redpoint Container Registry access:** 
-  - Prior to installing RPI, open a support ticket at support@redpointglobal.com requesting access to the RPI repository.
+- **Redpoint Container Registry access:** Open a support ticket at support@redpointglobal.com requesting access to download RPI container images.
 
-- **RPI License:** 
-  - Prior to installing RPI, open a support ticket at support@redpointglobal.com to obtain your License activation key. 
+- **RPI License:** Open a support ticket at support@redpointglobal.com to obtain your RPI v7 License activation key. 
 
-- **Commandline Tools:** 
-  - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
-  - Install [Helm](https://helm.sh/docs/helm/helm_install/), a package manager for Kubernetes.
-  - Ensure you obtain the necessary permissions to install applications in your Kubernetes cluster.
+- Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
+
+- Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluste
 
 ### Greenfield Installation
 In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: A new cluster, A new tenant, New operations and logging databases, New cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing systems. 
