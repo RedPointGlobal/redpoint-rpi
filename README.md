@@ -114,14 +114,12 @@ kubectl create secret tls ingress-tls \
 --namespace $NAMESPACE \
 --cert=$CERT_FILE \
 --key=$KEY_FILE
-
 ```
 If you prefer to use a custom ingress controller rather than the NGINX ingress controller provided by the chart, you can disable the built-in controller by modifying the ```values.yaml``` file. Set the ```ingress.controller.enabled``` setting to false as shown below:
 ```
 ingress:
   controller:
     enabled: false
-
 ```
 **6. Install RPI:**
   - Clone the RPI repository to your local machine
