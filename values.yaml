@@ -155,11 +155,9 @@ OpenIdProviders:
   # Validate audience of the OpenID Connect provider
   ValidateAudience: true
 
-# Define storage configuration
+# Define storage configuration for the RPI File Output Directory
 storage:
-  # Set whether storage is enabled or not (false means disabled)
   enabled: false
-  # Specify the persistent volume claim for the File output directory
   persistentVolumeClaim: rpifileoutputdir
 
 SMTPSettings:

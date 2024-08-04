@@ -237,7 +237,7 @@ At this point, the default installation is complete and you are ready to add you
 
 The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
 
-To achieve high availability, adjust the number of replicas for each service to 2 or more. Additionally, the cluster admin could also create a [Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. Here’s how you can set the replica count in the ```values.yaml``` file:
+To achieve high availability, adjust the number of replicas for each service to 2 or more. Additionally, the cluster admin can create a [Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. Here’s how you can set the replica count in the ```values.yaml``` file:
 ```
 replicas:
   interactionapi: 2
@@ -259,13 +259,9 @@ The RPI Helm chart is intentionally non-opinionated on storage solutions. Users 
 
 To enable this storage, update the ```values.yaml``` as shown below
 ```
-  # Define storage configuration
   storage:
-    # Set whether storage is enabled or not (false means disabled)
     enabled: false
-    # Specify the persistent volume claim for the directory
     persistentVolumeClaim: rpifileoutputdir
-
 ```
 ### RPI Realtime
 
