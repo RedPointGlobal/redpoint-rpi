@@ -60,13 +60,13 @@ In a Greenfield installation, you're setting up RPI in a completely new environm
 
 Follow the following steps to get started
 
- 1. **Set your target Cloud Provider:**
+**1. Set your target Cloud Provider:**
 
 Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google``` and ```selfhosted```
 ```
   cloud: amazon
 ```
- - **Configure SQL Server Settings:**
+**2 Configure SQL Server Settings:**
 
 Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresql```, ```amazonrds```, ```postgresql```, and  ```googlecloudsql```
 ```
