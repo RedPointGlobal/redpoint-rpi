@@ -10,7 +10,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Greenfield Installation ](#greenfield-installation)
 - [Upgrade Installation ](#upgrade-installation)
 - [Demo Installation ](#demo-installation)
-- [RPI Services Access URLs ](#rpi-services-access-urls)
+- [Accessing the RPI Services URLs ](#accessing-the-rpi-services-urls)
 - [RPI Storage ](#rpi-storage)
 - [Configuring Realtime Queue Providers](#configuring-realtime-queue-providers)
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
@@ -139,7 +139,7 @@ NOTES:
 ```
 It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. 
 
-### RPI Services Access URLs
+### Accesing the RPI Services URLs
 
 To interact with RPI services, such as client login or using the integration API, you need to obtain the URL endpoints exposed by the ingress. Use the following command to list the ingresses in the redpoint-rpi namespace
 ```
