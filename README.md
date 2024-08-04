@@ -104,6 +104,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-password=$DOCKER_PASSWORD
 ```
 - **Create the TLS Certificate Secrets:**
+
 The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
 
 To add the certificate, run the following command to create a Kubernetes secret. Replace ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
