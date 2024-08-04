@@ -6,7 +6,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 ![image](https://user-images.githubusercontent.com/42842390/229413149-ff9497cd-8ed4-4512-96e1-c71932680350.png)
 ### Table of Contents
 - [System Requirements ](#system-requirements)
-- [Prerequisites ](#prerequisites)
+- [Before You Begin ](#before-you-begin)
 - [Greenfield Installation ](#greenfield-installation)
 - [Upgrade Installation ](#upgrade-installation)
 - [Demo Installation ](#demo-installation)
