@@ -123,22 +123,16 @@ ingress:
     enabled: false
 
 ```
-**6) Install RPI:**
-
-After completing the above steps, you are now ready to proceed with the installation as follows:
-
-- Clone the RPI repository to your local machine:
+- **Install RPI:**
+- Clone the RPI repository to your local machine
+- Change into the cloned repository's directory
+- Execute the Helm install command
 ```
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git
-```
-- Change into the cloned repository's directory:
-```
-cd redpoint-rpi
-```
-- Run the following Helm command to install RPI on your Kubernetes cluster, using the configurations set in your values.yaml file:
-```
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git && \
+cd redpoint-rpi && \
 helm install redpoint-rpi redpoint-rpi/ --values values.yaml
 ```
+
 If everything goes well, You should see the output below.
 ```
 NAME: redpoint-rpi
@@ -150,7 +144,7 @@ TEST SUITE: None
 NOTES:
 ********************************* SUCCESS! *********************************
 ```
-It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. This patience is crucial for the successful retrieval of ingress endpoints in the subsequent step.
+It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. 
 
 ### RPI Endpoints
 
