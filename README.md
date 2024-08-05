@@ -26,7 +26,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
     - 256 GB or more free disk space.
 
 - **Kubernetes Cluster:**
-Ensure you use the latest stable version of Kubernetes, which can be either self-hosted or managed. Managed options include Azure Kubernetes Service (AKS), Amazon Elastic Kubernetes Service (EKS), and Google Kubernetes Engine (GKE). If you don't already have a Kubernetes cluster, refer to the ```./kubernetes/``` directory. This directory contains official quickstart guides for the managed options.
+Latest stable version of Kubernetes. If you dont have a Kubernetes solution, select from this list of [Kubernetes certified solution providers](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/). From each provider page, you can learn how to install and setup production ready clusters.
 
 - **Kubernetes Nodepools**
     - Node Sizing for RPI Workloads
