@@ -168,26 +168,26 @@ storage:
 
 SMTPSettings:
   SMTP_SenderAddress: noreply-rpi@example.com
-  SMTP_Address: smtp-host.example.com
+  SMTP_Address: your_smtp_host
   SMTP_Port: 587
-  SMTP_Username: example-smtp-username
-  SMTP_Password: example-smtp-password
+  SMTP_Username: your_smtp_server_username
+  SMTP_Password: your_smtp_server_password
 
 ingress:
   controller:
     # Set enabled to false if you want to disable the creation of the ingress controller
     enabled: true 
   # Set mode to private for internal ingress and public for public ingress
-  mode: private 
+  mode: public 
   # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
   # If you set it to k8ssecret, you must create a kubernetes secret containing your certificates
   certificateSource: k8ssecret # acm
   tlsSecretName: ingress-tls
   className: nginx-redpoint-rpi
   # Subnet name is only required if you set the ingress mode to private
-  subnetName: snet-rgoc-nonprod-eus2-aks #your_ingress_vpc_or_vnet_subnet 
+  subnetName: your_ingress_vpc_or_vnet_subnet 
   # Certificate Arn is only required if you set the certificateSource to acm
-  certificateArn: arn:aws:acm:us-east-1:005309590283:certificate/a6a30363-5c06-4d16-9ec1-0516e0e0e3b1
+  certificateArn: your_acm_certificate_arn
   
   # Specify the domain name for the ingress resources.
   domain: redpointdemo.com
