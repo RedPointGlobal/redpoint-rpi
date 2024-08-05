@@ -198,10 +198,10 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
   # Define hostnames for different services in your application.
   hosts:
-    # Config service
+    # Configuration service
     config: rpi-configeditor
     
-    # Client service
+    # Client Login service
     client: rpi-interactionapi
 
     # Integration API
