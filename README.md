@@ -27,7 +27,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 
 - **Kubernetes Cluster:**
 
-Latest stable version of Kubernetes. If you dont have a Kubernetes solution, select from this list of [Kubernetes certified solution providers](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/). From each provider page, you can learn how to install and setup production ready clusters.
+Latest stable version of Kubernetes. Select from this list of [Kubernetes certified solution providers](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). From each provider page, you can learn how to install and setup production ready clusters.
 
 - **Kubernetes Nodepools**
     - Node Sizing for RPI Workloads
