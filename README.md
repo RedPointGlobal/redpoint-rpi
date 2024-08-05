@@ -197,11 +197,11 @@ The resulting file will contain details about the incompatible plugins along wit
   }
 }
 ```
-Use the contents of this file as a reference to customize the ```values.yaml``` file for the Helm Chart before deploying the new v7 cluster. For instance, you will need to update the SMTP and database connection strings in the values.yaml based on the information provided in the example.
+Use the contents of this file as a reference to customize the ```values.yaml``` file for the Helm Chart before deploying the new v7 cluster. For instance, you will need to update the SMTP and database connection strings in the ```values.yaml``` based on the information provided in the example.
 
 To perform the upgrade, follow the same steps outlined in the [Greenfield Installation](#greenfield-installation) section. The key differences are
 
-  - **SQL Server Configuration:** Ensure your SQL server configuration points to your existing databases, caches, and queues from your current RPI version 6 environment.
+  - **SQL Server Configuration:** Ensure your SQL server configuration, caches and queues provider settings all point to your current RPI version 6 environment.
 
   - **Helm Chart Customization:** Modify the Helm Chart to incorporate the details provided in the Upgrade Assistant output. Update the ```values.yaml``` file with the relevant environment variables and configuration settings from the output to ensure compatibility with v7.
 
