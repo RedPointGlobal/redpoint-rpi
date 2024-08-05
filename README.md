@@ -224,7 +224,9 @@ cloud: demo
 
 After installing RPI, you need to apply a license. You have two options for applying the license:
 
- - **During Cluster Installation:** In a [Greenfield Installation](#greenfield-installation) where you need to call the ```/api/deployment/installCluster``` endpoint to install the operational databases as shown in the example below
+ - **During Cluster Installation:** 
+ 
+ In a [Greenfield Installation](#greenfield-installation) where you need to call the ```/api/deployment/installCluster``` endpoint to install the operational databases as shown in the example below
 
  ```
 ACTIVATION_KEY="your_license_activation_key"
@@ -248,7 +250,9 @@ SYSTEM_NAME="my_dev_rpi_system"
   }
 }'
  ```
- - **Directly via the License API:** In an [Upgrade Installation](#greenfield-installation) where you need to call the ```/api/licensing/activatelicense``` endpoint to activate your existing RPI cluster as shown in the example below
+ - **Directly via the License API:** 
+ 
+ In an [Upgrade Installation](#greenfield-installation) where you need to call the ```/api/licensing/activatelicense``` endpoint to activate your existing RPI cluster as shown in the example below
 
 ```
 ACTIVATION_KEY="your_license_activation_key"
