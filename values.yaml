@@ -36,7 +36,7 @@ databases:
   # upported options are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
   type: sqlserver 
   # The hostname or IP address of the database server
-  serverhost: rpiopsmssqlserver 
+  serverhost: rpiopsmssqlserver
   # The username for authenticating to the database server
   username: mssqladmin
   # The password for authenticating to the database server

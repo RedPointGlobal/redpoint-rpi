@@ -41,25 +41,25 @@ spec:
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         env:
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
-        - name: OperationalDatabase__PulseDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
           value: "Pulse"
-        - name: OperationalDatabase__LoggingDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
           value: "PulseLogging"
-        - name: OperationalDatabase__ConnectionSettings__Server
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
           value: "rpiopsmssqlserver"
-        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__Username
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
           value: "sa"
-        - name: OperationalDatabase__ConnectionSettings__Password
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: ".RedPoint2024"
-        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
           value: "dbo"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
           value: "true"
         ports:
         - containerPort: 8080
@@ -95,42 +95,42 @@ spec:
         imagePullPolicy: Always
         env:
         {{- if eq .Values.databases.type "sqlserver" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
         {{- if eq .Values.databases.type "amazonrds" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AmazonRDSSQL"
         {{- end }}
         {{- if eq .Values.databases.type "azuresql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AzureSQLDatabase"
         {{- end }}
         {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "GoogleCloudSQL"
         {{- end }}
         {{- if eq .Values.databases.type "postgresql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "PostgreSQL"
         {{- end }}
-        - name: OperationalDatabase__PulseDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
           value: {{ .Values.databases.operationsDatabaseName | quote }}
-        - name: OperationalDatabase__LoggingDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
           value: {{ .Values.databases.loggingDatabaseName | quote }}
-        - name: OperationalDatabase__ConnectionSettings__Server
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
           value: {{ .Values.databases.serverhost | quote }}
-        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__Username
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
           value: {{ .Values.databases.username | quote }}
-        - name: OperationalDatabase__ConnectionSettings__Password
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: {{ .Values.databases.password | quote }}
-        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
           value: "dbo"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
           value: "true"
         ports:
         - containerPort: 8080
@@ -174,42 +174,42 @@ spec:
         imagePullPolicy: Always
         env:
         {{- if eq .Values.databases.type "sqlserver" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
         {{- if eq .Values.databases.type "amazonrds" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AmazonRDSSQL"
         {{- end }}
         {{- if eq .Values.databases.type "azuresql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AzureSQLDatabase"
         {{- end }}
         {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "GoogleCloudSQL"
         {{- end }}
         {{- if eq .Values.databases.type "postgresql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "PostgreSQL"
         {{- end }}
-        - name: OperationalDatabase__PulseDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
           value: {{ .Values.databases.operationsDatabaseName | quote }}
-        - name: OperationalDatabase__LoggingDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
           value: {{ .Values.databases.loggingDatabaseName | quote }}
-        - name: OperationalDatabase__ConnectionSettings__Server
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
           value: {{ .Values.databases.serverhost | quote }}
-        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__Username
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
           value: {{ .Values.databases.username | quote }}
-        - name: OperationalDatabase__ConnectionSettings__Password
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: {{ .Values.databases.password | quote }}
-        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
           value: "dbo"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
           value: "true"
         ports:
         - containerPort: 8080
@@ -253,42 +253,42 @@ spec:
         imagePullPolicy: Always
         env:
         {{- if eq .Values.databases.type "sqlserver" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
         {{- if eq .Values.databases.type "amazonrds" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AmazonRDSSQL"
         {{- end }}
         {{- if eq .Values.databases.type "azuresql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AzureSQLDatabase"
         {{- end }}
         {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "GoogleCloudSQL"
         {{- end }}
         {{- if eq .Values.databases.type "postgresql" }}
-        - name: OperationalDatabase__DatabaseType
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "PostgreSQL"
         {{- end }}
-        - name: OperationalDatabase__PulseDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
           value: {{ .Values.databases.operationsDatabaseName | quote }}
-        - name: OperationalDatabase__LoggingDatabaseName
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
           value: {{ .Values.databases.loggingDatabaseName | quote }}
-        - name: OperationalDatabase__ConnectionSettings__Server
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
           value: {{ .Values.databases.serverhost | quote }}
-        - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__Username
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
           value: {{ .Values.databases.username | quote }}
-        - name: OperationalDatabase__ConnectionSettings__Password
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: {{ .Values.databases.password | quote }}
-        - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
           value: "dbo"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
-        - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
           value: "true"
         ports:
         - containerPort: 8080
