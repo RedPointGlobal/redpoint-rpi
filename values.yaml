@@ -89,8 +89,7 @@ queueProviders:
     projectId: your_google_project_Id
 
 cacheProviders: 
-  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis
-  # cosmosdb
+  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis and cosmosdb
   type: mongodb
 
   mongodb: 
