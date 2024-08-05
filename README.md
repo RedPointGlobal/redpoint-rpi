@@ -148,21 +148,21 @@ kubectl get ingress --namespace redpoint-rpi
 Initially, you might not see an IP address for your endpoints. This is normal and occurs because provisioning the ingress load balancer takes some time. If no IP address is displayed, wait a few minutes and then re-run the command. Once the load balancer is ready, you should see output similar to the following, where ```<Load Balancer IP>``` will be replaced with the actual IP address:
 ```
 NAME           HOSTS                                   ADDRESS              PORTS     AGE
-redpoint-rpi   rpi-configeditor.example.com           <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-client.example.com                 <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-integrationapi.example.com         <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-realtime.example.com               <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-configeditor.redpointdemo.com           <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-client.redpointdemo.com                 <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-integrationapi.redpointdemo.com         <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-realtime.redpointdemo.com               <Load Balancer IP>   80, 443   32d
 ```
 
-Add DNS records for the above hosts in your DNS zone. This ensures that the domain names you use for example ```rpi-client.example.com``` correctly route to your RPI instance.
+Add DNS records for the above hosts in your DNS zone. This ensures that the domain names you use for example ```rpi-client.redpointdemo.com``` correctly route to your RPI instance.
 
 With the DNS configuration in place, RPI Services can be accessed at the follwing addresses:
 ```
-rpi-configeditor.example.com                              # Configuration editor
-rpi-client.example.com                                    # RPI Client hostname
+rpi-configeditor.redpointdemo.com                              # Configuration editor
+rpi-client.redpointdemo.com                                    # RPI Client hostname
 rpi-configeditor.example/api/deployment/downloads/Client  # RPI Client Executable Download
-rpi-integrationapi.example.com                            # Integration API
-rpi-realtime.example.com                                  # RPI Realtime
+rpi-integrationapi.redpointdemo.com                            # Integration API
+rpi-realtime.redpointdemo.com                                  # RPI Realtime
 ```
 ### Upgrade Installation
 
@@ -227,7 +227,7 @@ After installing RPI, you need to apply a license. You have two options for appl
 
  ```
 ACTIVATION_KEY="your_license_activation_key"
-ACTIVATION_URL=rpi-configeditor.example.com
+ACTIVATION_URL=rpi-configeditor.redpointdemo.com
 SYSTEM_NAME="my_dev_rpi_system"
 
  curl -X 'POST' \
@@ -251,7 +251,7 @@ SYSTEM_NAME="my_dev_rpi_system"
 
 ```
 ACTIVATION_KEY="your_license_activation_key"
-ACTIVATION_URL=rpi-configeditor.example.com
+ACTIVATION_URL=rpi-configeditor.redpointdemo.com
 SYSTEM_NAME="my_dev_rpi_system"
 
 curl -X 'POST' \

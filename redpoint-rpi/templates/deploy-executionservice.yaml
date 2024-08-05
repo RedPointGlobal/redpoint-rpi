@@ -53,7 +53,7 @@ spec:
         - name: RPI__SMTP__Password
           value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
         - name: RPIExecution__MaxThreadsPerExecutionService
-          value: {{ .Values.appsettings.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
+          value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
         - name: Logging__LogLevel__Default
@@ -86,7 +86,7 @@ spec:
         volumeMounts:
           - name: rpi-executionservice
             mountPath: /app/appsettings
-          {{- if .Values.appsettings.storage.enabled }}
+          {{- if .Values.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
           {{- end }}
@@ -94,10 +94,10 @@ spec:
         - name: rpi-executionservice
           configMap:
             name: rpi-executionservice
-        {{- if .Values.appsettings.storage.enabled }}
+        {{- if .Values.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: {{ .Values.appsettings.storage.persistentVolumeClaim }}
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
         {{- end }}
 {{- end }}
 

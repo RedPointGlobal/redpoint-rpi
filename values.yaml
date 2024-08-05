@@ -3,7 +3,7 @@ global:
     name: redpoint-interaction
     version: "7"
   # Supported cloud providers are azure, amazon, google, and demo
-  cloud: amazon
+  cloud: demo #amazon
 
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
@@ -32,15 +32,19 @@ replicas:
   queueservice: 1
   queuereader: 1
   
-databases: 
-  # The Supported options for database type are 
-  # sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
-  type: amazonrds
-  serverhost: rpiopsmssqlserver
+databases:
+  # upported options are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
+  type: sqlserver 
+  # The hostname or IP address of the database server
+  serverhost: rpiopsmssqlserver 
+  # The username for authenticating to the database server
   username: mssqladmin
+  # The password for authenticating to the database server
   password: .RedPoint2024
+  # The name of the database used for operations
   operationsDatabaseName: Pulse
-  loggingDatabaseName: Pulse_Logging
+  # The name of the database used for logging purposes
+  loggingDatabaseName: Pulse_Logging 
 
 realtime:
   rpiClientID: "00000000-0000-0000-0000-000000000000"
@@ -53,14 +57,15 @@ realtime:
   cacheOutputQueueEnabled: true
 
 queueNames: 
-  formQueuePath: rpiwebformsubmission
-  eventsQueuePath: rpiwebevents
-  cacheOutputQueuePath: rpiwebcachedata
-  recommendationsQueuePath: rpiwebrecommendation
-  listenerQueuePath: rpiqueuelistener
+  formQueuePath: RPIWebFormSubmission
+  eventsQueuePath: RPIWebEvents
+  cacheOutputQueuePath: RPIWebCacheData
+  recommendationsQueuePath: RPIWebRecommendations
+  listenerQueuePath: RPIQueueListener
+  callbackServiceQueuePath: RPICallbackApiQueue
   
 queueProviders: 
-  # Supported queue providers sqs, azureservicebus, googlepubsub, rabbitmq, azureeventhubs
+  # Supported queue providers are sqs, azureservicebus, googlepubsub, rabbitmq, azureeventhubs
   type: amazonsqs 
 
   azureeventhubs: 
@@ -80,7 +85,8 @@ queueProviders:
   azureservicebus: 
     connectionString: your_service_bus_connection_string 
   
-  googlepubsub: 
+  googlepubsub:
+    projectId: your_google_project_Id
 
 cacheProviders: 
   # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis
@@ -172,21 +178,19 @@ ingress:
     # Set enabled to false if you want to disable the creation of the ingress controller
     enabled: true 
   # Set mode to private for internal ingress and public for public ingress
-  mode: public #private 
+  mode: private 
   # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
   # If you set it to k8ssecret, you must create a kubernetes secret containing your certificates
   certificateSource: k8ssecret # acm
   tlsSecretName: ingress-tls
   className: nginx-redpoint-rpi
-  azure: 
-    # Subnet name is only required if you set the ingress mode to private
-    subnetName: your_ingress_vpc_or_vnet_subnet 
-  amazon:
-    # Certificate Arn is only required if you set the certificateSource to acm
-    certificateArn: arn:aws:acm:us-east-1:005309590283:certificate/a6a30363-5c06-4d16-9ec1-0516e0e0e3b1
+  # Subnet name is only required if you set the ingress mode to private
+  subnetName: snet-rgoc-nonprod-eus2-aks #your_ingress_vpc_or_vnet_subnet 
+  # Certificate Arn is only required if you set the certificateSource to acm
+  certificateArn: arn:aws:acm:us-east-1:005309590283:certificate/a6a30363-5c06-4d16-9ec1-0516e0e0e3b1
   
   # Specify the domain name for the ingress resources.
-  domain: rg1cloud.com
+  domain: redpointdemo.com
   # Add any specific annotations required for your ingress setup here.
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 99m

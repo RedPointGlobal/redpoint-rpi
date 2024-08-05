@@ -85,7 +85,7 @@ spec:
         volumeMounts:
           - name: rpi-interactionapi
             mountPath: /app/appsettings
-          {{- if .Values.appsettings.storage.enabled }}
+          {{- if .Values.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
           {{- end }}
@@ -94,10 +94,10 @@ spec:
         - name: rpi-interactionapi
           configMap:
             name: rpi-interactionapi
-        {{- if .Values.appsettings.storage.enabled }}
+        {{- if .Values.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: {{ .Values.appsettings.storage.persistentVolumeClaim }}
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
         {{- end }}
 {{- end }}
 

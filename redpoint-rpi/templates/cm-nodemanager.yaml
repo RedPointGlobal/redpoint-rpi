@@ -27,3 +27,34 @@ data:
       "DisableHttpRedirect": true
     }
 {{- end }}
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-nodemanager
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": true,
+        "OpenIdProviders": [
+          {
+            "Name": {{ .Values.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": "",
+            "ClientID": "",
+            "Audience": "",
+            "RedirectURL": "https://rpi-client.redpointdemo.com",
+            "EnableRefreshTokens": true,
+            "CustomScopes": [],
+            "LogoutIdTokenParameter": "id_token_hint",
+            "ValidateIssuer": false,
+            "ValidateAudience": true
+          }
+        ]
+      },
+      "DisableHttpRedirect": true
+    }
+{{- end }}

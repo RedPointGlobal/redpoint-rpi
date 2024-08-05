@@ -1,0 +1,61 @@
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-queueservice
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "QueueService": {
+        "QueueListener": {
+          "IsEnabled": true,
+          "QueuePath": "RPIListenerQueue",
+          "ThreadPoolSize": 10,
+          "TimeoutMinutes": 60,
+          "MaxBatchSize": 50,
+          "UseMessageLocks": true
+        },
+        "RealtimeConfiguration": {
+          "IsFormProcessingEnabled": true,
+          "IsEventProcessingEnabled": true,
+          "IsCacheProcessingEnabled": true,
+          "TenantIDs": [],
+          "IsDistributed": true,
+          "DistributedCache": {
+            "Provider": "Redis",
+            "RedisSettings": {
+              "IPAddress": "rpi-rtdrediscache"
+            }
+          },
+          "DistributedQueue": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": "rpi-queueservice"
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": "redpointdev"
+              },
+              {
+                "Key": "Password",
+                "Value": ".RedPoint2021"
+              }
+            ]
+          }
+        }
+      }
+    }
+{{- end }}
+
+
+
+
+

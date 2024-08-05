@@ -1,4 +1,4 @@
----
+{{- if eq .Values.global.cloud "amazon" }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -61,3 +61,204 @@ spec:
               name: rpi-callbackapi
               port:
                 number: 80
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redpoint-rpi
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+  - secretName: ingress-tls
+  rules:
+    - host: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.config }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-configeditor
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-realtimeapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callbackapi
+              port:
+                number: 80
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redpoint-rpi
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+  - secretName: ingress-tls
+  rules:
+    - host: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.config }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-configeditor
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-realtimeapi
+              port:
+                number: 80
+    - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callbackapi
+              port:
+                number: 80
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redpoint-rpi
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 99m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: redpointdemo
+  tls:
+  - secretName: ingress-tls
+  rules:
+    - host: rpi-client.redpointdemo.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: 80
+    - host: rpi-configeditor.redpointdemo.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-configeditor
+              port:
+                number: 80
+    - host: rpi-integrationapi.redpointdemo.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: 80
+    - host: rpi-realtimeapi.redpointdemo.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-realtimeapi
+              port:
+                number: 80
+    - host: rpi-callbackapi.redpointdemo.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callbackapi
+              port:
+                number: 80
+{{- end }}

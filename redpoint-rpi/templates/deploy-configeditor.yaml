@@ -24,7 +24,7 @@ metadata:
   labels:
     app: rpi-configeditor
 spec:
-  replicas: {{ .Values.replicas.configeditor }}
+  replicas: 1
   selector:
     matchLabels:
       app: rpi-configeditor
@@ -41,38 +41,20 @@ spec:
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         env:
-        {{- if eq .Values.databases.type "sqlserver" }}
         - name: OperationalDatabase__DatabaseType
           value: "SQLServer"
-        {{- end }}
-        {{- if eq .Values.databases.type "amazonrds" }}
-        - name: OperationalDatabase__DatabaseType
-          value: "AmazonRDSSQL"
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresql" }}
-        - name: OperationalDatabase__DatabaseType
-          value: "AzureSQLDatabase"
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: OperationalDatabase__DatabaseType
-          value: "GoogleCloudSQL"
-        {{- end }}
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: OperationalDatabase__DatabaseType
-          value: "PostgreSQL"
-        {{- end }}
         - name: OperationalDatabase__PulseDatabaseName
-          value: {{ .Values.databases.operationsDatabaseName | quote }}
+          value: "Pulse"
         - name: OperationalDatabase__LoggingDatabaseName
-          value: {{ .Values.databases.loggingDatabaseName | quote }}
+          value: "PulseLogging"
         - name: OperationalDatabase__ConnectionSettings__Server
-          value: {{ .Values.databases.serverhost | quote }}
+          value: "rpiopsmssqlserver"
         - name: OperationalDatabase__ConnectionSettings__IsUsingCredentials
           value: "true"
         - name: OperationalDatabase__ConnectionSettings__Username
-          value: {{ .Values.databases.username | quote }}
+          value: "sa"
         - name: OperationalDatabase__ConnectionSettings__Password
-          value: {{ .Values.databases.password | quote }}
+          value: ".RedPoint2024"
         - name: OperationalDatabase__ConnectionSettings__DatabaseSchema
           value: "dbo"
         - name: OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
@@ -83,13 +65,6 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-#        volumeMounts:
-#          - name: rpi-configeditor
-#           mountPath: /app/appsettings
-#      volumes:
-#        - name: rpi-configeditor
-#          configMap:
-#            name: rpi-configeditor
 {{- end }}
 
 ---

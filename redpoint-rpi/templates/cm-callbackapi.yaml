@@ -9,7 +9,7 @@ data:
     {{- if eq .Values.queueProviders.type "amazonsqs" }}
     {
       "CallbackServiceConfig": {
-        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "QueueEnabled": true,
         "queueProviders": {
           "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
           "CallbackServiceQueuePath": {{ .Values.callbackapi.callbackServiceQueuePath | quote }},
@@ -39,9 +39,9 @@ data:
     {{- if eq .Values.queueProviders.type "rabbitmq" }}
     {
       "CallbackServiceConfig": {
-        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "QueueEnabled": true,
         "queueProviders": {
-          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
+          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
           "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Resonance.RabbitMQAccess",
@@ -84,10 +84,10 @@ data:
     {{- if eq .Values.queueProviders.type "azureservicebus" }}
     {
       "CallbackServiceConfig": {
-        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "QueueEnabled": true,
         "queueProviders": {
-          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Azure.Server",
             "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
@@ -110,10 +110,10 @@ data:
     {{- if eq .Values.queueProviders.type "azureeventhubs" }}
     {
       "CallbackServiceConfig": {
-        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "QueueEnabled": true,
         "queueProviders": {
-          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Azure.Server",
             "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
@@ -136,10 +136,10 @@ data:
     {{- if eq .Values.queueProviders.type "rabbitmq" }}
     {
       "CallbackServiceConfig": {
-        "QueueEnabled": {{ .Values.callbackapi.queueEnabled }},
+        "QueueEnabled": true,
         "queueProviders": {
-          "ChannelLabel": {{ .Values.queueProviders.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Resonance.RabbitMQAccess",
             "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
@@ -167,4 +167,78 @@ data:
       }
     }
     {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": true,
+        "queueProviders": {
+          "ChannelLabel": "SendGrid",
+          "CallbackServiceQueuePath": "RPICallbackApiQueue",
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": "rpi-queueservice"
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": "redpointdev"
+              },
+              {
+                "Key": "Password",
+                "Value": ".RedPoint2021"
+              }
+            ]
+          }
+        },
+        "AllowedHosts": "*"
+      }
+    }
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "CallbackServiceConfig": {
+        "QueueEnabled": true,
+        "queueProviders": {
+          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueueSettings": {
+            "Assembly": "RedPoint.Google.Server",
+            "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactor",
+            "Settings": [
+              {
+                "Key": "ProjectId",
+                "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+              }
+            ]
+          }
+        },
+        "AllowedHosts": "*"
+      }
+    }
 {{- end }}

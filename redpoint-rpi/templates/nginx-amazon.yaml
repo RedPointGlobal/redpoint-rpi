@@ -267,7 +267,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
     {{- end }}
     {{- if eq .Values.ingress.certificateSource "acm" }}
-    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.ingress.tlsSecretName | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.ingress.certificateArn | quote }}
     {{- end }}
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
     {{- if eq .Values.ingress.mode "private" }}

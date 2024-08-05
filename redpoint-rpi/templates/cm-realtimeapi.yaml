@@ -362,3 +362,123 @@ data:
     }
     }
 {{- end }}
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+      "RealtimeAPIConfiguration": {
+        "AppSettings": {
+          "RealtimeAgentInProcessEnabled": true,
+          "RealtimeAgentAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
+          "EnableHelpPages": true,
+          "DecisionCacheDuration": 0,
+          "RPIClientID": "11111111-1111-1111-1111-111111111111",
+          "RPIAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
+          "EnableAuditMetricsInHeaders": true,
+          "EnableEventListening": true
+        },
+        "Queues": {
+          "FormQueuePath": "RPIWebFormSubmission",
+          "EventsQueuePath": "RPIWebEvents",
+          "CacheOutputQueueEnabled": true,
+          "CacheOutputQueuePath": "RPIWebCacheData",
+          "RecommendationsQueuePath": "RPIWebRecommendations",
+          "ClientQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": "rpi-queueservice"
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": "redpointdev"
+              },
+              {
+                "Key": "Password",
+                "Value": ".RedPoint2021"
+              }
+            ]
+          },
+          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ListenerQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": "rpi-queueservice"
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": "redpointdev"
+              },
+              {
+                "Key": "Password",
+                "Value": ".RedPoint2021"
+              }
+            ]
+          }
+        },
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "Redis",
+              "Assembly": "RedPoint.Resonance.RedisCache",
+              "Class": "RedPoint.Resonance.RedisCache.RedisCacheHandler",
+              "Settings": [
+                {
+                  "Key": "IPAddress",
+                  "Value": "rpi-rtdrediscache"
+                }
+              ]
+            }
+          ]
+        },
+        "DataMaps": [
+          {
+            "Type": "Visitor Profile",
+            "Cache": "Redis",
+            "DaysToPersist": 200,
+            "CompressData": false
+          },
+          {
+            "Type": "Visitor History",
+            "Cache": "Redis",
+            "DaysToPersist": 365,
+            "CompressData": false
+          },
+          {
+            "Type": "Non Visitor Data",
+            "Cache": "Redis",
+            "DaysToPersist": 365
+          },
+          {
+            "Type": "Product Recommendations",
+            "Cache": "Redis",
+            "DaysToPersist": 365
+          }
+        ]
+      },
+    "Authentication": {
+      "DisableHttpRedirect": true,
+      "EnableOAuth": false
+    }
+    }
+{{- end }}
