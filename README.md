@@ -211,6 +211,7 @@ In a Demo installation, RPI is set up using the default configurations provided 
   - Containerized SQL Server for the Operations databases
   - Redis as the Cache Provider
   - RabbitMQ as the Queue Provider
+  - Self-signed certificate used for Ingress
 
 These components are pre-configured and deployed automatically, allowing you to quickly get started with a fully functional setup.
 
