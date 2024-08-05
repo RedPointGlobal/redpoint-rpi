@@ -3,7 +3,7 @@ global:
     name: redpoint-interaction
     version: "7"
   # Supported cloud providers are azure, amazon, google, and demo
-  cloud: demo #amazon
+  cloud: amazon
 
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
