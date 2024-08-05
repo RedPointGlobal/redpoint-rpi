@@ -154,11 +154,11 @@ Add DNS records for the above hosts in your DNS zone. This ensures that the doma
 
 With the DNS configuration in place, RPI Services can be accessed at the follwing addresses:
 ```
-rpi-configeditor.redpointdemo.com                              # Configuration editor
-rpi-client.redpointdemo.com                                    # RPI Client hostname
-rpi-configeditor.example/api/deployment/downloads/Client       # RPI Client Executable Download
-rpi-integrationapi.redpointdemo.com                            # Integration API
-rpi-realtime.redpointdemo.com                                  # RPI Realtime
+rpi-configeditor.redpointdemo.com                                 # Configuration editor
+rpi-client.redpointdemo.com                                       # RPI Client hostname
+rpi-configeditor.redpointdemo.com/api/deployment/downloads/Client # RPI Client Executable Download
+rpi-integrationapi.redpointdemo.com                               # Integration API
+rpi-realtime.redpointdemo.com                                     # RPI Realtime
 ```
 ### Upgrade Installation
 
