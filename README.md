@@ -11,14 +11,14 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Upgrade Installation ](#upgrade-installation)
 - [Demo Installation ](#demo-installation)
 - [Accessing RPI Services URLs ](#accessing-rpi-services-urls)
-- [RPI Storage ](#rpi-storage)
+- [Configuring Storage ](#configuring-storage)
 - [Configuring Realtime Queue Providers](#configuring-realtime-queue-providers)
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
 - [Install Cluster and add Tenants](#install-cluster-and-add-tenants)
 - [RPI High Availability ](#rpi-high-availability)
 - [RPI License Activation ](#license-activation)
 - [RPI Documentation](#rpi-documentation)
-- [Support](#support)
+- [Getting Support](#getting-support)
 
 ### System Requirements
 - **SQL Server 2019 or later**
@@ -372,7 +372,7 @@ replicas:
   executionservice: 2
   realtimeapi: 2
 ```
-### RPI Storage
+### Configuring Storage
 
 RPI requires the following for it's Storage requirements
 
@@ -413,7 +413,7 @@ To explore in-depth documentation and stay updated with the latest release notes
 
  [Redpoint Documentation Site ](https://docs.redpointglobal.com/rpi/)
 
-### Support 
+### Getting Support 
 If you encounter any challenges specific to the RPI application, our dedicated support team is here to assist you. Please reach out to us with details of the issue for prompt and expert help.
 
 [support@redpointglobal.com](support@redpointglobal.com)
