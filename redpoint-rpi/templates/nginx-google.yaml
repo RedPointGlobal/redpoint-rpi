@@ -456,7 +456,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-configeditor
+              name: rpi-deploymentapi
               port:
                 number: 80
     - host: rpintegrationapi.rg1cloud.com

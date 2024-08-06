@@ -14,6 +14,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [RPI Storage ](#rpi-storage)
 - [Configuring Realtime Queue Providers](#configuring-realtime-queue-providers)
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
+- [Install Cluster and add Tenants](#install-cluster-and-add-tenants)
 - [RPI High Availability ](#rpi-high-availability)
 - [RPI License Activation ](#license-activation)
 - [RPI Documentation](#rpi-documentation)
@@ -150,21 +151,80 @@ kubectl get ingress --namespace redpoint-rpi
 Initially, you might not see an IP address for your endpoints. This is normal and occurs because provisioning the ingress load balancer takes some time. If no IP address is displayed, wait a few minutes and then re-run the command. Once the load balancer is ready, you should see output similar to the following, where ```<Load Balancer IP>``` will be replaced with the actual IP address:
 ```
 NAME           HOSTS                                  ADDRESS              PORTS     AGE
-redpoint-rpi   rpi-configeditor.example.com           <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-client.example.com                 <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-deploymentapi.example.com          <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-interactionapi.example.com         <Load Balancer IP>   80, 443   32d
 redpoint-rpi   rpi-integrationapi.example.com         <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-realtime.example.com               <Load Balancer IP>   80, 443   32d
+redpoint-rpi   rpi-realtimeapi.example.com            <Load Balancer IP>   80, 443   32d
 ```
 
-Add DNS records for the above hosts in your DNS zone. This ensures that the domain names you use for example ```rpi-client.example.com``` correctly route to your RPI instance.
+Add DNS records for the above hosts in your DNS zone. This ensures that the domain names you use for example ```rpi-interactionapi.example.com``` correctly route to your RPI instance.
 
 With the DNS configuration in place, RPI Services can be accessed at the follwing addresses:
 ```
-rpi-configeditor.example.com                                 # Configuration editor
-rpi-client.example.com                                       # RPI Client hostname
-rpi-configeditor.example.com/api/deployment/downloads/Client # RPI Client Executable Download
-rpi-integrationapi.example.com                               # Integration API
-rpi-realtime.example.com                                     # RPI Realtime
+rpi-deploymentapi.example.com                                 # Deployment Service
+rpi-interactionapi.example.com                                # RPI Client hostname
+rpi-deploymentapi.example.com/api/deployment/downloads/Client # RPI Client Executable Download
+rpi-integrationapi.example.com                                # Integration API
+rpi-realtimeapi.example.com                                   # RPI Realtime
+```
+### Install Cluster and Add Tenants
+
+If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
+
+  - **Install Cluster:** 
+Run the following command to install the cluster
+```
+DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+INITIAL_ADMIN_USERNAME=coreuser
+INITIAL_ADMIN_PASSWORD=.Admin123
+INITIAL_ADMIN_EMAIL=coreuser@example.com
+
+curl -X 'POST' \
+  "https://$DEPLOYMENT_SERVICE_URL/api/deployment/installcluster?waitTimeoutSeconds=360" \
+  -H 'accept: text/plain' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "UseExistingDatabases": false,
+  "CoreUserInitialPassword": "'"$INITIAL_ADMIN_PASSWORD"'",
+  "SystemAdministrator": {
+    "Username": "'"$INITIAL_ADMIN_USERNAME"'",
+    "EmailAddress": "'"$INITIAL_ADMIN_EMAIL"'"
+  }
+}'
+
+```
+To check the status of the cluster installation, execute the following command:
+```
+curl -X 'GET' \
+  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/status' \
+  -H 'accept: text/plain'
+```
+You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster installation has been completed successfully.
+```
+{
+  "DeploymentInstanceID": "default",
+  "Status": "LastRunComplete",
+  "PulseDatabaseName": "Pulse",
+  "Messages": [
+    "[2024-08-06 03:13:50] Install starting",
+    "[2024-08-06 03:13:50] Deployment files already unpacked",
+    "[2024-08-06 03:13:50] Operational Database Type: AmazonRDSSQL",
+    "[2024-08-06 03:13:50] Pulse Database Name: Pulse",
+    "[2024-08-06 03:13:50] Logging Database Name: Pulse_Logging",
+    "[2024-08-06 03:13:50] Database Host: rpiopsmssqlserver",
+    "[2024-08-06 03:13:50] Core user password has been provided",
+    "[2024-08-06 03:13:50] Creating the databases",
+    "[2024-08-06 03:13:50] Updating cluster details",
+    "[2024-08-06 03:13:50] Updating cluster details",
+    "[2024-08-06 03:13:50] Loading Plugins",
+    "[2024-08-06 03:13:55] Adding 'what is new'",
+    "[2024-08-06 03:13:55] Setting sys admin details"
+  ]
+}
+```
+  - **Add Client:** 
+```
+
 ```
 ### Upgrade Installation
 
@@ -232,7 +292,7 @@ After installing RPI, you need to apply a license. You have two options for appl
 
  ```
 ACTIVATION_KEY="your_license_activation_key"
-ACTIVATION_URL=rpi-configeditor.example.com
+ACTIVATION_URL=rpi-deploymentapi.example.com
 SYSTEM_NAME="my_dev_rpi_system"
 
  curl -X 'POST' \
@@ -258,7 +318,7 @@ SYSTEM_NAME="my_dev_rpi_system"
 
 ```
 ACTIVATION_KEY="your_license_activation_key"
-ACTIVATION_URL=rpi-configeditor.example.com
+ACTIVATION_URL=rpi-deploymentapi.example.com
 SYSTEM_NAME="my_dev_rpi_system"
 
 curl -X 'POST' \
@@ -282,7 +342,7 @@ To achieve high availability, adjust the number of replicas for each service to 
 replicas:
   interactionapi: 2
   integrationapi: 2
-  configeditor: 2
+  deploymentapi: 2
   callbackapi: 2
   nodemanager: 2
   executionservice: 2

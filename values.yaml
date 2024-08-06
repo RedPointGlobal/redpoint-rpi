@@ -34,7 +34,7 @@ replicas:
   
 databases:
   # upported options are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
-  type: sqlserver 
+  type: amazonrds #sqlserver 
   # The hostname or IP address of the database server
   serverhost: rpiopsmssqlserver
   # The username for authenticating to the database server
@@ -198,7 +198,7 @@ ingress:
   # Define hostnames for different services in your application.
   hosts:
     # Configuration service
-    config: rpi-configeditor
+    config: rpi-deploymentapi
     
     # Client Login service
     client: rpi-interactionapi

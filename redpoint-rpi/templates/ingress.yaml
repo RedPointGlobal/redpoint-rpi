@@ -28,7 +28,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-configeditor
+              name: rpi-deploymentapi
               port:
                 number: 80
     - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
@@ -94,7 +94,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-configeditor
+              name: rpi-deploymentapi
               port:
                 number: 80
     - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
@@ -160,7 +160,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-configeditor
+              name: rpi-deploymentapi
               port:
                 number: 80
     - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
@@ -221,14 +221,14 @@ spec:
               name: rpi-interactionapi
               port:
                 number: 80
-    - host: rpi-configeditor.redpointdemo.com
+    - host: rpi-deploymentapi.redpointdemo.com
       http:
         paths:
         - path: /
           pathType: Prefix
           backend:
             service:
-              name: rpi-configeditor
+              name: rpi-deploymentapi
               port:
                 number: 80
     - host: rpi-integrationapi.redpointdemo.com
