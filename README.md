@@ -106,6 +106,12 @@ kubectl create secret tls ingress-tls \
 --cert=$CERT_FILE \
 --key=$KEY_FILE
 ```
+
+With the secret created, you need to specify the domain for your ingress configuration. This domain will be used to construct the URLs that users will use to access RPI. To do this, open the ```values.yaml``` file and find the ingress.domain section. Replace ```example.com``` with your actual domain name:
+```
+ingress:
+  domain: example.com
+```
 If you prefer to use a custom ingress controller rather than the NGINX ingress controller provided by the chart, you can disable the built-in controller by modifying the ```values.yaml``` file. Set the ```ingress.controller.enabled``` setting to false as shown below:
 ```
 ingress:
