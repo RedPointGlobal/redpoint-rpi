@@ -44,7 +44,7 @@ Ensure that the following requirements are met:
 
 - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.
 
-- Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluste
+- Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluster
 
 ### Greenfield Installation
 In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: a new RPI cluster, new RPI tenant, new operations and logging databases, new cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing deployments. 
@@ -112,7 +112,7 @@ With the secret created, you need to specify the domain for your ingress configu
 ingress:
   domain: example.com
 ```
-If you prefer to use a custom ingress controller rather than the NGINX ingress controller provided by the chart, you can disable the built-in controller by modifying the ```values.yaml``` file. Set the ```ingress.controller.enabled``` setting to false as shown below:
+If you prefer to use a custom ingress controller rather than the NGINX ingress controller provided by the chart, you can disable the built-in controller. To do this, set the ```ingress.controller.enabled``` setting to false as shown below:
 ```
 ingress:
   controller:
