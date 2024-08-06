@@ -74,10 +74,10 @@ kubectl config set-context --current --namespace=redpoint-rpi
 
 Run the following command to create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
-DOCKER_USERNAME=<your_username> 
-DOCKER_PASSWORD=<your_password>
-DOCKER_SERVER=rg1acrpub.azurecr.io
-NAMESPACE=redpoint-rpi
+export DOCKER_USERNAME=<your_username> 
+export DOCKER_PASSWORD=<your_password>
+export DOCKER_SERVER=rg1acrpub.azurecr.io
+export NAMESPACE=redpoint-rpi
 
 kubectl create secret docker-registry redpoint-rpi \
 --namespace $NAMESPACE \
@@ -91,9 +91,9 @@ The Helm chart deploys an ingress resource and an NGINX ingress controller to ex
 
 To add the certificate, run the following command to create a Kubernetes secret. Replace ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
 ```
-CERT_FILE=path/to/your_cert.crt
-KEY_FILE=path/to/your_cert.key
-NAMESPACE=redpoint-rpi
+export CERT_FILE=path/to/your_cert.crt
+export KEY_FILE=path/to/your_cert.key
+export NAMESPACE=redpoint-rpi
 
 kubectl create secret tls ingress-tls \
 --namespace $NAMESPACE \
@@ -166,9 +166,9 @@ rpi-realtimeapi.example.com                                   # RPI Realtime
 After installing RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
 
 ```
-ACTIVATION_KEY="your_license_activation_key"
-ACTIVATION_URL=rpi-deploymentapi.example.com
-SYSTEM_NAME="my_dev_rpi_system"
+export ACTIVATION_KEY="your_license_activation_key"
+export ACTIVATION_URL=rpi-deploymentapi.example.com
+export SYSTEM_NAME="my_dev_rpi_system"
 
 curl -X 'POST' \
   'https://$ACTIVATION_URL/api/licensing/activatelicense' \
@@ -189,10 +189,10 @@ If you have completed a [Greenfield Installation](#greenfield-installation) of R
 
 Run the following command to install the cluster
 ```
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
-INITIAL_ADMIN_USERNAME=coreuser
-INITIAL_ADMIN_PASSWORD=.Admin123
-INITIAL_ADMIN_EMAIL=coreuser@example.com
+export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+export INITIAL_ADMIN_USERNAME=coreuser
+export INITIAL_ADMIN_PASSWORD=.Admin123
+export INITIAL_ADMIN_EMAIL=coreuser@example.com
 
 curl -X 'POST' \
   "https://$DEPLOYMENT_SERVICE_URL/api/deployment/installcluster?waitTimeoutSeconds=360" \
@@ -242,25 +242,32 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To do this, execute the following command:
 
 ```
+export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+export TENANT_NAME=My_RPI_Tenant1
+export DATAWAREHOUSE_SERVER=your_datawarehouse_server
+export DATAWAREHOUSE_NAME=your_datawarehouse_name
+export DATAWAREHOUSE_USERNAME=your_datawarehouse_server
+export DATAWAREHOUSE_PASSWORD=your_datawarehouse_server
+
 curl -X 'POST' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/addclient?waitTimeoutSeconds=360' \
   -H 'accept: text/plain' \
   -H 'Content-Type: application/json' \
   -d '{
-  "Name": "RPI-Development",
-  "Description": "RPI Development Tenant",
+  "Name": "$TENANT_NAME",
+  "Description": "My RPI Tenant 1",
   "ClientID": "",
   "UseExistingDatabases": false,
-  "DatabaseSuffix": "RPI_Dev",
+  "DatabaseSuffix": "My_RPI_Tenant1",
   "DataWarehouse": {
     "ConnectionParameters": {
       "Provider": "SQLServer",
       "UseDatabaseAgent": false,
-      "Server": "rpiopsmssqlserver",
-      "DatabaseName": "RPI_Datawarehouse",
+      "Server": "$DATAWAREHOUSE_SERVER",
+      "DatabaseName": "$DATAWAREHOUSE_NAME",
       "IsUsingCredentials": true,
-      "Username": "sa",
-      "Password": "mySuperStrongPassword",
+      "Username": "$DATAWAREHOUSE_NAME",
+      "Password": "$DATAWAREHOUSE_PASSWORD",
       "SQLServerSettings": {
         "Encrypt": true,
         "TrustServerCertificate": true
