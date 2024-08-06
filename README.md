@@ -228,11 +228,6 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To do this, execute the following command:
 
 ```
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
-INITIAL_ADMIN_USERNAME=coreuser
-INITIAL_ADMIN_PASSWORD=.Admin123
-INITIAL_ADMIN_EMAIL=coreuser@example.com
-
 curl -X 'POST' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/addclient?waitTimeoutSeconds=360' \
   -H 'accept: text/plain' \
