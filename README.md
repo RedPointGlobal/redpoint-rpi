@@ -242,51 +242,54 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To do this, execute the following command:
 
 ```
+# Export environment variables
 export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
 export TENANT_NAME=My_RPI_Tenant1
 export DATAWAREHOUSE_SERVER=your_datawarehouse_server
 export DATAWAREHOUSE_NAME=your_datawarehouse_name
-export DATAWAREHOUSE_USERNAME=your_datawarehouse_server
-export DATAWAREHOUSE_PASSWORD=your_datawarehouse_server
+export DATAWAREHOUSE_USERNAME=your_datawarehouse_username
+export DATAWAREHOUSE_PASSWORD=your_datawarehouse_password
 
 curl -X 'POST' \
-  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/addclient?waitTimeoutSeconds=360' \
+  "https://$DEPLOYMENT_SERVICE_URL/api/deployment/addclient?waitTimeoutSeconds=360" \
   -H 'accept: text/plain' \
   -H 'Content-Type: application/json' \
-  -d '{
-  "Name": "$TENANT_NAME",
-  "Description": "My RPI Tenant 1",
-  "ClientID": "",
-  "UseExistingDatabases": false,
-  "DatabaseSuffix": "My_RPI_Tenant1",
-  "DataWarehouse": {
-    "ConnectionParameters": {
-      "Provider": "SQLServer",
-      "UseDatabaseAgent": false,
-      "Server": "$DATAWAREHOUSE_SERVER",
-      "DatabaseName": "$DATAWAREHOUSE_NAME",
-      "IsUsingCredentials": true,
-      "Username": "$DATAWAREHOUSE_USERNAME",
-      "Password": "$DATAWAREHOUSE_PASSWORD",
-      "SQLServerSettings": {
-        "Encrypt": true,
-        "TrustServerCertificate": true
+  -d "{
+  \"Name\": \"$TENANT_NAME\",
+  \"Description\": \"My RPI Tenant 1\",
+  \"ClientID\": \"\",
+  \"UseExistingDatabases\": false,
+  \"DatabaseSuffix\": \"$TENANT_NAME\",
+  \"DataWarehouse\": {
+    \"ConnectionParameters\": {
+      \"Provider\": \"SQLServer\",
+      \"UseDatabaseAgent\": false,
+      \"Server\": \"$DATAWAREHOUSE_SERVER\",
+      \"DatabaseName\": \"$DATAWAREHOUSE_NAME\",
+      \"IsUsingCredentials\": true,
+      \"Username\": \"$DATAWAREHOUSE_USERNAME\",
+      \"Password\": \"$DATAWAREHOUSE_PASSWORD\",
+      \"SQLServerSettings\": {
+        \"Encrypt\": true,
+        \"TrustServerCertificate\": true
       }
     },
-    "DeploymentSettings": {
-      "DatabaseMode": "SQL",
-      "DatabaseSchema": "dbo"
+    \"DeploymentSettings\": {
+      \"DatabaseMode\": \"SQL\",
+      \"DatabaseSchema\": \"dbo\"
     }
   },
-  "TemplateTenant": "NoTemplateTenant",
-  "StartupConfiguration": {
-    "Users": [
-      "coreuser"
+  \"TemplateTenant\": \"NoTemplateTenant\",
+  \"StartupConfiguration\": {
+    \"Users\": [
+      \"coreuser\"
     ],
-    "FileOutput": {
-      "UseGlobalSettings": true
+    \"FileOutput\": {
+      \"UseGlobalSettings\": true
     }
-}'
+  }
+}"
+
 ```
 To check the status of the client installation, execute the following command:
 ```
