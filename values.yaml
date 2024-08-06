@@ -47,8 +47,11 @@ databases:
   loggingDatabaseName: Pulse_Logging 
 
 realtime:
+  # Unique identifier for the RPI client. Ensure this matches your registered RPI client ID.
   rpiClientID: "00000000-0000-0000-0000-000000000000"
+  # Authentication token associated with the RPI client. This token is used to authenticate API requests.
   rpiAuthToken: "00000000-0000-0000-0000-000000000000" 
+  # Set to `true` to make the Realtime API Swagger page available for API exploration and testing.
   enableHelpPages: true 
   enableEventListening: true
   realtimeProcessingEnabled: true
