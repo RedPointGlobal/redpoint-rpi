@@ -37,13 +37,13 @@ Latest stable version of Kubernetes. Select from this list of [Kubernetes certif
        - Minimum of 2 nodes for high availability
 
 ### Before you begin
-
-| Ensure that the following requirements are met!                                                                                                                       |
+| Ensure that the following requirements are met!                                                                 |
 |------------------------------------------------------------------------------------------------------------------|
-| - **Redpoint Container Registry access:** Open a support ticket at [support@redpointglobal.com](mailto:support@redpointglobal.com) requesting access to download RPI container images. |
-| - **RPI License:** Open a support ticket at [support@redpointglobal.com](mailto:support@redpointglobal.com) to obtain your RPI v7 License activation key. |
-| - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster. |
-| - Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluster. |
+| - **Redpoint Container Registry access:** Open a support ticket at [support@redpointglobal.com](mailto:support@redpointglobal.com) requesting access to download RPI container images. <br> 
+  - **RPI License:** Open a support ticket at [support@redpointglobal.com](mailto:support@redpointglobal.com) to obtain your RPI v7 License activation key. <br>
+  - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster. <br>
+  - Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluster. |
+
 
 
 ### Greenfield Installation
