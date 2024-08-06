@@ -278,6 +278,14 @@ curl -X 'POST' \
     }
 }'
 ```
+To check the status of the client installation, execute the following command:
+```
+curl -X 'GET' \
+  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/status' \
+  -H 'accept: text/plain'
+```
+You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster installation has been completed successfully.
+
 ### Upgrade Installation
 
 In an Upgrade installation, you will set up RPI in an existing version 6.x environment, which includes an existing cluster, tenant, operations and logging databases, cache, and queue providers.
