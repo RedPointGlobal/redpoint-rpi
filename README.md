@@ -51,7 +51,7 @@ Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specif
 ```
   cloud: amazon
 ```
-**2 Configure SQL Server Settings:**
+**2. Configure SQL Server Settings:**
 
 Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresql```, ```amazonrds```, ```postgresql```, and  ```googlecloudsql```
 ```
