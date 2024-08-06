@@ -266,7 +266,7 @@ curl -X 'POST' \
       "Server": "$DATAWAREHOUSE_SERVER",
       "DatabaseName": "$DATAWAREHOUSE_NAME",
       "IsUsingCredentials": true,
-      "Username": "$DATAWAREHOUSE_NAME",
+      "Username": "$DATAWAREHOUSE_USERNAME",
       "Password": "$DATAWAREHOUSE_PASSWORD",
       "SQLServerSettings": {
         "Encrypt": true,
@@ -285,12 +285,6 @@ curl -X 'POST' \
     ],
     "FileOutput": {
       "UseGlobalSettings": true
-    },
-    "Realtime": {
-      "EnableRPIRealtimeServices": true,
-      "RealtimeAPIAddress": "https://rpi-realtimeapi.example.com",
-      "UseCredentials": false,
-      "RealtimeAPIKey": "2697e37d-282f-412a-8ffe-eabd5dd01a2e"
     }
 }'
 ```
