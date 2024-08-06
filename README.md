@@ -14,9 +14,9 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Configuring Storage ](#configuring-storage)
 - [Configuring Realtime Queue Providers](#configuring-realtime-queue-providers)
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
-- [Install Cluster and add Tenants](#install-cluster-and-add-tenants)
-- [RPI High Availability ](#rpi-high-availability)
-- [RPI License Activation ](#license-activation)
+- [Installing Cluster and adding Tenants](#installing-cluster-and-adding-tenants)
+- [Configuring High Availability ](#configuring-high-availability)
+- [Configuring License Activation ](#configuring-license-activation)
 - [RPI Documentation](#rpi-documentation)
 - [Getting Support](#getting-support)
 
@@ -168,7 +168,7 @@ rpi-integrationapi.example.com                                # Integration API
 rpi-realtimeapi.example.com                                   # RPI Realtime
 ```
 
-### License Activation
+### Configuring License Activation
 
 After installing RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
 
@@ -188,7 +188,7 @@ curl -X 'POST' \
 ```
 With RPI installed and the license activated, you're now ready to install your first cluster and add tenants.
 
-### Install Cluster and Add Tenants
+### Installing Cluster and Add Tenants
 
 If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
 
@@ -357,7 +357,7 @@ To perform a demo installation, open the values.yaml file and set the cloud valu
 ```
 cloud: demo
 ```
-### High Availability
+### Configuring High Availability
 
 The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
 
