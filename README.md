@@ -14,7 +14,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Configuring Storage ](#configuring-storage)
 - [Configuring Realtime Queue Providers](#configuring-realtime-queue-providers)
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
-- [Installing Cluster and adding Tenants](#installing-cluster-and-adding-tenants)
+- [Configuring Cluster and Tenants](#configuring-cluster-and-tenants)
 - [Configuring High Availability ](#configuring-high-availability)
 - [Configuring License Activation ](#configuring-license-activation)
 - [RPI Documentation](#rpi-documentation)
@@ -181,7 +181,7 @@ curl -X 'POST' \
 ```
 With RPI installed and the license activated, you're now ready to install your first cluster and add tenants.
 
-### Installing Cluster and Add Tenants
+### Configuring Cluster and Tenants
 
 If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
 
