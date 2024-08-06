@@ -275,18 +275,7 @@ curl -X 'POST' \
       "RealtimeAPIAddress": "https://rpi-realtimeapi.example.com",
       "UseCredentials": false,
       "RealtimeAPIKey": "2697e37d-282f-412a-8ffe-eabd5dd01a2e"
-    },
-    "DataManagement": {
-      "OAPIWebServiceAddress": "[Please specify]",
-      "Port": 20400,
-      "Credentials": {
-        "Username": "",
-        "Password": ""
-      },
-      "DataConnection": "",
-      "OverrideNetworkRootDirectory": false
     }
-  }
 }'
 ```
 ### Upgrade Installation
