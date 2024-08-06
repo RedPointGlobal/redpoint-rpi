@@ -8,7 +8,7 @@ global:
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
   # This tag refers to a specific version of the docker image to be deployed.
-  image_tag: 7.3.2024-0703-1351
+  image_tag: 7.4.2024-0806-1013
   
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
   nodeSelector: {}
