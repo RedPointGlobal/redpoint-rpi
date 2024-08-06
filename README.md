@@ -70,7 +70,7 @@ Run the following command to create the Kubernetes namespace for deploying RPI s
 kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
-**4. Create the Container Registry Secret:**
+**4. Create Container Registry Secret:**
 
 Run the following command to create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
@@ -85,7 +85,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=$DOCKER_USERNAME \
 --docker-password=$DOCKER_PASSWORD
 ```
-**5. Create the TLS Certificate Secrets:**
+**5. Create TLS Certificate Secret:**
 
 The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
 
