@@ -172,6 +172,7 @@ rpi-realtimeapi.example.com                                   # RPI Realtime
 If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
 
   - **Install Cluster:** 
+  
 Run the following command to install the cluster
 ```
 DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
