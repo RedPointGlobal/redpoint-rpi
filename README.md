@@ -172,7 +172,7 @@ rpi-realtimeapi.example.com                                   # RPI Realtime
 If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
 
   - **Install Cluster:** 
-  
+
 Run the following command to install the cluster
 ```
 DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
@@ -224,8 +224,70 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 }
 ```
   - **Add Client:** 
-```
+  
+Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To do this, execute the following command:
 
+```
+DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+INITIAL_ADMIN_USERNAME=coreuser
+INITIAL_ADMIN_PASSWORD=.Admin123
+INITIAL_ADMIN_EMAIL=coreuser@example.com
+
+curl -X 'POST' \
+  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/addclient?waitTimeoutSeconds=360' \
+  -H 'accept: text/plain' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "Name": "RPI-Development",
+  "Description": "RPI Development Tenant",
+  "ClientID": "",
+  "UseExistingDatabases": false,
+  "DatabaseSuffix": "RPI_Dev",
+  "DataWarehouse": {
+    "ConnectionParameters": {
+      "Provider": "SQLServer",
+      "UseDatabaseAgent": false,
+      "Server": "rpiopsmssqlserver",
+      "DatabaseName": "RPI_Datawarehouse",
+      "IsUsingCredentials": true,
+      "Username": "sa",
+      "Password": "mySuperStrongPassword",
+      "SQLServerSettings": {
+        "Encrypt": true,
+        "TrustServerCertificate": true
+      }
+    },
+    "DeploymentSettings": {
+      "DatabaseMode": "SQL",
+      "DatabaseSchema": "dbo"
+    }
+  },
+  "TemplateTenant": "NoTemplateTenant",
+  "StartupConfiguration": {
+    "Users": [
+      "coreuser"
+    ],
+    "FileOutput": {
+      "UseGlobalSettings": true
+    },
+    "Realtime": {
+      "EnableRPIRealtimeServices": true,
+      "RealtimeAPIAddress": "https://rpi-realtimeapi.example.com",
+      "UseCredentials": false,
+      "RealtimeAPIKey": "2697e37d-282f-412a-8ffe-eabd5dd01a2e"
+    },
+    "DataManagement": {
+      "OAPIWebServiceAddress": "[Please specify]",
+      "Port": 20400,
+      "Credentials": {
+        "Username": "",
+        "Password": ""
+      },
+      "DataConnection": "",
+      "OverrideNetworkRootDirectory": false
+    }
+  }
+}'
 ```
 ### Upgrade Installation
 
