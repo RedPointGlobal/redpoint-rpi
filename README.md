@@ -35,9 +35,9 @@ Latest stable version of Kubernetes. Select from this list of [Kubernetes certif
     - 16 GB of Memory per node
     - Minimum of 2 nodes for high availability
 
-
-| <h3>Before You Begin</h3>                                |
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+### Before you begin
+| Ensure that the following requirements are met!                                                                                                                                                                                                                                   |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | - **Redpoint Container Registry access:** Open a support ticket at [support@redpointglobal.com](mailto:support@redpointglobal.com) requesting access to download RPI container images.<br><br> - **RPI License:** Open a support ticket at [support@redpointglobal.com](mailto:support@redpointglobal.com) to obtain your RPI v7 License activation key.<br><br> - Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.<br><br> - Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluster. |
 
 ### Greenfield Installation
