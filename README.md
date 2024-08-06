@@ -167,6 +167,27 @@ rpi-deploymentapi.example.com/api/deployment/downloads/Client # RPI Client Execu
 rpi-integrationapi.example.com                                # Integration API
 rpi-realtimeapi.example.com                                   # RPI Realtime
 ```
+
+### License Activation
+
+After installing RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
+
+```
+ACTIVATION_KEY="your_license_activation_key"
+ACTIVATION_URL=rpi-deploymentapi.example.com
+SYSTEM_NAME="my_dev_rpi_system"
+
+curl -X 'POST' \
+  'https://$ACTIVATION_URL/api/licensing/activatelicense' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "ActivationKey": "'"${ACTIVATION_KEY}"'",
+  "SystemName": "'"${SYSTEM_NAME}"'"
+}'
+```
+With RPI installed and the license activated, you're now ready to install your first cluster and add tenants.
+
 ### Install Cluster and Add Tenants
 
 If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
@@ -336,27 +357,6 @@ To perform a demo installation, open the values.yaml file and set the cloud valu
 ```
 cloud: demo
 ```
-
-### License Activation
-
-After installing RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
-
-```
-ACTIVATION_KEY="your_license_activation_key"
-ACTIVATION_URL=rpi-deploymentapi.example.com
-SYSTEM_NAME="my_dev_rpi_system"
-
-curl -X 'POST' \
-  'https://$ACTIVATION_URL/api/licensing/activatelicense' \
-  -H 'accept: */*' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "ActivationKey": "'"${ACTIVATION_KEY}"'",
-  "SystemName": "'"${SYSTEM_NAME}"'"
-}'
-```
-With RPI installed and license activated, you are ready to use the application. 
-
 ### High Availability
 
 The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
