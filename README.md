@@ -339,37 +339,7 @@ cloud: demo
 
 ### License Activation
 
-After installing RPI, you need to apply a license. You have two options for applying the license:
-
- - **During Cluster Installation:** 
- 
- In a [Greenfield Installation](#greenfield-installation) where you need to call the ```/api/deployment/installCluster``` endpoint to install the operational databases as shown in the example below
-
- ```
-ACTIVATION_KEY="your_license_activation_key"
-ACTIVATION_URL=rpi-deploymentapi.example.com
-SYSTEM_NAME="my_dev_rpi_system"
-
- curl -X 'POST' \
-  'https://$ACTIVATION_URL/api/deployment/installcluster?waitTimeoutSeconds=360' \
-  -H 'accept: text/plain' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "UseExistingDatabases": false,
-  "CoreUserInitialPassword": ".Admin123",
-  "SystemAdministrator": {
-    "Username": "coreuser",
-    "EmailAddress": "coreuser@noemail.com"
-  },
-  "LicenseInfo": {
-    "ActivationKey": "'"${ACTIVATION_KEY}"'",
-    "SystemName": "'"${SYSTEM_NAME}"'"
-  }
-}'
- ```
- - **Directly via the License API:** 
- 
- In an [Upgrade Installation](#greenfield-installation) where you need to call the ```/api/licensing/activatelicense``` endpoint to activate your existing RPI cluster as shown in the example below
+After installing RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
 
 ```
 ACTIVATION_KEY="your_license_activation_key"
@@ -385,7 +355,6 @@ curl -X 'POST' \
   "SystemName": "'"${SYSTEM_NAME}"'"
 }'
 ```
-
 With RPI installed and license activated, you are ready to use the application. 
 
 ### High Availability
