@@ -422,9 +422,15 @@ The container now handles all work previously undertaken by the following system
 To configure the Queue Reader, open the ```values.yaml``` file and update the ```queueReader``` section
 
 ```
-
+queueReader: 
+  isEnabled: true
+  isFormProcessingEnabled: true
+  isEventProcessingEnabled: true
+  isCacheProcessingEnabled: true
+  isDistributed: false 
+  tenantIds: []
+  useMessageLocks: true
 ```
-
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our documentation site by clicking the link below
 
