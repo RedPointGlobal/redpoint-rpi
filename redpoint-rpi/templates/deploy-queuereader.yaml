@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-queueservice
+  name: rpi-queuereader
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: rpi-queueservice
+    app: rpi-queuereader
 spec:
   ports:
   - name: broker
@@ -17,29 +17,29 @@ spec:
     protocol: TCP
     targetPort: 15672
   selector:
-    app: rpi-queueservice
+    app: rpi-queuereader
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-queueservice
+  name: rpi-queuereader
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: rpi-queueservice
+    app: rpi-queuereader
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rpi-queueservice
+      app: rpi-queuereader
   template:
     metadata:
       labels:
-        app: rpi-queueservice
+        app: rpi-queuereader
     spec:
       serviceAccountName: redpoint-rpi
       containers:
-      - name: rpi-queueservice
+      - name: rpi-queuereader
         image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
         imagePullPolicy: Always
         ports:
@@ -72,14 +72,14 @@ spec:
       volumes:
         - name: homedir
           persistentVolumeClaim:
-            claimName: rpi-queueservice
-      hostname: rpi-queueservice
+            claimName: rpi-queuereader
+      hostname: rpi-queuereader
 
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: rpi-queueservice
+  name: rpi-queuereader
   namespace: {{ .Values.global.namespace }}
 spec:
   accessModes:
@@ -93,7 +93,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rpi-queueservice
+  name: rpi-queuereader
   namespace: {{ .Values.global.namespace }}
 spec:
   accessModes:

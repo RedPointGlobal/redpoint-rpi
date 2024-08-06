@@ -14,6 +14,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Configuring Storage ](#configuring-storage)
 - [Configuring Realtime Queue Providers](#configuring-realtime-queue-providers)
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
+- [Configuring Realtime Queue Reader](#configuring-realtime-queue-reader)
 - [Configuring Cluster and Tenants](#configuring-cluster-and-tenants)
 - [Configuring High Availability ](#configuring-high-availability)
 - [Configuring License Activation ](#configuring-license-activation)
@@ -403,6 +404,25 @@ To configure a Cache Provider, Open the ```values.yaml``` file and locate the ``
 ```
 cacheProviders: 
   type: mongodb
+```
+### Configuring Realtime Queue Reader
+A new dedicated Queue Reader container has been introduced in RPI v7.4, which is responsible for the draining of Queue listener and RPI Realtime queues.
+
+The new container supports operation in two modes:
+
+***Distributed mode:*** facilitates more than one queue reader service draining the same queue. Allows for scaling to improve processing performance. Interim data is stored in an external (redis) cache and queue (any queue provider, but preferably local), which also protects against data loss.
+
+***Non-distributed mode:*** all work for a single queue is handled by a single service. There is no need for an external queue or cache to hold interim data.
+
+The container now handles all work previously undertaken by the following system tasks, which have been deprecated:
+  - Web cache data importer
+  - Web events importer
+  - Web form processor
+
+To configure the Queue Reader, open the ```values.yaml``` file and update the ```queueReader``` section
+
+```
+
 ```
 
 ### RPI Documentation

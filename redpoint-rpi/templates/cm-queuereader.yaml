@@ -1,27 +1,27 @@
-{{- if eq .Values.global.cloud "demo" }}
+{{- if eq .Values.global.cloud "amazon" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: rpi-queueservice
+  name: rpi-queuereader
   namespace: {{ .Values.global.namespace }}
 data:
   appsettings.overrides.json: |
     {
       "QueueService": {
         "QueueListener": {
-          "IsEnabled": true,
-          "QueuePath": "RPIListenerQueue",
-          "ThreadPoolSize": 10,
-          "TimeoutMinutes": 60,
-          "MaxBatchSize": 50,
-          "UseMessageLocks": true
+          "IsEnabled": {{ .Values.queueReader.isEnabled }},
+          "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
+          "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
+          "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
+          "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
         },
         "RealtimeConfiguration": {
-          "IsFormProcessingEnabled": true,
-          "IsEventProcessingEnabled": true,
-          "IsCacheProcessingEnabled": true,
-          "TenantIDs": [],
-          "IsDistributed": true,
+          "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
+          "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
+          "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
+          "TenantIDs": {{ .Values.queueReader.tenantIds }},
+          "IsDistributed": {{ .Values.queueReader.isDistributed }},
           "DistributedCache": {
             "Provider": "Redis",
             "RedisSettings": {
@@ -34,7 +34,7 @@ data:
             "Settings": [
               {
                 "Key": "HostName",
-                "Value": "rpi-queueservice"
+                "Value": "rpi-queuereader"
               },
               {
                 "Key": "VirtualHost",
@@ -54,7 +54,6 @@ data:
       }
     }
 {{- end }}
-
 
 
 

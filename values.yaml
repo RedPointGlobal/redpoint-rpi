@@ -117,6 +117,19 @@ cacheProviders:
 
   cosmosdb:
 
+queueReader: 
+  isEnabled: true
+  isFormProcessingEnabled: true
+  isEventProcessingEnabled: true
+  isCacheProcessingEnabled: true
+  # High performance or high volume transactions
+  isDistributed: false 
+  tenantIds: []
+  threadPoolSize: 10
+  timeoutMinutes: 60
+  maxBatchSize: 50
+  useMessageLocks: true
+
 callbackapi:
   queueEnabled: true
   channelLabel: SendGrid

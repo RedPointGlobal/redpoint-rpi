@@ -190,7 +190,7 @@ data:
             "Settings": [
               {
                 "Key": "HostName",
-                "Value": "rpi-queueservice"
+                "Value": "rpi-queuereader"
               },
               {
                 "Key": "VirtualHost",
