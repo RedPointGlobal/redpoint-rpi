@@ -415,7 +415,7 @@ cacheProviders:
   type: mongodb
 ```
 ### Configuring Realtime Queue Reader
-A new dedicated Queue Reader container has been introduced in RPI v7.4, which is responsible for the draining of Queue listener and RPI Realtime queues.
+A new dedicated  [Queue Reader ](https://docs.redpointglobal.com/rpi/admin-queue-listener-setup) container has been introduced in RPI v7.4, which is responsible for the draining of Queue listener and RPI Realtime queues.
 
 The new container supports operation in two modes:
 
