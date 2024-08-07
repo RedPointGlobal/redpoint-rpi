@@ -258,7 +258,6 @@ curl -X 'POST' \
   -d "{
   \"Name\": \"$TENANT_NAME\",
   \"Description\": \"My RPI Tenant 1\",
-  \"ClientID\": \"\",
   \"UseExistingDatabases\": false,
   \"DatabaseSuffix\": \"$TENANT_NAME\",
   \"DataWarehouse\": {
