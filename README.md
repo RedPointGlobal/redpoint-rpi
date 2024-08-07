@@ -306,7 +306,7 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 To connect to the RPI server, you'll need the RPI Client. This client is included with the Interaction API in a zip file that you can download to your workstation. To get the client, use the following URL: Replace ```example.com``` with the actual domain name used for your ingress.
 
 ```
-https://rpi-interactionapi.example.com /download
+https://rpi-interactionapi.example.com/downloads/Client
 ```
 
 ### Upgrade Installation
