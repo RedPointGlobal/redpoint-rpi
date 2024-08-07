@@ -11,6 +11,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Upgrade Installation ](#upgrade-installation)
 - [Demo Installation ](#demo-installation)
 - [Accessing RPI Services URLs ](#accessing-rpi-services-urls)
+- [Downloading Client Executable ](#downloading-client-executable)
 - [Configuring Storage ](#configuring-storage)
 - [Configuring Realtime Queue Providers](#configuring-realtime-queue-providers)
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
@@ -299,6 +300,14 @@ curl -X 'GET' \
   -H 'accept: text/plain'
 ```
 You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster installation has been completed successfully.
+
+### Downloading Client Executable
+
+To connect to the RPI server, you'll need the RPI Client. This client is included with the Interaction API in a zip file that you can download to your workstation. To get the client, use the following URL: Replace ```example.com``` with the actual domain name used for your ingress.
+
+```
+https://rpi-interactionapi.example.com /download
+```
 
 ### Upgrade Installation
 
