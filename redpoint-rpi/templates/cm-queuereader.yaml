@@ -55,6 +55,176 @@ data:
     }
 {{- end }}
 
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "QueueService": {
+        "QueueListener": {
+          "IsEnabled": {{ .Values.queueReader.isEnabled }},
+          "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
+          "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
+          "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
+          "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
+        },
+        "RealtimeConfiguration": {
+          "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
+          "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
+          "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
+          "TenantIDs": {{ .Values.queueReader.tenantIds }},
+          "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          "DistributedCache": {
+            "Provider": "Redis",
+            "RedisSettings": {
+              "IPAddress": "rpi-rtdrediscache"
+            }
+          },
+          "DistributedQueue": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": "rpi-queuereader"
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": "redpointdev"
+              },
+              {
+                "Key": "Password",
+                "Value": ".RedPoint2021"
+              }
+            ]
+          }
+        }
+      }
+    }
+{{- end }}
 
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "QueueService": {
+        "QueueListener": {
+          "IsEnabled": {{ .Values.queueReader.isEnabled }},
+          "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
+          "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
+          "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
+          "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
+        },
+        "RealtimeConfiguration": {
+          "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
+          "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
+          "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
+          "TenantIDs": {{ .Values.queueReader.tenantIds }},
+          "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          "DistributedCache": {
+            "Provider": "Redis",
+            "RedisSettings": {
+              "IPAddress": "rpi-rtdrediscache"
+            }
+          },
+          "DistributedQueue": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": "rpi-queuereader"
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": "redpointdev"
+              },
+              {
+                "Key": "Password",
+                "Value": ".RedPoint2021"
+              }
+            ]
+          }
+        }
+      }
+    }
+{{- end }}
 
-
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "QueueService": {
+        "QueueListener": {
+          "IsEnabled": {{ .Values.queueReader.isEnabled }},
+          "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
+          "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
+          "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
+          "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
+        },
+        "RealtimeConfiguration": {
+          "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
+          "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
+          "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
+          "TenantIDs": {{ .Values.queueReader.tenantIds }},
+          "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          "DistributedCache": {
+            "Provider": "Redis",
+            "RedisSettings": {
+              "IPAddress": "rpi-rtdrediscache"
+            }
+          },
+          "DistributedQueue": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": "rpi-queuereader"
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": "redpointdev"
+              },
+              {
+                "Key": "Password",
+                "Value": ".RedPoint2021"
+              }
+            ]
+          }
+        }
+      }
+    }
+{{- end }}
