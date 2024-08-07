@@ -428,7 +428,7 @@ queueReader:
   isEventProcessingEnabled: true
   isCacheProcessingEnabled: true
   isDistributed: false 
-  tenantIds: []
+  tenantIds: ["your_clientId_1", "your_clientId_2"]
   useMessageLocks: true
 ```
 ### RPI Documentation
