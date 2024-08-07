@@ -124,7 +124,7 @@ queueReader:
   isCacheProcessingEnabled: true
   # High performance or high volume transactions
   isDistributed: false 
-  tenantIds: []
+  tenantIds: ["your_clientId_1", "your_clientId_2"]
   threadPoolSize: 10
   timeoutMinutes: 60
   maxBatchSize: 50
