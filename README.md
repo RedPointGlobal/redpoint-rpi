@@ -423,7 +423,7 @@ The new container supports operation in two modes:
 
 ***Non-distributed mode:*** all work for a single queue is handled by a single service. There is no need for an external queue or cache to hold interim data.
 
-The container now handles all work previously undertaken by the ```Web cache data importer, Web events importer and Web form processor system tasks``` which have been deprecated:
+The container now handles all work previously undertaken by the Web cache data importer, Web events importer and Web form processor system tasks which have been deprecated:
 
 To configure the Queue Reader, open the ```values.yaml``` file and update the ```queueReader``` section
 
