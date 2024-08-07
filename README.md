@@ -212,7 +212,7 @@ curl -X 'POST' \
 To check the status of the cluster installation, execute the following command:
 ```
 curl -X 'GET' \
-  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/status' \
+  "https://$DEPLOYMENT_SERVICE_URL/api/deployment/status" \
   -H 'accept: text/plain'
 ```
 You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster installation has been completed successfully.
