@@ -12,7 +12,7 @@ data:
         "QueueEnabled": true,
         "queueProviders": {
           "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.callbackapi.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Resonance.AWSQueueAccess",
             "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
@@ -42,7 +42,7 @@ data:
         "QueueEnabled": true,
         "queueProviders": {
           "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueProviders.callbackServiceQueuePath | quote }},
+          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Resonance.RabbitMQAccess",
             "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",

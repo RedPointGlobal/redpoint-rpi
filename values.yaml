@@ -164,10 +164,14 @@ queueReader:
   maxBatchSize: 50
   useMessageLocks: true
 
+
 callbackapi:
+  # The RPI Callback Service is used to retrieve results from the following channel providers:
+  # Sendgrid and MPulse
+
+  # Enable or disable the CallbackService queue
   queueEnabled: true
   channelLabel: SendGrid
-  callbackServiceQueuePath: sendgridcallbackqueue
 
 executionservice:
   RPIExecution__QueueListener__IsEnabled: false 
