@@ -54,6 +54,10 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
         - name: RPIExecution__MaxThreadsPerExecutionService
           value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
         - name: Logging__LogLevel__Default
@@ -138,6 +142,10 @@ spec:
           value: "true"
         - name: RPI__SMTP__Username
           value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
         - name: RPI__SMTP__Password
           value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
         - name: RPIExecution__MaxThreadsPerExecutionService
@@ -235,6 +243,10 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
         - name: RPI__SMTP__Password
           value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
         - name: RPIExecution__MaxThreadsPerExecutionService
           value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
         - name: RPIClient__ApplicationSupportURL
@@ -330,6 +342,10 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
         - name: RPI__SMTP__Password
           value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
         - name: RPIExecution__MaxThreadsPerExecutionService
           value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
         - name: RPIClient__ApplicationSupportURL

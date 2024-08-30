@@ -60,11 +60,15 @@ realtime:
   cacheOutputQueueEnabled: true
 
 queueNames: 
+  # Queues required by the RPI Realtime service
+  # Ensure that you replace these values with the actual names of the queues 
+  # that are allocated for your specific environment.
   formQueuePath: RPIWebFormSubmission
   eventsQueuePath: RPIWebEvents
   cacheOutputQueuePath: RPIWebCacheData
   recommendationsQueuePath: RPIWebRecommendations
   listenerQueuePath: RPIQueueListener
+  # Queue required for the RPI callback service (Sendgrid)
   callbackServiceQueuePath: RPICallbackApiQueue
   
 queueProviders: 
@@ -124,7 +128,8 @@ queueReader:
   isCacheProcessingEnabled: true
   # High performance or high volume transactions
   isDistributed: false 
-  tenantIds: ["your_clientId_1", "your_clientId_2"]
+  # Repleace with the actual client ID or IDs of your RPI tenants
+  tenantIds: ["your_rpi_clientId_1", "your_rpi_clientId_2"]
   threadPoolSize: 10
   timeoutMinutes: 60
   maxBatchSize: 50
@@ -135,18 +140,9 @@ callbackapi:
   channelLabel: SendGrid
   callbackServiceQueuePath: sendgridcallbackqueue
 
-externalContentProvider:
-  type: azureblob
-  storageAccountName: saredpointrpiecp
-  storageAccountKey: your_storage_account_access_key
-  enabled: false 
-  containerName: sendgridcallbackapi
-  saveEmailEvents: true
-
 executionservice:
   RPIExecution__QueueListener__IsEnabled: false 
   RPIExecution_MaxThreadsPerExecutionService: 50
-  RPIExecution__QueueListener__QueuePath: "temporaryplaceholder"
 
 interactionapi: 
   enableSwagger: true
