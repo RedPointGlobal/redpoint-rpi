@@ -102,3 +102,321 @@ spec:
     requests:
       storage: 100Gi
 {{- end }}
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: broker
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+  - name: mgmt
+    port: 15672
+    protocol: TCP
+    targetPort: 15672
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: rpi-queuereader
+        image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
+        imagePullPolicy: Always
+        ports:
+        - name: broker
+          containerPort: 5672
+          protocol: TCP
+        - name: mgmt
+          containerPort: 15672
+          protocol: TCP
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "redpointdev"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: ".RedPoint2021"
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: "/"
+        livenessProbe:
+          exec:
+            command:
+            - "rabbitmq-diagnostics"
+            - "-q"
+            - "ping"
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        volumeMounts:
+          - name: homedir
+            mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: homedir
+          persistentVolumeClaim:
+            claimName: rpi-queuereader
+      hostname: rpi-queuereader
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 10Gi  
+  hostPath:
+    path: /var/lib/rabbitmq
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: broker
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+  - name: mgmt
+    port: 15672
+    protocol: TCP
+    targetPort: 15672
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: rpi-queuereader
+        image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
+        imagePullPolicy: Always
+        ports:
+        - name: broker
+          containerPort: 5672
+          protocol: TCP
+        - name: mgmt
+          containerPort: 15672
+          protocol: TCP
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "redpointdev"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: ".RedPoint2021"
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: "/"
+        livenessProbe:
+          exec:
+            command:
+            - "rabbitmq-diagnostics"
+            - "-q"
+            - "ping"
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        volumeMounts:
+          - name: homedir
+            mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: homedir
+          persistentVolumeClaim:
+            claimName: rpi-queuereader
+      hostname: rpi-queuereader
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 10Gi  
+  hostPath:
+    path: /var/lib/rabbitmq
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: broker
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+  - name: mgmt
+    port: 15672
+    protocol: TCP
+    targetPort: 15672
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: rpi-queuereader
+        image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
+        imagePullPolicy: Always
+        ports:
+        - name: broker
+          containerPort: 5672
+          protocol: TCP
+        - name: mgmt
+          containerPort: 15672
+          protocol: TCP
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "redpointdev"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: ".RedPoint2021"
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: "/"
+        livenessProbe:
+          exec:
+            command:
+            - "rabbitmq-diagnostics"
+            - "-q"
+            - "ping"
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        volumeMounts:
+          - name: homedir
+            mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: homedir
+          persistentVolumeClaim:
+            claimName: rpi-queuereader
+      hostname: rpi-queuereader
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 10Gi  
+  hostPath:
+    path: /var/lib/rabbitmq
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+{{- end }}
