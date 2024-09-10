@@ -234,7 +234,7 @@ ingress:
   certificateArn: your_acm_certificate_arn
   
   # Specify the domain name for the ingress resources.
-  domain: rg1cloud.com
+  domain: example.com
   # Add any specific annotations required for your ingress setup here.
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 99m
