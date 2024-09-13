@@ -33,7 +33,7 @@ replicas:
   queuereader: 1
   
 databases:
-  # upported options are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
+  # Supported options are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
   type: amazonrds #sqlserver 
   # The hostname or IP address of the database server
   serverhost: rpiopsmssqlserver
