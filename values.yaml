@@ -33,7 +33,7 @@ replicas:
   queuereader: 1
   
 databases:
-  # Supported options are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
+  # Supported options for the Operations (Pulse) and Logging (Pulse_Logging) databases are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
   type: amazonrds #sqlserver 
   # The hostname or IP address of the database server
   serverhost: rpiopsmssqlserver
