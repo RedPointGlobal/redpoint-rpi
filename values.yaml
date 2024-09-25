@@ -36,7 +36,7 @@ databases:
   # Supported options for the Operational databases are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
   type: amazonrds #sqlserver 
   # The hostname or IP address of the database server
-  serverhost: rpiopsmssqlserver
+  serverhost: your_sql_server_host
   # The username for authenticating to the database server
   username: mssqladmin
   # The password for authenticating to the database server
