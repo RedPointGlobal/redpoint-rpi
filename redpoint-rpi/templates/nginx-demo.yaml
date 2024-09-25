@@ -260,8 +260,8 @@ kind: Service
 metadata:
   annotations:
     {{- if eq .Values.ingress.mode "private" }}
-      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
-      service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{ .Values.ingress.subnetName }}
+    service.beta.kubernetes.io/azure-load-balancer-internal: {{.Values.ingress.controller.enabled | quote }}
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{.Values.ingress.subnetName | quote }}
     {{- end }}
   labels:
     app.kubernetes.io/component: controller
