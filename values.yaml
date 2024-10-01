@@ -3,7 +3,7 @@ global:
     name: redpoint-interaction
     version: "7"
   # Supported cloud providers are azure, amazon, google, and demo
-  cloud: amazon
+  cloud: demo
 
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
@@ -222,7 +222,7 @@ ingress:
     # Set enabled to false if you want to disable the creation of the ingress controller
     enabled: true 
   # Set mode to private for internal ingress and public for public ingress
-  mode: public 
+  mode: private 
   # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
   # If you set it to k8ssecret, you must create a kubernetes secret containing your certificates
   certificateSource: k8ssecret # acm
@@ -234,7 +234,7 @@ ingress:
   certificateArn: your_acm_certificate_arn
   
   # Specify the domain name for the ingress resources.
-  domain: example.com
+  domain: rg1cloud.com
   # Add any specific annotations required for your ingress setup here.
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 99m

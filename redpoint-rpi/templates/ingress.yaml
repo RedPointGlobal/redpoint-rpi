@@ -209,9 +209,9 @@ metadata:
 spec:
   ingressClassName: redpointdemo
   tls:
-  - secretName: ingress-tls
+  - secretName: demo-tls
   rules:
-    - host: rpi-client.redpointdemo.com
+    - host: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
       http:
         paths:
         - path: /
@@ -221,7 +221,7 @@ spec:
               name: rpi-interactionapi
               port:
                 number: 80
-    - host: rpi-deploymentapi.redpointdemo.com
+    - host: {{ .Values.ingress.hosts.config }}.{{ .Values.ingress.domain }}
       http:
         paths:
         - path: /
@@ -231,7 +231,7 @@ spec:
               name: rpi-deploymentapi
               port:
                 number: 80
-    - host: rpi-integrationapi.redpointdemo.com
+    - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
       http:
         paths:
         - path: /
@@ -241,7 +241,7 @@ spec:
               name: rpi-integrationapi
               port:
                 number: 80
-    - host: rpi-realtimeapi.redpointdemo.com
+    - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
       http:
         paths:
         - path: /
@@ -251,7 +251,7 @@ spec:
               name: rpi-realtimeapi
               port:
                 number: 80
-    - host: rpi-callbackapi.redpointdemo.com
+    - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
       http:
         paths:
         - path: /
