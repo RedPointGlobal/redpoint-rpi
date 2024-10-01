@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: rpiopsmssqlserver
-        image: rpiclouddev.azurecr.io/dockerenvbuilder/rpi-7-4/sql/mssql-2022-opsdatabases
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mssql-2022-opsdatabases:latest
         ports:
         - name: mssql
           containerPort: 1433
@@ -83,7 +83,7 @@ spec:
     spec:
       containers:
       - name: rpimongodbserver
-        image: rpicloudprod.azurecr.io/dockerenvbuilder/rpi-7-3/nosql/mongodb-6-0-seeded
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mongodb-6-0-seeded:latest
         ports:
         - name: mongo
           containerPort: 27017
