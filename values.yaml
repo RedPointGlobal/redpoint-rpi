@@ -229,7 +229,7 @@ ingress:
   tlsSecretName: ingress-tls
   className: nginx-redpoint-rpi
   # Subnet name is only required if you set the ingress mode to private
-  subnetName: your_ingress_vpc_or_vnet_subnet 
+  subnetName: snet-rgoc-nonprod-eus2-aks 
   # Certificate Arn is only required if you set the certificateSource to acm
   certificateArn: your_acm_certificate_arn
   

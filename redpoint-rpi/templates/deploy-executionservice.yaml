@@ -33,7 +33,7 @@ spec:
       labels:
         app: rpi-executionservice
     spec:
-      serviceAccountName: sa-rpi-executionservice
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - env:
         - name: ASPNETCORE_ENVIRONMENT

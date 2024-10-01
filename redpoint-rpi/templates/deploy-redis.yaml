@@ -33,7 +33,7 @@ spec:
       labels:
         app: rpi-rtdrediscache
     spec:
-      serviceAccountName: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - name: rpi-rtdrediscache
         image: rpspeastus2acr.azurecr.io/rpi/ancillary/rtcache/redis-6:latest

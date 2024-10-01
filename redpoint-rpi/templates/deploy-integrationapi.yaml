@@ -33,7 +33,7 @@ spec:
       labels:
         app: rpi-integrationapi
     spec:
-      serviceAccountName: sa-rpi-integrationapi
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - env:
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE

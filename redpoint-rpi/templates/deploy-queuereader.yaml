@@ -37,7 +37,7 @@ spec:
       labels:
         app: rpi-queuereader
     spec:
-      serviceAccountName: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - name: rpi-queuereader
         image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
@@ -143,7 +143,7 @@ spec:
       labels:
         app: rpi-queuereader
     spec:
-      serviceAccountName: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - name: rpi-queuereader
         image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
@@ -249,7 +249,7 @@ spec:
       labels:
         app: rpi-queuereader
     spec:
-      serviceAccountName: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - name: rpi-queuereader
         image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
@@ -355,7 +355,7 @@ spec:
       labels:
         app: rpi-queuereader
     spec:
-      serviceAccountName: redpoint-rpi
+      serviceAccountName: sa-redpoint-rpi
       containers:
       - name: rpi-queuereader
         image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
