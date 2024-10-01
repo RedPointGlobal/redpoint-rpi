@@ -42,13 +42,6 @@ spec:
           value: "Y"
         - name: SA_PASSWORD
           value: ".RedPoint2021"
-        volumeMounts:
-        - name: mssqldb
-          mountPath: /var/opt/mssql
-      volumes:
-      - name: mssqldb
-        hostPath:
-          path: /mnt/data/mssql
 
 ---
 apiVersion: v1
@@ -90,11 +83,4 @@ spec:
         env:
         - name: MONGO_INITDB_DATABASE
           value: "rpi_cdp_nosql"
-        volumeMounts:
-        - name: mssqldb
-          mountPath: /data/db
-      volumes:
-      - name: mongodata
-        hostPath:
-          path: /mnt/data/mongodb
 {{- end }}
