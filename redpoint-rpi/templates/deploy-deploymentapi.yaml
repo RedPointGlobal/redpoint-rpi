@@ -54,7 +54,7 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
           value: "sa"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
-          value: ".RedPoint2024"
+          value: ".RedPoint2021"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
           value: "dbo"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
