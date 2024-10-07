@@ -250,6 +250,7 @@ Once the cluster installation is complete, you can proceed to add your first RPI
 export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
 export TENANT_NAME=My_RPI_Tenant1
 export CLIENT_ID="00000000-0000-0000-0000-000000000000"
+export DATAWAREHOUSE_PROVIDER=SQLServer
 export DATAWAREHOUSE_SERVER=your_datawarehouse_server
 export DATAWAREHOUSE_NAME=your_datawarehouse_name
 export DATAWAREHOUSE_USERNAME=your_datawarehouse_username
@@ -267,7 +268,7 @@ curl -X 'POST' \
   \"DatabaseSuffix\": \"$TENANT_NAME\",
   \"DataWarehouse\": {
     \"ConnectionParameters\": {
-      \"Provider\": \"SQLServer\",
+      \"Provider\": \"$DATAWAREHOUSE_PROVIDER\",
       \"UseDatabaseAgent\": false,
       \"Server\": \"$DATAWAREHOUSE_SERVER\",
       \"DatabaseName\": \"$DATAWAREHOUSE_NAME\",
