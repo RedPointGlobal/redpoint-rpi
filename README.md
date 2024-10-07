@@ -302,7 +302,7 @@ curl -X 'GET' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/status' \
   -H 'accept: text/plain'
 ```
-You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster installation has been completed successfully.
+You should receive the ```"Status": "LastRunComplete"``` response to confirm that the client installation has completed successfully.
 
 ### Downloading Client Executable
 
