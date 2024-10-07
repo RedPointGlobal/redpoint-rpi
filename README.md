@@ -318,7 +318,7 @@ In an Upgrade installation, you will set up RPI in an existing version 6.x envir
 Before performing the upgrade, use the ```Interaction Upgrade``` Helper to check the v7 compatibility of all plugins currently used in your version 6 installation. Follow these steps:
 
   - Download and extract the [Upgrade Helper](https://github.com/RedPointGlobal/redpoint-rpi/blob/main/UpgradeAssistant.zip)
-  - Execute the ```RedPoint.Interaction.UpgradeHelper```application. 
+  - Execute the ```RedPoint.Interaction.UpgradeHelper.exe```application. 
   
 When running the Helper, you will be prompted to enter a v6 Pulse database connection string. Once connected, the Helper will check the compatibility of all currently used plugins with v7. If any incompatible plugins are found, their details will be displayed, and you will have the option to output this information to a file.
 
