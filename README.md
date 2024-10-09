@@ -373,7 +373,7 @@ You should receive ```"Status": "LastRunComplete", and ```Upgrade Complete``` in
     "[2024-10-09 17:22:49] Pulse Database Name: Pulse",
     "[2024-10-09 17:22:49] Logging Database Name: Pulse_Logging",
     "[2024-10-09 17:22:49] Database Host: rpiopsmssqlserver",
-    "[2024-10-09 17:22:49] Version before upgrade 7.4.24250.1529",
+    "[2024-10-09 17:22:49] Version before upgrade 6.7.24250",
     "[2024-10-09 17:22:49] Upgrading to version 7.4.24278.1712",
     "[2024-10-09 17:22:49] Upgrading the database",
     "[2024-10-09 17:23:35] Updating database version",
