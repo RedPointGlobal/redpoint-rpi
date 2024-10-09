@@ -361,7 +361,7 @@ curl -X 'GET' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/upgrade?waitTimeoutSeconds=360' \
   -H 'accept: text/plain'
 ```
-You should receive ```"Status": "LastRunComplete", and ```Upgrade Complete``` in the response to confirm that the cluster installation has been completed successfully.
+You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete``` in the response to confirm that the cluster installation has been completed successfully.
 ```
 {
   "DeploymentInstanceID": "default",
