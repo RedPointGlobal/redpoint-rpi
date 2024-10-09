@@ -352,6 +352,7 @@ To perform the upgrade, follow the same steps outlined in the [Greenfield Instal
   - **SQL Server Configuration:** Ensure your SQL server configuration, caches and queues provider settings all point to your current RPI version 6 environment.
 
   - **Helm Chart Customization:** Modify the Helm Chart to incorporate the details provided in the Upgrade Assistant output. Update the ```values.yaml``` file with the relevant environment variables and configuration settings from the output to ensure compatibility with v7.
+  - **Call the Upgrade API endpoint:**
 
 To initiate the upgrade operation, please run the command below
 
@@ -360,7 +361,7 @@ curl -X 'GET' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/upgrade?waitTimeoutSeconds=360' \
   -H 'accept: text/plain'
 ```
-You should receive ```"Status": "LastRunComplete", and ```"Upgrade Complete"``` in the response to confirm that the cluster installation has been completed successfully.
+You should receive ```"Status": "LastRunComplete", and ```Upgrade Complete``` in the response to confirm that the cluster installation has been completed successfully.
 ```
 {
   "DeploymentInstanceID": "default",
