@@ -353,6 +353,36 @@ To perform the upgrade, follow the same steps outlined in the [Greenfield Instal
 
   - **Helm Chart Customization:** Modify the Helm Chart to incorporate the details provided in the Upgrade Assistant output. Update the ```values.yaml``` file with the relevant environment variables and configuration settings from the output to ensure compatibility with v7.
 
+To initiate the upgrade operation, please run the command below
+
+```
+curl -X 'GET' \
+  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/upgrade?waitTimeoutSeconds=360' \
+  -H 'accept: text/plain'
+```
+You should receive ```"Status": "LastRunComplete", and ```"Upgrade Complete"``` in the response to confirm that the cluster installation has been completed successfully.
+```
+{
+  "DeploymentInstanceID": "default",
+  "Status": "LastRunComplete",
+  "PulseDatabaseName": "Pulse",
+  "Messages": [
+    "[2024-10-09 17:22:49] Upgrade starting",
+    "[2024-10-09 17:22:49] Operational Database Type: AmazonRDSSQL",
+    "[2024-10-09 17:22:49] Pulse Database Name: Pulse",
+    "[2024-10-09 17:22:49] Logging Database Name: Pulse_Logging",
+    "[2024-10-09 17:22:49] Database Host: rpiopsmssqlserver",
+    "[2024-10-09 17:22:49] Version before upgrade 7.4.24250.1529",
+    "[2024-10-09 17:22:49] Upgrading to version 7.4.24278.1712",
+    "[2024-10-09 17:22:49] Upgrading the database",
+    "[2024-10-09 17:23:35] Updating database version",
+    "[2024-10-09 17:23:35] Adding 'what is new'",
+    "[2024-10-09 17:23:35] Loading Plugins",
+    "[2024-10-09 17:24:19] Upgrade Complete"
+  ]
+}
+```
+If any errors occur during the upgrade, the deployment API will provide relevant details in the response. Please analyze these details and resolve any issues before attempting to re-run the upgrade.
 ### Demo Installation
 In a Demo installation, RPI is set up using the default configurations provided by the Helm Chart. This includes:
 
