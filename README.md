@@ -398,7 +398,7 @@ To perform a demo installation, open the values.yaml file and set the cloud valu
 ```
 cloud: demo
 ```
-After completing the Demo installation, please refer to the Configuring Cluster and Tenants sections to set up a cluster and add your first RPI client
+After completing the Demo installation, please refer to the ```Configuring Cluster and Tenants``` sections to set up a cluster and add your first RPI client
 
 ### Configuring High Availability
 
