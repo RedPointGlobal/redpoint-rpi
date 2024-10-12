@@ -385,7 +385,7 @@ You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete```
 ```
 If any errors occur during the upgrade, the deployment API will provide relevant details in the response. Please analyze these details and resolve any issues before attempting to re-run the upgrade.
 ### Demo Installation
-In a Demo installation, RPI is set up using the default configurations provided by the Helm Chart. This includes:
+In a Demo installation, the steps mirror those of a Greenfield installation. However, in this case, RPI is configured using the default settings provided by the Helm Chart, which includes:
 
   - Containerized SQL Server for the Operations databases
   - Redis as the Cache Provider
@@ -398,6 +398,8 @@ To perform a demo installation, open the values.yaml file and set the cloud valu
 ```
 cloud: demo
 ```
+After completing the Demo installation, please refer to the Configuring Cluster and Tenants sections to set up a cluster and add your first RPI client
+
 ### Configuring High Availability
 
 The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
