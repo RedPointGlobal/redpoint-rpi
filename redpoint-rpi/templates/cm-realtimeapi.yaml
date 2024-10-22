@@ -64,8 +64,8 @@ data:
           "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
           "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
           "ClientQueueSettings": {
-            "Assembly": "RedPoint.Resonance.AWSQueueAccess",
-            "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
+            "Assembly": "RedPoint.Amazon.Server",
+            "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
             "Settings": [
               {
                 "Key": "AccessKey",
@@ -83,8 +83,8 @@ data:
           },
           "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
           "ListenerQueueSettings": {
-            "Assembly": "RedPoint.Resonance.AWSQueueAccess",
-            "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
+            "Assembly": "RedPoint.Amazon.Server",
+            "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
             "Settings": [
               {
                 "Key": "AccessKey",
