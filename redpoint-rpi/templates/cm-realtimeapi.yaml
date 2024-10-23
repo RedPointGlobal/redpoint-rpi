@@ -14,6 +14,7 @@ data:
           "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
           "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
           "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
+          "PluginAssemblyPath": "",
           "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
           "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
           "EnableEventListening": {{ .Values.realtime.enableEventListening }}
