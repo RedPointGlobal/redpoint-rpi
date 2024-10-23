@@ -380,6 +380,7 @@ data:
           "RealtimeAgentAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
           "EnableHelpPages": true,
           "DecisionCacheDuration": 0,
+          "PluginAssemblyPath": "",
           "RPIClientID": "11111111-1111-1111-1111-111111111111",
           "RPIAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
           "EnableAuditMetricsInHeaders": true,
