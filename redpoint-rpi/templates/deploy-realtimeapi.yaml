@@ -54,14 +54,18 @@ spec:
                 key: ConnectionStrings__OperationalDatabase
                 name: database-secrets
           - name: RealtimeAPIConfiguration__AppSettings__PluginAssemblyPath
-            value: ""
+            value: "/app/plugins"
           volumeMounts:
             - name: rpi-realtimeapi
               mountPath: /app/appsettings
+            - name: plugins
+              mountPath: /app/plugins
       volumes:
         - name: rpi-realtimeapi
           configMap:
             name: rpi-realtimeapi
+        - name: plugins
+          emptyDir: {}
 {{- end }}
 
 ---
@@ -106,7 +110,7 @@ spec:
                 key: ConnectionStrings__OperationalDatabase
                 name: database-secrets
           - name: RealtimeAPIConfiguration__AppSettings__PluginAssemblyPath
-            value: ""
+            value: "/app/plugins"
           volumeMounts:
             - name: rpi-realtimeapi
               mountPath: /app/appsettings
@@ -170,14 +174,18 @@ spec:
                 key: ConnectionStrings__OperationalDatabase
                 name: database-secrets
           - name: RealtimeAPIConfiguration__AppSettings__PluginAssemblyPath
-            value: ""
+            value: "/app/plugins"
           volumeMounts:
             - name: rpi-realtimeapi
               mountPath: /app/appsettings
+            - name: plugins
+              mountPath: /app/plugins
       volumes:
         - name: rpi-realtimeapi
           configMap:
             name: rpi-realtimeapi
+        - name: plugins
+          emptyDir: {}
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -234,10 +242,14 @@ spec:
           volumeMounts:
             - name: rpi-realtimeapi
               mountPath: /app/appsettings
+            - name: plugins
+              mountPath: /app/plugins
       volumes:
         - name: rpi-realtimeapi
           configMap:
             name: rpi-realtimeapi
+        - name: plugins
+          emptyDir: {}
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
