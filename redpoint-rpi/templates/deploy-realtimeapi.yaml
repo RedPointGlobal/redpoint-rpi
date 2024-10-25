@@ -110,10 +110,14 @@ spec:
           volumeMounts:
             - name: rpi-realtimeapi
               mountPath: /app/appsettings
+            - name: plugins
+              mountPath: /app/plugins
       volumes:
         - name: rpi-realtimeapi
           configMap:
             name: rpi-realtimeapi
+        - name: plugins
+          emptyDir: {}
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
