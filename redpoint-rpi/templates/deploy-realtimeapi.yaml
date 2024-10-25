@@ -238,7 +238,7 @@ spec:
                 key: ConnectionStrings__OperationalDatabase
                 name: database-secrets
           - name: RealtimeAPIConfiguration__AppSettings__PluginAssemblyPath
-            value: ""
+            value: "/app/plugins"
           volumeMounts:
             - name: rpi-realtimeapi
               mountPath: /app/appsettings
