@@ -160,7 +160,7 @@ data:
         "CacheSettings": {
           "Caches": [
             {
-              "Name": "MongoPrimary",
+              "Name": "Default",
               "Assembly": "RedPoint.Resonance.MongoDBCache",
               "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
               "Settings": [
@@ -252,24 +252,24 @@ data:
         "DataMaps": [
           {
             "Type": "Visitor Profile",
-            "Cache": "MongoPrimary",
+            "Cache": "Default",
             "DaysToPersist": 200,
             "CompressData": false
           },
           {
             "Type": "Visitor History",
-            "Cache": "MongoPrimary",
+            "Cache": "Default",
             "DaysToPersist": 365,
             "CompressData": false
           },
           {
             "Type": "Non Visitor Data",
-            "Cache": "MongoPrimary",
+            "Cache": "Default",
             "DaysToPersist": 365
           },
           {
             "Type": "Product Recommendations",
-            "Cache": "MongoPrimary",
+            "Cache": "Default",
             "DaysToPersist": 365
           }
         ]
