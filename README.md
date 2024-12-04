@@ -451,7 +451,7 @@ cacheProviders:
   type: mongodb
 ```
 
-Note: When using the RPI SQL Server native cache provider, you can download the necessary setup scripts for SQL Server in-memory cache tables from the deployment service's downloads page: ```https://$DEPLOYMENT_SERVICE_URL/downloads.html.``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\In Memory Cache Setup.sql.```
+**Note:*** When using the RPI SQL Server native cache provider, you can download the necessary setup scripts for SQL Server in-memory cache tables from the deployment service's downloads page: ```https://$DEPLOYMENT_SERVICE_URL/downloads.html.``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\In Memory Cache Setup.sql.```
 
 ### Configuring Realtime Queue Reader
 A new dedicated  [Queue Reader ](https://docs.redpointglobal.com/rpi/admin-queue-listener-setup) container has been introduced in RPI v7.4, which is responsible for the draining of Queue listener and RPI Realtime queues.
