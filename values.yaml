@@ -3,7 +3,7 @@ global:
     name: redpoint-interaction
     version: "7"
   # Supported cloud providers are azure, amazon, google, and demo
-  cloud: demo
+  cloud: amazon
 
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
@@ -104,7 +104,7 @@ cacheProviders:
   # This enables immediate action within data dependent websites, without the delays of retrieving information back from the database
   
   # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis, azurecosmosdb and inMemorySql
-  type: mongodb
+  type: inMemorySql
 
   # Update this section if your cacheProvider type is set to mongodb
   mongodb: 
