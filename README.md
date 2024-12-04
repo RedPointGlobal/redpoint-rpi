@@ -455,9 +455,9 @@ For the selected cache provider, include the required connection details in the 
 
 ```
   mongodb: 
-    databaseName: rpiCache
+    databaseName: your_rpi_cache_name
     ConnectionString: your_mongodb_connection_string
-    CollectionName: rpiCacheCollection
+    CollectionName: your_rpi_cache_collection_name
 ```
 
 **Note:** When using the RPI SQL Server native cache provider, you can download the necessary setup scripts for SQL Server in-memory cache tables from the deployment service's downloads page: ```https://$DEPLOYMENT_SERVICE_URL/downloads.html.``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\In Memory Cache Setup.sql.``` 
