@@ -455,7 +455,7 @@ For the selected cache provider, include the required connection details in the 
 
 ```
   mongodb: 
-    databaseName: your_rpi_cache_name
+    databaseName: your_rpi_cache_database_name
     ConnectionString: your_mongodb_connection_string
     CollectionName: your_rpi_cache_collection_name
 ```

@@ -133,13 +133,13 @@ cacheProviders:
 
   # Update this section if your cacheProvider type is set to azurecosmosdb
   azurecosmosdb:
-    databaseName: your_rpi_cache_name
+    databaseName: your_rpi_cache_database_name
     ConnectionString: your_mongodb_connection_string
     CollectionName: your_rpi_collection_name
 
   # Update this section if your cacheProvider type is set to azurecosmosdb
   inMemorySql:
-    connectionString: Data Source=localhost;Initial Catalog=AdventureWorksDW;Integrated Security=True
+    connectionString: Data Source=your_server_host;Initial Catalog=your_data_warehouse;Integrated Security=True
 
 queueReader: 
   # Configuration for the Queue Reader container introduced in RPI v7.4
