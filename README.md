@@ -451,7 +451,7 @@ cacheProviders:
   type: mongodb
 ```
 
-**NOTE"" When using the RPI SQL Server native cache provider, scripts to set up SQL Server in-memory cache tables are available. Please refer to this [setup guide ](https://docs.redpointglobal.com/rpi/admin-queue-listener-setup)
+**NOTE** When using the RPI SQL Server native cache provider, scripts to set up SQL Server in-memory cache tables are available. Please refer to this [setup guide ](https://docs.redpointglobal.com/rpi/admin-queue-listener-setup)
 
 ### Configuring Realtime Queue Reader
 A new dedicated  [Queue Reader ](https://docs.redpointglobal.com/rpi/admin-queue-listener-setup) container has been introduced in RPI v7.4, which is responsible for the draining of Queue listener and RPI Realtime queues.
