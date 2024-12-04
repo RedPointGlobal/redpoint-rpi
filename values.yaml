@@ -108,9 +108,9 @@ cacheProviders:
 
   # Update this section if your cacheProvider type is set to mongodb
   mongodb: 
-    databaseName: rpiCache
+    databaseName: your_rpi_cache_name
     ConnectionString: your_mongodb_connection_string
-    CollectionName: rpiCacheCollection
+    CollectionName: your_rpi_collection_name
   
   # Update this section if your cacheProvider type is set to redis
   redis: 
@@ -133,9 +133,9 @@ cacheProviders:
 
   # Update this section if your cacheProvider type is set to azurecosmosdb
   azurecosmosdb:
-    databaseName: rpiCache
+    databaseName: your_rpi_cache_name
     ConnectionString: your_mongodb_connection_string
-    CollectionName: rpiCacheCollection
+    CollectionName: your_rpi_collection_name
 
   # Update this section if your cacheProvider type is set to azurecosmosdb
   inMemorySql:
