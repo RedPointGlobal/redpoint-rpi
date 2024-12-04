@@ -444,7 +444,7 @@ queueProviders:
 
 The [Cache connectors ](https://docs.redpointglobal.com/rpi/cache-configuration) allow RPI to store and access various data quickly (in-memory), such as Visitor Profiles, Realtime Decisions rules, and content. This enables immediate action within data dependent websites, without the delays of retrieving information back from the database.
 
-To configure a Cache Provider, Open the ```values.yaml``` file and locate the ```cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```cassandra ```, ```redis``` ,```googlebigtable```, ```inMemorySql```
+To configure a Cache Provider, Open the ```values.yaml``` file and locate the ```cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```cassandra ```, ```redis``` ,```googlebigtable``` ```inMemorySql``` and ```azurecosmosdb```
 
 ```
 cacheProviders: 

@@ -227,6 +227,31 @@ data:
           ]
         },
         {{- end }}
+        {{- if eq .Values.cacheProviders.type "azurecosmosdb" }}
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "AzureCosmosDB",
+              "Assembly": "RedPoint.Resonance.DocumentDBCache",
+              "Class": "RedPoint.Resonance.DocumentDbCache.DocumentDBCacheHandler",
+              "Settings": [
+                {
+                  "Key": "DatabaseId",
+                  "Value": {{ .Values.cacheProviders.azurecosmosdb.databaseId | quote }}
+                },
+                {
+                  "Key": "ConnectionString",
+                  "Value": {{ .Values.cacheProviders.azurecosmosdb.connectionString | quote }}
+                },
+                {
+                  "Key": "ContainerName",
+                  "Value": {{ .Values.cacheProviders.azurecosmosdb.containerName | quote }}
+                }
+              ]
+            }
+          ]
+        }
+        {{- end }}
         {{- if eq .Values.cacheProviders.type "redis" }}
         "CacheSettings": {
           "Caches": [

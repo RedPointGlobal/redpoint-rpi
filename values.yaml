@@ -103,7 +103,7 @@ cacheProviders:
   # The Cache connectors allow RPI to store and access various data quickly, such as Visitor Profiles, Realtime Decisions rules, and content. 
   # This enables immediate action within data dependent websites, without the delays of retrieving information back from the database
   
-  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis, cosmosdb and inMemorySql
+  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis, azurecosmosdb and inMemorySql
   type: mongodb
 
   # Update this section if your cacheProvider type is set to mongodb
@@ -131,13 +131,13 @@ cacheProviders:
     connectionString: your_redis_connection_string
     disableMGET: true
 
-  # Update this section if your cacheProvider type is set to cosmosdb
-  cosmosdb:
+  # Update this section if your cacheProvider type is set to azurecosmosdb
+  azurecosmosdb:
     databaseName: rpiCache
     ConnectionString: your_mongodb_connection_string
     CollectionName: rpiCacheCollection
 
-  # Update this section if your cacheProvider type is set to cosmosdb
+  # Update this section if your cacheProvider type is set to azurecosmosdb
   inMemorySql:
     connectionString: Data Source=localhost;Initial Catalog=AdventureWorksDW;Integrated Security=True
 
