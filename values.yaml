@@ -100,10 +100,10 @@ queueProviders:
     projectId: your_google_project_Id
 
 cacheProviders: 
-  # The Cache connectors allow RPI to store and access various data quickly (in-memory), such as Visitor Profiles, Realtime Decisions rules, and content. 
+  # The Cache connectors allow RPI to store and access various data quickly, such as Visitor Profiles, Realtime Decisions rules, and content. 
   # This enables immediate action within data dependent websites, without the delays of retrieving information back from the database
   
-  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis and cosmosdb
+  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis, cosmosdb and inMemorySql
   type: mongodb
 
   # Update this section if your cacheProvider type is set to mongodb
@@ -137,6 +137,9 @@ cacheProviders:
     ConnectionString: your_mongodb_connection_string
     CollectionName: rpiCacheCollection
 
+  # Update this section if your cacheProvider type is set to cosmosdb
+  inMemorySql:
+    connectionString: Data Source=localhost;Initial Catalog=AdventureWorksDW;Integrated Security=True
 
 queueReader: 
   # Configuration for the Queue Reader container introduced in RPI v7.4

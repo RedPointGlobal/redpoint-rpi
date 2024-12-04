@@ -181,6 +181,23 @@ data:
           ]
         },
         {{- end }}
+        {{- if eq .Values.cacheProviders.type "inMemorySql" }}
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "InMemorySQL",
+              "Assembly": "RedPoint.Resonance.Web.Shared",
+              "Class": "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache",
+              "Settings": [
+                {
+                  "Key": "ConnectionString",
+                  "Value": {{ .Values.cacheProviders.inMemorySql.connectionString | quote }}
+                }
+              ]
+            }
+          ]
+        }
+        {{- end }}
         {{- if eq .Values.cacheProviders.type "cassandra" }}
         "CacheSettings": {
           "Caches": [
