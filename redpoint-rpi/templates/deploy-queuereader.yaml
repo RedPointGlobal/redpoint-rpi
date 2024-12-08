@@ -227,40 +227,14 @@ spec:
           timeoutSeconds: 5
           failureThreshold: 6
         volumeMounts:
-          - name: homedir
+          - name: data
             mountPath: /var/lib/rabbitmq
       volumes:
-        - name: homedir
-          persistentVolumeClaim:
-            claimName: rpi-queuereader
-      hostname: rpi-queuereader
+        - name: data
+          hostPath:
+            path: /tmp/rabbitmq 
+            type: DirectoryOrCreate 
 
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-spec:
-  accessModes:
-    - ReadWriteOnce
-  capacity:
-    storage: 10Gi  
-  hostPath:
-    path: /var/lib/rabbitmq
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Gi
 {{- end }}
 
 ---
@@ -333,38 +307,12 @@ spec:
           timeoutSeconds: 5
           failureThreshold: 6
         volumeMounts:
-          - name: homedir
+          - name: data
             mountPath: /var/lib/rabbitmq
       volumes:
-        - name: homedir
-          persistentVolumeClaim:
-            claimName: rpi-queuereader
-      hostname: rpi-queuereader
+        - name: data
+          hostPath:
+            path: /tmp/rabbitmq 
+            type: DirectoryOrCreate 
 
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-spec:
-  accessModes:
-    - ReadWriteOnce
-  capacity:
-    storage: 10Gi  
-  hostPath:
-    path: /var/lib/rabbitmq
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Gi
 {{- end }}
