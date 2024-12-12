@@ -104,7 +104,7 @@ cacheProviders:
   # This enables immediate action within data dependent websites, without the delays of retrieving information back from the database
   
   # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis, azurecosmosdb and inMemorySql
-  type: inMemorySql
+  type: mongodb
 
   # Update this section if your cacheProvider type is set to mongodb
   mongodb: 

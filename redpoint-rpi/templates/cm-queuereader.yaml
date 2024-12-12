@@ -22,6 +22,7 @@ data:
           "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
           "TenantIDs": [{{ .Values.queueReader.tenantIds | quote }}],
           "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          {{- if eq .Values.cacheProviders.type "mongodb" }}
           "DistributedCache": {
             "Name": "Default",
             "Assembly": "RedPoint.Resonance.MongoDBCache",
@@ -41,6 +42,7 @@ data:
               }
             ]
           },
+          {{- end }}
           "DistributedQueue": {
             "Assembly": "RedPoint.Amazon.Server",
             "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
