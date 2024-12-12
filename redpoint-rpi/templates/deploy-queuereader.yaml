@@ -1,4 +1,3 @@
-{{- if eq .Values.global.cloud "demo" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,14 +7,27 @@ metadata:
     app: rpi-queuereader
 spec:
   ports:
-  - name: broker
-    port: 5672
+  - name: http
+    port: 80
     protocol: TCP
-    targetPort: 5672
-  - name: mgmt
-    port: 15672
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader-preview
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: 80
     protocol: TCP
-    targetPort: 15672
+    targetPort: 8080
   selector:
     app: rpi-queuereader
 
@@ -28,7 +40,7 @@ metadata:
   labels:
     app: rpi-queuereader
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas.queuereader }}
   selector:
     matchLabels:
       app: rpi-queuereader
@@ -36,283 +48,54 @@ spec:
     metadata:
       labels:
         app: rpi-queuereader
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/rpi-queuereader: runtime/default
     spec:
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: sa-azure-identity
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
       containers:
-      - name: rpi-queuereader
-        image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
+      - env:
+        - name: RPI__ServiceHostName
+          value: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+        - name: RPI__ServiceHostPortNumber
+          value: "433"
+        - name: Logging__Database__RPITrace
+          value: "Error" 
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-queue-reader:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
+        name: rpi-queuereader
         ports:
-        - name: broker
-          containerPort: 5672
+        - containerPort: 8080
+          name: web-port
           protocol: TCP
-        - name: mgmt
-          containerPort: 15672
-          protocol: TCP
-        env:
-        - name: RABBITMQ_DEFAULT_USER
-          value: "redpointdev"
-        - name: RABBITMQ_DEFAULT_PASS
-          value: ".RedPoint2021"
-        - name: RABBITMQ_DEFAULT_VHOST
-          value: "/"
-        livenessProbe:
-          exec:
-            command:
-            - "rabbitmq-diagnostics"
-            - "-q"
-            - "ping"
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 6
         volumeMounts:
-          - name: data
-            mountPath: /var/lib/rabbitmq
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+          - name: rpi-queuereader
+            mountPath: /app/appsettings
       volumes:
-        - name: data
-          hostPath:
-            path: /tmp/rabbitmq 
-            type: DirectoryOrCreate 
-
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "amazon" }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-queuereader
-spec:
-  ports:
-  - name: broker
-    port: 5672
-    protocol: TCP
-    targetPort: 5672
-  - name: mgmt
-    port: 15672
-    protocol: TCP
-    targetPort: 15672
-  selector:
-    app: rpi-queuereader
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-queuereader
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: rpi-queuereader
-  template:
-    metadata:
-      labels:
-        app: rpi-queuereader
-    spec:
-      serviceAccountName: sa-redpoint-rpi
-      containers:
-      - name: rpi-queuereader
-        image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
-        imagePullPolicy: Always
-        ports:
-        - name: broker
-          containerPort: 5672
-          protocol: TCP
-        - name: mgmt
-          containerPort: 15672
-          protocol: TCP
-        env:
-        - name: RABBITMQ_DEFAULT_USER
-          value: "redpointdev"
-        - name: RABBITMQ_DEFAULT_PASS
-          value: ".RedPoint2021"
-        - name: RABBITMQ_DEFAULT_VHOST
-          value: "/"
-        livenessProbe:
-          exec:
-            command:
-            - "rabbitmq-diagnostics"
-            - "-q"
-            - "ping"
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 6
-        volumeMounts:
-          - name: data
-            mountPath: /var/lib/rabbitmq
-      volumes:
-        - name: data
-          hostPath:
-            path: /tmp/rabbitmq 
-            type: DirectoryOrCreate 
-
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "azure" }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-queuereader
-spec:
-  ports:
-  - name: broker
-    port: 5672
-    protocol: TCP
-    targetPort: 5672
-  - name: mgmt
-    port: 15672
-    protocol: TCP
-    targetPort: 15672
-  selector:
-    app: rpi-queuereader
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-queuereader
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: rpi-queuereader
-  template:
-    metadata:
-      labels:
-        app: rpi-queuereader
-    spec:
-      serviceAccountName: sa-redpoint-rpi
-      containers:
-      - name: rpi-queuereader
-        image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
-        imagePullPolicy: Always
-        ports:
-        - name: broker
-          containerPort: 5672
-          protocol: TCP
-        - name: mgmt
-          containerPort: 15672
-          protocol: TCP
-        env:
-        - name: RABBITMQ_DEFAULT_USER
-          value: "redpointdev"
-        - name: RABBITMQ_DEFAULT_PASS
-          value: ".RedPoint2021"
-        - name: RABBITMQ_DEFAULT_VHOST
-          value: "/"
-        livenessProbe:
-          exec:
-            command:
-            - "rabbitmq-diagnostics"
-            - "-q"
-            - "ping"
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 6
-        volumeMounts:
-          - name: data
-            mountPath: /var/lib/rabbitmq
-      volumes:
-        - name: data
-          hostPath:
-            path: /tmp/rabbitmq 
-            type: DirectoryOrCreate 
-
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "google" }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-queuereader
-spec:
-  ports:
-  - name: broker
-    port: 5672
-    protocol: TCP
-    targetPort: 5672
-  - name: mgmt
-    port: 15672
-    protocol: TCP
-    targetPort: 15672
-  selector:
-    app: rpi-queuereader
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-queuereader
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: rpi-queuereader
-  template:
-    metadata:
-      labels:
-        app: rpi-queuereader
-    spec:
-      serviceAccountName: sa-redpoint-rpi
-      containers:
-      - name: rpi-queuereader
-        image: rpspeastus2acr.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
-        imagePullPolicy: Always
-        ports:
-        - name: broker
-          containerPort: 5672
-          protocol: TCP
-        - name: mgmt
-          containerPort: 15672
-          protocol: TCP
-        env:
-        - name: RABBITMQ_DEFAULT_USER
-          value: "redpointdev"
-        - name: RABBITMQ_DEFAULT_PASS
-          value: ".RedPoint2021"
-        - name: RABBITMQ_DEFAULT_VHOST
-          value: "/"
-        livenessProbe:
-          exec:
-            command:
-            - "rabbitmq-diagnostics"
-            - "-q"
-            - "ping"
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 6
-        volumeMounts:
-          - name: data
-            mountPath: /var/lib/rabbitmq
-      volumes:
-        - name: data
-          hostPath:
-            path: /tmp/rabbitmq 
-            type: DirectoryOrCreate 
-
-{{- end }}
+        - name: rpi-queuereader
+          configMap:
+            name: rpi-queuereader
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
