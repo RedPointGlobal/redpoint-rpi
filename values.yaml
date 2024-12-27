@@ -8,7 +8,7 @@ global:
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
   # This tag refers to a specific version of the docker image to be deployed.
-  image_tag: 7.4.2024-1004-1712
+  image_tag: 7.4.2024-1105-1937
   
   # The nodeSelector is used to specify the nodes where RPI should be deployed.
   nodeSelector: {}
@@ -55,9 +55,34 @@ realtime:
   enableHelpPages: true 
   enableEventListening: true
   realtimeProcessingEnabled: true
+  ThresholdBetweenSiteVisitsMinutes: 30
+  NoDaysPersistWebEvents: 365
+  CacheWebFormData: true
   decisionCacheDuration: 60
   enableAuditMetricsInHeaders: true
   cacheOutputQueueEnabled: true
+  DataMaps:
+    VisitorProfile:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: false
+    VisitorHistory:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: false
+    NonVisitorData:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: false
+    ProductRecommendation:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: false
+    
 
 queueNames: 
   # Queues required by the RPI Realtime service
@@ -74,6 +99,8 @@ queueNames:
 queueProviders: 
   # Supported queue providers are sqs, azureservicebus, googlepubsub, rabbitmq, azureeventhubs
   type: amazonsqs 
+  
+  CacheOutputQueueEnabled: true
 
   azureeventhubs: 
     eventHubName: your_event_hub_name
@@ -83,7 +110,7 @@ queueProviders:
   amazonsqs: 
     accessKey: your_aws_iam_accesskey
     secretKey: your_aws_iam_secretkey
-    regionEndpoint: us-east-1
+    regionEndpoint: your_aws_region
   
   # Update this section if your queueProviders type is set to rabbitmq
   rabbitmq: 
@@ -105,6 +132,7 @@ cacheProviders:
   
   # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis, azurecosmosdb and inMemorySql
   type: mongodb
+  name: Default
 
   # Update this section if your cacheProvider type is set to mongodb
   mongodb: 
@@ -114,7 +142,7 @@ cacheProviders:
   
   # Update this section if your cacheProvider type is set to redis
   redis: 
-    hostName: your_redis_cache_host
+    hostName: your_redis_cache_host_or_ip_address
   
   # Update this section if your cacheProvider type is set to cassandra
   cassandra:
@@ -125,6 +153,8 @@ cacheProviders:
   
   # Update this section if your cacheProvider type is set to googlebigtable
   googlebigtable:
+    ProjectId: your_google_project_id 
+    InstanceId: your_google_bigtable_instance_id
   
   # Update this section if your cacheProvider type is set to azureredis
   azureredis:
@@ -187,7 +217,8 @@ integrationapi:
   enableSwagger: true
 
 OpenIdProviders:
-  # Host for OpenID Connect Metadata
+  enabled: false
+  # Allowed values are azure, okta, keycloak, Auth0, Gigya, pingIdentity, none
   MetadataHost: ""
   # Microsoft Entra ID App registration Client ID
   ClientID: 00000000-0000-0000-0000-000000000000
@@ -207,6 +238,9 @@ OpenIdProviders:
   ValidateIssuer: false
   # Validate audience of the OpenID Connect provider
   ValidateAudience: true
+  RedirectURL: https://local.rphelios.net/Interaction
+
+
 
 # Define storage configuration for the RPI File Output Directory
 storage:
@@ -225,10 +259,10 @@ ingress:
     # Set enabled to false if you want to disable the creation of the ingress controller
     enabled: true 
   # Set mode to private for internal ingress and public for public ingress
-  mode: private 
+  mode: public 
   # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
   # If you set it to k8ssecret, you must create a kubernetes secret containing your certificates
-  certificateSource: k8ssecret # acm
+  certificateSource: k8ssecret #acm
   tlsSecretName: ingress-tls
   className: nginx-redpoint-rpi
   # Subnet name is only required if you set the ingress mode to private

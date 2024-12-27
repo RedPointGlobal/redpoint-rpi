@@ -5,11 +5,15 @@ metadata:
   name: redpoint-rpi
   namespace: {{ .Values.global.namespace }}
   annotations:
-    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+    nginx.ingress.kubernetes.io/proxy-body-size: 99m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   ingressClassName: {{ .Values.ingress.className }}
+  {{- if eq .Values.ingress.certificateSource "k8ssecret" }}
   tls:
   - secretName: ingress-tls
+  {{- end }}
   rules:
     - host: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
       http:

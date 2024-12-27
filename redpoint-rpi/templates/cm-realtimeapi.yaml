@@ -14,48 +14,14 @@ data:
           "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
           "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
           "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
+          "CORSOrigins": ["*"],
+          "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
+          "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
+          "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
           "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
           "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
           "EnableEventListening": {{ .Values.realtime.enableEventListening }}
         },
-        {{- if eq .Values.queueProviders.type "azureeventhubs" }}
-        "Queues": {
-          "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
-          "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
-          "CacheOutputQueueEnabled": true,
-          "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
-          "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
-          "ClientQueueSettings": {
-            "Assembly": "RedPoint.Azure.Server",
-            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
-            "Settings": [
-              {
-                "Key": "EventHubName",
-                "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote }}
-              },
-              {
-                "Key": "EventHubConnectionString",
-                "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote }}
-              }
-            ]
-          },
-          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-          "ListenerQueueSettings": {
-            "Assembly": "RedPoint.Resonance.AzureEventHubsAccess",
-            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
-            "Settings": [
-              {
-                "Key": "EventHubName",
-                "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote }}
-              },
-              {
-                "Key": "EventHubConnectionString",
-                "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote }}
-              }
-            ]
-          }
-        },
-        {{- end }}
         {{- if eq .Values.queueProviders.type "amazonsqs" }}
         "Queues": {
           "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
@@ -227,31 +193,6 @@ data:
           ]
         }
         {{- end }}
-        {{- if eq .Values.cacheProviders.type "azurecosmosdb" }}
-        "CacheSettings": {
-          "Caches": [
-            {
-              "Name": "AzureCosmosDB",
-              "Assembly": "RedPoint.Resonance.DocumentDBCache",
-              "Class": "RedPoint.Resonance.DocumentDbCache.DocumentDBCacheHandler",
-              "Settings": [
-                {
-                  "Key": "DatabaseId",
-                  "Value": {{ .Values.cacheProviders.azurecosmosdb.databaseId | quote }}
-                },
-                {
-                  "Key": "ConnectionString",
-                  "Value": {{ .Values.cacheProviders.azurecosmosdb.connectionString | quote }}
-                },
-                {
-                  "Key": "ContainerName",
-                  "Value": {{ .Values.cacheProviders.azurecosmosdb.containerName | quote }}
-                }
-              ]
-            }
-          ]
-        }
-        {{- end }}
         {{- if eq .Values.cacheProviders.type "redis" }}
         "CacheSettings": {
           "Caches": [
@@ -269,253 +210,28 @@ data:
           ]
         },
         {{- end }}
-        {{- if eq .Values.cacheProviders.type "azureredis" }}
-        "CacheSettings": {
-          "Caches": [
-            {
-              "Name": "AzureRedis",
-              "Assembly": "RedPoint.Azure.Server",
-              "Class": "RedPoint.Azure.Server.AzureRedisCache.AzureRedisCacheHandler",
-              "Settings": [
-                {
-                  "Key": "ConnectionString",
-                  "Value": {{ .Values.cacheProviders.azureredis.connectionString | quote }}
-                },
-                "Key": "DisableMGET",
-                "Value": {{ .Values.cacheProviders.azureredis.disableMGET}}
-                }
-              ]
-            }
-            }
-          ]
-        },
-        {{- end }}
-        {{- if eq .Values.cacheProviders.type "mongodb" }}
         "DataMaps": [
           {
             "Type": "Visitor Profile",
-            "Cache": "Default",
-            "DaysToPersist": 200,
-            "CompressData": false
+            "Cache": {{ .Values.realtime.DataMaps.VisitorProfile.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist | quote }},
+            "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData | quote }}
           },
           {
             "Type": "Visitor History",
-            "Cache": "Default",
-            "DaysToPersist": 365,
-            "CompressData": false
+            "Cache": {{ .Values.realtime.DataMaps.VisitorHistory.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist | quote }},
+            "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData | quote }}
           },
           {
             "Type": "Non Visitor Data",
-            "Cache": "Default",
-            "DaysToPersist": 365
+            "Cache": {{ .Values.realtime.DataMaps.NonVisitorData.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist | quote }}
           },
           {
             "Type": "Product Recommendations",
-            "Cache": "Default",
-            "DaysToPersist": 365
-          }
-        ]
-      },
-      {{- end }}
-      {{- if eq .Values.cacheProviders.type "redis" }}
-      "DataMaps": [
-        {
-          "Type": "Visitor Profile",
-          "Cache": "Redis",
-          "DaysToPersist": 200,
-          "CompressData": false
-        },
-        {
-          "Type": "Visitor History",
-          "Cache": "Redis",
-          "DaysToPersist": 365,
-          "CompressData": false
-        },
-        {
-          "Type": "Non Visitor Data",
-          "Cache": "Redis",
-          "DaysToPersist": 365
-        },
-        {
-          "Type": "Product Recommendations",
-          "Cache": "Redis",
-          "DaysToPersist": 365
-        }
-      ]
-    },
-    {{- end }}
-    {{- if eq .Values.cacheProviders.type "azureredis" }}
-      "DataMaps": [
-        {
-          "Type": "Visitor Profile",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 200,
-          "CompressData": false
-        },
-        {
-          "Type": "Visitor History",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 365,
-          "CompressData": false
-        },
-        {
-          "Type": "Non Visitor Data",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 365
-        },
-        {
-          "Type": "Product Recommendations",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 365
-        }
-      ]
-    },
-    {{- end }}
-    {{- if eq .Values.cacheProviders.type "cassandra" }}
-      "DataMaps": [
-        {
-          "Type": "Visitor Profile",
-          "Cache": "Default",
-          "DaysToPersist": 200,
-          "CompressData": false
-        },
-        {
-          "Type": "Visitor History",
-          "Cache": "Default",
-          "DaysToPersist": 365,
-          "CompressData": false
-        },
-        {
-          "Type": "Non Visitor Data",
-          "Cache": "Default",
-          "DaysToPersist": 365
-        },
-        {
-          "Type": "Product Recommendations",
-          "Cache": "Default",
-          "DaysToPersist": 365
-        }
-      ]
-    },
-    {{- end }}
-    "Authentication": {
-      "DisableHttpRedirect": true,
-      "EnableOAuth": false
-    }
-    }
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "demo" }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-realtimeapi
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |-
-    {
-      "RealtimeAPIConfiguration": {
-        "AppSettings": {
-          "RealtimeAgentInProcessEnabled": true,
-          "RealtimeAgentAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
-          "EnableHelpPages": true,
-          "DecisionCacheDuration": 0,
-          "PluginAssemblyPath": "",
-          "RPIClientID": "11111111-1111-1111-1111-111111111111",
-          "RPIAuthToken": "a8155b10-c073-4147-8095-0f0033c58ae8",
-          "EnableAuditMetricsInHeaders": true,
-          "EnableEventListening": true
-        },
-        "Queues": {
-          "FormQueuePath": "RPIWebFormSubmission",
-          "EventsQueuePath": "RPIWebEvents",
-          "CacheOutputQueueEnabled": true,
-          "CacheOutputQueuePath": "RPIWebCacheData",
-          "RecommendationsQueuePath": "RPIWebRecommendations",
-          "ClientQueueSettings": {
-            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
-            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
-            "Settings": [
-              {
-                "Key": "HostName",
-                "Value": "rpi-queuereader"
-              },
-              {
-                "Key": "VirtualHost",
-                "Value": "/"
-              },
-              {
-                "Key": "UserName",
-                "Value": "redpointdev"
-              },
-              {
-                "Key": "Password",
-                "Value": ".RedPoint2021"
-              }
-            ]
-          },
-          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-          "ListenerQueueSettings": {
-            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
-            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
-            "Settings": [
-              {
-                "Key": "HostName",
-                "Value": "rpi-queuereader"
-              },
-              {
-                "Key": "VirtualHost",
-                "Value": "/"
-              },
-              {
-                "Key": "UserName",
-                "Value": "redpointdev"
-              },
-              {
-                "Key": "Password",
-                "Value": ".RedPoint2021"
-              }
-            ]
-          }
-        },
-        "CacheSettings": {
-          "Caches": [
-            {
-              "Name": "Redis",
-              "Assembly": "RedPoint.Resonance.RedisCache",
-              "Class": "RedPoint.Resonance.RedisCache.RedisCacheHandler",
-              "Settings": [
-                {
-                  "Key": "IPAddress",
-                  "Value": "rpi-rtdrediscache"
-                }
-              ]
-            }
-          ]
-        },
-        "DataMaps": [
-          {
-            "Type": "Visitor Profile",
-            "Cache": "Redis",
-            "DaysToPersist": 200,
-            "CompressData": false
-          },
-          {
-            "Type": "Visitor History",
-            "Cache": "Redis",
-            "DaysToPersist": 365,
-            "CompressData": false
-          },
-          {
-            "Type": "Non Visitor Data",
-            "Cache": "Redis",
-            "DaysToPersist": 365
-          },
-          {
-            "Type": "Product Recommendations",
-            "Cache": "Redis",
-            "DaysToPersist": 365
+            "Cache": {{ .Values.realtime.DataMaps.ProductRecommendation.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist | quote }}
           }
         ]
       },
@@ -542,8 +258,12 @@ data:
           "RealtimeAgentAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
           "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
           "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
+          "CORSOrigins": ["*"],
           "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
           "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+          "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
+          "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
+          "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
           "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
           "EnableEventListening": {{ .Values.realtime.enableEventListening }}
         },
@@ -580,52 +300,6 @@ data:
               {
                 "Key": "EventHubConnectionString",
                 "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote }}
-              }
-            ]
-          }
-        },
-        {{- end }}
-        {{- if eq .Values.queueProviders.type "amazonsqs" }}
-        "Queues": {
-          "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
-          "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
-          "CacheOutputQueueEnabled": true,
-          "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
-          "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
-          "ClientQueueSettings": {
-            "Assembly": "RedPoint.Amazon.Server",
-            "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
-            "Settings": [
-              {
-                "Key": "AccessKey",
-                "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
-              },
-              {
-                "Key": "SecretKey",
-                "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
-              },
-              {
-                "Key": "RegionEndpoint",
-                "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
-              }
-            ]
-          },
-          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-          "ListenerQueueSettings": {
-            "Assembly": "RedPoint.Amazon.Server",
-            "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
-            "Settings": [
-              {
-                "Key": "AccessKey",
-                "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
-              },
-              {
-                "Key": "SecretKey",
-                "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
-              },
-              {
-                "Key": "RegionEndpoint",
-                "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
               }
             ]
           }
@@ -819,117 +493,137 @@ data:
           ]
         },
         {{- end }}
-        {{- if eq .Values.cacheProviders.type "mongodb" }}
         "DataMaps": [
           {
             "Type": "Visitor Profile",
-            "Cache": "Default",
-            "DaysToPersist": 200,
-            "CompressData": false
+            "Cache": {{ .Values.realtime.DataMaps.VisitorProfile.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist | quote }},
+            "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData | quote }}
           },
           {
             "Type": "Visitor History",
-            "Cache": "Default",
-            "DaysToPersist": 365,
-            "CompressData": false
+            "Cache": {{ .Values.realtime.DataMaps.VisitorHistory.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist | quote }},
+            "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData | quote }}
           },
           {
             "Type": "Non Visitor Data",
-            "Cache": "Default",
-            "DaysToPersist": 365
+            "Cache": {{ .Values.realtime.DataMaps.NonVisitorData.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist | quote }}
           },
           {
             "Type": "Product Recommendations",
-            "Cache": "Default",
-            "DaysToPersist": 365
+            "Cache": {{ .Values.realtime.DataMaps.ProductRecommendation.Cache | quote }},
+            "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist | quote }}
           }
         ]
       },
-      {{- end }}
-      {{- if eq .Values.cacheProviders.type "redis" }}
-      "DataMaps": [
-        {
-          "Type": "Visitor Profile",
-          "Cache": "Redis",
-          "DaysToPersist": 200,
-          "CompressData": false
-        },
-        {
-          "Type": "Visitor History",
-          "Cache": "Redis",
-          "DaysToPersist": 365,
-          "CompressData": false
-        },
-        {
-          "Type": "Non Visitor Data",
-          "Cache": "Redis",
-          "DaysToPersist": 365
-        },
-        {
-          "Type": "Product Recommendations",
-          "Cache": "Redis",
-          "DaysToPersist": 365
-        }
-      ]
-    },
-    {{- end }}
-    {{- if eq .Values.cacheProviders.type "azureredis" }}
-      "DataMaps": [
-        {
-          "Type": "Visitor Profile",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 200,
-          "CompressData": false
-        },
-        {
-          "Type": "Visitor History",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 365,
-          "CompressData": false
-        },
-        {
-          "Type": "Non Visitor Data",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 365
-        },
-        {
-          "Type": "Product Recommendations",
-          "Cache": "AzureRedis",
-          "DaysToPersist": 365
-        }
-      ]
-    },
-    {{- end }}
-    {{- if eq .Values.cacheProviders.type "cassandra" }}
-      "DataMaps": [
-        {
-          "Type": "Visitor Profile",
-          "Cache": "Default",
-          "DaysToPersist": 200,
-          "CompressData": false
-        },
-        {
-          "Type": "Visitor History",
-          "Cache": "Default",
-          "DaysToPersist": 365,
-          "CompressData": false
-        },
-        {
-          "Type": "Non Visitor Data",
-          "Cache": "Default",
-          "DaysToPersist": 365
-        },
-        {
-          "Type": "Product Recommendations",
-          "Cache": "Default",
-          "DaysToPersist": 365
-        }
-      ]
-    },
-    {{- end }}
     "Authentication": {
       "DisableHttpRedirect": true,
       "EnableOAuth": false
     }
+    }
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "RealtimeAPIConfiguration": {
+        "AppSettings": {
+          "RealtimeAgentInProcessEnabled": true,
+          "RealtimeAgentAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+          "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
+          "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
+          "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
+          "CORSOrigins": ["*"],
+          "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
+          "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
+          "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
+          "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+          "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
+          "EnableEventListening": {{ .Values.realtime.enableEventListening }}
+        },
+        "Queues": {
+          "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+          "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+          "CacheOutputQueueEnabled": true,
+          "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+          "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+          "ClientQueueSettings": {
+            "Assembly": "RedPoint.Google.Server",
+            "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
+            "Settings": [
+              {
+                "Key": "ProjectId",
+                "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+              }
+            ]
+          },
+          "ListenerQueuePath": {{ .Values.queueNames.ListenerQueuePath | quote }},
+          "ListenerQueueSettings": {
+            "Assembly": "RedPoint.Google.Server",
+            "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
+            "Settings": [
+              {
+                "Key": "ProjectId",
+                "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+              }
+            ]
+          }
+        },
+        "CacheSettings": {
+          "Caches": [
+            {
+              "Name": "GoogleBigTable",
+              "Assembly": "RedPoint.Google.Server",
+              "Class": "RedPoint.Google.Server.GoogleBigTableCache.GoogleBigTableCacheHandler",
+              "Settings": [
+                {
+                  "Key": "ProjectId",
+                  "Value": {{ .Values.cacheProviders.googlebigtable.ProjectId | quote }}
+                },
+                {
+                  "Key": "InstanceId",
+                  "Value": {{ .Values.cacheProviders.googlebigtable.InstanceId | quote }}
+                }
+              ]
+            }
+          ],
+          "DataMaps": [
+            {
+              "Type": "Visitor Profile",
+              "Cache": {{ .Values.realtime.DataMaps.VisitorProfile.Cache | quote }},
+              "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist | quote }},
+              "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData | quote }}
+            },
+            {
+              "Type": "Visitor History",
+              "Cache": {{ .Values.realtime.DataMaps.VisitorHistory.Cache | quote }},
+              "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist | quote }},
+              "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData | quote }}
+            },
+            {
+              "Type": "Non Visitor Data",
+              "Cache": {{ .Values.realtime.DataMaps.NonVisitorData.Cache | quote }},
+              "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist | quote }}
+            },
+            {
+              "Type": "Product Recommendations",
+              "Cache": {{ .Values.realtime.DataMaps.ProductRecommendation.Cache | quote }},
+              "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist | quote }}
+            }
+          ]
+        },
+      "Authentication": {
+        "DisableHttpRedirect": true,
+        "EnableOAuth": false
+      }
     }
 {{- end }}

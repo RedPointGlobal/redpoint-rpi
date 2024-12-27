@@ -9,27 +9,30 @@ data:
     {
       "Authentication": {
         "EnableRPIAuthentication": true,
+        {{- if .Values.OpenIdProviders.enabled }}
         "OpenIdProviders": [
           {
             "Name": {{ .Values.OpenIdProviders.Name | quote }},
             "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
             "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
             "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
-            "RedirectURL": "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}",
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
             "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes | quote }},
-            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
             "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
-            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }}
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes }}
           }
         ]
+        {{- end }}
       },
       "DisableHttpRedirect": true
     }
 {{- end }}
 
 ---
-{{- if eq .Values.global.cloud "demo" }}
+{{- if eq .Values.global.cloud "azure" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -40,20 +43,23 @@ data:
     {
       "Authentication": {
         "EnableRPIAuthentication": true,
+        {{- if .Values.OpenIdProviders.enabled }}
         "OpenIdProviders": [
           {
-            "Name": {{ .Values.OpenIdProviders.Name | quote }},
-            "AuthorizationHost": "",
-            "ClientID": "",
-            "Audience": "",
-            "RedirectURL": "https://rpi-client.redpointdemo.com",
-            "EnableRefreshTokens": true,
-            "CustomScopes": [],
-            "LogoutIdTokenParameter": "id_token_hint",
-            "ValidateIssuer": false,
-            "ValidateAudience": true
+            "Name": {{ .Values.OpenIdProviders.azure.Name | quote }},
+            "AuthorizationHost": {{ .Values.OpenIdProviders.azure.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.OpenIdProviders.azure.ClientID | quote }},
+            "Audience": {{ .Values.OpenIdProviders.azure.Audience | quote }},
+            "RedirectURL": {{ .Values.OpenIdProviders.azure.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.OpenIdProviders.azure.EnableRefreshTokens }},
+            "ValidateIssuer": {{ .Values.OpenIdProviders.azure.ValidateIssuer }},
+            "ValidateAudience": {{ .Values.OpenIdProviders.azure.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.azure.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.azure.CustomScopes }}
           }
         ]
+        {{- end }}
       },
       "DisableHttpRedirect": true
     }

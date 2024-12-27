@@ -33,7 +33,7 @@ spec:
       labels:
         app: rpi-nodemanager
     spec:
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPIClient__applicationSupportURL
@@ -93,7 +93,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPIClient__applicationSupportURL
@@ -161,7 +161,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPIClient__applicationSupportURL
@@ -229,7 +229,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPIClient__applicationSupportURL

@@ -22,9 +22,28 @@ data:
           "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
           "TenantIDs": [{{ .Values.queueReader.tenantIds | quote }}],
           "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          {{- if eq .Values.cacheProviders.type "redis" }}
+          "DistributedCache": {
+            "Provider": "Redis",
+            "RedisSettings": {
+              "IPAddress": {{ .Values.cacheProviders.redis.hostName }}
+            }
+          },
+          {{- end }}
+          {{- if eq .Values.cacheProviders.type "inMemorySql" }}
+          "DistributedCache": {
+            "Name": "InMemorySQL",
+            "Assembly": "RedPoint.Resonance.Web.Shared",
+            "Class": "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache",
+            "Settings": {
+              "Key": "ConnectionString",
+              "Value": {{ .Values.cacheProviders.inMemorySql.connectionString | quote }}
+            }
+          },
+          {{- end }}
           {{- if eq .Values.cacheProviders.type "mongodb" }}
           "DistributedCache": {
-            "Name": "Default",
+            "Name": {{ .Values.cacheProviders.name | quote }},
             "Assembly": "RedPoint.Resonance.MongoDBCache",
             "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
             "Settings": [
@@ -41,26 +60,222 @@ data:
                 "Value": {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
               }
             ]
-          },
+          }
           {{- end }}
-          "DistributedQueue": {
-            "Assembly": "RedPoint.Amazon.Server",
-            "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
+        {{- if eq .Values.queueProviders.type "rabbitmq" }}
+        "Queues": {
+          "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+          "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+          "CacheOutputQueueEnabled": true,
+          "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+          "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+          "ClientQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
             "Settings": [
               {
-                "Key": "AccessKey",
-                "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
+                "Key": "HostName",
+                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
               },
               {
-                "Key": "SecretKey",
-                "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
+                "Key": "VirtualHost",
+                "Value": "/"
               },
               {
-                "Key": "RegionEndpoint",
-                "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
+                "Key": "UserName",
+                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+              },
+              {
+                "Key": "Password",
+                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
+              }
+            ]
+          },
+          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ListenerQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+              },
+              {
+                "Key": "Password",
+                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
               }
             ]
           }
+        },
+        {{- end }}
+        {{- if eq .Values.queueProviders.type "amazonsqs" }}
+        "DistributedQueue": {
+          "Assembly": "RedPoint.Amazon.Server",
+          "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
+          "Settings": [
+            {
+              "Key": "AccessKey",
+              "Value":  {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
+            },
+            {
+              "Key": "SecretKey",
+              "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
+            },
+            {
+              "Key": "RegionEndpoint",
+              "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
+            }
+          ]
+        }
+      {{- end }}
+        }
+      }
+    }
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "QueueService": {
+        "QueueListener": {
+          "IsEnabled": {{ .Values.queueReader.isEnabled }},
+          "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
+          "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
+          "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
+          "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
+        },
+        "RealtimeConfiguration": {
+          "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
+          "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
+          "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
+          "TenantIDs": [{{ .Values.queueReader.tenantIds | quote }}],
+          "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          {{- if eq .Values.cacheProviders.type "redis" }}
+          "DistributedCache": {
+            "Provider": "Redis",
+            "RedisSettings": {
+              "IPAddress": {{ .Values.cacheProviders.redis.hostName }}
+            }
+          },
+          {{- end }}
+          {{- if eq .Values.cacheProviders.type "inMemorySql" }}
+          "DistributedCache": {
+            "Name": "InMemorySQL",
+            "Assembly": "RedPoint.Resonance.Web.Shared",
+            "Class": "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache",
+            "Settings": {
+              "Key": "ConnectionString",
+              "Value": {{ .Values.cacheProviders.inMemorySql.connectionString | quote }}
+            }
+          },
+          {{- end }}
+          {{- if eq .Values.cacheProviders.type "mongodb" }}
+          "DistributedCache": {
+            "Name": {{ .Values.cacheProviders.name | quote }},
+            "Assembly": "RedPoint.Resonance.MongoDBCache",
+            "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
+            "Settings": [
+              {
+                "Key": "Database",
+                "Value": {{ .Values.cacheProviders.mongodb.databaseName | quote }}
+              },
+              {
+                "Key": "ConnectionString",
+                "Value": {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
+              },
+              {
+                "Key": "CollectionName",
+                "Value": {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
+              }
+            ]
+          }
+          {{- end }}
+          {{- if eq .Values.queueProviders.type "azureservicebus" }}
+          "DistributedQueue": {
+            "Assembly": "RedPoint.Azure.Server",
+            "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
+            "Settings": [
+              {
+                "Key": "QueueType",
+                "Value": "ServiceBus"
+              },
+              {
+                "Key": "ConnectionString",
+                "Value": {{ .Values.queueProviders.azureservicebus.connectionString }}
+              }
+            ]
+          }
+        {{- end }}
+        {{- if eq .Values.queueProviders.type "rabbitmq" }}
+        "Queues": {
+          "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+          "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+          "CacheOutputQueueEnabled": true,
+          "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+          "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+          "ClientQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+              },
+              {
+                "Key": "Password",
+                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
+              }
+            ]
+          },
+          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ListenerQueueSettings": {
+            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+            "Settings": [
+              {
+                "Key": "HostName",
+                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
+              },
+              {
+                "Key": "VirtualHost",
+                "Value": "/"
+              },
+              {
+                "Key": "UserName",
+                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+              },
+              {
+                "Key": "Password",
+                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
+              }
+            ]
+          }
+        },
+        {{- end }}
         }
       }
     }
@@ -89,94 +304,60 @@ data:
           "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
           "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
           "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
-          "TenantIDs": {{ .Values.queueReader.tenantIds }},
+          "TenantIDs": [{{ .Values.queueReader.tenantIds | quote }}],
           "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          {{- if eq .Values.cacheProviders.type "redis" }}
           "DistributedCache": {
             "Provider": "Redis",
             "RedisSettings": {
-              "IPAddress": "rpi-rtdrediscache"
+              "IPAddress": {{ .Values.cacheProviders.redis.hostName }}
             }
           },
-          "DistributedQueue": {
-            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
-            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
-            "Settings": [
-              {
-                "Key": "HostName",
-                "Value": "rpi-queuereader"
-              },
-              {
-                "Key": "VirtualHost",
-                "Value": "/"
-              },
-              {
-                "Key": "UserName",
-                "Value": "redpointdev"
-              },
-              {
-                "Key": "Password",
-                "Value": ".RedPoint2021"
-              }
-            ]
-          }
-        }
-      }
-    }
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "azure" }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {
-      "QueueService": {
-        "QueueListener": {
-          "IsEnabled": {{ .Values.queueReader.isEnabled }},
-          "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-          "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
-          "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
-          "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
-          "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
-        },
-        "RealtimeConfiguration": {
-          "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
-          "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
-          "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
-          "TenantIDs": {{ .Values.queueReader.tenantIds }},
-          "IsDistributed": {{ .Values.queueReader.isDistributed }},
+          {{- end }}
+          {{- if eq .Values.cacheProviders.type "inMemorySql" }}
           "DistributedCache": {
-            "Provider": "Redis",
-            "RedisSettings": {
-              "IPAddress": "rpi-rtdrediscache"
+            "Name": "InMemorySQL",
+            "Assembly": "RedPoint.Resonance.Web.Shared",
+            "Class": "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache",
+            "Settings": {
+              "Key": "ConnectionString",
+              "Value": {{ .Values.cacheProviders.inMemorySql.connectionString | quote }}
             }
           },
-          "DistributedQueue": {
-            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
-            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+          {{- end }}
+          {{- if eq .Values.cacheProviders.type "mongodb" }}
+          "DistributedCache": {
+            "Name": {{ .Values.cacheProviders.name | quote }},
+            "Assembly": "RedPoint.Resonance.MongoDBCache",
+            "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
             "Settings": [
               {
-                "Key": "HostName",
-                "Value": "rpi-queuereader"
+                "Key": "Database",
+                "Value": {{ .Values.cacheProviders.mongodb.databaseName | quote }}
               },
               {
-                "Key": "VirtualHost",
-                "Value": "/"
+                "Key": "ConnectionString",
+                "Value": {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
               },
               {
-                "Key": "UserName",
-                "Value": "redpointdev"
-              },
-              {
-                "Key": "Password",
-                "Value": ".RedPoint2021"
+                "Key": "CollectionName",
+                "Value": {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
               }
             ]
           }
+          {{- end }}
+          {{- if eq .Values.queueProviders.type "googlepubsub" }}
+          "DistributedQueue": {
+            "Assembly": "RedPoint.Google.Server",
+            "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
+            "Settings": [
+              {
+                "Key": "ProjectId",
+                "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+              }
+            ]
+          }
+        {{- end }}
         }
       }
     }

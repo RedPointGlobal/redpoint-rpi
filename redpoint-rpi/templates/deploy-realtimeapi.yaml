@@ -33,7 +33,7 @@ spec:
       labels:
         app: rpi-realtimeapi
     spec:
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
         - name: rpi-realtimeapi
           image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
@@ -89,7 +89,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
         - name: rpi-realtimeapi
           image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
@@ -153,7 +153,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
         - name: rpi-realtimeapi
           image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}
@@ -217,7 +217,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
         - name: rpi-realtimeapi
           image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}

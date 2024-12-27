@@ -33,7 +33,7 @@ spec:
       labels:
         app: rpi-integrationapi
     spec:
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
@@ -83,7 +83,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
@@ -150,7 +150,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
@@ -217,7 +217,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE

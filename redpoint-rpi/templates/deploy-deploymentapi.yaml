@@ -35,7 +35,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
@@ -88,7 +88,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
@@ -132,6 +132,10 @@ spec:
           value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: 5432
+        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -167,7 +171,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
@@ -246,7 +250,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - name: config-editor
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
@@ -255,14 +259,6 @@ spec:
         {{- if eq .Values.databases.type "sqlserver" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
-        {{- end }}
-        {{- if eq .Values.databases.type "amazonrds" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "AmazonRDSSQL"
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresql" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "AzureSQLDatabase"
         {{- end }}
         {{- if eq .Values.databases.type "googlecloudsql" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType

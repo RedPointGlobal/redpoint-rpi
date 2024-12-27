@@ -9,22 +9,25 @@ data:
     {
       "Authentication": {
         "EnableRPIAuthentication": true,
+        {{- if .Values.OpenIdProviders.enabled }}
         "OpenIdProviders": [
           {
             "Name": {{ .Values.OpenIdProviders.Name | quote }},
             "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
             "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
             "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
-            "RedirectURL": "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}",
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
             "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes | quote }},
-            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
             "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
-            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }}
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes }}
           }
         ]
+        {{- end }}
       },
-        "DisableHttpRedirect": true
+      "DisableHttpRedirect": true
     }
 {{- end }}
 
@@ -40,22 +43,25 @@ data:
     {
       "Authentication": {
         "EnableRPIAuthentication": true,
+        {{- if .Values.OpenIdProviders.enabled }}
         "OpenIdProviders": [
           {
             "Name": {{ .Values.OpenIdProviders.Name | quote }},
             "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
             "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
             "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
-            "RedirectURL": "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}",
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
             "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes | quote }},
-            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
             "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
-            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }}
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes }}
           }
         ]
+        {{- end }}
       },
-        "DisableHttpRedirect": true
+      "DisableHttpRedirect": true
     }
 {{- end }}
 
@@ -71,22 +77,25 @@ data:
     {
       "Authentication": {
         "EnableRPIAuthentication": true,
+        {{- if .Values.OpenIdProviders.enabled }}
         "OpenIdProviders": [
           {
             "Name": {{ .Values.OpenIdProviders.Name | quote }},
             "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
             "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
             "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
-            "RedirectURL": "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}",
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
             "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes}},
-            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
             "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
-            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }}
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes }}
           }
         ]
+        {{- end }}
       },
-        "DisableHttpRedirect": true
+      "DisableHttpRedirect": true
     }
 {{- end }}
 
@@ -102,20 +111,6 @@ data:
     {
       "Authentication": {
         "EnableRPIAuthentication": true,
-        "OpenIdProviders": [
-          {
-            "Name": {{ .Values.OpenIdProviders.Name | quote }},
-            "AuthorizationHost": "",
-            "ClientID": "",
-            "Audience": "",
-            "RedirectURL": "https://rpi-client.redpointdemo.com",
-            "EnableRefreshTokens": true,
-            "CustomScopes": [],
-            "LogoutIdTokenParameter": "id_token_hint",
-            "ValidateIssuer": false,
-            "ValidateAudience": true
-          }
-        ]
       },
         "DisableHttpRedirect": true
     }

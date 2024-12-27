@@ -48,8 +48,6 @@ spec:
     metadata:
       labels:
         app: rpi-queuereader
-      annotations:
-        container.apparmor.security.beta.kubernetes.io/rpi-queuereader: runtime/default
     spec:
       serviceAccountName: sa-azure-identity
       securityContext:

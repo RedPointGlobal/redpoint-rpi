@@ -1,3 +1,4 @@
+---
 {{- if eq .Values.global.cloud "amazon" }}
 apiVersion: v1
 kind: ConfigMap
@@ -14,24 +15,148 @@ data:
           "AuthMetaHttpHost": "http://rpi-integrationapi",
           "EnableTransportSecurityRequirement": false
         },
+        {{- if .Values.OpenIdProviders.enabled }}
         "OpenIdProviders": [
           {
             "Name": {{ .Values.OpenIdProviders.Name | quote }},
             "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
             "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
             "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
-            "RedirectURL": "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}",
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
             "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
-            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes | quote }},
-            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
             "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
-            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }}
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes }}
           }
         ]
+        {{- end }}
       },
       "EnableSwagger": {{ .Values.integrationapi.enableSwagger }}
     }
 {{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": true,
+        "RPIAuthentication": {
+          "AuthorizationHost": "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}",
+          "AuthMetaHttpHost": "http://rpi-integrationapi",
+          "EnableTransportSecurityRequirement": false
+        },
+        {{- if .Values.OpenIdProviders.enabled }}
+        "OpenIdProviders": [
+          {
+            "Name": {{ .Values.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
+            "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
+            "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes }}
+          }
+        ]
+        {{- end }}
+      },
+      "EnableSwagger": {{ .Values.integrationapi.enableSwagger }}
+    }
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": true,
+        "RPIAuthentication": {
+          "AuthorizationHost": "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}",
+          "AuthMetaHttpHost": "http://rpi-integrationapi",
+          "EnableTransportSecurityRequirement": false
+        },
+        {{- if .Values.OpenIdProviders.enabled }}
+        "OpenIdProviders": [
+          {
+            "Name": {{ .Values.OpenIdProviders.Name | quote }},
+            "AuthorizationHost": {{ .Values.OpenIdProviders.AuthorizationHost | quote }},
+            "ClientID": {{ .Values.OpenIdProviders.ClientID | quote }},
+            "Audience": {{ .Values.OpenIdProviders.Audience | quote }},
+            "RedirectURL": {{ .Values.OpenIdProviders.RedirectURL | quote }},
+            "EnableRefreshTokens": {{ .Values.OpenIdProviders.EnableRefreshTokens }},
+            "ValidateIssuer": {{ .Values.OpenIdProviders.ValidateIssuer }},
+            "ValidateAudience": {{ .Values.OpenIdProviders.ValidateAudience }},
+            "LogoutIdTokenParameter": {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }},
+            "SupportsUserManagement": true,
+            "CustomScopes": {{ .Values.OpenIdProviders.CustomScopes }}
+          }
+        ]
+        {{- end }}
+      },
+      "EnableSwagger": {{ .Values.integrationapi.enableSwagger }}
+    }
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |
+    {
+      "Authentication": {
+        "EnableRPIAuthentication": true,
+      },
+        "DisableHttpRedirect": true
+    }
+{{- end }}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---
 {{- if eq .Values.global.cloud "demo" }}

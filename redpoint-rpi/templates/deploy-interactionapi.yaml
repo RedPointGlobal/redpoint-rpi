@@ -33,7 +33,7 @@ spec:
       labels:
         app: rpi-interactionapi
     spec:
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPI__SMTP__EmailSenderAddress
@@ -123,7 +123,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPI__SMTP__EmailSenderAddress
@@ -221,7 +221,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPI__SMTP__EmailSenderAddress
@@ -319,7 +319,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: sa-redpoint-rpi
+      serviceAccountName: redpoint-rpi
       containers:
       - env:
         - name: RPI__SMTP__EmailSenderAddress
