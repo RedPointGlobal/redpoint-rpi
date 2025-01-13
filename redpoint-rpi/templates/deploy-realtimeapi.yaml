@@ -24,7 +24,7 @@ metadata:
   labels:
     app: rpi-realtimeapi
 spec:
-  replicas: {{ .Values.replicas.realtime }}
+  replicas: {{ .Values.replicas.realtimeapi }}
   selector:
     matchLabels:
       app: rpi-realtimeapi
