@@ -566,7 +566,7 @@ data:
               }
             ]
           },
-          "ListenerQueuePath": {{ .Values.queueNames.ListenerQueuePath | quote }},
+          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
           "ListenerQueueSettings": {
             "Assembly": "RedPoint.Google.Server",
             "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
@@ -621,9 +621,10 @@ data:
             }
           ]
         },
-      "Authentication": {
-        "DisableHttpRedirect": true,
-        "EnableOAuth": false
+        "Authentication": {
+          "DisableHttpRedirect": true,
+          "EnableOAuth": false
+        }
       }
     }
 {{- end }}

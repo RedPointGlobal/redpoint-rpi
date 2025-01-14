@@ -142,7 +142,7 @@ data:
 {{- end }}
 
 ---
-{{- if eq .Values.global.cloud "amazon" }}
+{{- if eq .Values.global.cloud "azure" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

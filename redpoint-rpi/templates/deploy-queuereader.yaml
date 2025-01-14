@@ -1,24 +1,8 @@
+{{- if eq .Values.global.cloud "demo" }}
 apiVersion: v1
 kind: Service
 metadata:
   name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-queuereader
-spec:
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: 8080
-  selector:
-    app: rpi-queuereader
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rpi-queuereader-preview
   namespace: {{ .Values.global.namespace }}
   labels:
     app: rpi-queuereader
@@ -97,3 +81,262 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaim }}
         {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: {{ .Values.replicas.queuereader }}
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: sa-azure-identity
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
+      containers:
+      - env:
+        - name: RPI__ServiceHostName
+          value: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+        - name: RPI__ServiceHostPortNumber
+          value: "433"
+        - name: Logging__Database__RPITrace
+          value: "Error" 
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-queue-reader:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: rpi-queuereader
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+          - name: rpi-queuereader
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-queuereader
+          configMap:
+            name: rpi-queuereader
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: {{ .Values.replicas.queuereader }}
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: sa-azure-identity
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
+      containers:
+      - env:
+        - name: RPI__ServiceHostName
+          value: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+        - name: RPI__ServiceHostPortNumber
+          value: "433"
+        - name: Logging__Database__RPITrace
+          value: "Error" 
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-queue-reader:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: rpi-queuereader
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+          - name: rpi-queuereader
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-queuereader
+          configMap:
+            name: rpi-queuereader
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
+    
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: {{ .Values.replicas.queuereader }}
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: sa-azure-identity
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
+      containers:
+      - env:
+        - name: RPI__ServiceHostName
+          value: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
+        - name: RPI__ServiceHostPortNumber
+          value: "433"
+        - name: Logging__Database__RPITrace
+          value: "Error" 
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-queue-reader:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: rpi-queuereader
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+          - name: rpi-queuereader
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-queuereader
+          configMap:
+            name: rpi-queuereader
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+{{- end }}
