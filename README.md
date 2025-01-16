@@ -70,14 +70,14 @@ databases:
 ```
 **3. Create Kubernetes Namespace:**
 
-Run the following command to create the Kubernetes namespace for deploying RPI services and set it as the default context for future CLI commands
+Create the Kubernetes namespace for deploying RPI services and set it as the default context for future CLI commands
 ```
 kubectl create namespace redpoint-rpi && \
 kubectl config set-context --current --namespace=redpoint-rpi
 ```
 **4. Create Container Registry Secret:**
 
-Run the following command to create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
+Create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
 export DOCKER_USERNAME=<your_username> 
 export DOCKER_PASSWORD=<your_password>
@@ -94,7 +94,7 @@ kubectl create secret docker-registry redpoint-rpi \
 
 The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
 
-To add the certificate, run the following command to create a Kubernetes secret. Replace ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
+To add the certificate, create a Kubernetes secret. Replace ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
 ```
 export CERT_FILE=path/to/your_cert.crt
 export KEY_FILE=path/to/your_cert.key
