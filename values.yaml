@@ -238,7 +238,7 @@ OpenIdProviders:
   ValidateIssuer: false
   # Validate audience of the OpenID Connect provider
   ValidateAudience: true
-  RedirectURL: https://local.rphelios.net/Interaction
+  RedirectURL: your_rpi_client_hostname
 
 
 
