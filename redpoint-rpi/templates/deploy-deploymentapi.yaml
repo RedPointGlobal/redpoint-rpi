@@ -98,17 +98,9 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
-        {{- if eq .Values.databases.type "amazonrds" }}
+        {{- if eq .Values.databases.type "amazonrdssql" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AmazonRDSSQL"
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresql" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "AzureSQLDatabase"
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "GoogleCloudSQL"
         {{- end }}
         {{- if eq .Values.databases.type "postgresql" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
@@ -181,17 +173,9 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
-        {{- if eq .Values.databases.type "amazonrds" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "AmazonRDSSQL"
-        {{- end }}
         {{- if eq .Values.databases.type "azuresql" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AzureSQLDatabase"
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "GoogleCloudSQL"
         {{- end }}
         {{- if eq .Values.databases.type "postgresql" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType

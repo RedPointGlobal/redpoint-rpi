@@ -33,8 +33,8 @@ replicas:
   queuereader: 1
   
 databases:
-  # Supported options for the Operational databases are sqlserver, azuresql, amazonrds, postgresql, and googlecloudsql
-  type: amazonrds #sqlserver 
+  # Supported options for the Operational databases are sqlserver, azuresql, amazonrdssql, postgresql, and googlecloudsql
+  type: amazonrdssql #sqlserver 
   # The hostname or IP address of the database server
   serverhost: your_sql_server_host
   # The username for authenticating to the database server
