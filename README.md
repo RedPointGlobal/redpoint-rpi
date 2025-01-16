@@ -244,7 +244,7 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 ```
   - **Add Client:** 
   
-Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To assist in this process, a JSON building tool is available at **Note** A JSON building tool is available at ```https://$DEPLOYMENT_SERVICE_URL/clienteditor.html```which can help you construct the necessary payload for your tenant setup. After constructing the JSON payload that aligns with your tenant's requirements and Datawarehouse options, simply execute the commands below to add the tenant
+Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To assist in this process, a JSON building tool is available at ```https://$DEPLOYMENT_SERVICE_URL/clienteditor.html```which can help you construct the necessary payload for your tenant setup. After constructing the JSON payload that aligns with your tenant's requirements and Datawarehouse options, simply execute the commands below to add the tenant
 
 ```
 # Export environment variables
