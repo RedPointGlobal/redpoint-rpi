@@ -10,7 +10,7 @@ data:
     {
       "CallbackServiceConfig": {
         "QueueEnabled": true,
-        "queueProviders": {
+        "QueueProvider": {
           "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
           "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
@@ -40,7 +40,7 @@ data:
     {
       "CallbackServiceConfig": {
         "QueueEnabled": true,
-        "queueProviders": {
+        "QueueProvider": {
           "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
           "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
@@ -70,175 +70,4 @@ data:
       }
     }
     {{- end }}
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "azure" }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-callbackapi
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {{- if eq .Values.queueProviders.type "azureservicebus" }}
-    {
-      "CallbackServiceConfig": {
-        "QueueEnabled": true,
-        "queueProviders": {
-          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
-          "CallbackServiceQueueSettings": {
-            "Assembly": "RedPoint.Azure.Server",
-            "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
-            "Settings": [
-              {
-                "Key": "QueueType",
-                "Value": "ServiceBus"
-              },
-              {
-                "Key": "ConnectionString",
-                "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
-              }
-            ]
-          }
-        },
-        "AllowedHosts": "*"
-      }
-    }
-    {{- end }}
-    {{- if eq .Values.queueProviders.type "azureeventhubs" }}
-    {
-      "CallbackServiceConfig": {
-        "QueueEnabled": true,
-        "queueProviders": {
-          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
-          "CallbackServiceQueueSettings": {
-            "Assembly": "RedPoint.Azure.Server",
-            "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
-            "Settings": [
-              {
-                "Key": "EventHubName",
-                "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote}}
-              },
-              {
-                "Key": "EventHubConnectionString",
-                "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote}}
-              }
-            ]
-          }
-        },
-        "AllowedHosts": "*"
-      }
-    }
-    {{- end }}
-    {{- if eq .Values.queueProviders.type "rabbitmq" }}
-    {
-      "CallbackServiceConfig": {
-        "QueueEnabled": true,
-        "queueProviders": {
-          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
-          "CallbackServiceQueueSettings": {
-            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
-            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
-            "Settings": [
-              {
-                "Key": "HostName",
-                "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
-              },
-              {
-                "Key": "VirtualHost",
-                "Value": "/"
-              },
-              {
-                "Key": "UserName",
-                "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
-              },
-              {
-                "Key": "Password",
-                "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
-              }
-            ]
-          }
-        },
-        "AllowedHosts": "*"
-      }
-    }
-    {{- end }}
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "demo" }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-callbackapi
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {
-      "CallbackServiceConfig": {
-        "QueueEnabled": true,
-        "queueProviders": {
-          "ChannelLabel": "SendGrid",
-          "CallbackServiceQueuePath": "RPICallbackApiQueue",
-          "CallbackServiceQueueSettings": {
-            "Assembly": "RedPoint.Resonance.RabbitMQAccess",
-            "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
-            "Settings": [
-              {
-                "Key": "HostName",
-                "Value": "rpi-queuereader"
-              },
-              {
-                "Key": "VirtualHost",
-                "Value": "/"
-              },
-              {
-                "Key": "UserName",
-                "Value": "redpointdev"
-              },
-              {
-                "Key": "Password",
-                "Value": ".RedPoint2021"
-              }
-            ]
-          }
-        },
-        "AllowedHosts": "*"
-      }
-    }
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "google" }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-callbackapi
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {
-      "CallbackServiceConfig": {
-        "QueueEnabled": true,
-        "queueProviders": {
-          "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
-          "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
-          "CallbackServiceQueueSettings": {
-            "Assembly": "RedPoint.Google.Server",
-            "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactor",
-            "Settings": [
-              {
-                "Key": "ProjectId",
-                "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
-              }
-            ]
-          }
-        },
-        "AllowedHosts": "*"
-      }
-    }
 {{- end }}
