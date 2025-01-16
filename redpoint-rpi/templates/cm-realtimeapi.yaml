@@ -305,6 +305,44 @@ data:
           }
         },
         {{- end }}
+        {{- if eq .Values.queueProviders.type "azureservicebus" }}
+        "Queues": {
+          "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+          "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+          "CacheOutputQueueEnabled": true,
+          "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+          "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+          "ClientQueueSettings": {
+            "Assembly": "RedPoint.Azure.Server",
+            "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
+            "Settings": [
+              {
+                "Key": "QueueType",
+                "Value": "ServiceBus"
+              },
+              {
+                "Key": "ConnectionString",
+                "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
+              }
+            ]
+          },
+          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+          "ListenerQueueSettings": {
+            "Assembly": "RedPoint.Azure.Server",
+            "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
+            "Settings": [
+              {
+                "Key": "QueueType",
+                "Value": "ServiceBus"
+              },
+              {
+                "Key": "ConnectionString",
+                "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
+              }
+            ]
+          }
+        },
+        {{- end }}
         {{- if eq .Values.queueProviders.type "rabbitmq" }}
         "Queues": {
           "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
