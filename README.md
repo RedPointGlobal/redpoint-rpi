@@ -140,7 +140,7 @@ NOTES:
 ```
 It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. 
 
-### Accesing RPI Services URLs
+### Accessing RPI Services URLs
 
 To interact with RPI services, such as client login or using the integration API, you need to obtain the URL endpoints exposed by the ingress. Use the following command to list the ingresses in the redpoint-rpi namespace
 ```
