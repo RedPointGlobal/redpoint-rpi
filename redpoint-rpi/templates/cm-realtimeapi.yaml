@@ -449,110 +449,6 @@ data:
 {{- end }}
 
 ---
-{{- if eq .Values.global.cloud "google" }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-realtimeapi
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {
-      "RealtimeAPIConfiguration": {
-        "AppSettings": {
-          "RealtimeAgentInProcessEnabled": true,
-          "RealtimeAgentAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
-          "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
-          "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
-          "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
-          "CORSOrigins": ["*"],
-          "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
-          "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
-          "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
-          "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
-          "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
-          "EnableEventListening": {{ .Values.realtime.enableEventListening }}
-        },
-        "Queues": {
-          "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
-          "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
-          "CacheOutputQueueEnabled": true,
-          "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
-          "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
-          "ClientQueueSettings": {
-            "Assembly": "RedPoint.Google.Server",
-            "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
-            "Settings": [
-              {
-                "Key": "ProjectId",
-                "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
-              }
-            ]
-          },
-          "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-          "ListenerQueueSettings": {
-            "Assembly": "RedPoint.Google.Server",
-            "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
-            "Settings": [
-              {
-                "Key": "ProjectId",
-                "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
-              }
-            ]
-          }
-        },
-        "CacheSettings": {
-          "Caches": [
-            {
-              "Name": "GoogleBigTable",
-              "Assembly": "RedPoint.Google.Server",
-              "Class": "RedPoint.Google.Server.GoogleBigTableCache.GoogleBigTableCacheHandler",
-              "Settings": [
-                {
-                  "Key": "ProjectId",
-                  "Value": {{ .Values.cacheProviders.googlebigtable.ProjectId | quote }}
-                },
-                {
-                  "Key": "InstanceId",
-                  "Value": {{ .Values.cacheProviders.googlebigtable.InstanceId | quote }}
-                }
-              ]
-            }
-          ],
-          "DataMaps": [
-            {
-              "Type": "Visitor Profile",
-              "Cache": {{ .Values.realtime.DataMaps.VisitorProfile.Cache | quote }},
-              "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist | quote }},
-              "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData | quote }}
-            },
-            {
-              "Type": "Visitor History",
-              "Cache": {{ .Values.realtime.DataMaps.VisitorHistory.Cache | quote }},
-              "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist | quote }},
-              "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData | quote }}
-            },
-            {
-              "Type": "Non Visitor Data",
-              "Cache": {{ .Values.realtime.DataMaps.NonVisitorData.Cache | quote }},
-              "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist | quote }}
-            },
-            {
-              "Type": "Product Recommendations",
-              "Cache": {{ .Values.realtime.DataMaps.ProductRecommendation.Cache | quote }},
-              "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist | quote }}
-            }
-          ]
-        },
-        "Authentication": {
-          "DisableHttpRedirect": true,
-          "EnableOAuth": false
-        }
-      }
-    }
-{{- end }}
-
----
 {{- if eq .Values.global.cloud "demo" }}
 apiVersion: v1
 kind: ConfigMap
@@ -658,6 +554,125 @@ data:
                         "Type": "Product Recommendations",
                         "Cache": "Redis",
                         "DaysToPersist": 365
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "LogLevel": {
+                "Default": "Error"
+            },
+            "Database": {
+                "LogLevel": {
+                    "Default": "Error"
+                },
+                "RPITrace": "Error",
+                "RPIError": "Error"
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
+                "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
+                "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
+                "CORSOrigins": ["*"],
+                "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
+                "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
+                "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
+                "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
+                "EnableEventListening": {{ .Values.realtime.enableEventListening }}
+            },
+            "Queues": {
+                "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+                "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+                "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Google.Server",
+                    "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
+                    "Settings": [
+                        {
+                            "Key": "ProjectId",
+                            "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+                        }
+                    ]
+                },
+                "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Google.Server",
+                    "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
+                    "Settings": [
+                        {
+                            "Key": "ProjectId",
+                            "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+                        }
+                    ]
+                }
+            },        
+            "CacheSettings": {
+                {{- if eq .Values.cacheProviders.type "googlebigtable" }}
+                "Caches": [
+                    {
+                        "Name": "GoogleBigTable",
+                        "Assembly": "RedPoint.Google.Server",
+                        "Class": "RedPoint.Google.Server.GoogleBigTableCache.GoogleBigTableCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "ProjectId",
+                                "Value": {{ .Values.cacheProviders.googlebigtable.ProjectId | quote }}
+                            },
+                            {
+                                "Key": "InstanceId",
+                                "Value": {{ .Values.cacheProviders.googlebigtable.InstanceId | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData }}
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData }}
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist }}
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist }}
                     }
                 ]
             }
