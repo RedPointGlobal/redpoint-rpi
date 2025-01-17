@@ -144,7 +144,6 @@ data:
 {{- end }}
 
 ---
----
 {{- if eq .Values.global.cloud "google" }}
 apiVersion: v1
 kind: ConfigMap
