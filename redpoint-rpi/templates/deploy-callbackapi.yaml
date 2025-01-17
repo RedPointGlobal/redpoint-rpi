@@ -147,7 +147,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: redpoint-rpi
-      serviceAccountName: sa-rpi-callbackapi
+      serviceAccountName: redpoint-rpi
       securityContext:
         runAsNonRoot: true
         runAsUser: 7777
@@ -208,7 +208,7 @@ spec:
     spec:
       imagePullSecrets:
       - name: redpoint-rpi
-      serviceAccountName: sa-rpi-callbackapi
+      serviceAccountName: redpoint-rpi
       securityContext:
         runAsNonRoot: true
         runAsUser: 7777
