@@ -215,7 +215,7 @@ spec:
   tls:
   - secretName: demo-tls
   rules:
-    - host: {{ .Values.ingress.hosts.client }}.redpointdemo.com
+    - host: rpi-interactionapi.redpointdemo.com
       http:
         paths:
         - path: /
@@ -225,7 +225,7 @@ spec:
               name: rpi-interactionapi
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.config }}.redpointdemo.com
+    - host: rpi-deploymentapi.redpointdemo.com
       http:
         paths:
         - path: /
@@ -235,7 +235,7 @@ spec:
               name: rpi-deploymentapi
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.integration }}.redpointdemo.com
+    - host: rpi-integrationapi.redpointdemo.com
       http:
         paths:
         - path: /
@@ -245,7 +245,7 @@ spec:
               name: rpi-integrationapi
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.realtime }}.redpointdemo.com
+    - host: rpi-realtimeapi.redpointdemo.com
       http:
         paths:
         - path: /
@@ -255,7 +255,7 @@ spec:
               name: rpi-realtimeapi
               port:
                 number: 80
-    - host: {{ .Values.ingress.hosts.callbackapi }}.redpointdemo.com
+    - host: rpi-callbackapi.redpointdemo.com
       http:
         paths:
         - path: /
@@ -265,4 +265,24 @@ spec:
               name: rpi-callbackapi
               port:
                 number: 80
+    - host: rabbitmq-console.redpointdemo.com
+      http:
+        paths:
+        - backend:
+            service:
+              name: rabbitmq-management
+              port:
+                number: 15672
+          path: /
+          pathType: Prefix
+    - host: redis-console.redpointdemo.com
+      http:
+        paths:
+        - backend:
+            service:
+              name: rpi-rtcache-redis
+              port:
+                number: 6379
+          path: /
+          pathType: Prefix
 {{- end }}
