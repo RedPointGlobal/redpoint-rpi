@@ -551,3 +551,133 @@ data:
       }
     }
 {{- end }}
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAuthToken": "a3182767-582e-4ad3-bfad-62707197bab0",
+                "EnableHelpPages": true,
+                "RPIClientID": "9e0442e3-6aaa-4591-ac90-c6c7fe1172fe",
+                "RPIAuthToken": "a3182767-582e-4ad3-bfad-62707197bab0",
+            },
+            "Queues": {
+                "FormQueuePath": "webformsubmission",
+                "EventsQueuePath": "webevents",
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": "webcachedata",
+                "RecommendationsQueuePath": "recommendation",
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+                    "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+                    "Settings": [
+                        {
+                            "Key": "HostName",
+                            "Value": "rabbitmq-management"
+                        },
+                        {
+                            "Key": "VirtualHost",
+                            "Value": "/"
+                        },
+                        {
+                            "Key": "UserName",
+                            "Value": "redpointdev"
+                        },
+                        {
+                            "Key": "Password",
+                            "Value": ".RedPoint2021"
+                        }
+                    ]
+                },
+                "ListenerQueuePath": "queuelistener",
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+                    "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+                    "Settings": [
+                        {
+                            "Key": "HostName",
+                            "Value": "rabbitmq-management"
+                        },
+                        {
+                            "Key": "VirtualHost",
+                            "Value": "/"
+                        },
+                        {
+                            "Key": "UserName",
+                            "Value": "redpointdev"
+                        },
+                        {
+                            "Key": "Password",
+                            "Value": ".RedPoint2021"
+                        }
+                    ]
+                }
+            },
+            "CacheSettings": {
+                "Caches": [
+                    {
+                        "Name": "Redis",
+                        "Assembly": "RedPoint.Resonance.RedisCache",
+                        "Class": "RedPoint.Resonance.RedisCache.RedisCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "IPAddress",
+                                "Value": "rpi-rtcache-redis",
+                            }
+                        ]
+                    }
+                ],
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "Redis",
+                        "DaysToPersist": 200,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "LogLevel": {
+                "Default": "Error"
+            },
+            "Database": {
+                "LogLevel": {
+                    "Default": "Error"
+                },
+                "RPITrace": "Error",
+                "RPIError": "Error"
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+{{- end }}

@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-rtdrediscache
+  name: rpi-rtcache-redis
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: rpi-rtdrediscache
+    app: rpi-rtcache-redis
 spec:
   ports:
   - name: http
@@ -13,34 +13,36 @@ spec:
     protocol: TCP
     targetPort: 6379
   selector:
-    app: rpi-rtdrediscache
+    app: rpi-rtcache-redis
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-rtdrediscache
+  name: rpi-rtcache-redis
   namespace: {{ .Values.global.namespace }}
   labels:
-    app: rpi-rtdrediscache
+    app: rpi-rtcache-redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rpi-rtdrediscache
+      app: rpi-rtcache-redis
   template:
     metadata:
       labels:
-        app: rpi-rtdrediscache
+        app: rpi-rtcache-redis
     spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
       serviceAccountName: redpoint-rpi
       containers:
-      - name: rpi-rtdrediscache
-        image: rpspeastus2acr.azurecr.io/rpi/ancillary/rtcache/redis-6:latest
+      - name: rpi-rtcache-redis
+        image: rg1acrpub.azurecr.io/rpi/ancillary/rtcache/redis-6:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 6379
           name: web-port
           protocol: TCP
-      hostname: rpi-rtdrediscache
+      hostname: rpi-rtcache-redis
 {{- end }}

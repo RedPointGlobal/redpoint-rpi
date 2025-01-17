@@ -131,9 +131,10 @@ data:
           "AuthMetaHttpHost": "http://rpi-interactionapi",
           "EnableTransportSecurityRequirement": false
         },
+        {{- if .Values.OpenIdProviders.enabled }}
         "OpenIdProviders": [
           {
-            "Name": {{ .Values.OpenIdProviders.Azure.Name | quote }},
+            "Name": "Azure",
             "AuthorizationHost": "",
             "ClientID": "",
             "Audience": "",
@@ -145,6 +146,7 @@ data:
             "ValidateAudience": true
           }
         ]
+        {{- end }}
       },
       "EnableSwagger": true
     }
