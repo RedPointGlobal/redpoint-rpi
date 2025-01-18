@@ -1,4 +1,5 @@
 {{- if eq .Values.global.cloud "amazon" }}
+{{- if .Values.queueReader.isQueueReaderEnabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -67,9 +68,11 @@ data:
         }
     }
 {{- end }}
+{{- end }}
 
 ---
 {{- if eq .Values.global.cloud "azure" }}
+{{- if .Values.queueReader.isQueueReaderEnabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -155,9 +158,11 @@ data:
         }
     }
 {{- end }}
+{{- end }}
 
 ---
 {{- if eq .Values.global.cloud "google" }}
+{{- if .Values.queueReader.isQueueReaderEnabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -215,4 +220,5 @@ data:
             }
         }
     }
+{{- end }}
 {{- end }}
