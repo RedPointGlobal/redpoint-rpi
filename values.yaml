@@ -55,34 +55,41 @@ realtime:
   enableHelpPages: true 
   enableEventListening: true
   realtimeProcessingEnabled: true
+  CORSOrigins: ["*"]
   ThresholdBetweenSiteVisitsMinutes: 30
   NoDaysPersistWebEvents: 365
   CacheWebFormData: true
   decisionCacheDuration: 60
+  pluginAssemblyPath: /app/plugins
   enableAuditMetricsInHeaders: true
   cacheOutputQueueEnabled: true
+  enableConfigmap: false
   DataMaps:
     VisitorProfile:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
-      CompressData: false
+      CompressData: true
     VisitorHistory:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
-      CompressData: false
+      CompressData: true
     NonVisitorData:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
-      CompressData: false
+      CompressData: true
     ProductRecommendation:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
-      CompressData: false
-    
+      CompressData: true
+  LogLevel:
+    default: Trace # accepted values are Trace, Error
+    rpiTrace: Trace
+    rpiError: Trace
+    database: Trace
 
 queueNames: 
   # Queues required by the RPI Realtime service
@@ -176,7 +183,8 @@ queueReader:
   # This component handles the draining of Queue Listener and RPI Realtime queues.
 
   # Enable or disable the Queue Reader container
-  isEnabled: true
+  isEnabled: false
+  isQueueReaderEnabled: false
 
   # Enable or disable processing for specific queues
   isFormProcessingEnabled: true
@@ -188,7 +196,7 @@ queueReader:
   isDistributed: false 
 
   # List of RPI client IDs associated with your RPI cluster
-  tenantIds: your_rpi_clientId_1
+  tenantIds: [ "your_rpi_clientId_1"]
   # Thread pool configuration
   threadPoolSize: 10
   # Timeout duration for processing, in minutes
