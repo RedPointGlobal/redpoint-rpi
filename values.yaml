@@ -143,9 +143,9 @@ cacheProviders:
 
   # Update this section if your cacheProvider type is set to mongodb
   mongodb: 
-    databaseName: your_rpi_cache_name
+    databaseName: your_rpi_cache_database_name
     ConnectionString: your_mongodb_connection_string
-    CollectionName: your_rpi_collection_name
+    CollectionName: your_rpi_cache_collection_name
   
   # Update this section if your cacheProvider type is set to redis
   redis: 
