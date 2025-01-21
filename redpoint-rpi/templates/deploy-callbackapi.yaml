@@ -126,7 +126,7 @@ spec:
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
           value: {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
-          value: {{ .Values.queueProviders.allowedHosts | quote }}
+          value: "*"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
@@ -211,7 +211,7 @@ spec:
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
           value: {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
-          value: {{ .Values.queueProviders.allowedHosts | quote }}
+          value: "*"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
@@ -277,6 +277,22 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: CallbackServiceConfig__QueueEnabled
+          value: "true"
+        - name: CallbackServiceConfig__QueueProvider__ChannelLabel
+          value: {{ .Values.callbackapi.channelLabel | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ .Values.queueNames.callbackServiceQueuePath | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Google.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "ProjectId"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
+          value: "*"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
