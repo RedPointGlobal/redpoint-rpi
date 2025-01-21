@@ -145,6 +145,7 @@ spec:
             value: {{ .Values.queueNames.cacheOutputQueuePath | quote }}
           - name: RealtimeAPIConfiguration__Queues__RecommendationsQueuePath
             value: {{ .Values.queueNames.recommendationsQueuePath | quote }}
+          {{- if eq .Values.queueProviders.type "amazonsqs" }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Assembly
             value: "RedPoint.Amazon.Server"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Type
@@ -179,6 +180,8 @@ spec:
             value: "RegionEndpoint"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__2__Value
             value: {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
+          {{- end }}
+          {{- if eq .Values.cacheProviders.type "mongodb" }}
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Name
             value: "Default"
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Assembly
@@ -197,6 +200,7 @@ spec:
             value: "CollectionName"
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__2__Value
             value: {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
+          {{- end }}
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Type
             value: "Visitor Profile"
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Cache
@@ -331,6 +335,7 @@ spec:
             value: {{ .Values.queueNames.cacheOutputQueuePath | quote }}
           - name: RealtimeAPIConfiguration__Queues__RecommendationsQueuePath
             value: {{ .Values.queueNames.recommendationsQueuePath | quote }}
+          {{- if eq .Values.queueProviders.type "azureservicebus" }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Assembly
             value: "RedPoint.Azure.Server"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Type
@@ -357,6 +362,8 @@ spec:
             value: "ConnectionString"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value
             value: {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
+          {{- end }}
+          {{- if eq .Values.cacheProviders.type "mongodb" }}
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Name
             value: "Default"
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Assembly
@@ -375,6 +382,7 @@ spec:
             value: "CollectionName"
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__2__Value
             value: {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
+          {{- end }}
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Type
             value: "Visitor Profile"
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Cache
