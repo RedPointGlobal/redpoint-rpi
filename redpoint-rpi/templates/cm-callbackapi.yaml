@@ -1,4 +1,5 @@
 {{- if eq .Values.global.cloud "amazon" }}
+{{- if .Values.callbackapi.enableConfigmap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -15,7 +16,7 @@ data:
           "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
             "Assembly": "RedPoint.Resonance.AWSQueueAccess",
-            "Type": "RedPoint.Resonance.AWSQueueAccess.SQSQueueFactory",
+            "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
             "Settings": [
               {
                 "Key": "AccessKey",
@@ -71,9 +72,11 @@ data:
     }
     {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if eq .Values.global.cloud "azure" }}
+{{- if .Values.callbackapi.enableConfigmap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -142,9 +145,11 @@ data:
     }
     {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if eq .Values.global.cloud "google" }}
+{{- if .Values.callbackapi.enableConfigmap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -208,4 +213,5 @@ data:
       }
     }
     {{- end }}
+{{- end }}
 {{- end }}
