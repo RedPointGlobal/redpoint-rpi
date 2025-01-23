@@ -184,7 +184,7 @@ queueReader:
 
   # Enable or disable the Queue Reader container
   isEnabled: false
-  isQueueReaderEnabled: false
+  isQueueReaderEnabled: true
 
   # Enable or disable processing for specific queues
   isFormProcessingEnabled: true
@@ -195,8 +195,8 @@ queueReader:
   # Set to true if you require distributed processing
   isDistributed: false 
 
-  # List of RPI client IDs associated with your RPI cluster
-  tenantIds: [ "your_rpi_clientId_1"]
+  # Comma separated List of RPI client IDs associated with your RPI cluster 
+  tenantIds: ["your_rpi_clientId_1"]
   # Thread pool configuration
   threadPoolSize: 10
   # Timeout duration for processing, in minutes

@@ -1,224 +1,117 @@
 {{- if eq .Values.global.cloud "amazon" }}
 {{- if .Values.queueReader.isQueueReaderEnabled }}
 apiVersion: v1
-kind: ConfigMap
+kind: Service
 metadata:
   name: rpi-queuereader
   namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {
-        "QueueService": {
-            "QueueListener": {
-                "IsEnabled": {{ .Values.queueReader.isEnabled }},
-                "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-                "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
-                "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
-                "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
-                "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
-            },
-            "RealtimeConfiguration": {
-                "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
-                "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
-                "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
-                "TenantIDs": [{{ .Values.queueReader.tenantIds | quote }}],
-                "IsDistributed": {{ .Values.queueReader.isDistributed }},
-                {{- if eq .Values.cacheProviders.type "mongodb" }}
-                "DistributedCache": {
-                    "Name": "Default",
-                    "Assembly": "RedPoint.Resonance.MongoDBCache",
-                    "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
-                    "Settings": {
-                        "Settings": [
-                            {
-                                "Key": "Database",
-                                "Value": {{ .Values.cacheProviders.mongodb.databaseName | quote }}
-                            },
-                            {
-                                "Key": "ConnectionString",
-                                "Value": {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
-                            },
-                            {
-                                "Key": "CollectionName",
-                                "Value": {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
-                            }
-                        ]
-                    }
-                },
-                {{- end }}
-                "DistributedQueue": {
-                    "Assembly": "RedPoint.Azure.Server",
-                    "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
-                    "Settings": [
-                        {
-                            "Key": "AccessKey",
-                            "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
-                        },
-                        {
-                            "Key": "SecretKey",
-                            "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
-                        },
-                        {
-                            "Key": "RegionEndpoint",
-                            "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
-                        }
-                    ]
-                }
-            }
-        }
-    }
-{{- end }}
-{{- end }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
 
 ---
-{{- if eq .Values.global.cloud "azure" }}
-{{- if .Values.queueReader.isQueueReaderEnabled }}
-apiVersion: v1
-kind: ConfigMap
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: rpi-queuereader
   namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {
-        "QueueService": {
-            "QueueListener": {
-                "IsEnabled": {{ .Values.queueReader.isEnabled }},
-                "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-                "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
-                "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
-                "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
-                "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
-            },
-            "RealtimeConfiguration": {
-                "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
-                "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
-                "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
-                "TenantIDs": [{{ .Values.queueReader.tenantIds | quote }}],
-                "IsDistributed": {{ .Values.queueReader.isDistributed }},
-                {{- if eq .Values.cacheProviders.type "azureredis" }}
-                "DistributedCache": {
-                    "Name": "AzureRedis",
-                    "Assembly": "RedPoint.Azure.Server",
-                    "Class": "RedPoint.Azure.Server.AzureRedisCache.AzureRedisCacheHandler",
-                    "Settings": {
-                        "Settings": [
-                            {
-                                "Key": "ConnectionString",
-                                "Value": {{ .Values.cacheProviders.azureredis.connectionString | quote }}
-                            },
-                            {
-                                "Key": "DisableMGET",
-                                "Value": {{ .Values.cacheProviders.azureredis.disableMGET}}
-                            }
-                        ]
-                    }
-                },
-                {{- end }}
-                {{- if eq .Values.cacheProviders.type "mongodb" }}
-                "DistributedCache": {
-                    "Name": "Default",
-                    "Assembly": "RedPoint.Resonance.MongoDBCache",
-                    "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
-                    "Settings": {
-                        "Settings": [
-                            {
-                                "Key": "Database",
-                                "Value": {{ .Values.cacheProviders.mongodb.databaseName | quote }}
-                            },
-                            {
-                                "Key": "ConnectionString",
-                                "Value": {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
-                            },
-                            {
-                                "Key": "CollectionName",
-                                "Value": {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
-                            }
-                        ]
-                    }
-                },
-                {{- end }}
-                {{- if eq .Values.queueProviders.type "azureservicebus" }}
-                "DistributedQueue": {
-                    "Assembly": "RedPoint.Azure.Server",
-                    "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
-                    "Settings": [
-                        {
-                            "Key": "QueueType",
-                            "Value": "ServiceBus"
-                        },
-                        {
-                            "Key": "ConnectionString",
-                            "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
-                        }
-                    ]
-                }
-            }
-           {{- end }}
-        }
-    }
-{{- end }}
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "google" }}
-{{- if .Values.queueReader.isQueueReaderEnabled }}
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: rpi-queuereader
-  namespace: {{ .Values.global.namespace }}
-data:
-  appsettings.overrides.json: |
-    {
-        "QueueService": {
-            "QueueListener": {
-                "IsEnabled": {{ .Values.queueReader.isEnabled }},
-                "QueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
-                "ThreadPoolSize": {{ .Values.queueReader.threadPoolSize }},
-                "TimeoutMinutes": {{ .Values.queueReader.timeoutMinutes }},
-                "MaxBatchSize": {{ .Values.queueReader.maxBatchSize }},
-                "UseMessageLocks": {{ .Values.queueReader.useMessageLocks }}
-            },
-            "RealtimeConfiguration": {
-                "IsFormProcessingEnabled": {{ .Values.queueReader.isFormProcessingEnabled }},
-                "IsEventProcessingEnabled": {{ .Values.queueReader.isEventProcessingEnabled }},
-                "IsCacheProcessingEnabled": {{ .Values.queueReader.isCacheProcessingEnabled }},
-                "TenantIDs": [{{ .Values.queueReader.tenantIds | quote }}],
-                "IsDistributed": {{ .Values.queueReader.isDistributed }},
-                "DistributedCache": {
-                    "Name": "AzureRedis",
-                    "Assembly": "RedPoint.Azure.Server",
-                    "Class": "RedPoint.Azure.Server.AzureRedisCache.AzureRedisCacheHandler",
-                    "Settings": {
-                        "Settings": [
-                            {
-                                "Key": "ConnectionString",
-                                "Value": {{ .Values.cacheProviders.azureredis.connectionString | quote }}
-                            },
-                            {
-                                "Key": "DisableMGET",
-                                "Value": {{ .Values.cacheProviders.azureredis.disableMGET}}
-                            }
-                        ]
-                    }
-                },
-                "DistributedQueue": {
-                    "Assembly": "RedPoint.Azure.Server",
-                    "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
-                    "Settings": [
-                        {
-                            "Key": "QueueType",
-                            "Value": "ServiceBus"
-                        },
-                        {
-                            "Key": "ConnectionString",
-                            "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
-                        }
-                    ]
-                }
-            }
-        }
-    }
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: {{ .Values.replicas.queuereader }}
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__ServiceHostName
+          value: "http://rpi-interactionapi"
+        - name: RPI__ServiceHostPortNumber
+          value: "80"
+        - name: Logging__Database__RPITrace
+          value: "Error" 
+        - name: RPI__FileOutput__Directory
+          value: /fileoutputdir
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        - name: QueueService__QueueListener__IsEnabled
+          value: {{ .Values.queueReader.isEnabled | quote }}
+        - name: QueueService__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
+        - name: QueueService__QueueListener__ThreadPoolSize
+          value: {{ .Values.queueReader.threadPoolSize | quote }}
+        - name: QueueService__QueueListener__TimeoutMinutes
+          value: {{ .Values.queueReader.timeoutMinutes | quote }}
+        - name: QueueService__QueueListener__MaxBatchSize
+          value: {{ .Values.queueReader.maxBatchSize | quote }}
+        - name: QueueService__QueueListener__UseMessageLocks
+          value: {{ .Values.queueReader.useMessageLocks | quote }}
+        - name: QueueService__RealtimeConfiguration__IsFormProcessingEnabled
+          value: {{ .Values.queueReader.isFormProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__IsEventProcessingEnabled
+          value: {{ .Values.queueReader.isEventProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__IsCacheProcessingEnabled
+          value: {{ .Values.queueReader.isCacheProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__TenantIDs
+          value: {{ .Values.queueReader.tenantIds }}
+        {{- if eq .Values.cacheProviders.type "mongodb" }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Assembly
+          value: "RedPoint.Resonance.MongoDBCache"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Class
+          value: "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Key
+          value: "Database"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Value
+          value: {{ .Values.cacheProviders.mongodb.databaseName | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Key
+          value: "ConnectionString"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Value
+          value: {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Key
+          value: "CollectionName"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Value
+          value: {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
+        {{- end }}
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-queue-reader:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: rpi-queuereader
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      volumes:
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
 {{- end }}
 {{- end }}

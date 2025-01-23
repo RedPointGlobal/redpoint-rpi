@@ -46,6 +46,8 @@ spec:
           value: "Error"
         - name: Logging__Database__LogLevel__Default
           value: "Error"
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -116,6 +118,8 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
@@ -184,6 +188,8 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
@@ -252,6 +258,8 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
