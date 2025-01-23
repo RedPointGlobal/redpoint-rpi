@@ -121,9 +121,9 @@ spec:
           value: "SecretKey"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
           value: {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
-        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
           value: "RegionEndpoint"
-        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
           value: {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
           value: "*"
