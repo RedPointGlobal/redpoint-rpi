@@ -29,7 +29,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
     - 256 GB or more free disk space.
 - **Any of the following for the Data Warehouse Settings**
     - ```AzureSQLDatabase```, ```AmazonRDSSQL```, ```GoogleCloudSQL```, ```MicrosoftSQLServer```, ```AzureDatabaseMySQL```, ```AzureDatabasePostgreSQL```, ```GoogleBigQuery```, ```MongoDBDocument```, ```Snowflake```, ```PostgreSQL```,
-    ```SQLServer```, ```AWSRedshift```, ```Teradata```, ```Yellowbrick```
+    ```SQLServer```, ```AWSRedshift```, ```Teradata```
 
 - **Kubernetes Cluster:**
 
