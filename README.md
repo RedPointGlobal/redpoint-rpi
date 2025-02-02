@@ -7,7 +7,7 @@ This repository offers packaged scripts and detailed guidance for deploying Redp
 ### Table of Contents
 - [Prerequisites ](#prerequisites)
 - [Deploy on Kubernetes ](#deploy-on-kubernetes)
-- [Deploy on Serverless ](#deploy-serverless)
+- [Deploy on Serverless ](#deploy-on-serverless)
 - [RPI Documentation](#rpi-documentation)
 - [Getting Support](#getting-support)
 
