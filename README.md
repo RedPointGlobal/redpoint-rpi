@@ -17,14 +17,16 @@ This repository provides packaged and scripted guidance for deploying Redpoint I
 | - **Redpoint Container Registry:** Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.<br><br> - **RPI License:** Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 License activation key.<br><br>  |
 
 ### Deploy on Kubernetes
- - ### Azure Kubernetes Service (AKS)
- - ### Elastic Kubernetes Service (EKS)
- - ### Google Kubernetes Engine (GKE)
+
+- **[Azure Kubernetes Service (AKS)](azure/aks/README.md)**
+- **[Elastic Kubernetes Service (EKS)](aws/eks/README.md)**
+- **[Google Kubernetes Engine (GKE)](gcp/gke/README.md)**
 
 ### Deploy on Serverless
- - ### Azure Container Apps (ACA)
- - ### AWS Fargate for Amazon ECS
- - ### Google Cloud Run
+
+- **[Azure Container Apps (ACA)](azure/aca/README.md)**
+- **[AWS Fargate for Amazon ECS](aws/fargate/README.md)**
+- **[Google Cloud Run](gcp/cloud-run/README.md)**
 
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our documentation site by clicking the link below
