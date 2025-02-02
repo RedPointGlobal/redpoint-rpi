@@ -5,7 +5,7 @@ With Redpoint® Interaction you can define your audience and execute highly pers
 In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) on Kubernetes using HELM.
 ### Table of Contents
 - [System Requirements ](#system-requirements)
-- [Before You Begin ](#before-you-begin)
+- [Considerations Before you begin ](#considerations-before-you-begin)
 - [Accessing RPI Services URLs ](#accessing-rpi-services-urls)
 - [Downloading Client Executable ](#downloading-client-executable)
 - [Configuring Storage ](#configuring-storage)
