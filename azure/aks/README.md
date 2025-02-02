@@ -6,9 +6,6 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 ### Table of Contents
 - [System Requirements ](#system-requirements)
 - [Before You Begin ](#before-you-begin)
-- [Greenfield Installation ](#greenfield-installation)
-- [Upgrade Installation ](#upgrade-installation)
-- [Demo Installation ](#demo-installation)
 - [Accessing RPI Services URLs ](#accessing-rpi-services-urls)
 - [Downloading Client Executable ](#downloading-client-executable)
 - [Configuring Storage ](#configuring-storage)
@@ -28,26 +25,27 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
     - 256 GB or more free disk space.
 - **Any of the following for the Data Warehouse Settings**
     - ```AzureSQLDatabase```, ```AmazonRDSSQL```, ```GoogleCloudSQL```, ```MicrosoftSQLServer```, ```AzureDatabaseMySQL```, ```AzureDatabasePostgreSQL```, ```GoogleBigQuery```, ```MongoDBDocument```, ```Snowflake```, ```PostgreSQL```,
-    ```SQLServer```, ```AWSRedshift```, ```Teradata```
+    ```SQLServer```, ```AWSRedshift```
 
 - **Kubernetes Cluster:**
 
-Latest stable version of Kubernetes. Select from this list of [Kubernetes certified solution providers](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). From each provider page, you can learn how to install and setup production ready clusters.
+Latest stable version of Kubernetes. Refer to the [AKS Landing Zone Accelerator ](https://github.com/Azure/AKS-Landing-Zone-Accelerator) for architectural guidance, reference architecture and reference implementations
 
 -  Nodepools Sizing
     - 8 vCPUs per node
     - 16 GB of Memory per node
     - Minimum of 2 nodes for high availability
 
-### Before you begin
-| Ensure that the following requirements are met!                                                                                                                                                                                                                                   |
-|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| - **Redpoint Container Registry:** Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.<br><br> - **RPI License:** Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 License activation key.<br><br> - **Kubectl:** Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.<br><br> - **Helm:** Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluster. |
+### Considerations Before you begin
+Before deploying RPI, it's important to determine whether you're planning a Greenfield deployment or an Upgrade deployment.
 
-### Greenfield Installation
-In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: a new RPI cluster, new RPI tenant, new operations and logging databases, new cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing deployments. 
+- **Greenfield Installation:** This approach involves setting up RPI in a completely new environment. It includes the creation of a new RPI cluster, a new RPI tenant, fresh operations and logging databases, and new cache and queue providers. A Greenfield installation ensures that all components are installed from scratch, independent of any existing deployments.
 
-Follow the following steps to get started
+- **Upgrade Deployment:** In this case, RPI is being deployed into an existing version 6.x environment. This includes using the current cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup.
+
+Both deployment methods require you to deploy the RPI v7 containers following the same step. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
+
+To start the installation, follow the steps outlined in Steps 1-6 below.
 
 **1. Set your target Cloud Provider:**
 
@@ -185,9 +183,10 @@ curl -X 'POST' \
 ```
 With RPI installed and the license activated, you're now ready to install your first cluster and add tenants.
 
-### Configuring Cluster and Tenants
+### Post Deployment - Greenfield
+- **Configuring Cluster and Tenants**
 
-If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
+If you performed a Greenfield deployment of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
 
   - **Install Cluster:** 
 
