@@ -1,0 +1,264 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-integrationapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-integrationapi
+    
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-integrationapi
+spec:
+  replicas: {{ .Values.replicas.integrationapi }}
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+    spec:
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: integration-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-integrationapi
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-integrationapi
+          configMap:
+            name: rpi-integrationapi
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-integrationapi
+spec:
+  replicas: {{ .Values.replicas.integrationapi }}
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: integration-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-integrationapi
+            mountPath: /app/appsettings
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      volumes:
+        - name: rpi-integrationapi
+          configMap:
+            name: rpi-integrationapi
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-integrationapi
+spec:
+  replicas: {{ .Values.replicas.integrationapi }}
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: integration-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-integrationapi
+            mountPath: /app/appsettings
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      volumes:
+        - name: rpi-integrationapi
+          configMap:
+            name: rpi-integrationapi
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-integrationapi
+spec:
+  replicas: {{ .Values.replicas.integrationapi }}
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: integration-api
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: rpi-integrationapi
+            mountPath: /app/appsettings
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      volumes:
+        - name: rpi-integrationapi
+          configMap:
+            name: rpi-integrationapi
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

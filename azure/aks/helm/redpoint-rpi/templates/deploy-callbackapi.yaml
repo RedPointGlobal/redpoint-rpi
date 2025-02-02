@@ -1,0 +1,321 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-callbackapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-callbackapi
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-callbackapi
+spec:
+  replicas: {{ .Values.replicas.callbackapi }}
+  selector:
+    matchLabels:
+      app: rpi-callbackapi
+  template:
+    metadata:
+      labels:
+        app: rpi-callbackapi
+    spec:
+      serviceAccountName: redpoint-rpi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - name: http
+          containerPort: 8080
+        volumeMounts:
+          - name: rpi-callbackapi
+            mountPath: /app/appsettings
+      volumes:
+        - name: rpi-callbackapi
+          configMap:
+            name: rpi-callbackapi
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-callbackapi
+spec:
+  replicas: {{ .Values.replicas.callbackapi }}
+  selector:
+    matchLabels:
+      app: rpi-callbackapi
+  template:
+    metadata:
+      labels:
+        app: rpi-callbackapi
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        - name: CallbackServiceConfig__QueueEnabled
+          value: "true"
+        - name: CallbackServiceConfig__QueueProvider__ChannelLabel
+          value: {{ .Values.callbackapi.channelLabel | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ .Values.queueNames.callbackServiceQueuePath | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Resonance.AWSQueueAccess"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "AccessKey"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "SecretKey"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          value: {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
+          value: "RegionEndpoint"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
+          value: {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
+          value: "*"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - name: http
+          containerPort: 8080
+        {{- if .Values.callbackapi.enableConfigmap }}
+        volumeMounts:
+          - name: rpi-callbackapi
+            mountPath: /app/appsettings
+        {{- end }}
+      {{- if .Values.callbackapi.enableConfigmap }}
+      volumes:
+        - name: rpi-callbackapi
+          configMap:
+            name: rpi-callbackapi
+      {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-callbackapi
+spec:
+  replicas: {{ .Values.replicas.callbackapi }}
+  selector:
+    matchLabels:
+      app: rpi-callbackapi
+  template:
+    metadata:
+      labels:
+        app: rpi-callbackapi
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        - name: CallbackServiceConfig__QueueEnabled
+          value: "true"
+        - name: CallbackServiceConfig__QueueProvider__ChannelLabel
+          value: {{ .Values.callbackapi.channelLabel | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ .Values.queueNames.callbackServiceQueuePath | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Azure.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "QueueType"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: "ServiceBus"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "ConnectionString"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          value: {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
+          value: "*"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - name: http
+          containerPort: 8080
+        {{- if .Values.callbackapi.enableConfigmap }}
+        volumeMounts:
+          - name: rpi-callbackapi
+            mountPath: /app/appsettings
+        {{- end }}
+      {{- if .Values.callbackapi.enableConfigmap }}
+      volumes:
+        - name: rpi-callbackapi
+          configMap:
+            name: rpi-callbackapi
+      {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-callbackapi
+spec:
+  replicas: {{ .Values.replicas.callbackapi }}
+  selector:
+    matchLabels:
+      app: rpi-callbackapi
+  template:
+    metadata:
+      labels:
+        app: rpi-callbackapi
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 7777
+        runAsGroup: 7777
+      containers:
+      - env:
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        - name: CallbackServiceConfig__QueueEnabled
+          value: "true"
+        - name: CallbackServiceConfig__QueueProvider__ChannelLabel
+          value: {{ .Values.callbackapi.channelLabel | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ .Values.queueNames.callbackServiceQueuePath | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Google.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "ProjectId"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
+          value: "*"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: config-editor
+        ports:
+        - name: http
+          containerPort: 8080
+        {{- if .Values.callbackapi.enableConfigmap }}
+        volumeMounts:
+          - name: rpi-callbackapi
+            mountPath: /app/appsettings
+        {{- end }}
+      {{- if .Values.callbackapi.enableConfigmap }}
+      volumes:
+        - name: rpi-callbackapi
+          configMap:
+            name: rpi-callbackapi
+      {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

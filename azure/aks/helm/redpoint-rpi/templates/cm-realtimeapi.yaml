@@ -1,0 +1,706 @@
+{{- if eq .Values.global.cloud "amazon" }}
+{{- if .Values.realtime.enableConfigmap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
+                "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
+                "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
+                "CORSOrigins": ["*"],
+                "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
+                "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
+                "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
+                "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
+                "EnableEventListening": {{ .Values.realtime.enableEventListening }}
+            },
+            "Queues": {
+                "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+                "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+                "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Amazon.Server",
+                    "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
+                    "Settings": [
+                        {
+                            "Key": "AccessKey",
+                            "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
+                        },
+                        {
+                            "Key": "SecretKey",
+                            "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
+                        },
+                        {
+                            "Key": "RegionEndpoint",
+                            "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
+                        }
+                    ]
+                },
+                "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Amazon.Server",
+                    "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
+                    "Settings": [
+                        {
+                            "Key": "AccessKey",
+                            "Value": {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
+                        },
+                        {
+                            "Key": "SecretKey",
+                            "Value": {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
+                        },
+                        {
+                            "Key": "RegionEndpoint",
+                            "Value": {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
+                        }
+                    ]
+                }
+            },        
+            "CacheSettings": {
+                {{- if eq .Values.cacheProviders.type "mongodb" }}
+                "Caches": [
+                    {
+                        "Name": "Default",
+                        "Assembly": "RedPoint.Resonance.MongoDBCache",
+                        "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "Database",
+                                "Value": {{ .Values.cacheProviders.mongodb.databaseName | quote }}
+                            },
+                            {
+                                "Key": "ConnectionString",
+                                "Value": {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
+                            },
+                            {
+                            "Key": "CollectionName",
+                            "Value": {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData }}
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData }}
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist }}
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist }}
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "LogLevel": {
+                "Default": {{ .Values.realtime.LogLevel.default | quote }}
+            },
+            "Database": {
+                "LogLevel": {
+                    "Default": {{ .Values.realtime.LogLevel.database | quote }}
+                },
+                "RPITrace": {{ .Values.realtime.LogLevel.rpiTrace | quote }},
+                "RPIError": {{ .Values.realtime.LogLevel.rpiError | quote }}
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+{{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+{{- if .Values.realtime.enableConfigmap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
+                "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
+                "CORSOrigins": ["*"],
+                "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
+                "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
+                "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
+                "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
+                "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
+                "EnableEventListening": {{ .Values.realtime.enableEventListening }}
+            },
+            "Queues": {
+                "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+                "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+                "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+            {{- if eq .Values.queueProviders.type "azureservicebus" }}
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Azure.Server",
+                    "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
+                    "Settings": [
+                        {
+                            "Key": "QueueType",
+                            "Value": "ServiceBus"
+                        },
+                        {
+                            "Key": "ConnectionString",
+                            "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
+                        }
+                    ]
+                },
+                "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Azure.Server",
+                    "Type": "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory",
+                    "Settings": [
+                        {
+                            "Key": "QueueType",
+                            "Value": "ServiceBus"
+                        },
+                        {
+                            "Key": "ConnectionString",
+                            "Value": {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
+                        }
+                    ]
+                }
+            },
+            {{- end }}
+            {{- if eq .Values.queueProviders.type "azureeventhubs" }}
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Azure.Server",
+                    "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+                    "Settings": [
+                        {
+                            "Key": "EventHubName",
+                            "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote }}
+                        },
+                        {
+                            "Key": "EventHubConnectionString",
+                            "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote }}
+                        }
+                    ]
+                },
+                "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Azure.Server",
+                    "Type": "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory",
+                    "Settings": [
+                        {
+                            "Key": "EventHubName",
+                            "Value": {{ .Values.queueProviders.azureeventhubs.eventHubName | quote }}
+                        },
+                        {
+                            "Key": "EventHubConnectionString",
+                            "Value": {{ .Values.queueProviders.azureeventhubs.connectionString | quote }}
+                        }
+                    ]
+                }
+            },
+            {{- end }}
+            {{- if eq .Values.queueProviders.type "rabbitmq" }}
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+                    "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+                    "Settings": [
+                        {
+                            "Key": "HostName",
+                            "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
+                        },
+                        {
+                            "Key": "VirtualHost",
+                            "Value": "/"
+                        },
+                        {
+                            "Key": "UserName",
+                            "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+                        },
+                        {
+                            "Key": "Password",
+                            "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
+                        }
+                    ]
+                },
+                "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+                    "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+                    "Settings": [
+                        {
+                            "Key": "HostName",
+                            "Value": {{ .Values.queueProviders.rabbitmq.hostName | quote }}
+                        },
+                        {
+                            "Key": "VirtualHost",
+                            "Value": "/"
+                        },
+                        {
+                            "Key": "UserName",
+                            "Value": {{ .Values.queueProviders.rabbitmq.username | quote }}
+                        },
+                        {
+                            "Key": "Password",
+                            "Value": {{ .Values.queueProviders.rabbitmq.password | quote }}
+                        }
+                    ]
+                }
+            },
+            {{- end }}
+            "CacheSettings": {
+                {{- if eq .Values.cacheProviders.type "mongodb" }}
+                "Caches": [
+                    {
+                        "Name": "Default",
+                        "Assembly": "RedPoint.Resonance.MongoDBCache",
+                        "Class": "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "Database",
+                                "Value": {{ .Values.cacheProviders.mongodb.databaseName | quote }}
+                            },
+                            {
+                                "Key": "ConnectionString",
+                                "Value": {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
+                            },
+                            {
+                                "Key": "CollectionName",
+                                "Value": {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                {{- if eq .Values.cacheProviders.type "cassandra" }}
+                "Caches": [
+                    {
+                        "Name": "Default",
+                        "Assembly": "Redpoint.Resonance.CassandraCachehe",
+                        "Class": "Redpoint.CassandraCache.CassandraCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "Keyspace",
+                                "Value": {{ .Values.cacheProviders.cassandra.keyspace | quote }}
+                            },
+                            {
+                                "Key": "ContactPoints",
+                                "Value": {{ .Values.cacheProviders.cassandra.contactpoints | quote }}
+                            },
+                            {
+                                "Key": "UserName",
+                                "Value": {{ .Values.cacheProviders.cassandra.username | quote }}
+                            },
+                            {
+                                "Key": "Password",
+                                "Value": {{ .Values.cacheProviders.cassandra.password | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                {{- if eq .Values.cacheProviders.type "azurecosmosdb" }}
+                "Caches": [
+                    {
+                        "Name": "AzureCosmosDB",
+                        "Assembly": "RedPoint.Resonance.DocumentDBCache",
+                        "Class": "RedPoint.Resonance.DocumentDbCache.DocumentDBCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "DatabaseId",
+                                "Value": {{ .Values.cacheProviders.azurecosmosdb.databaseId | quote }}
+                            },
+                            {
+                                "Key": "ConnectionString",
+                                "Value": {{ .Values.cacheProviders.azurecosmosdb.connectionString | quote }}
+                            },
+                            {
+                                "Key": "ContainerName",
+                                "Value": {{ .Values.cacheProviders.azurecosmosdb.containerName | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                {{- if eq .Values.cacheProviders.type "inMemorySql" }}
+                "Caches": [
+                    {
+                        "Name": "inMemorySql",
+                        "Assembly": "RedPoint.Resonance.Web.Shared",
+                        "Class": "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache",
+                        "Settings": [
+                            {
+                                "Key": "ConnectionString",
+                                "Value": {{ .Values.cacheProviders.inMemorySql.connectionString | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                {{- if eq .Values.cacheProviders.type "redis" }}
+                "Caches": [
+                    {
+                        "Name": "Redis",
+                        "Assembly": "RedPoint.Resonance.RedisCache",
+                        "Class": "RedPoint.Resonance.RedisCache.RedisCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "IPAddress",
+                                "Value": {{ .Values.cacheProviders.redis.hostName | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                {{- if eq .Values.cacheProviders.type "azureredis" }}
+                "Caches": [
+                    {
+                        "Name": "AzureRedis",
+                        "Assembly": "RedPoint.Azure.Server",
+                        "Class": "RedPoint.Azure.Server.AzureRedisCache.AzureRedisCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "ConnectionString",
+                                "Value": {{ .Values.cacheProviders.azureredis.connectionString | quote }}
+                            },
+                            {
+                                "Key": "DisableMGET",
+                                "Value": {{ .Values.cacheProviders.azureredis.disableMGET}}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData }}
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData }}
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist }}
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist }}
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "LogLevel": {
+                "Default": "Error"
+            },
+            "Database": {
+                "LogLevel": {
+                    "Default": "Error"
+                },
+                "RPITrace": "Error",
+                "RPIError": "Error"
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+{{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+{{- if .Values.realtime.enableConfigmap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAuthToken": "a3182767-582e-4ad3-bfad-62707197bab0",
+                "EnableHelpPages": true,
+                "RPIClientID": "9e0442e3-6aaa-4591-ac90-c6c7fe1172fe",
+                "RPIAuthToken": "a3182767-582e-4ad3-bfad-62707197bab0",
+            },
+            "Queues": {
+                "FormQueuePath": "webformsubmission",
+                "EventsQueuePath": "webevents",
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": "webcachedata",
+                "RecommendationsQueuePath": "recommendation",
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+                    "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+                    "Settings": [
+                        {
+                            "Key": "HostName",
+                            "Value": "rabbitmq-management"
+                        },
+                        {
+                            "Key": "VirtualHost",
+                            "Value": "/"
+                        },
+                        {
+                            "Key": "UserName",
+                            "Value": "redpointdev"
+                        },
+                        {
+                            "Key": "Password",
+                            "Value": ".RedPoint2021"
+                        }
+                    ]
+                },
+                "ListenerQueuePath": "queuelistener",
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Resonance.RabbitMQAccess",
+                    "Type": "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory",
+                    "Settings": [
+                        {
+                            "Key": "HostName",
+                            "Value": "rabbitmq-management"
+                        },
+                        {
+                            "Key": "VirtualHost",
+                            "Value": "/"
+                        },
+                        {
+                            "Key": "UserName",
+                            "Value": "redpointdev"
+                        },
+                        {
+                            "Key": "Password",
+                            "Value": ".RedPoint2021"
+                        }
+                    ]
+                }
+            },
+            "CacheSettings": {
+                "Caches": [
+                    {
+                        "Name": "Redis",
+                        "Assembly": "RedPoint.Resonance.RedisCache",
+                        "Class": "RedPoint.Resonance.RedisCache.RedisCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "IPAddress",
+                                "Value": "rpi-rtcache-redis",
+                            }
+                        ]
+                    }
+                ],
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "Redis",
+                        "DaysToPersist": 200,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365,
+                        "CompressData": false
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "Redis",
+                        "DaysToPersist": 365
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "LogLevel": {
+                "Default": "Error"
+            },
+            "Database": {
+                "LogLevel": {
+                    "Default": "Error"
+                },
+                "RPITrace": "Error",
+                "RPIError": "Error"
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+{{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+{{- if .Values.realtime.enableConfigmap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Values.global.namespace }}
+data:
+  appsettings.overrides.json: |-
+    {
+        "RealtimeAPIConfiguration": {
+            "AppSettings": {
+                "RealtimeAgentInProcessEnabled": true,
+                "RealtimeAgentAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "EnableHelpPages": {{ .Values.realtime.enableHelpPages }},
+                "DecisionCacheDuration": {{ .Values.realtime.decisionCacheDuration }},
+                "RPIClientID": "{{ .Values.realtime.rpiClientID }}",
+                "CORSOrigins": ["*"],
+                "ThresholdBetweenSiteVisitsMinutes": {{ .Values.realtime.ThresholdBetweenSiteVisitsMinutes }},
+                "NoDaysPersistWebEvents": {{ .Values.realtime.NoDaysPersistWebEvents }},
+                "CacheWebFormData": {{ .Values.realtime.CacheWebFormData }},
+                "RPIAuthToken": "{{ .Values.realtime.rpiAuthToken }}",
+                "EnableAuditMetricsInHeaders": {{ .Values.realtime.enableAuditMetricsInHeaders }},
+                "EnableEventListening": {{ .Values.realtime.enableEventListening }}
+            },
+            "Queues": {
+                "FormQueuePath": {{ .Values.queueNames.formQueuePath | quote }},
+                "EventsQueuePath": {{ .Values.queueNames.eventsQueuePath | quote }},
+                "CacheOutputQueueEnabled": true,
+                "CacheOutputQueuePath": {{ .Values.queueNames.cacheOutputQueuePath | quote }},
+                "RecommendationsQueuePath": {{ .Values.queueNames.recommendationsQueuePath | quote }},
+                "ClientQueueSettings": {
+                    "Assembly": "RedPoint.Google.Server",
+                    "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
+                    "Settings": [
+                        {
+                            "Key": "ProjectId",
+                            "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+                        }
+                    ]
+                },
+                "ListenerQueuePath": {{ .Values.queueNames.listenerQueuePath | quote }},
+                "ListenerQueueSettings": {
+                    "Assembly": "RedPoint.Google.Server",
+                    "Type": "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory",
+                    "Settings": [
+                        {
+                            "Key": "ProjectId",
+                            "Value": {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+                        }
+                    ]
+                }
+            },        
+            "CacheSettings": {
+                {{- if eq .Values.cacheProviders.type "googlebigtable" }}
+                "Caches": [
+                    {
+                        "Name": "GoogleBigTable",
+                        "Assembly": "RedPoint.Google.Server",
+                        "Class": "RedPoint.Google.Server.GoogleBigTableCache.GoogleBigTableCacheHandler",
+                        "Settings": [
+                            {
+                                "Key": "ProjectId",
+                                "Value": {{ .Values.cacheProviders.googlebigtable.ProjectId | quote }}
+                            },
+                            {
+                                "Key": "InstanceId",
+                                "Value": {{ .Values.cacheProviders.googlebigtable.InstanceId | quote }}
+                            }
+                        ]
+                    }
+                ],
+                {{- end }}
+                "DataMaps": [
+                    {
+                        "Type": "Visitor Profile",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorProfile.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorProfile.CompressData }}
+                    },
+                    {
+                        "Type": "Visitor History",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.VisitorHistory.DaysToPersist }},
+                        "CompressData": {{ .Values.realtime.DataMaps.VisitorHistory.CompressData }}
+                    },
+                    {
+                        "Type": "Non Visitor Data",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.NonVisitorData.DaysToPersist }}
+                    },
+                    {
+                        "Type": "Product Recommendations",
+                        "Cache": "Default",
+                        "DaysToPersist": {{ .Values.realtime.DataMaps.ProductRecommendation.DaysToPersist }}
+                    }
+                ]
+            }
+        },
+        "Logging": {
+            "IncludeScopes": false,
+            "LogLevel": {
+                "Default": "Error"
+            },
+            "Database": {
+                "LogLevel": {
+                    "Default": "Error"
+                },
+                "RPITrace": "Error",
+                "RPIError": "Error"
+            }
+        },
+        "Authentication": {
+            "DisableHttpRedirect": true,
+            "EnableOAuth": false
+        }
+    }
+{{- end }}
+{{- end }}

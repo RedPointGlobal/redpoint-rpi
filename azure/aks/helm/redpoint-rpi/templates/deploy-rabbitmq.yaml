@@ -1,0 +1,80 @@
+{{- if eq .Values.global.cloud "demo" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-management
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rabbitmq-management
+spec:
+  ports:
+  - name: http
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+  - name: console
+    port: 15672
+    protocol: TCP
+    targetPort: 15672
+  selector:
+    app: rabbitmq-management
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-management
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rabbitmq-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq-management
+  template:
+    metadata:
+      labels:
+        app: rabbitmq-management
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: rabbitmq-management
+        image: rg1acrpub.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
+        imagePullPolicy: Always
+        ports:
+        - name: port-one
+          containerPort: 5672
+          protocol: TCP
+        - name: port-two
+          containerPort: 15672
+          protocol: TCP
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: "redpointdev"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: ".RedPoint2021"
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: "/"
+        livenessProbe:
+          exec:
+            command:
+            - "rabbitmq-diagnostics"
+            - "-q"
+            - "ping"
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+      hostname: rabbitmq-management
+      nodeSelector:
+        pool: rpinternal
+      tolerations:
+        - effect: NoSchedule
+          key: pool
+          operator: Equal
+          value: rpinternal
+{{- end }}

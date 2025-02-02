@@ -1,0 +1,117 @@
+{{- if eq .Values.global.cloud "amazon" }}
+{{- if .Values.queueReader.isQueueReaderEnabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  replicas: {{ .Values.replicas.queuereader }}
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+    spec:
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__ServiceHostName
+          value: "http://rpi-interactionapi"
+        - name: RPI__ServiceHostPortNumber
+          value: "80"
+        - name: Logging__Database__RPITrace
+          value: "Error" 
+        - name: RPI__FileOutput__Directory
+          value: /fileoutputdir
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        - name: QueueService__QueueListener__IsEnabled
+          value: {{ .Values.queueReader.isEnabled | quote }}
+        - name: QueueService__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
+        - name: QueueService__QueueListener__ThreadPoolSize
+          value: {{ .Values.queueReader.threadPoolSize | quote }}
+        - name: QueueService__QueueListener__TimeoutMinutes
+          value: {{ .Values.queueReader.timeoutMinutes | quote }}
+        - name: QueueService__QueueListener__MaxBatchSize
+          value: {{ .Values.queueReader.maxBatchSize | quote }}
+        - name: QueueService__QueueListener__UseMessageLocks
+          value: {{ .Values.queueReader.useMessageLocks | quote }}
+        - name: QueueService__RealtimeConfiguration__IsFormProcessingEnabled
+          value: {{ .Values.queueReader.isFormProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__IsEventProcessingEnabled
+          value: {{ .Values.queueReader.isEventProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__IsCacheProcessingEnabled
+          value: {{ .Values.queueReader.isCacheProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__TenantIDs
+          value: {{ .Values.queueReader.tenantIds }}
+        {{- if eq .Values.cacheProviders.type "mongodb" }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Assembly
+          value: "RedPoint.Resonance.MongoDBCache"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Class
+          value: "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Key
+          value: "Database"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Value
+          value: {{ .Values.cacheProviders.mongodb.databaseName | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Key
+          value: "ConnectionString"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Value
+          value: {{ .Values.cacheProviders.mongodb.ConnectionString | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Key
+          value: "CollectionName"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Value
+          value: {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
+        {{- end }}
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-queue-reader:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: rpi-queuereader
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      volumes:
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+{{- end }}
+{{- end }}
