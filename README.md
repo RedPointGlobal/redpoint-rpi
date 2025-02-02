@@ -2,7 +2,7 @@
 ## Redpoint Interaction (RPI) | Deployment on Kubernetes
 With Redpoint® Interaction you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
 
-This repository offers packaged scripts and detailed guidance for deploying Redpoint Interaction (RPI) for both greenfield implementations and upgrades from version 6 to version 7.
+This repository provides deployment guides for Redpoint Interaction (RPI) across various cloud platforms and Kubernetes environments.
 ![image](https://user-images.githubusercontent.com/42842390/229413149-ff9497cd-8ed4-4512-96e1-c71932680350.png)
 ### Table of Contents
 - [Prerequisites ](#prerequisites)
@@ -17,12 +17,14 @@ This repository offers packaged scripts and detailed guidance for deploying Redp
 | - Open a [Support](mailto:support@redpointglobal.com) to obtain access to the **Redpoint Container Registry** <br><br>  - Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your **RPI v7 License** activation key.<br><br>  |
 
 ### Deploy on Kubernetes
+This section includes detailed instructions for setting up RPI on the managed Kubernetes offerings of the three major cloud providers. Each section includes links to platform-specific README files for easy access to step-by-step implementation instructions. 
 
 - **[Azure Kubernetes Service (AKS)](azure/aks/README.md)**
 - **[Elastic Kubernetes Service (EKS)](aws/eks/README.md)**
 - **[Google Kubernetes Engine (GKE)](gcp/gke/README.md)**
 
 ### Deploy on Serverless
+This section outlines the deployment process for serverless solutions. Each section includes links to platform-specific README files for easy access to step-by-step implementation instructions.
 
 - **[Azure Container Apps (ACA)](azure/aca/README.md)**
 - **[AWS Fargate for Amazon ECS](aws/fargate/README.md)**
