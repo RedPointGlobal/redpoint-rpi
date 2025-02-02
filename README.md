@@ -17,14 +17,14 @@ This repository provides deployment guides for Redpoint Interaction (RPI) across
 | - Open a [Support](mailto:support@redpointglobal.com) to obtain access to the **Redpoint Container Registry** <br><br>  - Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your **RPI v7 License** activation key.<br><br>  |
 
 ### Deploy on Kubernetes
-This section includes detailed instructions for setting up RPI on the managed Kubernetes offerings of the three major cloud providers. Each section includes links to platform-specific README files for easy access to step-by-step implementation instructions. 
+This section includes detailed instructions for setting up RPI on the managed Kubernetes offerings of the three major cloud providers. Each section includes links to the platform-specific ```README``` containing step-by-step instructions. 
 
 - **[Azure Kubernetes Service (AKS)](azure/aks/README.md)**
 - **[Elastic Kubernetes Service (EKS)](aws/eks/README.md)**
 - **[Google Kubernetes Engine (GKE)](gcp/gke/README.md)**
 
 ### Deploy on Serverless
-This section outlines the deployment process for serverless solutions. Each section includes links to platform-specific README files for easy access to step-by-step implementation instructions.
+This section outlines the deployment process for serverless solutions. Each section includes links to platform-specific ```README``` file containing step-by-step instructions.
 
 - **[Azure Container Apps (ACA)](azure/aca/README.md)**
 - **[AWS Fargate for Amazon ECS](aws/fargate/README.md)**
