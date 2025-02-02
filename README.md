@@ -14,7 +14,7 @@ This repository offers packaged scripts and detailed guidance for deploying Redp
 ### Prerequisites
 | Ensure that the following requirements are met!                                                                                                                                                                                                                                   |
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| - **Redpoint Container Registry:** Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.<br><br> - **RPI License:** Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 License activation key.<br><br>  |
+| - Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.<br><br> from the **Redpoint Container Registry:** - Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your **RPI v7 License** activation key.<br><br>  |
 
 ### Deploy on Kubernetes
 
