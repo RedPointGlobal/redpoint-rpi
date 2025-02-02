@@ -2,7 +2,7 @@
 ## Redpoint Interaction (RPI) | Deployment on Kubernetes
 With Redpoint® Interaction you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
 
-This repository provides packaged and scripted guidance for deploying Redpoint Interaction (RPI) for greenflied implementations as well as version 6 to version 7 upgrade implementations.
+This repository offers packaged scripts and detailed guidance for deploying Redpoint Interaction (RPI) for both greenfield implementations and upgrades from version 6 to version 7.
 ![image](https://user-images.githubusercontent.com/42842390/229413149-ff9497cd-8ed4-4512-96e1-c71932680350.png)
 ### Table of Contents
 - [Prerequisites ](#prerequisites)
