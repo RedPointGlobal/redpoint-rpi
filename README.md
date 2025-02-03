@@ -6,10 +6,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 ![image](https://user-images.githubusercontent.com/42842390/229413149-ff9497cd-8ed4-4512-96e1-c71932680350.png)
 ### Table of Contents
 - [System Requirements ](#system-requirements)
-- [Before You Begin ](#before-you-begin)
-- [Greenfield Installation ](#greenfield-installation)
-- [Upgrade Installation ](#upgrade-installation)
-- [Demo Installation ](#demo-installation)
+- [Considerations Before you begin ](#considerations-before-you-begin)
 - [Accessing RPI Services URLs ](#accessing-rpi-services-urls)
 - [Downloading Client Executable ](#downloading-client-executable)
 - [Configuring Storage ](#configuring-storage)
@@ -45,10 +42,16 @@ Latest stable version of Kubernetes. Select from this list of [Kubernetes certif
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | - **Redpoint Container Registry:** Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.<br><br> - **RPI License:** Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 License activation key.<br><br> - **Kubectl:** Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.<br><br> - **Helm:** Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions from your Kubernetes Administrator to deploy applications in the target cluster. |
 
-### Greenfield Installation
-In a Greenfield installation, you're setting up RPI in a completely new environment. This includes: a new RPI cluster, new RPI tenant, new operations and logging databases, new cache and queue providers. This approach ensures that all components are installed fresh and independent of any existing deployments. 
+### Considerations Before you begin
+Before deploying RPI, it's important to determine whether you're planning a Greenfield deployment or an Upgrade deployment.
 
-Follow the following steps to get started
+- **Greenfield Installation:** This approach involves setting up RPI in a completely new environment. It includes the creation of a new RPI cluster, a new RPI tenant, fresh operations and logging databases, and new cache and queue providers. A Greenfield installation ensures that all components are installed from scratch, independent of any existing deployments.
+
+- **Upgrade Deployment:** In this case, RPI is being deployed into an existing version 6.x environment. This includes using the current cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup.
+
+Both deployment methods require you to deploy the RPI v7 containers following the same step. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
+
+To start the installation, follow the steps outlined in Steps 1-6 below.
 
 **1. Set your target Cloud Provider:**
 
@@ -166,7 +169,8 @@ rpi-integrationapi.example.com                                # Integration API
 rpi-realtimeapi.example.com                                   # RPI Realtime
 ```
 
-### Configuring License Activation
+### Post Deployment- Greenfield
+ - **Activate RPI License**
 
 After installing RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
 
@@ -186,13 +190,8 @@ curl -X 'POST' \
 ```
 With RPI installed and the license activated, you're now ready to install your first cluster and add tenants.
 
-### Configuring Cluster and Tenants
+ - **Install the cluster operational databases**
 
-If you have completed a [Greenfield Installation](#greenfield-installation) of RPI, there are two additional steps needed to prepare it for user access. These steps involve using the deployment service API to set up the operational databases required for the RPI cluster and for each new RPI tenant (client). Please refer to the examples below:
-
-  - **Install Cluster:** 
-
-Run the following command to install the cluster
 ```
 export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
 export INITIAL_ADMIN_USERNAME=coreuser
@@ -213,7 +212,7 @@ curl -X 'POST' \
 }'
 
 ```
-To check the status of the cluster installation, execute the following command:
+Get the install cluster installation status:
 ```
 curl -X 'GET' \
   "https://$DEPLOYMENT_SERVICE_URL/api/deployment/status" \
@@ -242,7 +241,7 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
   ]
 }
 ```
-  - **Add Client:** 
+  - **Install the tenant operational databases** 
   
 Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To assist in this process, a JSON building tool is available at ```https://$DEPLOYMENT_SERVICE_URL/clienteditor.html``` which can help you construct the necessary payload for your tenant setup. After constructing the JSON payload that aligns with your tenant's requirements and Datawarehouse options, simply execute the commands below to add the tenant
 
@@ -297,7 +296,7 @@ curl -X 'POST' \
   }
 }"
 ```
-To check the status of the client installation, execute the following command:
+Get the tenant installation status
 ```
 curl -X 'GET' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/status' \
@@ -305,15 +304,7 @@ curl -X 'GET' \
 ```
 You should receive the ```"Status": "LastRunComplete"``` response to confirm that the client installation has completed successfully.
 
-### Downloading Client Executable
-
-To connect to the RPI server, you'll need the RPI Client. This client is included with the Interaction API in a zip file that you can download to your workstation. To get the client, use the following URL: Replace ```example.com``` with the actual domain name used for your ingress.
-
-```
-https://rpi-interactionapi.example.com/downloads/Client
-```
-
-### Upgrade Installation
+### ### Post Deployment- Upgrade
 
 In an Upgrade installation, you will set up RPI in an existing version 6.x environment, which includes an existing cluster, tenant, operations and logging databases, cache, and queue providers.
 
@@ -348,14 +339,7 @@ The resulting file will contain details about the incompatible plugins along wit
 ```
 Use the contents of this file as a reference to customize the ```values.yaml``` file for the Helm Chart before deploying the new v7 cluster. For instance, you will need to update the SMTP and database connection strings in the ```values.yaml``` based on the information provided in the example.
 
-To perform the upgrade, follow the same steps outlined in the [Greenfield Installation](#greenfield-installation) section. The key differences are
-
-  - **SQL Server Configuration:** Ensure your SQL server configuration, caches and queues provider settings all point to your current RPI version 6 environment.
-
-  - **Helm Chart Customization:** Modify the Helm Chart to incorporate the details provided in the Upgrade Assistant output. Update the ```values.yaml``` file with the relevant environment variables and configuration settings from the output to ensure compatibility with v7.
-  - **Call the Upgrade API endpoint:**
-
-To initiate the upgrade operation, please run the command below
+Upgrade the version 6 operational databases to version 7
 
 ```
 curl -X 'GET' \
@@ -385,21 +369,14 @@ You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete```
 }
 ```
 If any errors occur during the upgrade, the deployment API will provide relevant details in the response. Please analyze these details and resolve any issues before attempting to re-run the upgrade.
-### Demo Installation
-In a Demo installation, the steps mirror those of a Greenfield installation. However, in this case, RPI is configured using the default settings provided by the Helm Chart, which includes:
 
-  - Containerized SQL Server for the Operations databases
-  - Redis as the Cache Provider
-  - RabbitMQ as the Queue Provider
-  - Self-signed certificate used for Ingress
+### Downloading Client Executable
 
-These components are pre-configured and deployed automatically, allowing you to quickly get started with a fully functional setup.
+To connect to the RPI server, you'll need the RPI Client. This client is included with the Interaction API in a zip file that you can download to your workstation. To get the client, use the following URL: Replace ```example.com``` with the actual domain name used for your ingress.
 
-To perform a demo installation, open the values.yaml file and set the cloud value to demo:
 ```
-cloud: demo
+https://rpi-interactionapi.example.com/downloads/Client
 ```
-After completing the Demo installation, please refer to the ```Configuring Cluster and Tenants``` sections to set up a cluster and add your first RPI client
 
 ### Configuring High Availability
 
