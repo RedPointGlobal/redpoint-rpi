@@ -304,9 +304,11 @@ curl -X 'GET' \
 ```
 You should receive the ```"Status": "LastRunComplete"``` response to confirm that the client installation has completed successfully.
 
-### ### Post Deployment- Upgrade
+### Post Deployment- Upgrade
 
-In an Upgrade installation, you will set up RPI in an existing version 6.x environment, which includes an existing cluster, tenant, operations and logging databases, cache, and queue providers.
+ - **Activate RPI License**
+
+After upgrading your version 6 RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
 
 Before performing the upgrade, use the ```Interaction Upgrade``` Helper to check the v7 compatibility of all plugins currently used in your version 6 installation. Follow these steps:
 
