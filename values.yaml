@@ -38,9 +38,9 @@ databases:
   # The hostname or IP address of the database server
   serverhost: your_sql_server_host
   # The username for authenticating to the database server
-  username: mssqladmin
+  username: your_sql_server_username
   # The password for authenticating to the database server
-  password: .RedPoint2024
+  password: your_sql_server_password
   # The name of the database used for operations
   operationsDatabaseName: Pulse
   # The name of the database used for logging purposes
