@@ -341,7 +341,9 @@ The resulting file will contain details about the incompatible plugins along wit
 ```
 Use the contents of this file as a reference to customize the ```values.yaml``` file for the Helm Chart before deploying the new v7 cluster. For instance, you will need to update the SMTP and database connection strings in the ```values.yaml``` based on the information provided in the example.
 
-Upgrade the version 6 operational databases to version 7
+ - **Perform the Upgrade**
+
+To Upgrade the version 6 operational databases to version 7, execute the commands below.
 
 ```
 curl -X 'GET' \
