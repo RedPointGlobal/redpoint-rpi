@@ -56,7 +56,7 @@ spec:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
         - name: QueueService__QueueListener__IsEnabled
-          value: {{ .Values.queueReader.isEnabled | quote }}
+          value: {{ .Values.queueReader.isQueueReaderEnabled | quote }}
         - name: QueueService__QueueListener__QueuePath
           value: {{ .Values.queueNames.listenerQueuePath | quote }}
         - name: QueueService__QueueListener__ThreadPoolSize
