@@ -3,7 +3,7 @@ global:
     name: redpoint-interaction
     version: "7"
   # Supported cloud providers are azure, amazon, google, and demo
-  cloud: azure #amazon
+  cloud: azure
 
   # Kubernetes namespace in which the services will be deployed.
   namespace: redpoint-rpi
@@ -33,23 +33,24 @@ replicas:
   queuereader: 1
   
 databases:
-  # Supported options for the Operational databases are sqlserver, azuresql, amazonrdssql, postgresql, and googlecloudsql
-  type: azuresql #sqlserver 
+  # Supported options for the Operational databases are sqlserver, azuresqlserver, amazonrdssql, postgresql, and googlecloudsql
+  type: azuresqlserver
   # The hostname or IP address of the database server
   serverhost: your_sql_server_host
   # The username for authenticating to the database server
-  username: mssqladmin
+  username: your_sql_server_username
   # The password for authenticating to the database server
-  password: .RedPoint2024
+  password: your_sql_server_password
   # The name of the database used for operations
   operationsDatabaseName: Pulse
   # The name of the database used for logging purposes
   loggingDatabaseName: Pulse_Logging 
+  DatabaseSchema: dbo
 
 realtime:
   # Unique identifier for the RPI client. Ensure this matches your registered RPI client ID.
   rpiClientID: "00000000-0000-0000-0000-000000000000"
-  # Authentication token associated with the RPI client. This token is used to authenticate API requests.
+  # Set the RPIAuthToken to the same value as the RealtimeAPIKey that is configured in the RPI client. 
   rpiAuthToken: "00000000-0000-0000-0000-000000000000" 
   # Set to `true` to make the Realtime API Swagger page available for API exploration and testing.
   enableHelpPages: true 
@@ -127,7 +128,7 @@ queueProviders:
   
   # Update this section if your queueProviders type is set to azureservicebus
   azureservicebus: 
-    connectionString: your_service_bus_connection_string 
+    connectionString: your_service_bus_connection_string
   
   # Update this section if your queueProviders type is set to googlepubsub
   googlepubsub:
@@ -184,7 +185,6 @@ queueReader:
 
   # Enable or disable the Queue Reader container
   isEnabled: false
-  isQueueReaderEnabled: true
 
   # Enable or disable processing for specific queues
   isFormProcessingEnabled: true
@@ -224,9 +224,10 @@ interactionapi:
 integrationapi:
   enableSwagger: true
 
+# Supported Providers are azure, okta, keycloak, Auth0, Gigya, pingIdentity
+OpenIdEnabled: false
 OpenIdProviders:
-  enabled: false
-  # Allowed values are azure, okta, keycloak, Auth0, Gigya, pingIdentity, none
+  enabled: true
   MetadataHost: ""
   # Microsoft Entra ID App registration Client ID
   ClientID: 00000000-0000-0000-0000-000000000000
@@ -247,8 +248,6 @@ OpenIdProviders:
   # Validate audience of the OpenID Connect provider
   ValidateAudience: true
   RedirectURL: your_rpi_client_hostname
-
-
 
 # Define storage configuration for the RPI File Output Directory
 storage:

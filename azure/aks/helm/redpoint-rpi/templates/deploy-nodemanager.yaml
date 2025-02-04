@@ -58,6 +58,10 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: DisableHttpRedirect
+          value: "true"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
@@ -65,13 +69,6 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-nodemanager
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-nodemanager
-          configMap:
-            name: rpi-nodemanager
 {{- end }}
 
 ---
@@ -118,6 +115,10 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: DisableHttpRedirect
+          value: "true"
         - name: RealtimeAPIAddressOverride
           value: "http://rpi-realtimeapi"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
@@ -127,13 +128,6 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-nodemanager
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-nodemanager
-          configMap:
-            name: rpi-nodemanager
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -190,6 +184,10 @@ spec:
               name: database-secrets
         - name: RealtimeAPIAddressOverride
           value: "http://rpi-realtimeapi"
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: DisableHttpRedirect
+          value: "true"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
@@ -197,13 +195,6 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-nodemanager
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-nodemanager
-          configMap:
-            name: rpi-nodemanager
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -260,6 +251,10 @@ spec:
               name: database-secrets
         - name: RealtimeAPIAddressOverride
           value: "http://rpi-realtimeapi"
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: DisableHttpRedirect
+          value: "true"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: node-manager
@@ -267,13 +262,6 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-        volumeMounts:
-          - name: rpi-nodemanager
-            mountPath: /app/appsettings
-      volumes:
-        - name: rpi-nodemanager
-          configMap:
-            name: rpi-nodemanager
       {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

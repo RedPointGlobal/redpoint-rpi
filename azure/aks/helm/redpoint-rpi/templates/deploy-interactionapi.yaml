@@ -76,6 +76,16 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: Authentication__RPIAuthentication__AuthorizationHost
+          value: "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}"
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://rpi-interactionapi"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        - name: EnableSwagger
+          value: "true"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.global.image_tag }}
         name: interaction-api
         ports:
@@ -83,17 +93,12 @@ spec:
           name: web-port
           protocol: TCP
         volumeMounts:
-          - name: rpi-interactionapi
-            mountPath: /app/appsettings
           {{- if .Values.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
           {{- end }}
       hostname: redpoint-interaction-api
       volumes:
-        - name: rpi-interactionapi
-          configMap:
-            name: rpi-interactionapi
         {{- if .Values.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
@@ -166,6 +171,16 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: Authentication__RPIAuthentication__AuthorizationHost
+          value: "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}"
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://rpi-interactionapi"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        - name: EnableSwagger
+          value: "true"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: interaction-api
@@ -174,17 +189,12 @@ spec:
           name: web-port
           protocol: TCP
         volumeMounts:
-          - name: rpi-interactionapi
-            mountPath: /app/appsettings
           {{- if .Values.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
           {{- end }}
       hostname: redpoint-interaction-api
       volumes:
-        - name: rpi-interactionapi
-          configMap:
-            name: rpi-interactionapi
         {{- if .Values.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
@@ -254,6 +264,36 @@ spec:
           value: "Error"
         - name: Logging__Database__LogLevel__Default
           value: "Error"
+        {{- if .Values.OpenIdEnabled }}
+        - name: Authentication__OpenIdProviders__0__Name
+          value: {{ .Values.OpenIdProviders.Name | quote }}
+        - name: Authentication__OpenIdProviders__0__AuthorizationHost
+          value: {{ .Values.OpenIdProviders.AuthorizationHost | quote }}
+        - name: Authentication__OpenIdProviders__0__ClientID
+          value: {{ .Values.OpenIdProviders.ClientID | quote }}
+        - name: Authentication__OpenIdProviders__0__Audience
+          value: {{ .Values.OpenIdProviders.Audience | quote }}
+        - name: Authentication__OpenIdProviders__0__RedirectURL
+          value: {{ .Values.OpenIdProviders.RedirectURL | quote }}
+        - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
+          value: {{ .Values.OpenIdProviders.EnableRefreshTokens | quote }}
+        - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
+          value: {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateIssuer
+          value: {{ .Values.OpenIdProviders.ValidateIssuer | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateAudience
+          value: {{ .Values.OpenIdProviders.ValidateAudience | quote }}
+        {{- end }}
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: Authentication__RPIAuthentication__AuthorizationHost
+          value: "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}"
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://rpi-interactionapi"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        - name: EnableSwagger
+          value: "true"
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -272,17 +312,12 @@ spec:
           name: web-port
           protocol: TCP
         volumeMounts:
-          - name: rpi-interactionapi
-            mountPath: /app/appsettings
           {{- if .Values.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
           {{- end }}
       hostname: redpoint-interaction-api
       volumes:
-        - name: rpi-interactionapi
-          configMap:
-            name: rpi-interactionapi
         {{- if .Values.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
@@ -362,6 +397,16 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: Authentication__RPIAuthentication__AuthorizationHost
+          value: "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}"
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://rpi-interactionapi"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        - name: EnableSwagger
+          value: "true"
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-api:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: interaction-api
@@ -370,17 +415,12 @@ spec:
           name: web-port
           protocol: TCP
         volumeMounts:
-          - name: rpi-interactionapi
-            mountPath: /app/appsettings
           {{- if .Values.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
           {{- end }}
       hostname: redpoint-interaction-api
       volumes:
-        - name: rpi-interactionapi
-          configMap:
-            name: rpi-interactionapi
         {{- if .Values.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
