@@ -56,7 +56,7 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: ".RedPoint2021"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
-          value: "dbo"
+          value: {{ .Values.databases.DatabaseSchema | quote }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
@@ -119,7 +119,7 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: {{ .Values.databases.password | quote }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
-          value: "dbo"
+          value: {{ .Values.databases.DatabaseSchema | quote }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
@@ -173,7 +173,7 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
-        {{- if eq .Values.databases.type "azuresql" }}
+        {{- if eq .Values.databases.type "azuresqlserver" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "AzureSQLDatabase"
         {{- end }}
@@ -194,7 +194,7 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: {{ .Values.databases.password | quote }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
-          value: "dbo"
+          value: {{ .Values.databases.DatabaseSchema | quote }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
@@ -265,7 +265,7 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           value: {{ .Values.databases.password | quote }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
-          value: "dbo"
+          value: {{ .Values.databases.DatabaseSchema | quote }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate

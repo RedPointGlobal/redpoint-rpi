@@ -61,7 +61,7 @@ Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specif
 ```
 **2. Configure SQL Server Settings:**
 
-Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresql```, ```amazonrdssql```, ```postgresql```, and  ```googlecloudsql```
+Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresqlserver```, ```amazonrdssql```, ```postgresql```, and  ```googlecloudsql```
 ```
 databases: 
   type: amazonrdssql
@@ -467,6 +467,16 @@ queueReader:
   tenantIds: ["your_clientId_1", "your_clientId_2"]
   useMessageLocks: true
 ```
+### Configuring Open ID Connect (OIDC)
+RPI supports OpenID Connect (OIDC) for authentication. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file. Adjust these values to match your environment's configuration
+
+```
+OpenIdEnabled: true
+OpenIdProviders:
+  Name: AzureAD
+```
+For more information related to these settings please refer to  [Admin: Appendix B - Open ID Connect (OIDC) configuration ](https://docs.redpointglobal.com/rpi/admin-appendix-b-open-id-connect-oidc-configuratio)
+
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit our documentation site by clicking the link below
 

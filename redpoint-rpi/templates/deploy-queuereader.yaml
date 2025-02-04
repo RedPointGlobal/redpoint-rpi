@@ -1,5 +1,5 @@
 {{- if eq .Values.global.cloud "amazon" }}
-{{- if .Values.queueReader.isQueueReaderEnabled }}
+{{- if .Values.queueReader.isEnabled }}
 apiVersion: v1
 kind: Service
 metadata:
