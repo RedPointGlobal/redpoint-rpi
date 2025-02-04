@@ -14,6 +14,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - [Configuring Realtime Cache Providers](#configuring-realtime-cache-providers)
 - [Configuring Realtime Queue Reader](#configuring-realtime-queue-reader)
 - [Configuring Cluster and Tenants](#configuring-cluster-and-tenants)
+- [Configuring Open ID Connect (OIDC)](#configuring-open-id-connect)
 - [Configuring High Availability ](#configuring-high-availability)
 - [Configuring License Activation ](#configuring-license-activation)
 - [RPI Documentation](#rpi-documentation)
