@@ -225,7 +225,7 @@ integrationapi:
   enableSwagger: true
 
 # Supported Providers are azure, okta, keycloak, Auth0, Gigya, pingIdentity
-OpenIdEnabled: true
+OpenIdEnabled: false
 OpenIdProviders:
   enabled: true
   MetadataHost: ""
