@@ -38,7 +38,7 @@ Latest stable version of Kubernetes. Select from this list of [Kubernetes certif
     - 8 GB of Memory per node
     - Minimum of 2 nodes for high availability
 
-The settings outlined above represent the minimum requirements for running RPI in a modest environment. These settings may need to be adjusted based on your production environment and specific use case. Please ensure you tailor the configurations to meet your production requirements.
+The Kubernetes nodepool and SQL server sizing requirements outlined above represent the minimum requirements for running RPI in a modest environment. These settings may need to be adjusted based on your production environment and specific use case. Please ensure you tailor the configurations to meet your production requirements.
 
 ### Prerequisites
 | Ensure that the following requirements are met!                                                                                                                                                                                                                                   |
