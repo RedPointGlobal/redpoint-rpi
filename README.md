@@ -48,7 +48,8 @@ Before deploying RPI, it's important to determine whether you're planning a Gree
 
 - **Greenfield Installation:** This approach involves setting up RPI in a completely new environment. It includes the creation of a new RPI cluster, a new RPI tenant, fresh operations and logging databases, and new cache and queue providers. A Greenfield installation ensures that all components are installed from scratch, independent of any existing deployments.
 
-- **Upgrade Deployment:** In this case, RPI is being deployed into an existing version 6.x environment. This includes using the current cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup.
+- **Upgrade Deployment:** In this case, RPI is being deployed into an existing version 6.x environment. This includes using the current cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup. The upgrade from RPI v6.x to RPI v7.x is more involved. Before attempting to upgrade, be sure to read the [Redpoint Interaction upgrade path]([https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/](https://docs.redpointglobal.com/bpd/upgrade-to-rpi-v7-x))
+![upgrade-start](https://github.com/user-attachments/assets/c6e517ed-89ba-4045-8686-c5ad8bc8c9a2)
 
 Both deployment methods require you to deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
 
