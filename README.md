@@ -157,7 +157,7 @@ helm install redpoint-rpi redpoint-rpi/ --values values.yaml
 If everything goes well, You should see the output below.
 ```
 NAME: redpoint-rpi
-LAST DEPLOYED: Sat July  1 02:31:46 2024
+LAST DEPLOYED: Sat Feb  1 02:31:46 2025
 NAMESPACE: redpoint-rpi
 STATUS: deployed
 REVISION: 1
