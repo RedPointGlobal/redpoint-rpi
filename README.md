@@ -50,9 +50,9 @@ Before deploying RPI, it's important to determine whether you're planning a Gree
 
 - **Upgrade Deployment:** In this case, RPI is being deployed into an existing version 6.x environment. This includes using the current cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup.
 
-Both deployment methods require you to deploy the RPI v7 containers following the same step. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
+Both deployment methods require you to deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
 
-To start the installation, follow the steps outlined in Steps 1-6 below.
+**To start the installation, follow the steps outlined in Steps 1-6 below.**
 
 **1 Clone this repository**
 
