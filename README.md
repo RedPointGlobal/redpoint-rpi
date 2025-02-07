@@ -56,7 +56,7 @@ Both deployment methods require you to deploy the RPI v7 containers following th
 
 **1 Clone this repository**
 
-Cloning the repository locally ensures you have an independent copy of the project, which is not directly affected by upstream changes. It also gives you control over versioning.
+  - Cloning the repository locally ensures you have an independent copy of the project, which is not directly affected by upstream changes. It also gives you control over versioning.
 
 ```
 git clone https://github.com/RedPointGlobal/redpoint-rpi.git
@@ -64,7 +64,7 @@ git clone https://github.com/RedPointGlobal/redpoint-rpi.git
 
 **2. Create Kubernetes Namespace:**
 
-A Kubernetes namespace provides a logical separation within the cluster. By creating a dedicated namespace for RPI services, you ensure that the resources and configurations for this project do not interfere with others in your cluster
+  - A Kubernetes namespace provides a logical separation within the cluster. By creating a dedicated namespace for RPI services, you ensure that the resources and configurations for this project do not interfere with others in your cluster
 
 ```
 kubectl create namespace redpoint-rpi 
@@ -72,7 +72,7 @@ kubectl create namespace redpoint-rpi
 
 **3. Create Container Registry Secret:**
 
-Create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
+ - Create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
 export DOCKER_USERNAME=<your_username> 
 export DOCKER_PASSWORD=<your_password>
