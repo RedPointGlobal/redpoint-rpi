@@ -34,9 +34,11 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 Latest stable version of Kubernetes. Select from this list of [Kubernetes certified solution providers](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). From each provider page, you can learn how to install and setup production ready clusters.
 
 -  Nodepools Sizing
-    - 8 vCPUs per node
-    - 16 GB of Memory per node
+    - 4 vCPUs per node
+    - 8 GB of Memory per node
     - Minimum of 2 nodes for high availability
+
+The settings outlined above represent the minimum requirements for running RPI in a modest environment. These settings may need to be adjusted based on your production environment and specific use case. Please ensure you tailor the configurations to meet your production requirements.
 
 ### Prerequisites
 | Ensure that the following requirements are met!                                                                                                                                                                                                                                   |
