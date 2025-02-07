@@ -86,7 +86,7 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-password=$DOCKER_PASSWORD
 ```
 
-**3. Create TLS Certificate Secret:**
+**4. Create TLS Certificate Secret:**
 
 The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
 
@@ -114,7 +114,7 @@ ingress:
     enabled: false
 ```
 
-**4. Set your target Cloud Provider:**
+**5. Set your target Cloud Provider:**
 
 Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google```
 
@@ -122,7 +122,7 @@ Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specif
   cloud: amazon
 ```
 
-**5. Configure SQL Server Settings:**
+**6. Configure SQL Server Settings:**
 
 Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresqlserver```, ```amazonrdssql```, ```postgresql```, and  ```googlecloudsql```
 
@@ -136,7 +136,7 @@ databases:
   loggingDatabaseName: Pulse_Logging
 ```
 
-**6. Install RPI:**
+**7. Install RPI:**
   - Make sure you are in the cloned repository's directory and run the Helm install command
 ```
 .
