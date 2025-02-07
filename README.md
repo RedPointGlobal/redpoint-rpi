@@ -88,7 +88,7 @@ kubectl create secret docker-registry redpoint-rpi \
 
 **4. Create TLS Certificate Secret:**
 
-The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
+  - The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
 
 To add the certificate, create a Kubernetes secret. Replace ```path/to/your_cert.crt``` and ```path/to/your_cert.key``` with the actual paths to your certificate files:
 ```
@@ -116,7 +116,7 @@ ingress:
 
 **5. Set your target Cloud Provider:**
 
-Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google```
+  - Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google```
 
 ```
   cloud: amazon
@@ -124,7 +124,7 @@ Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specif
 
 **6. Configure SQL Server Settings:**
 
-Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresqlserver```, ```amazonrdssql```, ```postgresql```, and  ```googlecloudsql```
+  - Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresqlserver```, ```amazonrdssql```, ```postgresql```, and  ```googlecloudsql```
 
 ```
 databases: 
