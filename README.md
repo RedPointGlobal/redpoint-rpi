@@ -328,51 +328,16 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 
 ### Post Deployment- Upgrade
 
- - **Activate RPI License**
-
-After upgrading your version 6 RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
-
-Before performing the upgrade, use the ```Interaction Upgrade``` Helper to check the v7 compatibility of all plugins currently used in your version 6 installation. Follow these steps:
-
-  - Download and extract the [Upgrade Helper](https://github.com/RedPointGlobal/redpoint-rpi/blob/main/UpgradeAssistant.zip)
-  - Execute the ```RedPoint.Interaction.UpgradeHelper.exe```application. 
-  
-When running the Helper, you will be prompted to enter a v6 Pulse database connection string. Once connected, the Helper will check the compatibility of all currently used plugins with v7. If any incompatible plugins are found, their details will be displayed, and you will have the option to output this information to a file.
-
-The resulting file will contain details about the incompatible plugins along with a set of v7 environment variables. An example output is shown below:
-```
-{
-  "General": {
-    "ConnectionStrings__OperationalDatabase": "[your_v6_connection_string],
-    "ConnectionStrings__LoggingDatabase": "[your_v6_connection_string]",
-    "RPI__ServiceHostName": "your_v6_rpi_hostname",
-    "RPI__SMTP__EmailSenderAddress": "[x]",
-    "RPI__SMTP__Address": "[x]",
-    "RPI__SMTP__Port": 587,
-    "RPI__SMTP__EnableSSL": false,
-    "RPI__SMTP__UseCredentials": false
-  },
-  "Execution": {
-    "RPIExecution__QueueListener__IsEnabled": true,
-    "RPIExecution__QueueListener__QueuePath": "RPIListenerQueue"
-  },
-  "InteractionAPI": {
-    "RPIClient__HelpStartPageURL": "[x]"
-  }
-}
-```
-Use the contents of this file as a reference to customize the ```values.yaml``` file for the Helm Chart before deploying the new v7 cluster. For instance, you will need to update the SMTP and database connection strings in the ```values.yaml``` based on the information provided in the example.
-
- - **Perform the Upgrade**
-
-To Upgrade the version 6 operational databases to version 7, execute the commands below.
+Once the RPI v7 containers have been successfully deployed using the Helm installation instructions in ```Step 7```` above, you are now ready to perform the upgrade. This is done by making the following API call to trigger the upgrade process.
 
 ```
 curl -X 'GET' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/upgrade?waitTimeoutSeconds=360' \
   -H 'accept: text/plain'
 ```
+
 You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete``` in the response to confirm that the cluster installation has been completed successfully.
+
 ```
 {
   "DeploymentInstanceID": "default",
@@ -394,7 +359,27 @@ You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete```
   ]
 }
 ```
+
 If any errors occur during the upgrade, the deployment API will provide relevant details in the response. Please analyze these details and resolve any issues before attempting to re-run the upgrade.
+
+ - **Activate RPI License**
+
+Once the upgrade operation is successful, the next step is to activate the license for the deployment. This is done by calling the ```/api/licensing/activatelicense``` endpoint in the deployment service. Below is an example of how to make the API call for license activation:
+
+```
+export ACTIVATION_KEY="your_license_activation_key"
+export ACTIVATION_URL=rpi-deploymentapi.example.com
+export SYSTEM_NAME="my_dev_rpi_system"
+
+curl -X 'POST' \
+  'https://$ACTIVATION_URL/api/licensing/activatelicense' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "ActivationKey": "'"${ACTIVATION_KEY}"'",
+  "SystemName": "'"${SYSTEM_NAME}"'"
+}'
+```
 
 ### Downloading Client Executable
 
