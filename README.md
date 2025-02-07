@@ -192,17 +192,18 @@ rpi-realtimeapi.example.com                                   # RPI Realtime
 ```
 
 ### Post Deployment- Greenfield
+
  - **Activate RPI License**
 
-After installing RPI, you need to apply a license. This is accomplished by calling the ```/api/licensing/activatelicense``` API endpoint of the deployment service, as demonstrated in the example below:
+Next step afer the deployment is successful - is to apply a license activation key. This is done by calling the ```/api/licensing/activatelicense``` endpoint in the deployment service. Below is an example of how to make the API call for license activation:
 
 ```
 export ACTIVATION_KEY="your_license_activation_key"
-export ACTIVATION_URL=rpi-deploymentapi.example.com
+export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
 export SYSTEM_NAME="my_dev_rpi_system"
 
 curl -X 'POST' \
-  'https://$ACTIVATION_URL/api/licensing/activatelicense' \
+  'https://$DEPLOYMENT_SERVICE_URL/api/licensing/activatelicense' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -328,7 +329,7 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 
 ### Post Deployment- Upgrade
 
-Once the RPI v7 containers have been successfully deployed using the Helm installation instructions in ```Step 7```` above, you are now ready to perform the upgrade. This is done by making the following API call to trigger the upgrade process.
+Once the RPI v7 containers have been successfully deployed using the Helm installation instructions in ```Step 7``` above, you are now ready to perform the upgrade. This is done by making the following API call to trigger the upgrade process.
 
 ```
 curl -X 'GET' \
@@ -364,15 +365,15 @@ If any errors occur during the upgrade, the deployment API will provide relevant
 
  - **Activate RPI License**
 
-Once the upgrade operation is successful, the next step is to activate the license for the deployment. This is done by calling the ```/api/licensing/activatelicense``` endpoint in the deployment service. Below is an example of how to make the API call for license activation:
+Next step afer the upgrade operation is successful - is to apply a license activation key. This is done by calling the ```/api/licensing/activatelicense``` endpoint in the deployment service. Below is an example of how to make the API call for license activation:
 
 ```
 export ACTIVATION_KEY="your_license_activation_key"
-export ACTIVATION_URL=rpi-deploymentapi.example.com
+export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
 export SYSTEM_NAME="my_dev_rpi_system"
 
 curl -X 'POST' \
-  'https://$ACTIVATION_URL/api/licensing/activatelicense' \
+  'https://$DEPLOYMENT_SERVICE_URL/api/licensing/activatelicense' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{
