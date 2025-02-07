@@ -54,32 +54,23 @@ Both deployment methods require you to deploy the RPI v7 containers following th
 
 To start the installation, follow the steps outlined in Steps 1-6 below.
 
-**1. Set your target Cloud Provider:**
+**1 Clone this repository**
 
-Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google``` and ```selfhosted```
-```
-  cloud: amazon
-```
-**2. Configure SQL Server Settings:**
+Cloning the repository locally ensures you have an independent copy of the project, which is not directly affected by upstream changes. It also gives you control over versioning.
 
-Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresqlserver```, ```amazonrdssql```, ```postgresql```, and  ```googlecloudsql```
 ```
-databases: 
-  type: amazonrdssql
-  serverhost: your_sql_server_host
-  username: your_sql_username
-  password: your_sql_password
-  operationsDatabaseName: Pulse
-  loggingDatabaseName: Pulse_Logging
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git
 ```
-**3. Create Kubernetes Namespace:**
 
-Create the Kubernetes namespace for deploying RPI services and set it as the default context for future CLI commands
+**2. Create Kubernetes Namespace:**
+
+A Kubernetes namespace provides a logical separation within the cluster. By creating a dedicated namespace for RPI services, you ensure that the resources and configurations for this project do not interfere with others in your cluster
+
 ```
-kubectl create namespace redpoint-rpi && \
-kubectl config set-context --current --namespace=redpoint-rpi
+kubectl create namespace redpoint-rpi 
 ```
-**4. Create Container Registry Secret:**
+
+**3. Create Container Registry Secret:**
 
 Create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
 ```
@@ -94,7 +85,8 @@ kubectl create secret docker-registry redpoint-rpi \
 --docker-username=$DOCKER_USERNAME \
 --docker-password=$DOCKER_PASSWORD
 ```
-**5. Create TLS Certificate Secret:**
+
+**3. Create TLS Certificate Secret:**
 
 The Helm chart deploys an ingress resource and an NGINX ingress controller to expose the URL endpoints required for accessing RPI services. These endpoints are secured using HTTPS. The only requirement on your part is to provide a TLS certificate for TLS termination.
 
@@ -121,13 +113,40 @@ ingress:
   controller:
     enabled: false
 ```
-**6. Install RPI:**
-  - Clone the RPI repository to your local machine
-  - Change into the cloned repository's directory
-  - Execute the Helm install command
+
+**4. Set your target Cloud Provider:**
+
+Open the ```values.yaml``` file and locate the ```cloud``` section. Here, specify the cloud provider where you intend to deploy RPI. Supported options are: ```azure```, ```amazon```, ```google```
+
 ```
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git && \
-cd redpoint-rpi && \
+  cloud: amazon
+```
+
+**5. Configure SQL Server Settings:**
+
+Open the ```values.yaml``` file, locate the ```databases``` section. Here, you need to provide the correct values for your SQL Server configuration. This includes specifying the database type, server host, username and password. The Supported options for database type are ```sqlserver```, ```azuresqlserver```, ```amazonrdssql```, ```postgresql```, and  ```googlecloudsql```
+
+```
+databases: 
+  type: amazonrdssql
+  serverhost: your_sql_server_host
+  username: your_sql_username
+  password: your_sql_password
+  operationsDatabaseName: Pulse
+  loggingDatabaseName: Pulse_Logging
+```
+
+**6. Install RPI:**
+  - Make sure you are in the cloned repository's directory and run the Helm install command
+```
+.
+├── README.md
+├── UpgradeAssistant.zip
+├── kubernetes
+├── redpoint-rpi
+├── smoketests
+└── values.yaml
+
 helm install redpoint-rpi redpoint-rpi/ --values values.yaml
 ```
 
