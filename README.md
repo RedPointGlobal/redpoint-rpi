@@ -24,7 +24,7 @@ In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) o
 - **SQL Server 2019 or later for the Operational Databases**
     - Any of the of the following: ```AzureSQLDatabase```, ```AmazonRDSSQL```, ```GoogleCloudSQL```, ```MicrosoftSQLServer```, ```PostgreSQL```
     - 8 GB Memory or more
-    - 256 GB or more free disk space.
+    - 200 GB or more free disk space.
 - **Any of the following for the Data Warehouse Settings**
     - ```AzureSQLDatabase```, ```AmazonRDSSQL```, ```GoogleCloudSQL```, ```MicrosoftSQLServer```, ```AzureDatabaseMySQL```, ```AzureDatabasePostgreSQL```, ```GoogleBigQuery```, ```MongoDBDocument```, ```Snowflake```, ```PostgreSQL```,
     ```SQLServer```, ```AWSRedshift```, ```Teradata```
