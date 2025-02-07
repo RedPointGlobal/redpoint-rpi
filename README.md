@@ -46,7 +46,7 @@ Latest stable version of Kubernetes. Select from this list of [Kubernetes certif
 ### Considerations Before you begin
 Before deploying RPI, it's important to determine whether you're planning a Greenfield deployment or an Upgrade deployment.
 
-- **Greenfield Installation:** This approach involves setting up RPI in a completely new environment. It includes the creation of a new RPI cluster, a new RPI tenant, fresh operations and logging databases, and new cache and queue providers. A Greenfield installation ensures that all components are installed from scratch, independent of any existing deployments.
+- **Greenfield Deployment:** This approach involves setting up RPI in a completely new environment. It includes the creation of a new RPI cluster, a new RPI tenant, fresh operations and logging databases, and new cache and queue providers. A Greenfield deployment ensures that all components are deployed from scratch, independent of any existing deployments.
 
 - **Upgrade Deployment:** In this case, RPI is being deployed into an existing version 6.x environment. This includes using the current cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup. The upgrade from RPI v6.x to RPI v7.x is more involved. Before attempting to upgrade, be sure to read the [Redpoint Interaction upgrade path](https://docs.redpointglobal.com/bpd/upgrade-to-rpi-v7-x)
   
@@ -54,7 +54,7 @@ Before deploying RPI, it's important to determine whether you're planning a Gree
 
 Both deployment methods require you to deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
 
-**To start the installation, follow the steps outlined in Steps 1-6 below.**
+**To start the deployment, follow the steps outlined in Steps 1-6 below.**
 
 **1 Clone this repository**
 
@@ -211,7 +211,7 @@ curl -X 'POST' \
   "SystemName": "'"${SYSTEM_NAME}"'"
 }'
 ```
-With RPI installed and the license activated, you're now ready to install your first cluster and add tenants.
+With RPI deployed and the license activated, you're now ready to install your first cluster and add tenants.
 
  - **Install the cluster operational databases**
 
@@ -235,13 +235,13 @@ curl -X 'POST' \
 }'
 
 ```
-Get the install cluster installation status:
+Get the install cluster deployment status:
 ```
 curl -X 'GET' \
   "https://$DEPLOYMENT_SERVICE_URL/api/deployment/status" \
   -H 'accept: text/plain'
 ```
-You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster installation has been completed successfully.
+You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster deployment has completed successfully.
 ```
 {
   "DeploymentInstanceID": "default",
@@ -266,7 +266,7 @@ You should receive the ```"Status": "LastRunComplete"``` response to confirm tha
 ```
   - **Install the tenant operational databases** 
   
-Once the cluster installation is complete, you can proceed to add your first RPI tenant (client). To assist in this process, a JSON building tool is available at ```https://$DEPLOYMENT_SERVICE_URL/clienteditor.html``` which can help you construct the necessary payload for your tenant setup. After constructing the JSON payload that aligns with your tenant's requirements and Datawarehouse options, simply execute the commands below to add the tenant
+Once the cluster deployment is complete, you can proceed to add your first RPI tenant (client). To assist in this process, a JSON building tool is available at ```https://$DEPLOYMENT_SERVICE_URL/clienteditor.html``` which can help you construct the necessary payload for your tenant setup. After constructing the JSON payload that aligns with your tenant's requirements and Datawarehouse options, simply execute the commands below to add the tenant
 
 ```
 # Export environment variables
@@ -319,17 +319,17 @@ curl -X 'POST' \
   }
 }"
 ```
-Get the tenant installation status
+Get the tenant deployment status
 ```
 curl -X 'GET' \
   'https://$DEPLOYMENT_SERVICE_URL/api/deployment/status' \
   -H 'accept: text/plain'
 ```
-You should receive the ```"Status": "LastRunComplete"``` response to confirm that the client installation has completed successfully.
+You should receive the ```"Status": "LastRunComplete"``` response to confirm that the client deployment has completed successfully.
 
 ### Post Deployment- Upgrade
 
-Once the RPI v7 containers have been successfully deployed using the Helm installation instructions in ```Step 7``` above, you are now ready to perform the upgrade. This is done by making the following API call to trigger the upgrade process.
+Once the RPI v7 containers have been successfully deployed using the Helm deployment instructions in ```Step 7``` above, you are now ready to perform the upgrade. This is done by making the following API call to trigger the upgrade process.
 
 ```
 curl -X 'GET' \
@@ -337,7 +337,7 @@ curl -X 'GET' \
   -H 'accept: text/plain'
 ```
 
-You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete``` in the response to confirm that the cluster installation has been completed successfully.
+You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete``` in the response to confirm that the cluster deployment has been completed successfully.
 
 ```
 {
@@ -392,7 +392,7 @@ https://rpi-interactionapi.example.com/downloads/Client
 
 ### Configuring High Availability
 
-The default installation of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
+The default deployment of RPI services is configured with a single replica for each service. However, for a production environment, it's crucial to ensure high availability to maintain service continuity and manage load efficiently.
 
 To achieve high availability, adjust the number of replicas for each service to 2 or more. Additionally, the cluster admin can create a [Horizontal Pod Autoscaler (HPA)](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) to automatically manage the number of pod replicas based on observed CPU utilization or other select metrics. Here’s how you can set the replica count in the ```values.yaml``` file:
 ```
