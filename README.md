@@ -214,7 +214,7 @@ curl -X 'POST' \
 }'
 ```
 
-A successful activation returns a ```200 OK ``` response. Once the RPI is deployed and the license activated, you're ready to proceed with installing your first cluster and adding tenants
+A successful activation returns a ```200 OK ``` response. Once RPI is deployed and the license activated, you're ready to proceed with installing your first cluster and adding tenants
 
  - **Install the cluster operational databases**
 
@@ -385,7 +385,7 @@ curl -X 'POST' \
 }'
 ```
 
-A successful activation returns a ```200 OK ``` response. Once the RPI is deployed and the license activated, you're ready to proceed with installing your first cluster and adding tenants
+A successful activation returns a ```200 OK ``` response. Once RPI is upgraded and the license activated, you're ready to proceed with downloading the Client executable for login and post upgrade validation
 
 ### Downloading Client Executable
 
