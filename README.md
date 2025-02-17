@@ -213,7 +213,8 @@ curl -X 'POST' \
   "SystemName": "'"${SYSTEM_NAME}"'"
 }'
 ```
-With RPI deployed and the license activated, you're now ready to install your first cluster and add tenants.
+
+A successful activation returns a ```200 OK ``` response. Once the RPI is deployed and the license activated, you're ready to proceed with installing your first cluster and adding tenants
 
  - **Install the cluster operational databases**
 
@@ -383,6 +384,8 @@ curl -X 'POST' \
   "SystemName": "'"${SYSTEM_NAME}"'"
 }'
 ```
+
+A successful activation returns a ```200 OK ``` response. Once the RPI is deployed and the license activated, you're ready to proceed with installing your first cluster and adding tenants
 
 ### Downloading Client Executable
 
