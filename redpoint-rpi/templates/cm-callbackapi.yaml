@@ -15,7 +15,7 @@ data:
           "ChannelLabel": {{ .Values.callbackapi.channelLabel | quote }},
           "CallbackServiceQueuePath": {{ .Values.queueNames.callbackServiceQueuePath | quote }},
           "CallbackServiceQueueSettings": {
-            "Assembly": "RedPoint.Resonance.AWSQueueAccess",
+            "Assembly": "RedPoint.Amazon.Server",
             "Type": "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory",
             "Settings": [
               {
