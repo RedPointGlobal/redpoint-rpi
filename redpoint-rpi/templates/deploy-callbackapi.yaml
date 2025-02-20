@@ -110,7 +110,7 @@ spec:
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
           value: {{ .Values.queueNames.callbackServiceQueuePath | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
-          value: "RedPoint.Resonance.AWSQueueAccess"
+          value: "RedPoint.Amazon.Server"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
           value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
