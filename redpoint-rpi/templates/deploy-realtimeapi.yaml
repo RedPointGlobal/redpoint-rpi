@@ -201,6 +201,18 @@ spec:
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__2__Value
             value: {{ .Values.cacheProviders.mongodb.CollectionName | quote }}
           {{- end }}
+          {{- if eq .Values.cacheProviders.type "redis" }}
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Name
+            value: "Default"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Assembly
+            value: "RedPoint.Resonance.RedisCache"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Class
+            value: "RedPoint.Resonance.RedisCache.RedisCacheHandler"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Key
+            value: "IPAddresses"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Value
+            value: {{ .Values.cacheProviders.redis.hostName | quote }}
+          {{- end }}
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Type
             value: "Visitor Profile"
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Cache
