@@ -33,9 +33,9 @@ spec:
       labels:
         app: rpi-callbackapi
     spec:
-      serviceAccountName: redpoint-rpi
       imagePullSecrets:
-        - name: redpoint-rpi
+      - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
       securityContext:
         runAsNonRoot: true
         runAsUser: 7777
@@ -52,6 +52,30 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        - name: CallbackServiceConfig__QueueEnabled
+          value: "true"
+        - name: CallbackServiceConfig__QueueProvider__ChannelLabel
+          value: {{ .Values.callbackapi.channelLabel | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ .Values.queueNames.callbackServiceQueuePath | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Amazon.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "AccessKey"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ .Values.queueProviders.amazonsqs.accessKey | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "SecretKey"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          value: {{ .Values.queueProviders.amazonsqs.secretKey | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
+          value: "RegionEndpoint"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
+          value: {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
+          value: "*"
         {{- if eq .Values.databases.type "postgresql" }}
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
@@ -62,13 +86,25 @@ spec:
         ports:
         - name: http
           containerPort: 8080
+        {{- if .Values.callbackapi.enableConfigmap }}
         volumeMounts:
           - name: rpi-callbackapi
             mountPath: /app/appsettings
+        {{- end }}
+      {{- if .Values.callbackapi.enableConfigmap }}
       volumes:
         - name: rpi-callbackapi
           configMap:
             name: rpi-callbackapi
+      {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}
 
 ---
