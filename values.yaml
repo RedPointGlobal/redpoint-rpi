@@ -29,7 +29,6 @@ replicas:
   executionservice: 1
   realtimeapi: 1
   redis: 1
-  queueservice: 1
   queuereader: 1
   
 databases:

@@ -76,7 +76,7 @@ spec:
         - name: QueueService__RealtimeConfiguration__IsCacheProcessingEnabled
           value: {{ .Values.queueReader.isCacheProcessingEnabled | quote }}
         - name: QueueService__RealtimeConfiguration__TenantIDs
-          value: {{ .Values.queueReader.tenantIds }}
+          value: {{ .Values.queueReader.tenantIds | quote }}
         {{- if eq .Values.cacheProviders.type "mongodb" }}
         - name: QueueService__RealtimeConfiguration__DistributedCache__Assembly
           value: "RedPoint.Resonance.MongoDBCache"
