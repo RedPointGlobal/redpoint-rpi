@@ -29,6 +29,8 @@ spec:
       labels:
         app: rpiopsmssqlserver
     spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
       containers:
       - name: rpiopsmssqlserver
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mssql-2022-opsdatabases:latest
@@ -74,6 +76,8 @@ spec:
       labels:
         app: rpimongodbserver
     spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
       containers:
       - name: rpimongodbserver
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mongodb-6-0-seeded:latest
