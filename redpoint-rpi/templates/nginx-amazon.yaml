@@ -396,7 +396,7 @@ spec:
         - containerPort: 80
           name: http
           protocol: TCP
-        - containerPort: 80
+        - containerPort: 443
           name: https
           protocol: TCP
         - containerPort: 2443
