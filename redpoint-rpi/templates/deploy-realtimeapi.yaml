@@ -34,6 +34,8 @@ spec:
         app: rpi-realtimeapi
     spec:
       serviceAccountName: redpoint-rpi
+      imagePullSecrets:
+        - name: redpoint-rpi
       containers:
         - name: rpi-realtimeapi
           image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-realtime-plus-agent:{{ .Values.global.image_tag }}

@@ -34,6 +34,8 @@ spec:
         app: rpi-interactionapi
     spec:
       serviceAccountName: redpoint-rpi
+      imagePullSecrets:
+        - name: redpoint-rpi
       containers:
       - env:
         - name: RPI__SMTP__EmailSenderAddress
