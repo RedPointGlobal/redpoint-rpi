@@ -56,6 +56,10 @@ spec:
           value: "false"
         - name: EnableSwagger
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: integration-api
@@ -109,6 +113,10 @@ spec:
           value: "false"
         - name: EnableSwagger
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: integration-api
@@ -201,6 +209,10 @@ spec:
         - name: Authentication__OpenIdProviders__0__ValidateAudience
           value: {{ .Values.OpenIdProviders.ValidateAudience | quote }}
         {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: integration-api
@@ -273,6 +285,10 @@ spec:
           value: "false"
         - name: EnableSwagger
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: integration-api

@@ -44,6 +44,10 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
         - name: Authentication__EnableRPIAuthentication
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         - name: RPI__SMTP__EnableSSL
           value: "true"
         - name: RPI__SMTP__UseCredentials
@@ -137,6 +141,10 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
         - name: RPI__SMTP__EnableSSL
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         - name: RPI__SMTP__UseCredentials
           value: "true"
         - name: RPI__SMTP__Username
@@ -235,6 +243,10 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
         - name: RPI__SMTP__EnableSSL
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         - name: RPI__SMTP__UseCredentials
           value: "true"
         - name: RPI__SMTP__Username
@@ -333,6 +345,10 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
         - name: RPI__SMTP__EnableSSL
           value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         - name: RPI__SMTP__UseCredentials
           value: "true"
         - name: RPI__SMTP__Username

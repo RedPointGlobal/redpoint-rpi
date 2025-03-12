@@ -50,6 +50,10 @@ spec:
             secretKeyRef:
               key: ConnectionStrings__OperationalDatabase
               name: database-secrets
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
@@ -127,6 +131,10 @@ spec:
           value: {{ .Values.queueProviders.amazonsqs.regionEndpoint | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
           value: "*"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
@@ -212,6 +220,10 @@ spec:
           value: {{ .Values.queueProviders.azureservicebus.connectionString | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
           value: "*"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
@@ -293,6 +305,10 @@ spec:
           value: {{ .Values.queueProviders.googlepubsub.projectId | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
           value: "*"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
         image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-plugins-callbackservicewebapi:{{ .Values.global.image_tag }}
         imagePullPolicy: Always
         name: config-editor
