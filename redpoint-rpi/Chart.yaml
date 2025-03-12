@@ -4,4 +4,4 @@ description: A Helm chart for Redpoint Interaction (RPI)
 
 type: application
 version: 1.0.0
-appVersion: "7.1"
+appVersion: "7"
