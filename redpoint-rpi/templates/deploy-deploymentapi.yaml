@@ -126,7 +126,7 @@ spec:
           value: "true"
         {{- if eq .Values.databases.type "postgresql" }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
-          value: 5432
+          value: "5432"
         {{- end }}
         ports:
         - containerPort: 8080
