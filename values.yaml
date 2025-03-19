@@ -1,0 +1,310 @@
+global:
+  application:
+    name: redpoint-interaction
+    version: "7"
+  # Supported cloud providers are azure, amazon, google, and demo
+  cloud: amazon
+
+  # Kubernetes namespace in which the services will be deployed.
+  namespace: redpoint-rpi
+  # This tag refers to a specific version of the docker image to be deployed.
+  image_tag: 7.5.2025-0304-1125
+  
+  # The nodeSelector is used to specify the nodes where RPI should be deployed.
+  nodeSelector: {}
+  # tolerations ensures that RPI is deployed on nodes specifically designated for Redpoint RPI,
+  tolerations: {}
+#    - effect: NoSchedule
+#      key: app
+#      operator: Equal
+#      value: redpoint-rpi
+
+  # Set the number of replicas for the deployment.
+replicas:
+  interactionapi: 1
+  integrationapi: 1
+  configeditor: 1
+  callbackapi: 1
+  nodemanager: 1
+  executionservice: 1
+  realtimeapi: 1
+  redis: 1
+  queuereader: 1
+  
+databases:
+  # Supported options for the Operational databases are azuresqlserver, amazonrdssql, postgresql, and googlecloudsql
+  type: postgresql
+  # The hostname or IP address of the database server
+  serverhost: your_sql_server_host
+  # The username for authenticating to the database server
+  username: your_sql_server_username
+  # The password for authenticating to the database server
+  password: your_sql_server_password
+  # The name of the database used for operations
+  operationsDatabaseName: Pulse
+  # The name of the database used for logging purposes
+  loggingDatabaseName: Pulse_Logging
+  DatabaseSchema: dbo
+
+realtime:
+  # Unique identifier for the RPI client. Ensure this matches your registered RPI client ID.
+  rpiClientID: "00000000-0000-0000-0000-000000000000"
+  # Set the RPIAuthToken to the same value as the RealtimeAPIKey that is configured in the RPI client. 
+  rpiAuthToken: "00000000-0000-0000-0000-000000000000" 
+  # Set to `true` to make the Realtime API Swagger page available for API exploration and testing.
+  enableHelpPages: true 
+  enableEventListening: true
+  realtimeProcessingEnabled: true
+  CORSOrigins: ["*"]
+  ThresholdBetweenSiteVisitsMinutes: 30
+  NoDaysPersistWebEvents: 365
+  CacheWebFormData: true
+  decisionCacheDuration: 60
+  pluginAssemblyPath: /app/plugins
+  enableAuditMetricsInHeaders: true
+  cacheOutputQueueEnabled: true
+  enableConfigmap: false
+  DataMaps:
+    VisitorProfile:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    VisitorHistory:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    NonVisitorData:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    ProductRecommendation:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+  LogLevel:
+    default: Trace # accepted values are Trace, Error
+    rpiTrace: Trace
+    rpiError: Trace
+    database: Trace
+
+queueNames: 
+  # Queues required by the RPI Realtime service
+  # Ensure that you replace these values with the actual names of the queues 
+  # that are allocated for your specific environment.
+  formQueuePath: RPIWebFormSubmission
+  eventsQueuePath: RPIWebEvents
+  cacheOutputQueuePath: RPIWebCacheData
+  recommendationsQueuePath: RPIWebRecommendations
+  listenerQueuePath: RPIQueueListener
+  # Queue required for the RPI callback service (Sendgrid)
+  callbackServiceQueuePath: RPICallbackApiQueue
+  
+queueProviders: 
+  # Supported queue providers are sqs, azureservicebus, googlepubsub, rabbitmq, azureeventhubs
+  type: azureservicebus 
+  
+  CacheOutputQueueEnabled: true
+
+  azureeventhubs: 
+    eventHubName: your_event_hub_name
+    connectionString: your_event_hub_connection_string
+  
+  # Update this section if your queueProviders type is set to amazonsqs
+  amazonsqs: 
+    accessKey: your_aws_iam_accesskey
+    secretKey: your_aws_iam_secretkey
+    regionEndpoint: your_aws_region
+  
+  # Update this section if your queueProviders type is set to rabbitmq
+  rabbitmq: 
+    hostName: your_rabbitmq_host
+    username: your_rabbitmq_username
+    password: your_rabbitmq_password
+  
+  # Update this section if your queueProviders type is set to azureservicebus
+  azureservicebus: 
+    connectionString: your_service_bus_connection_string
+  
+  # Update this section if your queueProviders type is set to googlepubsub
+  googlepubsub:
+    projectId: your_google_project_Id
+
+cacheProviders: 
+  # The Cache connectors allow RPI to store and access various data quickly, such as Visitor Profiles, Realtime Decisions rules, and content. 
+  # This enables immediate action within data dependent websites, without the delays of retrieving information back from the database
+  
+  # Supported cache providers are mongodb, redis, cassandra, googlebigtable, azureredis, azurecosmosdb and inMemorySql
+  type: mongodb
+  name: Default
+
+  # Update this section if your cacheProvider type is set to mongodb
+  mongodb: 
+    databaseName: your_rpi_cache_database_name
+    ConnectionString: your_mongodb_connection_string
+    CollectionName: your_rpi_cache_collection_name
+  
+  # Update this section if your cacheProvider type is set to redis
+  redis: 
+    hostName: your_redis_cache_host_or_ip_address
+  
+  # Update this section if your cacheProvider type is set to cassandra
+  cassandra:
+    keyspace: rpi
+    contactpoints: server1,server2
+    username: your_cassandra_username
+    password: your_cassandra_password
+  
+  # Update this section if your cacheProvider type is set to googlebigtable
+  googlebigtable:
+    ProjectId: your_google_project_id 
+    InstanceId: your_google_bigtable_instance_id
+  
+  # Update this section if your cacheProvider type is set to azureredis
+  azureredis:
+    connectionString: your_redis_connection_string
+    disableMGET: true
+
+  # Update this section if your cacheProvider type is set to azurecosmosdb
+  azurecosmosdb:
+    databaseName: your_rpi_cache_database_name
+    ConnectionString: your_mongodb_connection_string
+    CollectionName: your_rpi_collection_name
+
+  # Update this section if your cacheProvider type is set to azurecosmosdb
+  inMemorySql:
+    connectionString: Data Source=your_server_host;Initial Catalog=your_data_warehouse;Integrated Security=True
+
+queueReader: 
+  # Configuration for the Queue Reader container introduced in RPI v7.4
+  # This component handles the draining of Queue Listener and RPI Realtime queues.
+
+  # Enable or disable the Queue Reader container
+  isEnabled: false
+
+  # Enable or disable processing for specific queues
+  isFormProcessingEnabled: true
+  isEventProcessingEnabled: true
+  isCacheProcessingEnabled: true
+
+  # Distribution mode for high-performance or high-volume transactions
+  # Set to true if you require distributed processing
+  isDistributed: false 
+
+  # Comma separated List of RPI client IDs associated with your RPI cluster 
+  tenantIds: ["your_rpi_clientId_1"]
+  # Thread pool configuration
+  threadPoolSize: 10
+  # Timeout duration for processing, in minutes
+  timeoutMinutes: 60
+  # Maximum number of messages to process in a single batch
+  maxBatchSize: 50
+  useMessageLocks: true
+
+
+callbackapi:
+  # The RPI Callback Service is used to retrieve results from the following channel providers:
+  # Sendgrid and MPulse
+
+  # Enable or disable the CallbackService queue
+  queueEnabled: true
+  channelLabel: SendGrid
+
+dataWarehouseProviders:
+  type: redshift
+  redshift:
+    server: your_redshift_server_endpoint
+    port: 5439
+    database: your_redshift_database
+    username: your_redshift_username
+    password: your_redshift_password
+
+executionservice:
+  RPIExecution__QueueListener__IsEnabled: false 
+  RPIExecution_MaxThreadsPerExecutionService: 50
+
+interactionapi: 
+  enableSwagger: true
+
+integrationapi:
+  enableSwagger: true
+
+# Supported Providers are azure, okta, keycloak, Auth0, Gigya, pingIdentity
+OpenIdEnabled: false
+OpenIdProviders:
+  enabled: true
+  MetadataHost: ""
+  # Microsoft Entra ID App registration Client ID
+  ClientID: 00000000-0000-0000-0000-000000000000
+  # Name of the OpenID Connect provider. Azure AD in this example
+  Name: AzureAD
+  # Audience for the OpenID Connect authentication request
+  Audience: api://00000000-0000-0000-0000-000000000000
+  # Authorization host for OpenID Connect
+  AuthorizationHost: "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/v2.0/authorize"
+  # Enable or disable refresh tokens
+  EnableRefreshTokens: true
+  # Custom scopes for OpenID Connect
+  CustomScopes: ["api://00000000-0000-0000-0000-000000000000/Interaction.Clients"]
+  # Parameter for id_token_hint during logout
+  LogoutIdTokenParameter: id_token_hint
+  # Validate issuer of the OpenID Connect provider
+  ValidateIssuer: false
+  # Validate audience of the OpenID Connect provider
+  ValidateAudience: true
+  RedirectURL: your_rpi_client_hostname
+
+# Define storage configuration for the RPI File Output Directory
+storage:
+  enabled: false
+  persistentVolumeClaim: rpifileoutputdir
+
+SMTPSettings:
+  SMTP_SenderAddress: noreply-rpi@example.com
+  SMTP_Address: your_smtp_host
+  SMTP_Port: 587
+  SMTP_Username: your_smtp_server_username
+  SMTP_Password: your_smtp_server_password
+
+ingress:
+  controller:
+    # Set enabled to false if you want to disable the creation of the ingress controller
+    enabled: true 
+  # Set mode to private for internal ingress and public for public ingress
+  mode: public 
+  # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
+  # If you set it to k8ssecret, you must create a kubernetes secret containing your certificates
+  certificateSource: k8ssecret #acm
+  tlsSecretName: ingress-tls
+  className: nginx-redpoint-rpi
+  # Subnet name is only required if you set the ingress mode to private
+  subnetName: snet-rgoc-nonprod-eus2-aks 
+  # Certificate Arn is only required if you set the certificateSource to acm
+  certificateArn: your_acm_certificate_arn
+  
+  # Specify the domain name for the ingress resources.
+  domain: redpointcdp.com
+  # Add any specific annotations required for your ingress setup here.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 99m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  # Define hostnames for different services in your application.
+  hosts:
+    # Configuration service
+    config: rpi-deploymentapi
+    
+    # Client Login service
+    client: rpi-interactionapi
+
+    # Integration API
+    integration: rpi-integrationapi
+
+    # Real-time service 
+    realtime: rpi-realtimeapi
+
+    # Callback API
+    callbackapi: rpi-callbackapi

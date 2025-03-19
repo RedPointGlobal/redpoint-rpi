@@ -1,0 +1,285 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-deploymentapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-deploymentapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-deploymentapi
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-deploymentapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-deploymentapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-deploymentapi
+  template:
+    metadata:
+      labels:
+        app: rpi-deploymentapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: config-editor
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        env:
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: "Pulse"
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: "PulseLogging"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: "rpiopsmssqlserver"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: "sa"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          value: ".RedPoint2021"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: {{ .Values.databases.DatabaseSchema | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-deploymentapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-deploymentapi
+spec:
+  replicas: {{ .Values.replicas.configeditor }}
+  selector:
+    matchLabels:
+      app: rpi-deploymentapi
+  template:
+    metadata:
+      labels:
+        app: rpi-deploymentapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: config-editor
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        env:
+        {{- if eq .Values.databases.type "sqlserver" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrdssql" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operationsDatabaseName | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.loggingDatabaseName | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.serverhost | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.username | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          value: {{ .Values.databases.password | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: {{ .Values.databases.DatabaseSchema | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: "5432"
+        {{- end }}
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-deploymentapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-deploymentapi
+spec:
+  replicas: {{ .Values.replicas.configeditor }}
+  selector:
+    matchLabels:
+      app: rpi-deploymentapi
+  template:
+    metadata:
+      labels:
+        app: rpi-deploymentapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: config-editor
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        env:
+        {{- if eq .Values.databases.type "sqlserver" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresqlserver" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operationsDatabaseName | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.loggingDatabaseName | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.serverhost | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.username | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          value: {{ .Values.databases.password | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: {{ .Values.databases.DatabaseSchema | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-deploymentapi
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-deploymentapi
+spec:
+  replicas: {{ .Values.replicas.configeditor }}
+  selector:
+    matchLabels:
+      app: rpi-deploymentapi
+  template:
+    metadata:
+      labels:
+        app: rpi-deploymentapi
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: config-editor
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-configuration-editor:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        env:
+        {{- if eq .Values.databases.type "sqlserver" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operationsDatabaseName | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.loggingDatabaseName | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.serverhost | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.username | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          value: {{ .Values.databases.password | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: {{ .Values.databases.DatabaseSchema | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

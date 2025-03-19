@@ -1,0 +1,540 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-executionservice
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-executionservice
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-executionservice
+
+---
+{{- if eq .Values.global.cloud "demo" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-executionservice
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-executionservice
+spec:
+  replicas: {{ .Values.replicas.executionservice }}
+  selector:
+    matchLabels:
+      app: rpi-executionservice
+  template:
+    metadata:
+      labels:
+        app: rpi-executionservice
+    spec:
+      serviceAccountName: redpoint-rpi
+      imagePullSecrets:
+        - name: redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"     
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir 
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: database-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: database-secrets
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service-unixodbc:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: execution-service
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        {{- if .Values.storage.enabled }}
+        volumeMounts:
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+        {{- end }}
+      {{- if .Values.storage.enabled }}
+      volumes:
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+      {{- end }}
+{{- end }}
+
+---
+
+{{- if eq .Values.global.cloud "amazon" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-executionservice
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-executionservice
+spec:
+  replicas: {{ .Values.replicas.executionservice }}
+  selector:
+    matchLabels:
+      app: rpi-executionservice
+  template:
+    metadata:
+      labels:
+        app: rpi-executionservice
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"     
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: postgresql-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: postgresql-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresqlserver" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrdssql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service-unixodbc:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: execution-service
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+        {{- if .Values.storage.enabled }}    
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+        {{- end }}
+      volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+      {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+      {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "azure" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-executionservice
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-executionservice
+spec:
+  replicas: {{ .Values.replicas.executionservice }}
+  selector:
+    matchLabels:
+      app: rpi-executionservice
+  template:
+    metadata:
+      labels:
+        app: rpi-executionservice
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"     
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: postgresql-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: postgresql-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresqlserver" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrdssql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service-unixodbc:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: execution-service
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        {{- if .Values.storage.enabled }}
+        volumeMounts:
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+        {{- end }}
+      {{- if .Values.storage.enabled }}
+      volumes:
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+      {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.global.cloud "google" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-executionservice
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: rpi-executionservice
+spec:
+  replicas: {{ .Values.replicas.executionservice }}
+  selector:
+    matchLabels:
+      app: rpi-executionservice
+  template:
+    metadata:
+      labels:
+        app: rpi-executionservice
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - env:
+        - name: RPI__SMTP__EmailSenderAddress
+          value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: RPI__SMTP__Address
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: RPI__SMTP__Port
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: RPI__SMTP__Password
+          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+        - name: RPIExecution__QueueListener__IsEnabled
+          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
+        - name: RPIExecution__QueueListener__QueuePath
+          value: {{ .Values.queueNames.listenerQueuePath | quote }}
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__LogLevel__Microsoft
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"     
+        {{- if eq .Values.databases.type "postgresql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: postgresql-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: postgresql-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "azuresqlserver" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "amazonrdssql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        {{- if eq .Values.databases.type "googlecloudsql" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__LoggingDatabase
+              name: sqlserver-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionStrings__OperationalDatabase
+              name: sqlserver-secrets
+        {{- end }}
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-execution-service-unixodbc:{{ .Values.global.image_tag }}
+        imagePullPolicy: Always
+        name: execution-service
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        {{- if .Values.storage.enabled }}
+        volumeMounts:
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+        {{- end }}
+      {{- if .Values.storage.enabled }}
+      volumes:
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+      {{- end }}
+      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,28 @@
+{{- if eq .Values.dataWarehouseProviders.type "redshift" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odbc-config
+data:
+  odbc2.ini: |
+
+    [ODBC]
+    Trace=no
+
+    [ODBC Data Sources]
+    redshift=Amazon Redshift DSN 64=Amazon Redshift (x64)
+
+    [redshift]
+    Description=Amazon Redshift ODBC Driver (64-bit) DSN
+
+    # Driver: The location where the ODBC driver is installed to.
+    Driver=/app/odbc-lib/redshift/lib/libamazonredshiftodbc64.so
+
+    # Required: These values can also be specified in the connection string.
+    Server={{ .Values.dataWarehouseProviders.redshift.server }}
+    Port={{ .Values.dataWarehouseProviders.redshift.port }}
+    Database={{ .Values.dataWarehouseProviders.redshift.database }}
+    UID={{ .Values.dataWarehouseProviders.redshift.username }}
+    PWD={{ .Values.dataWarehouseProviders.redshift.password }}
+    locale=en-US
+{{- end }}
