@@ -36,7 +36,9 @@ global:
 databases:
   # Operational database providers 
   operational:
-    # Supported options: sqlserver, postgresql
+    # Supported options:
+    # - sqlserver (can be hosted on Azure, Google Cloud, AWS RDS, or a Virtual Machine)
+    # - postgresql (can be hosted on Azure, Google Cloud, AWS RDS, or a Virtual Machine)
     provider: sqlserver
     # The hostname or IP address of the database server
     server_host: <my-database-server-host>
