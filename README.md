@@ -3,7 +3,7 @@
 With Redpoint® Interaction you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
 
 In this guide, we take a Step-by-Step deployment of Redpoint Interaction (RPI) on Kubernetes using HELM.
-![RPI v7 (1)](https://github.com/user-attachments/assets/204e5942-502b-4c64-b8f8-85e64bae5f47)
+![RPI v7 (2)](https://github.com/user-attachments/assets/da4beff0-3cdd-4026-8461-dcdc7d4c700c)
 ### Table of Contents
 - [System Requirements ](#system-requirements)
 - [Considerations Before you begin ](#considerations-before-you-begin)
