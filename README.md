@@ -132,9 +132,7 @@ ingress:
 
 **5. Configure Operational Database Provider**
 
-The [operational databases](https://docs.redpointglobal.com/rpi/admin-key-concepts) store information necessary for RPI to function. There are two core operational databases: ```Pulse``` and ```Pulse_Logging```.
-
-Update the ```databases.operational``` section in the ```values.yaml``` with your SQL Server details.
+The [operational databases](https://docs.redpointglobal.com/rpi/admin-key-concepts) store information necessary for RPI to function. There are two core operational databases: ```Pulse``` and ```Pulse_Logging```. Update the ```databases.operational``` section in the ```values.yaml``` with your SQL Server details.
 
 ```
 databases:
