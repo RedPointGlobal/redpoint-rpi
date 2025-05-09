@@ -1,30 +1,61 @@
+{{- if .Values.nodemanager.serviceAccount.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.nodemanager.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-nodemanager
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: rpi-nodemanager
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-nodemanager
 spec:
   ports:
   - name: http
-    port: 80
+    port: {{ .Values.services.port }}
     protocol: TCP
     targetPort: 8080
   selector:
     app: rpi-nodemanager
     
 ---
-{{- if eq .Values.global.cloud "demo" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-nodemanager
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-nodemanager
+    {{- with .Values.nodemanager.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
 spec:
-  replicas: {{ .Values.replicas.nodemanager }}
+  {{- if not .Values.nodemanager.autoscaling.enabled }}
+  replicas: {{ .Values.nodemanager.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       app: rpi-nodemanager
@@ -32,374 +63,208 @@ spec:
     metadata:
       labels:
         app: rpi-nodemanager
+        {{- with .Values.nodemanager.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+        {{- end }}
+      annotations:
+        {{- with .Values.nodemanager.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.nodemanager.customMetrics.enabled }}
+        prometheus.io/scrape: {{ .Values.nodemanager.customMetrics.prometheus_scrape | quote }}
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        {{- end }}
     spec:
-      serviceAccountName: redpoint-rpi
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
-        - name: redpoint-rpi
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ .Values.nodemanager.serviceAccount.name }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      {{- end }}
       containers:
       - env:
+        - name: Logging__LogLevel__Default
+          value: {{ .Values.nodemanager.logging.logLevel | quote }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: CloudIdentity__Azure__CredentialType
+          value: "AzureIdentity"
+        - name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
+          value: {{ .Values.cloudIdentity.azureSettings.UseADTokenForDatabaseConnection | quote }}
+        - name: KeyVault__Provider
+          value: "Azure"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        - name: KeyVault__AzureSettings__VaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.vaultUri | quote }}
+        - name: KeyVault__AzureSettings__AppSettingsVaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.appSettingsVaultUri | quote }}
+        - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
+          value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
+        {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: CloudIdentity__Google_ProjectId
+          value: {{ .Values.cloudIdentity.googleSettings.projectId | quote }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS 
+          value: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
+        - name: KeyVault__Provider
+          value: "Google"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: CloudIdentity__Amazon__AccessKeyId
+          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
+        - name: CloudIdentity__Amazon__SecretAccessKey
+          value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        - name: KeyVault__Provider
+          value: "Amazon"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
         - name: RPIClient__applicationSupportURL
           value: "https://support.redpointglobal.com"
-        - name: Logging__LogLevel__Default
-          value: "Error"
-        - name: Logging__LogLevel__Microsoft
-          value: "Error"
-        - name: Logging__Database__RPITrace
-          value: "Error"
-        - name: Logging__Database__LogLevel__Default
-          value: "Error"
+        - name: Authentication__EnableRPIAuthentication
+          value: {{ .Values.nodemanager.enableRPIAuthentication | quote }}
+        - name: DisableHttpRedirect
+          value: "true"
         - name: RealtimeAPIAddressOverride
           value: "http://rpi-realtimeapi"
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: database-secrets
+              key: ConnectionString_Logging_Database
+              name: redpoint-rpi-secrets
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: database-secrets
-        - name: Authentication__EnableRPIAuthentication
-          value: "true"
-        - name: DisableHttpRedirect
-          value: "true"
-        {{- if eq .Values.databases.type "postgresql" }}
+              key: ConnectionString_Operations_Database
+              name: redpoint-rpi-secrets
+        {{- end }}   
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: redpoint-rpi-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: redpoint-rpi-secrets
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
         {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
+        {{- end }} 
+        {{- end }} 
+        {{- if .Values.redpointAI.enabled }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: RPI__NLP__ApiKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_API_KEY
+              name: redpoint-rpi-secrets
+        - name: RPI__NLP__SearchKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_SEARCH_KEY
+              name: redpoint-rpi-secrets
+        - name: RPI__NLP__Model__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_MODEL_CONNECTION_STRING
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}
+        {{- if .Values.redpointAI.enabled }}
+        - name: RPI__NLP__ApiBase
+          value: {{ .Values.redpointAI.naturalLanguage.ApiBase | quote }} 
+        - name: RPI__NLP__ApiVersion
+          value: {{ .Values.redpointAI.naturalLanguage.ApiVersion | quote }}
+        - name: RPI__NLP__ChatGptEngine
+          value: {{ .Values.redpointAI.naturalLanguage.ChatGptEngine | quote }} 
+        - name: RPI__NLP__ChatGptTemp
+          value: {{ .Values.redpointAI.naturalLanguage.ChatGptTemp | quote }}
+        - name: RPI__NLP__SearchEndpoint
+          value: {{ .Values.redpointAI.cognitiveSearch.SearchEndpoint | quote }} 
+        - name: RPI__NLP__Model__VectorSearchProfile
+          value: {{ .Values.redpointAI.cognitiveSearch.VectorSearchProfile | quote }}
+        - name: RPI__NLP__Model__VectorSearchConfig
+          value: {{ .Values.redpointAI.cognitiveSearch.VectorSearchConfig | quote }}
+        - name: RPI__NLP__EmbeddingsModel
+          value: {{ .Values.redpointAI.modelStorage.EmbeddingsModel | quote }}
+        - name: RPI__NLP__Model__ModelDimensions
+          value: {{ .Values.redpointAI.modelStorage.ModelDimensions | quote }}
+        - name: RPI__NLP__Model__ContainerName
+          value: {{ .Values.redpointAI.modelStorage.ContainerName | quote }}
+        - name: RPI__NLP__Model__BlobFolder
+          value: {{ .Values.redpointAI.modelStorage.BlobFolder | quote }}
+        {{- end }}
+        image: {{ .Values.global.deployment.images.nodemanager }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         name: node-manager
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "amazon" }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-nodemanager
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-nodemanager
-spec:
-  replicas: {{ .Values.replicas.nodemanager }}
-  selector:
-    matchLabels:
-      app: rpi-nodemanager
-  template:
-    metadata:
-      labels:
-        app: rpi-nodemanager
-    spec:
-      imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: redpoint-rpi
-      containers:
-      - env:
-        - name: RPIClient__applicationSupportURL
-          value: "https://support.redpointglobal.com"
-        - name: Logging__LogLevel__Default
-          value: "Error"
-        - name: Logging__LogLevel__Microsoft
-          value: "Error"
-        - name: Logging__Database__RPITrace
-          value: "Error"
-        - name: Logging__Database__LogLevel__Default
-          value: "Error"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: postgresql-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: postgresql-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresqlserver" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "amazonrdssql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        - name: Authentication__EnableRPIAuthentication
-          value: "true"
-        - name: DisableHttpRedirect
-          value: "true"
-        - name: RealtimeAPIAddressOverride
-          value: "http://rpi-realtimeapi"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: RPI_OperationalDatabaseType
-          value: "PostgreSQL"
-        {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
-        name: node-manager
-        ports:
-        - containerPort: 8080
-          name: web-port
-          protocol: TCP
-      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+        resources:
+          limits:
+            cpu: {{ .Values.nodemanager.resources.limits.cpu }}
+            memory: {{ .Values.nodemanager.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.nodemanager.resources.requests.cpu }}
+            memory: {{ .Values.nodemanager.resources.requests.memory }}
+      {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
       {{- end }}
-      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      {{- if .Values.tolerations.enabled }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
       {{- end }}
-{{- end }}
 
----
-{{- if eq .Values.global.cloud "azure" }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-nodemanager
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-nodemanager
-spec:
-  replicas: {{ .Values.replicas.nodemanager }}
-  selector:
-    matchLabels:
-      app: rpi-nodemanager
-  template:
-    metadata:
-      labels:
-        app: rpi-nodemanager
-    spec:
-      imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: redpoint-rpi
-      containers:
-      - env:
-        - name: RPIClient__applicationSupportURL
-          value: "https://support.redpointglobal.com"
-        - name: Logging__LogLevel__Default
-          value: "Error"
-        - name: Logging__LogLevel__Microsoft
-          value: "Error"
-        - name: Logging__Database__RPITrace
-          value: "Error"
-        - name: Logging__Database__LogLevel__Default
-          value: "Error"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: postgresql-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: postgresql-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresqlserver" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "amazonrdssql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        - name: RealtimeAPIAddressOverride
-          value: "http://rpi-realtimeapi"
-        - name: Authentication__EnableRPIAuthentication
-          value: "true"
-        - name: DisableHttpRedirect
-          value: "true"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: RPI_OperationalDatabaseType
-          value: "PostgreSQL"
-        {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
-        name: node-manager
-        ports:
-        - containerPort: 8080
-          name: web-port
-          protocol: TCP
-      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "google" }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-nodemanager
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-nodemanager
-spec:
-  replicas: {{ .Values.replicas.nodemanager }}
-  selector:
-    matchLabels:
-      app: rpi-nodemanager
-  template:
-    metadata:
-      labels:
-        app: rpi-nodemanager
-    spec:
-      imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: redpoint-rpi
-      containers:
-      - env:
-        - name: RPIClient__applicationSupportURL
-          value: "https://support.redpointglobal.com"
-        - name: Logging__LogLevel__Default
-          value: "Error"
-        - name: Logging__LogLevel__Microsoft
-          value: "Error"
-        - name: Logging__Database__RPITrace
-          value: "Error"
-        - name: Logging__Database__LogLevel__Default
-          value: "Error"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: postgresql-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: postgresql-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresqlserver" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "amazonrdssql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        - name: RealtimeAPIAddressOverride
-          value: "http://rpi-realtimeapi"
-        - name: Authentication__EnableRPIAuthentication
-          value: "true"
-        - name: DisableHttpRedirect
-          value: "true"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: RPI_OperationalDatabaseType
-          value: "PostgreSQL"
-        {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-interaction-node-manager:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
-        name: node-manager
-        ports:
-        - containerPort: 8080
-          name: web-port
-          protocol: TCP
-      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-{{- end }}

@@ -1,87 +1,61 @@
+{{- if .Values.integrationapi.serviceAccount.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.integrationapi.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-integrationapi
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: rpi-integrationapi
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-integrationapi
 spec:
   ports:
   - name: http
-    port: 80
+    port: {{ .Values.services.port }}
     protocol: TCP
     targetPort: 8080
   selector:
     app: rpi-integrationapi
-    
----
-{{- if eq .Values.global.cloud "demo" }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-integrationapi
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-integrationapi
-spec:
-  replicas: {{ .Values.replicas.integrationapi }}
-  selector:
-    matchLabels:
-      app: rpi-integrationapi
-  template:
-    metadata:
-      labels:
-        app: rpi-integrationapi
-    spec:
-      serviceAccountName: redpoint-rpi
-      imagePullSecrets:
-        - name: redpoint-rpi
-      containers:
-      - env:
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: database-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: database-secrets
-        - name: Authentication__EnableRPIAuthentication
-          value: "true"
-        - name: Authentication__RPIAuthentication__AuthorizationHost
-          value: "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
-        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
-          value: "http://rpi-integrationapi"
-        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
-          value: "false"
-        - name: EnableSwagger
-          value: "true"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: RPI_OperationalDatabaseType
-          value: "PostgreSQL"
-        {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
-        name: integration-api
-        ports:
-        - containerPort: 8080
-          name: web-port
-          protocol: TCP
-{{- end }}
 
 ---
-{{- if eq .Values.global.cloud "amazon" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpi-integrationapi
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-integrationapi
+    {{- with .Values.integrationapi.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
 spec:
-  replicas: {{ .Values.replicas.integrationapi }}
+  {{- if not .Values.integrationapi.autoscaling.enabled }}
+  replicas: {{ .Values.integrationapi.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       app: rpi-integrationapi
@@ -89,62 +63,42 @@ spec:
     metadata:
       labels:
         app: rpi-integrationapi
+        {{- with .Values.integrationapi.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+        {{- end }}
+      annotations:
+        {{- with .Values.integrationapi.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.integrationapi.customMetrics.enabled }}
+        prometheus.io/scrape: {{ .Values.integrationapi.customMetrics.prometheus_scrape | quote }}
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        {{- end }}
     spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: redpoint-rpi
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ .Values.integrationapi.serviceAccount.name }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      {{- end }}
       containers:
       - env:
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: postgresql-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: postgresql-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresqlserver" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "amazonrdssql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
+        - name: Logging__LogLevel__Default
+          value: {{ .Values.integrationapi.logging.logLevel | quote }}
         - name: Authentication__EnableRPIAuthentication
-          value: "true"
+          value: {{ .Values.integrationapi.enableRPIAuthentication | quote }}
         - name: Authentication__RPIAuthentication__AuthorizationHost
           value: "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
         - name: Authentication__RPIAuthentication__AuthMetaHttpHost
@@ -152,122 +106,68 @@ spec:
         - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
           value: "false"
         - name: EnableSwagger
-          value: "true"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: RPI_OperationalDatabaseType
-          value: "PostgreSQL"
+          value: {{ .Values.integrationapi.enableSwagger | quote }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: CloudIdentity__Azure__CredentialType
+          value: "AzureIdentity"
+        - name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
+          value: {{ .Values.cloudIdentity.azureSettings.UseADTokenForDatabaseConnection | quote }}
+        - name: KeyVault__Provider
+          value: "Azure"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        - name: KeyVault__AzureSettings__VaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.vaultUri | quote }}
+        - name: KeyVault__AzureSettings__AppSettingsVaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.appSettingsVaultUri | quote }}
+        - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
+          value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
-        name: integration-api
-        ports:
-        - containerPort: 8080
-          name: web-port
-          protocol: TCP
-        volumeMounts:
-          {{- if .Values.storage.enabled }}
-          - name: rpifileoutputdir
-            mountPath: /rpifileoutputdir
-          {{- end }}
-      volumes:
-        {{- if .Values.storage.enabled }}
-        - name: rpifileoutputdir
-          persistentVolumeClaim:
-            claimName: {{ .Values.storage.persistentVolumeClaim }}
         {{- end }}
-      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-{{- end }}
-
----
-{{- if eq .Values.global.cloud "azure" }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-integrationapi
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-integrationapi
-spec:
-  replicas: {{ .Values.replicas.integrationapi }}
-  selector:
-    matchLabels:
-      app: rpi-integrationapi
-  template:
-    metadata:
-      labels:
-        app: rpi-integrationapi
-    spec:
-      imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: redpoint-rpi
-      containers:
-      - env:
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: postgresql-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: postgresql-secrets
         {{- end }}
-        {{- if eq .Values.databases.type "azuresqlserver" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
         {{- end }}
-        {{- if eq .Values.databases.type "amazonrdssql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
+        {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: CloudIdentity__Google_ProjectId
+          value: {{ .Values.cloudIdentity.googleSettings.projectId | quote }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS 
+          value: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
+        - name: KeyVault__Provider
+          value: "Google"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
         {{- end }}
-        - name: Authentication__EnableRPIAuthentication
-          value: "true"
-        - name: Authentication__RPIAuthentication__AuthorizationHost
-          value: "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
-        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
-          value: "http://rpi-integrationapi"
-        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
-          value: "false"
-        - name: EnableSwagger
-          value: "true"
-        {{- if .Values.OpenIdEnabled }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: CloudIdentity__Amazon__AccessKeyId
+          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
+        - name: CloudIdentity__Amazon__SecretAccessKey
+          value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        - name: KeyVault__Provider
+          value: "Amazon"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.OpenIdProviders.enabled }}
         - name: Authentication__OpenIdProviders__0__Name
           value: {{ .Values.OpenIdProviders.Name | quote }}
         - name: Authentication__OpenIdProviders__0__AuthorizationHost
@@ -279,7 +179,7 @@ spec:
         - name: Authentication__OpenIdProviders__0__RedirectURL
           value: {{ .Values.OpenIdProviders.RedirectURL | quote }}
         - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
-          value: {{ .Values.OpenIdProviders.EnableRefreshTokens | quote }}
+          vlaue: {{ .Values.OpenIdProviders.EnableRefreshTokens | quote }}
         - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
           value: {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateIssuer
@@ -287,148 +187,121 @@ spec:
         - name: Authentication__OpenIdProviders__0__ValidateAudience
           value: {{ .Values.OpenIdProviders.ValidateAudience | quote }}
         {{- end }}
-        {{- if eq .Values.databases.type "postgresql" }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: redpoint-rpi-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}   
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: redpoint-rpi-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: redpoint-rpi-secrets
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
         {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
+        {{- end }}
+        {{- end }}
+        {{- if .Values.storage.enabled }}
+        - name: RPI__FileOutput__Directory
+          value: /rpifileoutputdir
+        {{- end }}
+        {{- if .Values.redpointAI.enabled }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: RPI__NLP__ApiKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_API_KEY
+              name: redpoint-rpi-secrets
+        - name: RPI__NLP__SearchKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_SEARCH_KEY
+              name: redpoint-rpi-secrets
+        - name: RPI__NLP__Model__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_MODEL_CONNECTION_STRING
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}
+        {{- if .Values.redpointAI.enabled }}
+        - name: RPI__NLP__ApiBase
+          value: {{ .Values.redpointAI.naturalLanguage.ApiBase | quote }} 
+        - name: RPI__NLP__ApiVersion
+          value: {{ .Values.redpointAI.naturalLanguage.ApiVersion | quote }}
+        - name: RPI__NLP__ChatGptEngine
+          value: {{ .Values.redpointAI.naturalLanguage.ChatGptEngine | quote }} 
+        - name: RPI__NLP__ChatGptTemp
+          value: {{ .Values.redpointAI.naturalLanguage.ChatGptTemp | quote }}
+        - name: RPI__NLP__SearchEndpoint
+          value: {{ .Values.redpointAI.cognitiveSearch.SearchEndpoint | quote }} 
+        - name: RPI__NLP__Model__VectorSearchProfile
+          value: {{ .Values.redpointAI.cognitiveSearch.VectorSearchProfile | quote }}
+        - name: RPI__NLP__Model__VectorSearchConfig
+          value: {{ .Values.redpointAI.cognitiveSearch.VectorSearchConfig | quote }}
+        - name: RPI__NLP__EmbeddingsModel
+          value: {{ .Values.redpointAI.modelStorage.EmbeddingsModel | quote }}
+        - name: RPI__NLP__Model__ModelDimensions
+          value: {{ .Values.redpointAI.modelStorage.ModelDimensions | quote }}
+        - name: RPI__NLP__Model__ContainerName
+          value: {{ .Values.redpointAI.modelStorage.ContainerName | quote }}
+        - name: RPI__NLP__Model__BlobFolder
+          value: {{ .Values.redpointAI.modelStorage.BlobFolder | quote }}
+        {{- end }}
+        image: {{ .Values.global.deployment.images.integrationapi }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         name: integration-api
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
+        resources:
+          limits:
+            cpu: {{ .Values.integrationapi.resources.limits.cpu }}
+            memory: {{ .Values.integrationapi.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.integrationapi.resources.requests.cpu }}
+            memory: {{ .Values.integrationapi.resources.requests.memory }}
+        {{- if .Values.storage.enabled }}
         volumeMounts:
-          {{- if .Values.storage.enabled }}
           - name: rpifileoutputdir
             mountPath: /rpifileoutputdir
-          {{- end }}
+        {{- end }}
+      {{- if .Values.storage.enabled }}
       volumes:
-        {{- if .Values.storage.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaim }}
-        {{- end }}
-      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      {{- end }}
+      {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
       {{- end }}
-      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      {{- if .Values.tolerations.enabled }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
       {{- end }}
-{{- end }}
 
----
-{{- if eq .Values.global.cloud "google" }}
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rpi-integrationapi
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: rpi-integrationapi
-spec:
-  replicas: {{ .Values.replicas.integrationapi }}
-  selector:
-    matchLabels:
-      app: rpi-integrationapi
-  template:
-    metadata:
-      labels:
-        app: rpi-integrationapi
-    spec:
-      imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: redpoint-rpi
-      containers:
-      - env:
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: postgresql-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: postgresql-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "azuresqlserver" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "amazonrdssql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        {{- if eq .Values.databases.type "googlecloudsql" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__LoggingDatabase
-              name: sqlserver-secrets
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionStrings__OperationalDatabase
-              name: sqlserver-secrets
-        {{- end }}
-        - name: Authentication__EnableRPIAuthentication
-          value: "true"
-        - name: Authentication__RPIAuthentication__AuthorizationHost
-          value: "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
-        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
-          value: "http://rpi-integrationapi"
-        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
-          value: "false"
-        - name: EnableSwagger
-          value: "true"
-        {{- if eq .Values.databases.type "postgresql" }}
-        - name: RPI_OperationalDatabaseType
-          value: "PostgreSQL"
-        {{- end }}
-        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/redpoint-integration-api:{{ .Values.global.image_tag }}
-        imagePullPolicy: Always
-        name: integration-api
-        ports:
-        - containerPort: 8080
-          name: web-port
-          protocol: TCP
-        volumeMounts:
-          {{- if .Values.storage.enabled }}
-          - name: rpifileoutputdir
-            mountPath: /rpifileoutputdir
-          {{- end }}
-      volumes:
-        {{- if .Values.storage.enabled }}
-        - name: rpifileoutputdir
-          persistentVolumeClaim:
-            claimName: {{ .Values.storage.persistentVolumeClaim }}
-        {{- end }}
-      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-{{- end }}

@@ -1,9 +1,9 @@
-{{- if eq .Values.global.cloud "demo" }}
+{{- if eq .Values.global.deployment.mode "demo" }}
 apiVersion: v1
 kind: Service
 metadata:
   name: rpiopsmssqlserver
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: rpiopsmssqlserver
@@ -18,7 +18,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpiopsmssqlserver
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -44,13 +44,24 @@ spec:
           value: "Y"
         - name: SA_PASSWORD
           value: ".RedPoint2021"
-
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: rpimongodbserver
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
     app: rpimongodbserver
@@ -65,7 +76,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rpimongodbserver
-  namespace: {{ .Values.global.namespace }}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -87,4 +98,15 @@ spec:
         env:
         - name: MONGO_INITDB_DATABASE
           value: "rpi_cdp_nosql"
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
 {{- end }}

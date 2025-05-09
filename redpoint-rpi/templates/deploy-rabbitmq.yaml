@@ -1,5 +1,4 @@
-{{- if eq .Values.global.cloud "demo" }}
----
+{{- if eq .Values.global.deployment.mode "demo" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -44,7 +43,7 @@ spec:
       containers:
       - name: rabbitmq-management
         image: rg1acrpub.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
-        imagePullPolicy: Always
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         ports:
         - name: port-one
           containerPort: 5672

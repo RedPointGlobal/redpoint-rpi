@@ -1,11 +1,11 @@
-{{- if eq .Values.global.cloud "demo" }}
+{{- if eq .Values.global.deployment.mode "demo" }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-rtcache-redis
-  namespace: {{ .Values.global.namespace }}
+  name: rtd-cache-redis
+  namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rtcache-redis
+    app: rtd-cache-redis
 spec:
   ports:
   - name: http
@@ -13,36 +13,47 @@ spec:
     protocol: TCP
     targetPort: 6379
   selector:
-    app: rpi-rtcache-redis
+    app: rtd-cache-redis
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-rtcache-redis
-  namespace: {{ .Values.global.namespace }}
+  name: rtd-cache-redis
+  namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rtcache-redis
+    app: rtd-cache-redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: rpi-rtcache-redis
+      app: rtd-cache-redis
   template:
     metadata:
       labels:
-        app: rpi-rtcache-redis
+        app: rtd-cache-redis
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
       serviceAccountName: redpoint-rpi
       containers:
-      - name: rpi-rtcache-redis
+      - name: rtd-cache-redis
         image: rg1acrpub.azurecr.io/rpi/ancillary/rtcache/redis-6:latest
-        imagePullPolicy: Always
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         ports:
         - containerPort: 6379
           name: web-port
           protocol: TCP
-      hostname: rpi-rtcache-redis
+      hostname: rtd-cache-redis
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
 {{- end }}
