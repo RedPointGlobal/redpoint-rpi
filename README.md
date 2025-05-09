@@ -13,8 +13,7 @@ This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
 - [Retrieve Client Endpoints ](#retrieve-client-endpoints)
 - [Download Client Executable ](#download-client-executable)
 - [Configure Storage ](#configure-storage)
-- [Configure Realtime Queue Providers](#configure-realtime-queue-providers)
-- [Configure Realtime Cache Providers](#configure-realtime-cache-providers)
+- [Configure Realtime](#configure-realtime)
 - [Configure Open ID Connect](#configure-open-id-connect)
 - [Configure Content Generation Tools](#configure-content-generation-tools)
 - [Configure Custom Metrics](#configure-custom-metrics)
@@ -59,7 +58,7 @@ Before deploying RPI, determine whether you're planning a Greenfield deployment 
 
 Both deployment methods require you deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
 
-**Begin Deployment**
+### Begin Deployment
 
 At a highlevel, the deployment process flows as follows:
 
@@ -241,7 +240,7 @@ This Helm chart does not enforce any specific storage solution. You are responsi
     persistentVolumeClaim: rpifileoutputdir
 ```
 
-**10. Configure Realtime Cache and Queue Providers**
+**10. Configure Realtime**
 
 **Note: This step is optional** Skip if your RPI deployment does not include Realtime Decisions
 
@@ -267,7 +266,7 @@ cacheProviders:
 
 **Note:** When using the RPI SQL Server native cache provider, you can download the necessary setup scripts for SQL Server in-memory cache tables from the deployment service's downloads page: ```https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\In Memory Cache Setup.sql.``` 
 
-**11. Configure Realtime Queue Reader**
+ -**Realtime Queue Reader**
 
 **Note: This step is optional** Skip if your RPI deployment does not include Realtime Decisions
 
