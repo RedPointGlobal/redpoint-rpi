@@ -8,14 +8,14 @@ This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
 - [System Requirements ](#system-requirements)
 - [Considerations Before you begin ](#considerations-before-you-begin)
 - [Begin Deployment ](#begin-deployment)
-- [Post Deployment Configuration (Greenfield)](#post-deployment-configuration-%28greenfield%29)
-- [Post Deployment Configuration (Upgrade)](#post-deployment-configuration-%28upgrade%29)
+- [Post Greenfield Deployment Configuration](#post-greenfield-deployment-configuration)
+- [Post Upgrade Deployment Configuration](#post-upgrade-deployment-configuration)
 - [Retrieve Client Endpoints ](#retrieve-client-endpoints)
 - [Download Client Executable ](#download-client-executable)
 - [Configure Storage ](#configure-storage)
 - [Configure Realtime Queue Providers](#configure-realtime-queue-providers)
 - [Configure Realtime Cache Providers](#configure-realtime-cache-providers)
-- [Configure Open ID Connect (OIDC)](#configure-open-id-connect-%28oidc%29)
+- [Configure Open ID Connect](#configure-open-id-connect)
 - [Configure Content Generation Tools](#configure-content-generation-tools)
 - [Configure Custom Metrics](#configure-custom-metrics)
 - [Configure High Availability ](#configure-high-availability)
@@ -340,7 +340,7 @@ https://rpi-callbackapi.example.com                                # Callback AP
 https://rpi-interactionapi.example.com/api/deployment/download     # Client Download
 ```
 
-### Post-Deployment Configuration (Greenfield)
+### Post Greenfield Deployment Configuration
 
  - **Activate RPI License**
 
@@ -478,7 +478,7 @@ curl -X 'GET' \
 
 You should receive the ```"Status": "LastRunComplete"``` response to confirm that the client deployment has completed successfully.
 
-### Post-Deployment Configuration (Upgrade)
+### Post Upgrade Deployment Configuration
 
 Once the RPI v7 containers have been successfully deployed as described above, you can trigger the upgrade process as shown below
 
@@ -573,7 +573,7 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
 ```
 
-### Configure Open ID Connect (OIDC)
+### Configure Open ID Connect
 RPI supports OpenID Connect (OIDC) for authentication. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file. Adjust these values to match your environment's configuration
 
 ```
