@@ -240,7 +240,7 @@ This Helm chart does not enforce any specific storage solution. You are responsi
     persistentVolumeClaim: rpifileoutputdir
 ```
 
-**10. Configure Realtime**
+### Configure Realtime
 
 **Note: This step is optional** Skip if your RPI deployment does not include Realtime Decisions
 
