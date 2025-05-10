@@ -2,3 +2,4 @@ aws-values.yaml
 azure-values.yaml
 aws-manifests.yaml
 azure-manifests.yaml
+azure.yaml
