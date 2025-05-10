@@ -381,13 +381,16 @@ spec:
               memory: 90Mi
       serviceAccountName: nginx-{{ .Release.Namespace }}
       terminationGracePeriodSeconds: 300
-      {{- with .Values.global.nodeSelector | default .Values.global.nodeSelector }}
+      {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
-        {{- toYaml . | nindent 8 }}
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
       {{- end }}
-      {{- with .Values.global.tolerations | default .Values.global.tolerations }}
+      {{- if .Values.tolerations.enabled }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
       {{- end }}
 
 ---
