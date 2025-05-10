@@ -213,11 +213,9 @@ spec:
           value: "5432"
         {{- end }}
         {{- end }}
-        {{- if eq .Values.databases.operational.provider "sqlserver" }}
-        {{- if eq .Values.databases.operational.platform "selfhosted" }}
+        {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
-        {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         {{- if eq .Values.databases.operational.platform "selfhosted" }}
@@ -280,5 +278,3 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
-
-
