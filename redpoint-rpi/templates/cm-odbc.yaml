@@ -1,0 +1,82 @@
+{{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odbc-config
+data:
+  odbc2.ini: |
+
+    [ODBC]
+    Trace=no
+
+    [ODBC Data Sources]
+    {{ .Values.databases.datawarehouse.provider }}=Amazon Redshift DSN 64=Amazon Redshift (x64)
+
+    [{{ .Values.databases.datawarehouse.provider }}]
+    Description=Amazon Redshift ODBC Driver (64-bit) DSN
+    Driver=/app/odbc-lib/redshift/lib/libamazonredshiftodbc64.so
+
+    Server={{ .Values.databases.datawarehouse.redshift.server }}
+    Port={{ .Values.databases.datawarehouse.redshift.port }}
+    Database={{ .Values.databases.datawarehouse.redshift.database }}
+    UID={{ .Values.databases.datawarehouse.redshift.username }}
+    PWD={{ .Values.databases.datawarehouse.redshift.password }}
+    locale=en-US
+{{- end }}
+
+---
+{{- if eq .Values.databases.datawarehouse.provider "databricks" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odbc-config
+data:
+  odbc2.ini: |
+
+    [ODBC]
+    Trace=no
+
+    [ODBC Data Sources]
+    {{ .Values.databases.datawarehouse.provider }}=Simba Spark ODBC Driver
+
+    [{{ .Values.databases.datawarehouse.provider }}]
+    Driver=/app/odbc-lib/simba/spark/lib/libsparkodbc_sb64.so
+    SparkServerType=3
+    Host={{ .Values.databases.datawarehouse.databricks.host }}
+    Port=443
+    SSL=1
+    Min_TLS=1.2 
+    ThriftTransport=2
+    UID={{ .Values.databases.datawarehouse.databricks.token }}
+    PWD={{ .Values.databases.datawarehouse.databricks.password }}
+    AuthMech=3
+    TrustedCerts=/app/odbc-lib/simba/spark/lib/cacerts.pem
+    UseSystemTrustStore=0
+    HTTPPath=/sql/1.0/warehouses/c546e1e69e8d2ac9
+{{- end }}
+
+
+---
+{{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odbc-config
+data:
+  odbc2.ini: |
+
+    [ODBC]
+    Trace=no
+
+    [ODBC Data Sources]
+    {{ .Values.databases.datawarehouse.provider }}=Simba ODBC Driver for Google BigQuery (64-bit) DSN
+
+    [{{ .Values.databases.datawarehouse.provider }}]
+    Description=Simba ODBC Driver for Google BigQuery (64-bit) DSN
+    Driver=/app/odbc-lib/bigquery/SimbaODBCDriverforGoogleBigQuery64/lib/libgooglebigqueryodbc_sb64.so
+    Catalog={{ .Values.databases.datawarehouse.bigquery.projectId }}
+    SQLDialect={{ .Values.databases.datawarehouse.bigquery.sqlDialect }}
+    OAuthMechanism={{ .Values.databases.datawarehouse.bigquery.OAuthMechanism }}
+    Email={{ .Values.databases.datawarehouse.bigquery.email }}
+    KeyFilePath={{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}
+{{- end }}

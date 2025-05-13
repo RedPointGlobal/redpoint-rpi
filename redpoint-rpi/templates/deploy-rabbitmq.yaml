@@ -1,0 +1,94 @@
+{{- if .Values.realtimeapi.enabled }}
+{{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-rabbitmq
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-rabbitmq
+spec:
+  ports:
+  - name: http
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+  - name: console
+    port: 15672
+    protocol: TCP
+    targetPort: 15672
+  selector:
+    app: rpi-rabbitmq
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rpi-rabbitmq
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: rpi-rabbitmq
+      containers:
+      - name: rpi-rabbitmq
+        image: {{ .Values.global.deployment.images.rabbitmq }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        ports:
+        - name: port-one
+          containerPort: 5672
+          protocol: TCP
+        - name: port-two
+          containerPort: 15672
+          protocol: TCP
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
+        - name: RABBITMQ_DEFAULT_PASS
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.password | quote }}
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtual_host | quote }}
+        livenessProbe:
+          exec:
+            command:
+            - "rabbitmq-diagnostics"
+            - "-q"
+            - "ping"
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+      hostname: rpi-rabbitmq
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+{{- end }}

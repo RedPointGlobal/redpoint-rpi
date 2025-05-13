@@ -1,0 +1,351 @@
+{{- if .Values.queuereader.enabled }}
+{{- if .Values.queuereader.serviceAccount.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.queuereader.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-queuereader
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.services.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-queuereader
+    {{- with .Values.queuereader.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+spec:
+  {{- if not .Values.queuereader.autoscaling.enabled }}
+  replicas: {{ .Values.queuereader.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+        {{- with .Values.queuereader.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+        {{- end }}
+      annotations:
+        {{- with .Values.queuereader.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.queuereader.customMetrics.enabled }}
+        prometheus.io/scrape: {{ .Values.queuereader.customMetrics.prometheus_scrape | quote }}
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ .Values.queuereader.serviceAccount.name }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      {{- end }}
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: {{ .Values.queuereader.logging.logLevel | quote }} 
+        - name: RPI__ServiceHostName
+          value: "http://rpi-interactionapi"
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        - name: RPI__ServiceHostPortNumber
+          value: {{ .Values.services.port | quote }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        - name: CloudIdentity__Azure__CredentialType
+          value: "AzureIdentity"
+        - name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
+          value: {{ .Values.cloudIdentity.azureSettings.UseADTokenForDatabaseConnection | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: KeyVault__Provider
+          value: "Azure"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        - name: KeyVault__AzureSettings__VaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.vaultUri | quote }}
+        - name: KeyVault__AzureSettings__AppSettingsVaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.appSettingsVaultUri | quote }}
+        - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
+          value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
+        {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
+        - name: CloudIdentity__Google_ProjectId
+          value: {{ .Values.cloudIdentity.googleSettings.projectId | quote }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS 
+          value: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: KeyVault__Provider
+          value: "Google"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+        - name: CloudIdentity__Amazon__AccessKeyId
+          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
+        - name: CloudIdentity__Amazon__SecretAccessKey
+          value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: KeyVault__Provider
+          value: "Amazon"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- if .Values.storage.enabled }}
+        - name: RPI__FileOutput__Directory
+          value: /fileoutputdir
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: redpoint-rpi-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: redpoint-rpi-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}
+        {{- end }}   
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: redpoint-rpi-secrets
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.cacheProvider.provider "mongodb" }}
+        {{- if .Values.queuereader.isDistributed }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Assembly
+          value: "RedPoint.Resonance.MongoDBCache"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Class
+          value: "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Key
+          value: "Database"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Value
+          value: {{ .Values.realtimeapi.cacheProvider.mongodb.databaseName | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Key
+          value: "CollectionName"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Value
+          value: {{ .Values.realtimeapi.cacheProvider.mongodb.collectionName | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        {{- if eq .Values.realtimeapi.cacheProvider.provider "mongodb" }}
+        {{- if .Values.queuereader.isDistributed }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Key
+          value: "ConnectionString"
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              key: RealtimeAPI_MongoCache_ConnectionString
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.cacheProvider.provider "inMemorySql" }}
+        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Name
+          value: "InMemorySQL"
+        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Assembly
+          value: "RedPoint.Resonance.Web.Shared"
+        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Class
+          value: "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache"
+        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Key
+          value: "ConnectionString"
+        {{- end }}
+        {{- if eq .Values.realtimeapi.cacheProvider.provider "inMemorySql" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_inMemorySql_ConnectionString
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        - name: QueueService__QueueListener__IsEnabled
+          value: {{ .Values.queuereader.queueListenerEnabled | quote }}
+        - name: QueueService__QueueListener__QueuePath
+          value: {{ .Values.realtimeapi.queueProvider.queueNames.listenerQueuePath | quote }}
+        - name: QueueService__QueueListener__ThreadPoolSize
+          value: {{ .Values.queuereader.threadPoolSize | quote }}
+        - name: QueueService__QueueListener__TimeoutMinutes
+          value: {{ .Values.queuereader.timeoutMinutes | quote }}
+        - name: QueueService__QueueListener__MaxBatchSize
+          value: {{ .Values.queuereader.maxBatchSize | quote }}
+        - name: QueueService__QueueListener__UseMessageLocks
+          value: {{ .Values.queuereader.useMessageLocks | quote }}
+        - name: QueueService__RealtimeConfiguration__IsFormProcessingEnabled
+          value: {{ .Values.queuereader.isFormProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__IsEventProcessingEnabled
+          value: {{ .Values.queuereader.isEventProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__IsCacheProcessingEnabled
+          value: {{ .Values.queuereader.isCacheProcessingEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__TenantIDs
+          value: '{{ toJson .Values.queuereader.tenantIds }}'
+        - name: QueueService__RealtimeConfiguration__IsDistributed
+          value: {{ .Values.queuereader.isDistributed | quote }}
+        {{- if eq .Values.realtimeapi.cacheProvider.provider "redis" }}
+        {{- if .Values.queuereader.isDistributed }}
+        - name: QueueService__RealtimeConfiguration__DistributedCache__Provider
+          value: "Redis"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__RedisSettings__IPAddress
+          value: {{ .Values.realtimeapi.cacheProvider.redis.connectionstring | quote }}
+        {{- end }}
+        {{- end }}
+        image: {{ .Values.global.deployment.images.queuereader }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        name: rpi-queuereader
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        resources:
+          limits:
+            cpu: {{ .Values.queuereader.resources.limits.cpu }}
+            memory: {{ .Values.queuereader.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.queuereader.resources.requests.cpu }}
+            memory: {{ .Values.queuereader.resources.requests.memory }}
+        volumeMounts:
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          {{- if .Values.storage.enabled }}
+          - name: rpifileoutputdir
+            mountPath: /rpifileoutputdir
+          {{- end }}
+      volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+        {{- if .Values.storage.enabled }}
+        - name: rpifileoutputdir
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaim }}
+        {{- end }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

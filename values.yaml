@@ -1,0 +1,1044 @@
+global:
+  application:
+    name: redpoint-interaction
+    version: 7
+
+  deployment:
+    # Specify the cloud environment where the deployment will run.
+    # Supported options: azure, amazon, google, selfhosted
+    # "selfhosted" is intended for on-premise or non-cloud based kubernetes deployments.
+    platform: amazon
+
+    # Image list
+    images:
+      interactionapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi
+      integrationapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-integrationapi
+      executionservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-executionservice
+      nodemanager: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-nodemanager
+      realtimeapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-realtimeapi
+      callbackapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-callbackapi
+      queuereader: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-queuereader
+      deploymentapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-deploymentapi
+      init: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-init:latest
+      rabbitmq: rg1acrpub.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
+      ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
+    
+      # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
+      tag: 7.6.2025-0503-1541
+      # Pull the image only if it's not already present on the node
+      imagepullPolicy: IfNotPresent
+      # Use an image pull secret for private registry authentication
+      imagePullSecret:
+        enabled: true
+        # Name of the Kubernetes secret containing registry credentials
+        name: redpoint-rpi
+
+# ==========================
+databases:
+  # Operational database providers 
+  operational:
+    # Supported options:
+    # - sqlserver (can be hosted on Azure, Google Cloud, AWS RDS)
+    # - postgresql (can be hosted on Azure, Google Cloud, AWS RDS)
+    # - sqlserveronvm (SQL Server on a Virtual Machine)
+    provider: sqlserver
+    # The hostname or IP address of the database server
+    server_host: <my-database-server-host>
+    # The username for accessing the database
+    server_username: <my-database-server-username>
+    # The password for the given username
+    server_password: <my-database-server-password>
+    # The name of the operational database
+    pulse_database_name: <my-pulse-database-name>
+    # The name of the logging database
+    pulse_logging_database_name: <my-logging-database-name>
+    # The schema to be used within the database
+    databaseSchema: dbo
+
+  # Datawarehouse Providers
+  datawarehouse:
+    # Enable datawarehouse configuration.
+    enabled: true
+    # Only update the fields relevant to your chosen option and leave the others unchanged.
+    # For example, if you're using Redshift, update the Redshift fields and leave Databricks and BigQuery fields as-is.
+    # Supported options: (redshift, databricks, bigquery, snowflake)
+    # In RPI use the provider name as the DSN name
+    provider: redshift
+    # ==========================
+    # Configuration for Redshift
+    redshift:
+      # The endpoint for your Redshift cluster
+      server: <my-redshift-endpoint>
+      # Default port for Redshift
+      port: 5439
+      # Name of the Redshift database
+      database: <my-redshift-database-name>
+      # Redshift database username
+      username: <my-redshift-username>
+      # Redshift database password
+      password: <my-redshift-password>
+    # ==========================
+    # Configuration for BigQuery
+    bigquery:
+      # The Google Cloud Project ID
+      projectId: my_google_project_id
+      # SQL dialect option (1 = Standard SQL)
+      sqlDialect: 1
+      # OAuth mechanism (0 = Service Account, 1 = User Credentials)
+      OAuthMechanism: 0 
+      # Service account email
+      email: my-google-svs-account@my-project.iam.gserviceaccount.com    
+      # Path to the service account JSON key file
+      ConfigMapFilePath: /app/odbc-google-creds-config/google-service-account.json
+    # ==========================
+    # Configuration for Snowflake
+    snowflake:
+      # Name of the ConfigMap storing Snowflake credentials
+      ConfigMapName: snowflake-creds
+      # Name of the RSA key for authentication
+      keyName: my_snowflake_rsa_key.p8
+      # Mount path for the credentials in the container
+      mountPath: /app/snowflake-creds
+
+# ==========================
+cloudIdentity:
+  enabled: false
+  # Authentication method for accessing cloud services.
+  # Supported options: Azure, Google, Amazon
+  provider: Amazon
+  secretsManagement:
+    enabled: false
+    # Specify how to reference required secrets, such as database passwords and connection strings.
+    # Supported options: 'kubernetes' or 'keyvault'
+    #
+    # - Use 'kubernetes' to have the Helm chart automatically create the secrets within your Kubernetes cluster.
+    # - Use 'keyvault' to disable Kubernetes secret creation and pull secrets from an external key vault.
+    #
+    # For more information, refer to the RPI Secret Management documentation:
+    # https://docs.redpointglobal.com/rpi/admin-secret-management
+    secretsProvider: kubernetes
+    # If secretsProvider is kubernetes - Let the Helm chart automatically create the secret
+    autoCreateSecrets: true
+    # Name of the kubernetes secret to be created
+    secretName: redpoint-rpi-secrets
+    # Use Key Vault for system configuration passwords
+    UseForConfigPasswords: true
+    UseForAppSettings: true
+    # Interval in seconds to reload configuration from Key Vault
+    ConfigurationReloadIntervalSeconds: 30
+  azureSettings:
+    # Supported options: workloadIdentity
+    credentialsType: workloadIdentity
+    managedIdentityClientId: your_managed_identity_client_id
+    UseADTokenForDatabaseConnection: false
+    # If your secretsProvider is keyvault
+    vaultUri: https://myvault.vault.azure.net/
+    appSettingsVaultUri: https://myvault.vault.azure.net/
+  googleSettings:
+    credentialsType: serviceAccount
+    # Create a ConfigMap containing the service account JSON credentials file 
+    # and provide the name below
+    configMapName: my-google-svs-account
+    serviceAccountEmail: my-google-svs-account@my-project.iam.gserviceaccount.com
+    # Name of google project
+    projectId: your_google_project_id
+  amazonSettings:
+    credentialsType: accessKey
+    accessKeyId: DUMMYACCESSKEY123456
+    secretAccessKey: DUMMYSECRETKEY7890abcdEFGH
+    region: us-east-1  
+
+# ==========================      
+storage:
+  # Configure storage for the RPI File Output Directory.
+  # This chart is intentionally storage agnostic and does not enforce any specific storage solution.
+  # You are responsible for creating the appropriate storage configuration based on your cloud provider’s requirements.
+  # Provide the name of the Persistent Volume Claim (PVC) to be used below.
+  # If storage is not needed, set 'enabled' to false.
+  enabled: false
+  persistentVolumeClaim: rpifileoutputdir
+
+services:
+  # The port on which the Kubernetes services will be exposed.
+  # This can be customized to align with the customer's internal port policies or conventions.
+  port: 80
+
+# ==========================
+realtimeapi:
+  # If disabled, Realtime Decisions will not be deployed
+  enabled: true
+  replicas: 1
+  serviceAccount: 
+    enabled: true
+    name: rpi-realtimeapi
+  enableEventListening: true
+  realtimeProcessingEnabled: true
+  CORSOrigins: ["*"]
+  ThresholdBetweenSiteVisitsMinutes: 30
+  NoDaysPersistWebEvents: 365
+  CacheWebFormData: true
+  decisionCacheDuration: 60
+  pluginAssemblyPath: /app/plugins
+  enableAuditMetricsInHeaders: true
+  cacheOutputQueueEnabled: true
+  # Unique identifier for the RPI client. Ensure this matches your registered RPI client ID.
+  rpiClientID: 00000000-0000-0000-0000-000000000000
+  # Set the RPIAuthToken to the same value as the RealtimeAPIKey that is configured in the RPI client. 
+  rpiAuthToken: 00000000-0000-0000-0000-000000000000 
+  # Set to `true` to make the Realtime API Swagger page available for API exploration and testing.
+  enableHelpPages: true 
+  cacheProvider:
+    # This section defines the settings for the real-time cache provider.
+    # Update only the fields relevant to your chosen provider and leave the others unchanged.
+    # Set to true to enable real-time cache configuration.
+    enabled: true  
+    # Choose your cache provider
+    # Supported options: (mongodb, azureredis, redis, inMemorySql).
+    provider: mongodb
+
+    # If using MongoDB as the provider
+    mongodb:
+      # Provide the MongoDB connection string.
+      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true
+      databaseName: <my-realtime-cache-db>
+      collectionName: <my-realtime-cache-collection>
+
+    # If using Azure Redis as the provider
+    azureredis: 
+      # Provide the Azure Redis server host URL.
+      connectionstring: redis://<your-redis-name>.redis.cache.windows.net:6380?ssl=true&password=<your-access-key>
+
+    # If using Redis as the provider
+    redis:
+      # Provide the Redis cache connection string.
+      connectionstring: <my-redis-hostname>:6379,ssl=True,abortConnect=false,user=<my-username>,password=<my-username>
+      
+    inMemorySql:
+      server_host: <my-cache-database-server-host>
+      databaseName: <my-cache-database-name>
+      username: <my-cache-database-username>
+      password: <my-cache-database-password>
+
+  queueProvider:
+    # This section defines the settings for the real-time message queue provider.
+    # Set to true to enable real-time queue configuration
+    enabled: true  
+    # Choose your message queue provider
+    # Supported options: (amazonsql, azureservicebus, googlepubsub, azureeventhubs, rabbitmq)
+    provider: amazonsqs  
+    queueNames: 
+      # Queues required by the RPI Realtime service
+      # Ensure that you replace these values with the actual names of the queues 
+      # that are allocated for your specific environment.
+      formQueuePath: RPIWebFormSubmission
+      eventsQueuePath: RPIWebEvents
+      cacheOutputQueuePath: RPIWebCacheData
+      recommendationsQueuePath: RPIWebRecommendations
+      listenerQueuePath: RPIQueueListener
+      # Queue required for the RPI callback service (Sendgrid)
+      callbackServiceQueuePath: RPICallbackApiQueue
+    # Update only the fields relevant to your chosen provider and leave the others unchanged.
+    # If using AWS SQS as the provider
+    amazonsqs:
+      # Specify the authentication method for accessing Amazon SQS.
+      # Supported options:
+      #   - accessKey: Use static AWS access key and secret key (configure these under the cloudIdentity.amazonSettings section above).
+      credentialsType: accessKey
+
+    # If using Azure Service Bus as the queue provider
+    azureservicebus:
+      # Provide the Azure Service Bus connection string
+      connectionstring: Endpoint=sb://<your-service-bus-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-policy-name>;SharedAccessKey=<your-policy-key>
+
+    # If using Google Pub/Sub as the queue provider
+    googlepubsub:
+      # Provide the Google Cloud project ID
+      projectId: <my-google-project-id>
+
+    # If using Azure Event Hubs as the queue provider
+    azureeventhubs:
+      # Provide the Azure Event Hub connection string
+      connectionstring: Endpoint=sb://<your-event-hubs-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-policy-name>;SharedAccessKey=<your-policy-key>;EntityPath=<your-event-hub-name>
+
+    # If using RabbitMQ as the queue provider
+    rabbitmq:
+      hostname: rpi-rabbitmq
+      virtual_host: /
+      username: redpointdev
+      password: .RedPoint2021
+
+  DataMaps:
+    VisitorProfile:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    VisitorHistory:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    NonVisitorData:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    ProductRecommendation:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    OfferHistory:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+    MessageHistory:
+      DaysToPersist: 365
+      Cache: Default
+      DaysToPersist: 365
+      CompressData: true
+  # Default resource requests and limits per deployment.
+  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Set the minimum log level for application logging.
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+  # Enable Horizontal autoscaling
+  autoscaling:
+    enabled: true
+    # Options: "keda" or "hpa".
+    # 
+    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
+    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
+    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    #
+    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
+    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
+    #
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # For resource-based scaling, use "hpa".
+    type: hpa
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    kedaScaledObject:
+      # The Prometheus server address where metrics are queried.
+      serverAddress: <my-prometheus-query-endpoint>
+      # The name of the RPI custom metric KEDA will use to trigger scaling.
+      metricName: <my-metrics-name>
+      # The Prometheus query that fetches the metric value for scaling decisions.
+      # This example filters the metric `execution_max_thread_count` based on:
+      # - Namespace: "redpoint-rpi"
+      # - Application: "rpi-executionservice"
+      # - Azure Workload Identity: "true"
+      #
+      # Update these labels if your namespace, app, or identity settings are different.
+      query: count(execution_tasks_executing_count{kubernetes_namespace="redpoint-rpi", app="rpi-execution-service", azure_workload_identity_use="true"})
+      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
+      # It defines the limit on how many work items an execution service can take on.
+      threshold: "90"
+      # Frequency (in seconds) at which KEDA checks the metric value.
+      pollingInterval: 15
+      # Minimum number of pods to maintain, even if the load is low
+      minReplicaCount: 2
+      # Maximum number of pods to scale up to when the load increases.
+      maxReplicaCount: 5
+
+
+# ==========================
+callbackapi:
+  replicas: 1
+  # The RPI Callback Service is used to retrieve results from the following channel providers:
+  # Sendgrid and MPulse
+
+  # Enable or disable the CallbackService queue
+  queueEnabled: true
+  channelLabel: SendGrid
+  serviceAccount: 
+    enabled: true 
+    name: rpi-callbackapi
+  # Default resource requests and limits per deployment.
+  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Set the minimum log level for application logging.
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+  # Enable Horizontal autoscaling
+  autoscaling:
+    enabled: true
+    # Options: "keda" or "hpa".
+    # 
+    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
+    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
+    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    #
+    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
+    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
+    #
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # For resource-based scaling, use "hpa".
+    type: hpa
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    kedaScaledObject:
+      # The Prometheus server address where metrics are queried.
+      serverAddress: <my-prometheus-query-endpoint>
+      # The name of the RPI custom metric KEDA will use to trigger scaling.
+      metricName: <my-metrics-name>
+      # The Prometheus query that fetches the metric value for scaling decisions.
+      # This example filters the metric `execution_max_thread_count` based on:
+      # - Namespace: "redpoint-rpi"
+      # - Application: "rpi-executionservice"
+      # - Azure Workload Identity: "true"
+      #
+      # Update these labels if your namespace, app, or identity settings are different.
+      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
+      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
+      # It defines the limit on how many work items an execution service can take on.
+      threshold: "90"
+      # Frequency (in seconds) at which KEDA checks the metric value.
+      pollingInterval: 15
+      # Minimum number of pods to maintain, even if the load is low
+      minReplicaCount: 2
+      # Maximum number of pods to scale up to when the load increases.
+      maxReplicaCount: 5
+
+# ==========================      
+executionservice:
+  replicas: 1
+  RPIExecution__QueueListener__IsEnabled: false 
+  RPIExecution_MaxThreadsPerExecutionService: 100
+  enableRPIAuthentication: true
+  serviceAccount: 
+    enabled: true 
+    name: rpi-executionservice
+  # Default resource requests and limits per deployment.
+  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Set the minimum log level for application logging.
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+  # Enable Horizontal autoscaling
+  autoscaling:
+    enabled: true
+    # Options: "keda" or "hpa".
+    # 
+    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
+    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
+    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    #
+    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
+    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
+    #
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # For resource-based scaling, use "hpa".
+    type: keda
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    kedaScaledObject:
+      # The Prometheus server address where metrics are queried.
+      serverAddress: <my-prometheus-query-endpoint>
+      # The name of the RPI custom metric KEDA will use to trigger scaling.
+      metricName: <my-metrics-name>
+      # The Prometheus query that fetches the metric value for scaling decisions.
+      # This example filters the metric `execution_max_thread_count` based on:
+      # - Namespace: "redpoint-rpi"
+      # - Application: "rpi-executionservice"
+      # - Azure Workload Identity: "true"
+      #
+      # Update these labels if your namespace, app, or identity settings are different.
+      query: count(execution_tasks_executing_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
+      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
+      # It defines the limit on how many work items an execution service can take on.
+      threshold: "90"
+      # Frequency (in seconds) at which KEDA checks the metric value.
+      pollingInterval: 15
+      # Minimum number of pods to maintain, even if the load is low
+      minReplicaCount: 2
+      # Maximum number of pods to scale up to when the load increases.
+      maxReplicaCount: 5
+
+# ========================== 
+interactionapi: 
+  replicas: 1
+  enableRPIAuthentication: true
+  enableSwagger: true
+  serviceAccount: 
+    enabled: true 
+    name: rpi-interactionapi
+  allowSavingLoginDetails: true
+  alwaysShowClientsAtLogin: true
+  # Default resource requests and limits per deployment.
+  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Set the minimum log level for application logging.
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+  # Enable Horizontal autoscaling
+  autoscaling:
+    enabled: true
+    # Options: "keda" or "hpa".
+    # 
+    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
+    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
+    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    #
+    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
+    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
+    #
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # For resource-based scaling, use "hpa".
+    type: hpa
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    kedaScaledObject:
+      # The Prometheus server address where metrics are queried.
+      serverAddress: <my-prometheus-query-endpoint>
+      # The name of the RPI custom metric KEDA will use to trigger scaling.
+      metricName: <my-metrics-name>
+      # The Prometheus query that fetches the metric value for scaling decisions.
+      # This example filters the metric `execution_max_thread_count` based on:
+      # - Namespace: "redpoint-rpi"
+      # - Application: "rpi-executionservice"
+      # - Azure Workload Identity: "true"
+      #
+      # Update these labels if your namespace, app, or identity settings are different.
+      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
+      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
+      # It defines the limit on how many work items an execution service can take on.
+      threshold: "90"
+      # Frequency (in seconds) at which KEDA checks the metric value.
+      pollingInterval: 15
+      # Minimum number of pods to maintain, even if the load is low
+      minReplicaCount: 2
+      # Maximum number of pods to scale up to when the load increases.
+      maxReplicaCount: 5
+
+# ========================== 
+integrationapi:
+  replicas: 1
+  enableSwagger: true
+  serviceAccount: 
+    enabled: true 
+    name: rpi-integrationapi
+  enableRPIAuthentication: true
+  # Default resource requests and limits per deployment.
+  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+  # Enable Horizontal autoscaling
+  autoscaling:
+    enabled: true
+    # Options: "keda" or "hpa".
+    # 
+    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
+    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
+    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    #
+    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
+    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
+    #
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # For resource-based scaling, use "hpa".
+    type: hpa
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    kedaScaledObject:
+      # The Prometheus server address where metrics are queried.
+      serverAddress: <my-prometheus-query-endpoint>
+      # The name of the RPI custom metric KEDA will use to trigger scaling.
+      metricName: <my-metrics-name>
+      # The Prometheus query that fetches the metric value for scaling decisions.
+      # This example filters the metric `execution_max_thread_count` based on:
+      # - Namespace: "redpoint-rpi"
+      # - Application: "rpi-executionservice"
+      # - Azure Workload Identity: "true"
+      #
+      # Update these labels if your namespace, app, or identity settings are different.
+      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
+      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
+      # It defines the limit on how many work items an execution service can take on.
+      threshold: "90"
+      # Frequency (in seconds) at which KEDA checks the metric value.
+      pollingInterval: 15
+      # Minimum number of pods to maintain, even if the load is low
+      minReplicaCount: 2
+      # Maximum number of pods to scale up to when the load increases.
+      maxReplicaCount: 5
+
+# ========================== 
+nodemanager:
+  replicas: 1
+  serviceAccount: 
+    enabled: true 
+    name: rpi-nodemanager
+  enableRPIAuthentication: true
+  enableSwagger: true
+  # Default resource requests and limits per deployment.
+  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Set the minimum log level for application logging.
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+  # Enable Horizontal autoscaling
+  autoscaling:
+    enabled: true
+    # Options: "keda" or "hpa".
+    # 
+    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
+    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
+    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    #
+    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
+    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
+    #
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # For resource-based scaling, use "hpa".
+    type: hpa
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    kedaScaledObject:
+      # The Prometheus server address where metrics are queried.
+      serverAddress: <my-prometheus-query-endpoint>
+      # The name of the RPI custom metric KEDA will use to trigger scaling.
+      metricName: <my-metrics-name>
+      # The Prometheus query that fetches the metric value for scaling decisions.
+      # This example filters the metric `execution_max_thread_count` based on:
+      # - Namespace: "redpoint-rpi"
+      # - Application: "rpi-executionservice"
+      # - Azure Workload Identity: "true"
+      #
+      # Update these labels if your namespace, app, or identity settings are different.
+      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
+      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
+      # It defines the limit on how many work items an execution service can take on.
+      threshold: "90"
+      # Frequency (in seconds) at which KEDA checks the metric value.
+      pollingInterval: 15
+      # Minimum number of pods to maintain, even if the load is low
+      minReplicaCount: 2
+      # Maximum number of pods to scale up to when the load increases.
+      maxReplicaCount: 5
+
+# ========================== 
+deploymentapi:
+  replicas: 1
+  serviceAccount: 
+    enabled: true 
+    name: rpi-deploymentapi
+  # Default resource requests and limits per deployment.
+  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Set the minimum log level for application logging.
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+
+# ==========================
+queuereader: 
+  replicas: 1
+  # Configuration for the Queue Reader container introduced in RPI v7.4
+  # This component handles the draining of Queue Listener and RPI Realtime queues.
+
+  # Enable or disable the Queue Reader container
+  enabled: true
+  serviceAccount: 
+    enabled: true 
+    name: rpi-queuereader
+
+  # Enable or disable processing for specific queues
+  isFormProcessingEnabled: true
+  isEventProcessingEnabled: true
+  isCacheProcessingEnabled: true
+  queueListenerEnabled: true
+
+  # Distribution mode for high-performance or high-volume transactions
+  # Set to true if you require distributed processing
+  isDistributed: false 
+
+  # Comma separated List of RPI client IDs associated with your RPI cluster 
+  tenantIds:
+    - 00000000-0000-0000-0000-000000000000
+    - 11111111-1111-1111-1111-111111111111
+  # Thread pool configuration
+  threadPoolSize: 10
+  # Timeout duration for processing, in minutes
+  timeoutMinutes: 60
+  # Maximum number of messages to process in a single batch
+  maxBatchSize: 50
+  useMessageLocks: true
+  resources:
+    requests:
+      cpu: 500m
+      memory: 750Mi
+    limits:
+      cpu: 875m
+      memory: 2048Mi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These will be added in addition to the default labels.
+  # Example: environment: prod, team: marketing
+  customLabels: 
+    environment: "prod"
+    team: "marketing"
+  customAnnotations:
+    my-custom-annotation: "my-value"
+  customMetrics:
+    # Enable or disable custom Prometheus metrics scraping for this service
+    enabled: false
+    # When enabled, the following annotation will be added to the pod metadata
+    # to allow Prometheus scrape the /metrics endpoint
+    prometheus_scrape: false
+  # Set the minimum log level for application logging.
+  # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  logging:
+    logLevel: Error
+  # Enable Horizontal autoscaling
+  autoscaling:
+    enabled: true
+    # Options: "keda" or "hpa".
+    # 
+    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
+    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
+    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    #
+    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
+    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
+    #
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # For resource-based scaling, use "hpa".
+    type: hpa
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    kedaScaledObject:
+      # The Prometheus server address where metrics are queried.
+      serverAddress: <my-prometheus-query-endpoint>
+      # The name of the RPI custom metric KEDA will use to trigger scaling.
+      metricName: <my-metrics-name>
+      # The Prometheus query that fetches the metric value for scaling decisions.
+      # This example filters the metric `execution_max_thread_count` based on:
+      # - Namespace: "redpoint-rpi"
+      # - Application: "rpi-executionservice"
+      # - Azure Workload Identity: "true"
+      #
+      # Update these labels if your namespace, app, or identity settings are different.
+      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
+      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
+      # It defines the limit on how many work items an execution service can take on.
+      threshold: "90"
+      # Frequency (in seconds) at which KEDA checks the metric value.
+      pollingInterval: 15
+      # Minimum number of pods to maintain, even if the load is low
+      minReplicaCount: 2
+      # Maximum number of pods to scale up to when the load increases.
+      maxReplicaCount: 5
+
+# Supported Providers are azure, okta, keycloak, Auth0, Gigya, pingIdentity
+OpenIdProviders:
+  enabled: false
+  MetadataHost: "https://example.com"
+  # Microsoft Entra ID App registration Client ID
+  ClientID: 00000000-0000-0000-0000-000000000000
+  # Name of the OpenID Connect provider. Azure AD in this example
+  Name: AzureAD
+  # Audience for the OpenID Connect authentication request
+  Audience: api://00000000-0000-0000-0000-000000000000
+  # Authorization host for OpenID Connect
+  AuthorizationHost: "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/v2.0/authorize"
+  # Enable or disable refresh tokens
+  EnableRefreshTokens: true
+  # Custom scopes for OpenID Connect
+  CustomScopes: ["api://00000000-0000-0000-0000-000000000000/Interaction.Clients"]
+  # Parameter for id_token_hint during logout
+  LogoutIdTokenParameter: id_token_hint
+  # Validate issuer of the OpenID Connect provider
+  ValidateIssuer: false
+  # Validate audience of the OpenID Connect provider
+  ValidateAudience: true
+  RedirectURL: your_rpi_client_hostname
+
+SMTPSettings:
+  SMTP_SenderAddress: noreply-rpi@example.com
+  SMTP_Address: your_smtp_host
+  SMTP_Port: 587
+  EnableSSL: true
+  UseCredentials: true
+  SMTP_Username: your_smtp_server_username
+  SMTP_Password: your_smtp_server_password
+
+# ========================== 
+ingress:
+  controller:
+    # Set enabled to false if you want to disable the creation of the ingress controller
+    enabled: true 
+  # Set mode to internal for private ingress and public for public ingress
+  mode: public 
+  # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
+  certificateSource: kubernetes # acm
+  tlsSecretName: ingress-tls
+  className: nginx-redpoint-rpi
+  # Subnet name is only required if you set the ingress mode to private
+  subnetName: <my-ingress-vpc-subnet-name> 
+  # Certificate Arn is only required if you set the certificateSource to acm
+  certificateArn: your_acm_certificate_arn
+  # Specify the domain name for the ingress resources.
+  domain: example.com
+  # Add any specific annotations required for your ingress setup here.
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 99m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  customLabels: 
+    environment: prod
+    team: marketing
+  customAnnotations:
+    prometheus.io/scrape: "false"
+  # Define hostnames for different services in your application.
+  hosts:
+    # Configuration service
+    config: rpi-deploymentapi
+    
+    # Client Login service
+    client: rpi-interactionapi
+
+    # Integration API
+    integration: rpi-integrationapi
+
+    # Real-time service 
+    realtime: rpi-realtimeapi
+
+    # Callback API
+    callbackapi: rpi-callbackapi
+
+securityContext:
+  # Enable this to enforce running the container as a non-root user.
+  enabled: true
+  # Indicates whether a custom user/group is being provided.
+  # If false, the default 7777 will be used
+  # NOTE: We highly recommend you dont change these settings and let it use the defaults).
+  isCustom: true
+  runAsUser: 7777
+  runAsGroup: 777
+  fsGroup: 777
+ # NOTE: `runAsNonRoot: true` is hardcoded in the template to ensure best practices.
+
+# NodeSelector is used to control scheduling by specifying node labels.
+# When enabled, the deployment will only be scheduled on nodes that match the provided key-value pair.
+nodeSelector:
+  enabled: false
+  key: app
+  value: redpoint-rpi
+
+# Tolerations allow the deployment to be scheduled on tainted nodes.
+# When enabled, this ensures that the workload can run on nodes explicitly reserved for Redpoint RPI by tolerating their taints.
+tolerations:
+  enabled: false
+  effect: NoSchedule
+  key: app
+  operator: Equal
+  value: redpoint-rpi
+
+# ==========================
+redpointAI:
+  # Set to true to enable Redpoint AI features
+  enabled: false  
+  naturalLanguage:
+    # your OpenAI API key
+    ApiKey: <my-openai-key>
+    # Base URL for the OpenAI endpoint             
+    ApiBase: https://example.openai.azure.com/
+    # API version (e.g., 2023-05-15)            
+    ApiVersion: 2023-07-01-preview
+    # Name of the deployed ChatGPT engine (e.g., gpt-35-turbo)           
+    ChatGptEngine: gpt-4-32k
+    # Temperature for ChatGPT responses (e.g., 0.7)        
+    ChatGptTemp: 0.5
+  
+  cognitiveSearch:
+    # Azure Cognitive Search endpoint URL
+    SearchEndpoint: https://example.search.windows.net
+    # API key for Azure Cognitive Search       
+    SearchKey: <my-cognitivesearch-key>
+    # Azure Cognitive Search vector profile name    
+    VectorSearchProfile: vector-profile-000000000000
+    # Azure Cognitive Search vector config name 
+    VectorSearchConfig:  vector-config-000000000000 
+
+  modelStorage:
+    # Azure Blob Storage connection string for model artifacts
+    ConnectionString: DefaultEndpointsProtocol=https;AccountName=my_account_name;AccountKey=my_account_access_key 
+    # Name of the embeddings model (e.g., text-embedding-ada-002)
+    EmbeddingsModel: text-embedding-ada-002
+    # Dimensionality of the embeddings (e.g., 1536)            
+    ModelDimensions: 1536 
+    # Name of the Azure Blob Storage container holding vector index data
+    ContainerName: my_blob_container_name
+    # Path inside the container where model files are stored       
+    BlobFolder: my_blob_container_folder_name

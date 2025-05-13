@@ -1,0 +1,178 @@
+{{- if .Values.executionservice.autoscaling.enabled }}
+{{- if eq .Values.executionservice.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-executionservice
+  labels:
+    app: rpi-executionservice
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-executionservice
+  minReplicas: {{ .Values.executionservice.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.executionservice.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.executionservice.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.executionservice.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.executionservice.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.executionservice.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.interactionapi.autoscaling.enabled }}
+{{- if eq .Values.interactionapi.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-interactionapi
+  labels:
+    app: rpi-interactionapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-interactionapi
+  minReplicas: {{ .Values.interactionapi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.interactionapi.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.interactionapi.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.interactionapi.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.interactionapi.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.interactionapi.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.integrationapi.autoscaling.enabled }}
+{{- if eq .Values.integrationapi.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-integrationapi
+  labels:
+    app: rpi-integrationapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-integrationapi
+  minReplicas: {{ .Values.integrationapi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.integrationapi.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.integrationapi.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.integrationapi.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.integrationapi.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.integrationapi.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.realtimeapi.autoscaling.enabled }}
+{{- if eq .Values.realtimeapi.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-realtimeapi
+  labels:
+    app: rpi-realtimeapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-realtimeapi
+  minReplicas: {{ .Values.realtimeapi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.realtimeapi.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.realtimeapi.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.realtimeapi.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.realtimeapi.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.realtimeapi.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.callbackapi.autoscaling.enabled }}
+{{- if eq .Values.callbackapi.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-callbackapi
+  labels:
+    app: rpi-callbackapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-callbackapi
+  minReplicas: {{ .Values.callbackapi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.callbackapi.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.callbackapi.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.callbackapi.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.callbackapi.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.callbackapi.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}

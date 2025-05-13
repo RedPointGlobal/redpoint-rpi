@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: file.csi.azure.com
+  name: fileoutputdir
+  namespace: redpoint-rpi
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: azurefile-csi
+  csi:
+    driver: file.csi.azure.com
+    volumeHandle: "RGOC-nonprod-eus2#aksrgocnonprodeus2#fileoutputdir"
+    volumeAttributes:
+      shareName: fileoutputdir
+    nodeStageSecretRef:
+      name: azurefiles
+      namespace: redpoint-rpi
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+    - uid=0
+    - gid=0
+    - mfsymlinks
+    - cache=strict
+    - nosharesock
+    - nobrl 
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fileoutputdir
+  namespace: redpoint-rpi
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  volumeName: fileoutputdir
+  resources:
+    requests:
+      storage: 100Gi

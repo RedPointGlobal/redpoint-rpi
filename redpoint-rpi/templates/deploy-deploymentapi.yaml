@@ -1,0 +1,280 @@
+{{- if .Values.deploymentapi.serviceAccount.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.deploymentapi.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-deploymentapi
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-deploymentapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-deploymentapi
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.services.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-deploymentapi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-deploymentapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-deploymentapi
+    {{- with .Values.deploymentapi.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+spec:
+  replicas: {{ .Values.deploymentapi.replicas }}
+  selector:
+    matchLabels:
+      app: rpi-deploymentapi
+  template:
+    metadata:
+      labels:
+        app: rpi-deploymentapi
+        {{- with .Values.deploymentapi.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+        {{- end }}
+      annotations:
+        {{- with .Values.deploymentapi.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ .Values.deploymentapi.serviceAccount.name }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      {{- end }}
+      containers:
+      - name: deploymentapi
+        image: {{ .Values.global.deployment.images.deploymentapi }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        env:
+        - name: Logging__LogLevel__Default
+          value: {{ .Values.deploymentapi.logging.logLevel | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operational.pulse_database_name | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.operational.pulse_logging_database_name | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.operational.server_host | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: {{ .Values.databases.operational.databaseSchema | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        - name: CloudIdentity__Azure__CredentialType
+          value: "AzureIdentity"
+        - name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
+          value: {{ .Values.cloudIdentity.azureSettings.UseADTokenForDatabaseConnection | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: KeyVault__Provider
+          value: "Azure"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        - name: KeyVault__AzureSettings__VaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.vaultUri | quote }}
+        - name: KeyVault__AzureSettings__AppSettingsVaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.appSettingsVaultUri | quote }}
+        - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
+          value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
+        {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
+        - name: CloudIdentity__Google_ProjectId
+          value: {{ .Values.cloudIdentity.googleSettings.projectId | quote }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS 
+          value: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: KeyVault__Provider
+          value: "Google"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+        - name: CloudIdentity__Amazon__AccessKeyId
+          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
+        - name: CloudIdentity__Amazon__SecretAccessKey
+          value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        - name: KeyVault__Provider
+          value: "Amazon"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- if eq .Values.global.deployment.mode "demo" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "amazon" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "google" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        {{- if eq .Values.global.deployment.platform "amazon" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: "5432"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: "5432"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        {{- if eq .Values.global.deployment.platform "google" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: "5432"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        {{- if eq .Values.databases.operational.platform "selfhosted" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: "5432"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.global.deployment.mode "demo" }}
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: "Pulse_Demo"
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: "Pulse_Demo_Logging"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: "rpiopsmssqlserver"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: "sa"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          value: ".RedPoint2021"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: "dbo"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: Operations_Database_Server_Password
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.operational.server_username | quote }}
+        {{- end }}
+        {{- end }}
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        resources:
+          limits:
+            cpu: {{ .Values.deploymentapi.resources.limits.cpu }}
+            memory: {{ .Values.deploymentapi.resources.limits.memory }}
+          requests:
+            cpu: {{ .Values.deploymentapi.resources.requests.cpu }}
+            memory: {{ .Values.deploymentapi.resources.requests.memory }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}

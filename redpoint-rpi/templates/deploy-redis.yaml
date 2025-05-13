@@ -1,0 +1,59 @@
+{{- if eq .Values.global.deployment.mode "demo" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-rediscache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-rediscache
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 6379
+  selector:
+    app: rpi-rediscache
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-rediscache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-rediscache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-rediscache
+  template:
+    metadata:
+      labels:
+        app: rpi-rediscache
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      serviceAccountName: redpoint-rpi
+      containers:
+      - name: rpi-rediscache
+        image: rg1acrpub.azurecr.io/rpi/ancillary/rtcache/redis-6:latest
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        ports:
+        - containerPort: 6379
+          name: web-port
+          protocol: TCP
+      hostname: rpi-rediscache
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

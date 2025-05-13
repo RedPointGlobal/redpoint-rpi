@@ -1,0 +1,112 @@
+{{- if eq .Values.global.deployment.mode "demo" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpiopsmssqlserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: rpiopsmssqlserver
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpiopsmssqlserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpiopsmssqlserver
+  template:
+    metadata:
+      labels:
+        app: rpiopsmssqlserver
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      containers:
+      - name: rpiopsmssqlserver
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mssql-2022-opsdatabases:latest
+        ports:
+        - name: mssql
+          containerPort: 1433
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          value: ".RedPoint2021"
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpimongodbserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: rpimongodbserver
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpimongodbserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpimongodbserver
+  template:
+    metadata:
+      labels:
+        app: rpimongodbserver
+    spec:
+      imagePullSecrets:
+        - name: redpoint-rpi
+      containers:
+      - name: rpimongodbserver
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mongodb-6-0-seeded:latest
+        ports:
+        - name: mongo
+          containerPort: 27017
+        env:
+        - name: MONGO_INITDB_DATABASE
+          value: "rpi_cdp_nosql"
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
