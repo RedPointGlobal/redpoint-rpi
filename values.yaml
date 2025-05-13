@@ -60,8 +60,8 @@ databases:
     # Enable datawarehouse configuration.
     enabled: true
     # Only update the fields relevant to your chosen option and leave the others unchanged.
-    # For example, if you're using Redshift, update the Redshift fields and leave Databricks and BigQuery fields as-is.
-    # Supported options: (redshift, databricks, bigquery, snowflake)
+    # For example, if you're using Redshift, update the Redshift fields and leave Snowflake, BigQuery fields as-is.
+    # Supported options: (redshift, bigquery, snowflake)
     # In RPI use the provider name as the DSN name
     provider: redshift
     # ==========================
