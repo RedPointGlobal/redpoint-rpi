@@ -179,7 +179,7 @@ spec:
         - name: Authentication__OpenIdProviders__0__RedirectURL
           value: {{ .Values.OpenIdProviders.RedirectURL | quote }}
         - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
-          vlaue: {{ .Values.OpenIdProviders.EnableRefreshTokens | quote }}
+          value: {{ .Values.OpenIdProviders.EnableRefreshTokens | quote }}
         - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
           value: {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateIssuer
