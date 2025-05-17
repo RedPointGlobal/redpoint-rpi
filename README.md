@@ -57,7 +57,7 @@ Before deploying RPI, determine whether you're planning a Greenfield deployment 
 
 - **Greenfield Deployment:** RPI is deployed in a completely new environment. This means the creation of a new cluster, tenant, operations and logging databases, cache and queue providers. All these components are deployed from scratch, independent of any existing deployments.
 
-Both deployment methods require you deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Deployment- Greenfield](#post-deployment-greenfield) and [Post Deployment- Upgrade](#post-deployment-upgrade) sections below.
+Both deployment methods require you deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Greenfield Deployment Configuration](#post-greenfield-deployment-configuration) and [Post Upgrade Deployment Configuration](#post-upgrade-deployment-configuration) sections below.
 
 ### Begin Deployment
 
@@ -557,9 +557,9 @@ If your organization enforces a specific runAsUser and runAsGroup policy, we rec
  - Define the required user and group IDs during the image build process
  - Adjust ownership and permissions of key directories—such as /app—to match the expected runtime security context
 
-Below is an example of how to adapt the container image for use in the execution service deployment:
+Below is an example of how to adapt the container image for use in the interactionapi service deployment:
 ```
-FROM rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-queuereader
+FROM rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi
 
 # Switch to root to change ownerships
 USER root
