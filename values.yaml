@@ -502,7 +502,7 @@ executionservice:
     #
     # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
     # For resource-based scaling, use "hpa".
-    type: keda
+    type: hpa
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
