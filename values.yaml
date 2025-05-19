@@ -224,7 +224,7 @@ realtimeapi:
     # Set to true to enable real-time queue configuration
     enabled: true  
     # Choose your message queue provider
-    # Supported options: (amazonsql, azureservicebus, googlepubsub, azureeventhubs, rabbitmq)
+    # Supported options: (amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq)
     provider: amazonsqs  
     queueNames: 
       # Queues required by the RPI Realtime service
