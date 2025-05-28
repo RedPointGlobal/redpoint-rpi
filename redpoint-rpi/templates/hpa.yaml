@@ -1,5 +1,6 @@
 {{- if .Values.executionservice.autoscaling.enabled }}
 {{- if eq .Values.executionservice.autoscaling.type "hpa" }}
+{{- if .Values.executionservice.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -33,10 +34,12 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if .Values.interactionapi.autoscaling.enabled }}
 {{- if eq .Values.interactionapi.autoscaling.type "hpa" }}
+{{- if .Values.interactionapi.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -70,10 +73,12 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if .Values.integrationapi.autoscaling.enabled }}
 {{- if eq .Values.integrationapi.autoscaling.type "hpa" }}
+{{- if .Values.integrationapi.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -107,10 +112,12 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if .Values.realtimeapi.autoscaling.enabled }}
 {{- if eq .Values.realtimeapi.autoscaling.type "hpa" }}
+{{- if .Values.realtimeapi.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -144,10 +151,12 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if .Values.callbackapi.autoscaling.enabled }}
 {{- if eq .Values.callbackapi.autoscaling.type "hpa" }}
+{{- if .Values.callbackapi.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -179,6 +188,7 @@ spec:
           type: Utilization
           averageUtilization: {{ .Values.callbackapi.autoscaling.targetMemoryUtilizationPercentage }}
     {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 

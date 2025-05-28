@@ -14,6 +14,7 @@ spec:
   - secretName: ingress-tls
   {{- end }}
   rules:
+    {{- if .Values.interactionapi.enabled }}
     - host: {{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -24,6 +25,8 @@ spec:
               name: {{ .Values.interactionapi.name }}
               port:
                 number: {{ .Values.interactionapi.service.port }}
+    {{- end }}
+    {{- if .Values.deploymentapi.enabled }}
     - host: {{ .Values.ingress.hosts.config }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -34,6 +37,7 @@ spec:
               name: {{ .Values.deploymentapi.name }}
               port:
                 number: {{ .Values.deploymentapi.service.port }}
+    {{- end }}
     {{- if .Values.queuereader.enabled }}
     - host: {{ .Values.ingress.hosts.queuereader }}.{{ .Values.ingress.domain }}
       http:
@@ -46,6 +50,7 @@ spec:
               port:
                 number: 80
     {{- end }}
+    {{- if .Values.integrationapi.enabled }}
     - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -56,6 +61,7 @@ spec:
               name: {{ .Values.integrationapi.name }}
               port:
                 number: {{ .Values.integrationapi.service.port }}
+    {{- end }}
     - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -66,6 +72,7 @@ spec:
               name: {{ .Values.realtimeapi.name }}
               port:
                 number: {{ .Values.realtimeapi.service.port }}
+    {{- if .Values.callbackapi.enabled }}
     - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -76,6 +83,7 @@ spec:
               name: {{ .Values.callbackapi.name }}
               port:
                 number: {{ .Values.callbackapi.service.port }}
+    {{- end }}
     {{- if .Values.realtimeapi.enabled }}
     {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
     {{- if .Values.realtimeapi.queueProvider.rabbitmq.internal }}

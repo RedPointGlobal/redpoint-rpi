@@ -3,4 +3,5 @@ azure-values.yaml
 aws-manifests.yaml
 azure-manifests.yaml
 workload-id.sh
-test.sh
+rpi-tenant1.yaml 
+rtd-tenant1.yaml 
