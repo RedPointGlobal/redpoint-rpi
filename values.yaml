@@ -108,6 +108,7 @@ databases:
     # which provides enhanced security compared to basic authentication (username and password).
     #
     # Apply this configuration if your Snowflake instance requires RSA key-based authentication.
+    # ********** This feature will be available starting with the upcoming RPI 7.7 release ****************
     snowflake:
       # Name of the ConfigMap storing Snowflake credentials
       ConfigMapName: snowflake-creds
