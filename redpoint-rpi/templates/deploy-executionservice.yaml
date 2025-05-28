@@ -354,6 +354,7 @@ spec:
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
           {{- end }}
+          {{- end }}
           {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
           {{- if .Values.databases.datawarehouse.enabled }}
           - name: odbc-config
