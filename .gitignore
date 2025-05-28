@@ -1,7 +1,7 @@
-aws-values.yaml
-azure-values.yaml
-aws-manifests.yaml
-azure-manifests.yaml
-workload-id.sh
-rpi-tenant1.yaml 
-rtd-tenant1.yaml 
+test-azure-msql.yaml
+test-azure-psql.yaml
+test-aws-msql.yaml
+test-aws-psql.yaml
+test-gcp-msql.yaml
+test-gcp-psql.yaml
+deploy.yaml

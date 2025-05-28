@@ -349,6 +349,7 @@ spec:
             memory: {{ .Values.executionservice.resources.requests.memory }}
         volumeMounts:
           {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
