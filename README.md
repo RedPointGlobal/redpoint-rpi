@@ -380,7 +380,7 @@ Follow the steps below to set up a multi-tenant deployment.
       helm install realtime-tenant1 redpoint-rpi \
       --values values-realtime-tenant1.yaml --namespace redpoint-rpi
       ```
-**Tenant 1**
+**Tenant 2**
 
 Repeat the same steps above for Tenant 2, using a separate ```values-realtime-tenant2.yaml``` file configured with tenant-specific queue and cache resources.
 
