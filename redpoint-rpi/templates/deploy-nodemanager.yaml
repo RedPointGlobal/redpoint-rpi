@@ -1,8 +1,9 @@
 {{- if .Values.nodemanager.serviceAccount.enabled }}
+{{- if .Values.nodemanager.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.nodemanager.serviceAccount.name }}
+  name: {{ .Values.nodemanager.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-nodemanager
@@ -23,19 +24,21 @@ metadata:
   {{- end }}
   {{- end }}
 {{- end }}
+{{- end }}
 
 ---
+{{- if .Values.nodemanager.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-nodemanager
+  name: {{ .Values.nodemanager.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-nodemanager
 spec:
   ports:
   - name: http
-    port: {{ .Values.services.port }}
+    port: {{ .Values.nodemanager.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
@@ -45,7 +48,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-nodemanager
+  name: {{ .Values.nodemanager.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-nodemanager
@@ -96,7 +99,13 @@ spec:
       containers:
       - env:
         - name: Logging__LogLevel__Default
-          value: {{ .Values.nodemanager.logging.logLevel | quote }}
+          value: {{ .Values.nodemanager.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ .Values.nodemanager.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ .Values.nodemanager.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ .Values.nodemanager.logging.rpiError | quote }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Azure" }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -108,6 +117,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
         - name: KeyVault__Provider
           value: "Azure"
         - name: KeyVault__UseForAppSettings
@@ -121,6 +131,7 @@ spec:
         - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
           value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
+        {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Google" }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
@@ -132,12 +143,14 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
         - name: KeyVault__Provider
           value: "Google"
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Amazon" }}
@@ -150,12 +163,14 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
         - name: KeyVault__Provider
           value: "Amazon"
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
         {{- end }}
         - name: RPIClient__applicationSupportURL
           value: "https://support.redpointglobal.com"
@@ -167,7 +182,6 @@ spec:
           value: "http://rpi-realtimeapi"
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -180,10 +194,8 @@ spec:
               name: redpoint-rpi-secrets
         {{- end }}   
         {{- end }}
-        {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -196,10 +208,8 @@ spec:
               name: redpoint-rpi-secrets
         {{- end }}
         {{- end }}
-        {{- end }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -214,9 +224,8 @@ spec:
           value: "PostgreSQL"
         {{- end }}
         {{- end }} 
-        {{- end }} 
         {{- if .Values.redpointAI.enabled }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: RPI__NLP__ApiKey
           valueFrom:
             secretKeyRef:
@@ -260,7 +269,30 @@ spec:
         {{- end }}
         image: {{ .Values.global.deployment.images.nodemanager }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
-        name: node-manager
+        name: rpi-nodemanager
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: {{ .Values.nodemanager.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.nodemanager.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.nodemanager.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.nodemanager.livenessProbe.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: {{ .Values.nodemanager.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.nodemanager.readinessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.nodemanager.readinessProbe.failureThreshold }}
+          timeoutSeconds: {{ .Values.nodemanager.readinessProbe.timeoutSeconds }}
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: {{ .Values.nodemanager.startupProbe.failureThreshold }}
+          periodSeconds: {{ .Values.nodemanager.startupProbe.periodSeconds }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -283,4 +315,4 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
-
+{{- end }}

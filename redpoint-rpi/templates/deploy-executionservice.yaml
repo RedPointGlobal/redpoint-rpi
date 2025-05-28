@@ -1,8 +1,9 @@
 {{- if .Values.executionservice.serviceAccount.enabled }}
+{{- if .Values.executionservice.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.executionservice.serviceAccount.name }}
+  name: {{ .Values.executionservice.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-executionservice
@@ -23,19 +24,21 @@ metadata:
   {{- end }}
   {{- end }}
 {{- end }}
+{{- end }}
 
 ---
+{{- if .Values.executionservice.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-executionservice
+  name: {{ .Values.executionservice.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-executionservice
 spec:
   ports:
   - name: http
-    port: {{ .Values.services.port }}
+    port: {{ .Values.executionservice.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
@@ -45,7 +48,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-executionservice
+  name: {{ .Values.executionservice.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-executionservice
@@ -96,7 +99,13 @@ spec:
       containers:
       - env:
         - name: Logging__LogLevel__Default
-          value: {{ .Values.executionservice.logging.logLevel | quote }}
+          value: {{ .Values.executionservice.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ .Values.executionservice.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ .Values.executionservice.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ .Values.executionservice.logging.rpiError | quote }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Azure" }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -108,6 +117,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
         - name: KeyVault__Provider
           value: "Azure"
         - name: KeyVault__UseForAppSettings
@@ -121,6 +131,7 @@ spec:
         - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
           value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
+        {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Google" }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
@@ -132,12 +143,14 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
         - name: KeyVault__Provider
           value: "Google"
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Amazon" }}
@@ -150,12 +163,14 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
         - name: KeyVault__Provider
           value: "Amazon"
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
         {{- end }}
         - name: Authentication__EnableRPIAuthentication
           value: {{ .Values.executionservice.enableRPIAuthentication | quote }}
@@ -172,10 +187,15 @@ spec:
         - name: RPI__SMTP__UseCredentials
           value: {{ .Values.SMTPSettings.UseCredentials | quote }}
         {{- if .Values.SMTPSettings.UseCredentials }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: RPI__SMTP__Username
           value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
         - name: RPI__SMTP__Password
-          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: SMTP_Password
+        {{- end }}
         {{- end }}
         - name: RPIExecution__QueueListener__IsEnabled
           value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
@@ -183,13 +203,12 @@ spec:
           value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
-        {{- if .Values.storage.enabled }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: RPI__FileOutput__Directory
-          value: /rpifileoutputdir
+          value: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -202,10 +221,8 @@ spec:
               name: redpoint-rpi-secrets
         {{- end }} 
         {{- end }}  
-        {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -218,10 +235,8 @@ spec:
               name: redpoint-rpi-secrets
         {{- end }}
         {{- end }}
-        {{- end }} 
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -234,26 +249,6 @@ spec:
               name: redpoint-rpi-secrets
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if .Values.redpointAI.enabled }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
-        - name: RPI__NLP__ApiKey
-          valueFrom:
-            secretKeyRef:
-              key:  RPI_NLP_API_KEY
-              name: redpoint-rpi-secrets
-        - name: RPI__NLP__SearchKey
-          valueFrom:
-            secretKeyRef:
-              key:  RPI_NLP_SEARCH_KEY
-              name: redpoint-rpi-secrets
-        - name: RPI__NLP__Model__ConnectionString
-          valueFrom:
-            secretKeyRef:
-              key:  RPI_NLP_MODEL_CONNECTION_STRING
-              name: redpoint-rpi-secrets
         {{- end }}
         {{- end }}
         {{- if .Values.redpointAI.enabled }}
@@ -280,13 +275,67 @@ spec:
         - name: RPI__NLP__Model__BlobFolder
           value: {{ .Values.redpointAI.modelStorage.BlobFolder | quote }}
         {{- end }}
+        {{- if .Values.redpointAI.enabled }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: RPI__NLP__ApiKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_API_KEY
+              name: redpoint-rpi-secrets
+        - name: RPI__NLP__SearchKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_SEARCH_KEY
+              name: redpoint-rpi-secrets
+        - name: RPI__NLP__Model__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_MODEL_CONNECTION_STRING
+              name: redpoint-rpi-secrets
+        {{- end }}
+        {{- end }}
         image: {{ .Values.global.deployment.images.executionservice }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
-        name: execution-service
+        name: rpi-executionservice
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: {{ .Values.executionservice.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.executionservice.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.executionservice.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.executionservice.livenessProbe.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: {{ .Values.executionservice.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.executionservice.readinessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.executionservice.readinessProbe.failureThreshold }}
+          timeoutSeconds: {{ .Values.executionservice.readinessProbe.timeoutSeconds }}
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: {{ .Values.executionservice.startupProbe.failureThreshold }}
+          periodSeconds: {{ .Values.executionservice.startupProbe.periodSeconds }}
+        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
         lifecycle:
           postStart:
             exec:
               command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -299,9 +348,18 @@ spec:
             cpu: {{ .Values.executionservice.resources.requests.cpu }}
             memory: {{ .Values.executionservice.resources.requests.memory }}
         volumeMounts:
+          {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
+          {{- end }}
+          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          {{- end }}
+          {{- end }}
           {{- if eq .Values.global.deployment.platform "google" }}
           {{- if .Values.cloudIdentity.enabled }}
           {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
@@ -311,14 +369,36 @@ spec:
           {{- end }}
           {{- end }}
           {{- end }}
-          {{- if .Values.storage.enabled }}    
+          {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          - name: snowflake-creds
+            mountPath: {{ .Values.databases.datawarehouse.snowflake.mountPath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}
+            subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
           - name: rpifileoutputdir
-            mountPath: /rpifileoutputdir
+            mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}    
+          - name: rpdmuploaddirectory
+            mountPath: {{  .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
       volumes:
+        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
         - name: odbc-config
           configMap:
             name: odbc-config
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+        {{- end }}
+        {{- end }}
         {{- if eq .Values.global.deployment.platform "google" }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
@@ -328,10 +408,22 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
-        {{- if .Values.storage.enabled }}
+        {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        - name: snowflake-creds
+          configMap:
+            name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: {{ .Values.storage.persistentVolumeClaim }}
+            claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
@@ -344,4 +436,4 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
-
+{{- end }}

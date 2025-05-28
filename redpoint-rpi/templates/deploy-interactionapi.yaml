@@ -1,8 +1,9 @@
 {{- if .Values.interactionapi.serviceAccount.enabled }}
+{{- if .Values.interactionapi.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.interactionapi.serviceAccount.name }}
+  name: {{ .Values.interactionapi.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-interactionapi
@@ -23,19 +24,21 @@ metadata:
   {{- end }}
   {{- end }}
 {{- end }}
+{{- end }}
 
 ---
+{{- if .Values.interactionapi.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-interactionapi
+  name: {{ .Values.interactionapi.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-interactionapi
 spec:
   ports:
   - name: http
-    port: {{ .Values.services.port }}
+    port: {{ .Values.interactionapi.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
@@ -45,7 +48,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-interactionapi
+  name: {{ .Values.interactionapi.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-interactionapi
@@ -96,7 +99,13 @@ spec:
       containers:
       - env:
         - name: Logging__LogLevel__Default
-          value: {{ .Values.interactionapi.logging.logLevel | quote }}
+          value: {{ .Values.interactionapi.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ .Values.interactionapi.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ .Values.interactionapi.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ .Values.interactionapi.logging.rpiError | quote }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Azure" }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -108,6 +117,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
         - name: KeyVault__Provider
           value: "Azure"
         - name: KeyVault__UseForAppSettings
@@ -121,6 +131,7 @@ spec:
         - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
           value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
+        {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Google" }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
@@ -132,12 +143,14 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
         - name: KeyVault__Provider
           value: "Google"
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Amazon" }}
@@ -150,6 +163,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
         - name: KeyVault__Provider
           value: "Amazon"
         - name: KeyVault__UseForAppSettings
@@ -157,25 +171,78 @@ spec:
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
+        {{- end }}
         {{- if .Values.OpenIdProviders.enabled }}
+        {{- if eq .Values.OpenIdProviders.name "KeyCloak" }}
         - name: Authentication__OpenIdProviders__0__Name
-          value: {{ .Values.OpenIdProviders.Name | quote }}
+          value: "KeyCloak"
         - name: Authentication__OpenIdProviders__0__AuthorizationHost
-          value: {{ .Values.OpenIdProviders.AuthorizationHost | quote }}
+          value: {{ .Values.OpenIdProviders.authorizationHost | quote }}
         - name: Authentication__OpenIdProviders__0__ClientID
-          value: {{ .Values.OpenIdProviders.ClientID | quote }}
+          value: {{ .Values.OpenIdProviders.clientID | quote }}
         - name: Authentication__OpenIdProviders__0__Audience
-          value: {{ .Values.OpenIdProviders.Audience | quote }}
+          value: {{ .Values.OpenIdProviders.audience | quote }}
         - name: Authentication__OpenIdProviders__0__RedirectURL
-          value: {{ .Values.OpenIdProviders.RedirectURL | quote }}
+          value: {{ .Values.OpenIdProviders.redirectURL | quote }}
         - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
-          value: {{ .Values.OpenIdProviders.EnableRefreshTokens | quote }}
-        - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
-          value: {{ .Values.OpenIdProviders.LogoutIdTokenParameter | quote }}
+          value: {{ .Values.OpenIdProviders.enableRefreshTokens | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateIssuer
-          value: {{ .Values.OpenIdProviders.ValidateIssuer | quote }}
+          value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateAudience
-          value: {{ .Values.OpenIdProviders.ValidateAudience | quote }}
+          value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
+          value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
+        - name: Authentication__OpenIdProviders__0__CustomScopes
+          value: '{{ toJson .Values.OpenIdProviders.customScopes }}'
+        {{- end }}
+        {{- end }}
+        {{- if .Values.OpenIdProviders.enabled }}
+        {{- if eq .Values.OpenIdProviders.name "Okta" }}
+        - name: Authentication__OpenIdProviders__0__Name
+          value: "Okta"
+        - name: Authentication__OpenIdProviders__0__AuthorizationHost
+          value: {{ .Values.OpenIdProviders.authorizationHost | quote }}
+        - name: Authentication__OpenIdProviders__0__ClientID
+          value: {{ .Values.OpenIdProviders.clientID | quote }}
+        - name: Authentication__OpenIdProviders__0__Audience
+          value: {{ .Values.OpenIdProviders.audience | quote }}
+        - name: Authentication__OpenIdProviders__0__RedirectURL
+          value: {{ .Values.OpenIdProviders.redirectURL | quote }}
+        - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
+          value: {{ .Values.OpenIdProviders.enableRefreshTokens | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateIssuer
+          value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateAudience
+          value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
+          value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
+        - name: Authentication__OpenIdProviders__0__CustomScopes
+          value: '{{ toJson .Values.OpenIdProviders.customScopes }}'
+        {{- end }}
+        {{- end }}
+        {{- if .Values.OpenIdProviders.enabled }}
+        {{- if eq .Values.OpenIdProviders.name "AzureAD" }}
+        - name: Authentication__OpenIdProviders__0__Name
+          value: "AzureAD"
+        - name: Authentication__OpenIdProviders__0__AuthorizationHost
+          value: {{ .Values.OpenIdProviders.authorizationHost | quote }}
+        - name: Authentication__OpenIdProviders__0__ClientID
+          value: {{ .Values.OpenIdProviders.clientID | quote }}
+        - name: Authentication__OpenIdProviders__0__Audience
+          value: {{ .Values.OpenIdProviders.audience | quote }}
+        - name: Authentication__OpenIdProviders__0__RedirectURL
+          value: {{ .Values.OpenIdProviders.redirectURL | quote }}
+        - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
+          value: {{ .Values.OpenIdProviders.enableRefreshTokens | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateIssuer
+          value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateAudience
+          value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
+          value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
+        - name: Authentication__OpenIdProviders__0__CustomScopes
+          value: '{{ toJson .Values.OpenIdProviders.customScopes }}'
+        {{- end }}
         {{- end }}
         - name: Authentication__EnableRPIAuthentication
           value: {{ .Values.interactionapi.enableRPIAuthentication | quote }}
@@ -198,10 +265,15 @@ spec:
         - name: RPI__SMTP__UseCredentials
           value: {{ .Values.SMTPSettings.UseCredentials | quote }}
         {{- if .Values.SMTPSettings.UseCredentials }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: RPI__SMTP__Username
           value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
         - name: RPI__SMTP__Password
-          value: {{ .Values.SMTPSettings.SMTP_Password | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: SMTP_Password
+        {{- end }}
         {{- end }}
         - name: RPIClient__AllowSavingLoginDetails
           value: {{ .Values.interactionapi.allowSavingLoginDetails | quote }}
@@ -209,13 +281,12 @@ spec:
           value: {{ .Values.interactionapi.alwaysShowClientsAtLogin | quote }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
-        {{- if .Values.storage.enabled }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: RPI__FileOutput__Directory
-          value: /rpifileoutputdir 
+          value: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }} 
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -226,12 +297,10 @@ spec:
             secretKeyRef:
               key: ConnectionString_Operations_Database
               name: redpoint-rpi-secrets
-        {{- end }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -244,10 +313,8 @@ spec:
               name: redpoint-rpi-secrets
         {{- end }}
         {{- end }}
-        {{- end }}   
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -262,9 +329,8 @@ spec:
           value: "PostgreSQL"
         {{- end }}
         {{- end }}
-        {{- end }}
         {{- if .Values.redpointAI.enabled }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: RPI__NLP__ApiKey
           valueFrom:
             secretKeyRef:
@@ -308,11 +374,46 @@ spec:
         {{- end }}
         image: {{ .Values.global.deployment.images.interactionapi }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
-        name: interaction-api
+        name: rpi-interactionapi
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: {{ .Values.interactionapi.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.interactionapi.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.interactionapi.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.interactionapi.livenessProbe.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: {{ .Values.interactionapi.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.interactionapi.readinessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.interactionapi.readinessProbe.failureThreshold }}
+          timeoutSeconds: {{ .Values.interactionapi.readinessProbe.timeoutSeconds }}
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: {{ .Values.interactionapi.startupProbe.failureThreshold }}
+          periodSeconds: {{ .Values.interactionapi.startupProbe.periodSeconds }}
+        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
         lifecycle:
           postStart:
             exec:
               command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -325,9 +426,20 @@ spec:
             cpu: {{ .Values.interactionapi.resources.requests.cpu }}
             memory: {{ .Values.interactionapi.resources.requests.memory }}
         volumeMounts:
+          {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
+          {{- end }}
+          {{- end }}
+          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          {{- end }}
+          {{- end }}
           {{- if eq .Values.global.deployment.platform "google" }}
           {{- if .Values.cloudIdentity.googleSettings.serviceAccount.enabled }}
           - name: {{ .Values.cloudIdentity.googleSettings.serviceAccountName }}
@@ -335,15 +447,30 @@ spec:
             subPath: "{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
           {{- end }}
           {{- end }}
-          {{- if .Values.storage.enabled }}
-          - name: rpifileoutputdir
-            mountPath: /rpifileoutputdir
+          {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
+          - name: snowflake-creds
+            mountPath: {{ .Values.databases.datawarehouse.snowflake.mountPath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}
+            subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
           {{- end }}
-      hostname: redpoint-interaction-api
+          {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
+          - name: rpifileoutputdir
+            mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+          {{- end }}
       volumes:
+        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
         - name: odbc-config
           configMap:
             name: odbc-config
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+        {{- end }}
+        {{- end }}
         {{- if eq .Values.global.deployment.platform "google" }}
         {{- if .Values.cloudIdentity.googleSettings.serviceAccount.enabled }}
         - name: {{ .Values.cloudIdentity.googleSettings.serviceAccountName | quote }}
@@ -351,10 +478,22 @@ spec:
             name: {{ .Values.cloudIdentity.googleSettings.serviceAccount.configMapName | quote }}
         {{- end }}
         {{- end }}
-        {{- if .Values.storage.enabled }}
+        {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        - name: snowflake-creds
+          configMap:
+            name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: {{ .Values.storage.persistentVolumeClaim }}
+            claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
@@ -367,4 +506,4 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
-
+{{- end }}

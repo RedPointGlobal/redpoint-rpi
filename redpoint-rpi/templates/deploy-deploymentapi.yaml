@@ -1,8 +1,9 @@
 {{- if .Values.deploymentapi.serviceAccount.enabled }}
+{{- if .Values.deploymentapi.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.deploymentapi.serviceAccount.name }}
+  name: {{ .Values.deploymentapi.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-deploymentapi
@@ -23,19 +24,22 @@ metadata:
   {{- end }}
   {{- end }}
 {{- end }}
+{{- end }}
+
 
 ---
+{{- if .Values.deploymentapi.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-deploymentapi
+  name: {{ .Values.deploymentapi.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-deploymentapi
 spec:
   ports:
   - name: http
-    port: {{ .Values.services.port }}
+    port: {{ .Values.deploymentapi.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
@@ -45,7 +49,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-deploymentapi
+  name: {{ .Values.deploymentapi.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-deploymentapi
@@ -87,12 +91,12 @@ spec:
         fsGroup: {{ .Values.securityContext.fsGroup }}
       {{- end }}
       containers:
-      - name: deploymentapi
+      - name: rpi-deploymentapi
         image: {{ .Values.global.deployment.images.deploymentapi }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         env:
         - name: Logging__LogLevel__Default
-          value: {{ .Values.deploymentapi.logging.logLevel | quote }}
+          value: {{ .Values.deploymentapi.logging.default | quote }}
         - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
           value: {{ .Values.databases.operational.pulse_database_name | quote }}
         - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
@@ -103,8 +107,10 @@ spec:
           value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
           value: {{ .Values.databases.operational.databaseSchema | quote }}
+        {{- if .Values.databases.operational.encrypt }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
           value: "true"
+        {{- end }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
           value: "true"
         {{- if .Values.cloudIdentity.enabled }}
@@ -118,6 +124,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
         - name: KeyVault__Provider
           value: "Azure"
         - name: KeyVault__UseForAppSettings
@@ -131,6 +138,7 @@ spec:
         - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
           value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
+        {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Google" }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
@@ -142,12 +150,14 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
         - name: KeyVault__Provider
           value: "Google"
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Amazon" }}
@@ -160,6 +170,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
         - name: KeyVault__Provider
           value: "Amazon"
         - name: KeyVault__UseForAppSettings
@@ -167,9 +178,6 @@ spec:
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
-        {{- if eq .Values.global.deployment.mode "demo" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "SQLServer"
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.global.deployment.platform "amazon" }}
@@ -190,71 +198,23 @@ spec:
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
-        {{- if eq .Values.global.deployment.platform "amazon" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "PostgreSQL"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
           value: "5432"
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.databases.operational.provider "postgresql" }}
-        {{- if eq .Values.global.deployment.platform "azure" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "PostgreSQL"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
-          value: "5432"
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.databases.operational.provider "postgresql" }}
-        {{- if eq .Values.global.deployment.platform "google" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "PostgreSQL"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
-          value: "5432"
-        {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
-        {{- if eq .Values.databases.operational.provider "postgresql" }}
-        {{- if eq .Values.databases.operational.platform "selfhosted" }}
-        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
-          value: "PostgreSQL"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
-          value: "5432"
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.global.deployment.mode "demo" }}
-        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
-          value: "Pulse_Demo"
-        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
-          value: "Pulse_Demo_Logging"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
-          value: "rpiopsmssqlserver"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
-          value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
-          value: "sa"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
-          value: ".RedPoint2021"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
-          value: "dbo"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
-          value: "true"
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
-          value: "true"
-        {{- end }}
+          value: {{ .Values.databases.operational.server_username | quote }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           valueFrom:
             secretKeyRef:
               name: redpoint-rpi-secrets
               key: Operations_Database_Server_Password
-        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
-          value: {{ .Values.databases.operational.server_username | quote }}
-        {{- end }}
         {{- end }}
         ports:
         - containerPort: 8080
@@ -278,3 +238,4 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
+{{- end }}

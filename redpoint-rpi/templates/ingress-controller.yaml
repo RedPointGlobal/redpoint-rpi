@@ -443,7 +443,7 @@ spec:
     - IPv4
   ports:
     - name: http
-      port: {{ .Values.services.port }}
+      port: {{ .Values.ingress.service.port }}
       protocol: TCP
       targetPort: 80
       appProtocol: http

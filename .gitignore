@@ -2,6 +2,5 @@ aws-values.yaml
 azure-values.yaml
 aws-manifests.yaml
 azure-manifests.yaml
-azure.yaml
 workload-id.sh
-azure-vmsql.yaml
+test.sh

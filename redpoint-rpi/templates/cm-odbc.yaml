@@ -1,4 +1,5 @@
 {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+{{- if  .Values.databases.datawarehouse.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -23,9 +24,11 @@ data:
     PWD={{ .Values.databases.datawarehouse.redshift.password }}
     locale=en-US
 {{- end }}
+{{- end }}
 
 ---
 {{- if eq .Values.databases.datawarehouse.provider "databricks" }}
+{{- if  .Values.databases.datawarehouse.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -54,10 +57,11 @@ data:
     UseSystemTrustStore=0
     HTTPPath=/sql/1.0/warehouses/c546e1e69e8d2ac9
 {{- end }}
-
+{{- end }}
 
 ---
 {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+{{- if  .Values.databases.datawarehouse.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -79,4 +83,5 @@ data:
     OAuthMechanism={{ .Values.databases.datawarehouse.bigquery.OAuthMechanism }}
     Email={{ .Values.databases.datawarehouse.bigquery.email }}
     KeyFilePath={{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}
+{{- end }}
 {{- end }}

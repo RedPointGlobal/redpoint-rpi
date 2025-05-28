@@ -3,7 +3,8 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: rpi-executionservice
+  name: {{ .Values.executionservice.name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-executionservice
 spec:
@@ -39,7 +40,8 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: rpi-interactionapi
+  name: {{ .Values.interactionapi.name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-interactionapi
 spec:
@@ -75,7 +77,8 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: rpi-integrationapi
+  name: {{ .Values.integrationapi.name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-integrationapi
 spec:
@@ -111,7 +114,8 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: rpi-realtimeapi
+  name: {{ .Values.realtimeapi.name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-realtimeapi
 spec:
@@ -147,7 +151,8 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: rpi-callbackapi
+  name: {{ .Values.callbackapi.name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-callbackapi
 spec:
@@ -176,3 +181,43 @@ spec:
     {{- end }}
 {{- end }}
 {{- end }}
+
+---
+{{- if .Values.queuereader.autoscaling.enabled }}
+{{- if .Values.queuereader.enabled }}
+{{- if eq .Values.queuereader.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.queuereader.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-queuereader
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-queuereader
+  minReplicas: {{ .Values.queuereader.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.queuereader.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.queuereader.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.queuereader.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.queuereader.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.queuereader.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+

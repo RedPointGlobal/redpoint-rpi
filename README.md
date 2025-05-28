@@ -69,8 +69,8 @@ At a highlevel, the deployment process flows as follows:
 - Provide the connection details for:
    - Operational database server
    - Data warehouse server (If using Redshift or BigQuery)
-   - Realtime Cache and queue providers (If using RPI Realtime)
-- Deploy the application using the provided Helm chart.
+   - Cache and Queue providers (If using RPI Realtime)
+- Deploy the application using Helm.
 
 To begin, follow the detailed instructions in the sections below.
 
@@ -148,7 +148,7 @@ databases:
 
 **6. Configure Datawarehouse Provider**
 
-If your [datawarehouse](https://docs.redpointglobal.com/rpi/supported-connectors#Supportedconnectors-Databaseplatforms) is one of ```Redshift``` or ```BigQuery```, open the ```values.yaml``` file and provide connection details relevant to your chosen provider.
+**Note:** This section only applies if your [datawarehouse](https://docs.redpointglobal.com/rpi/supported-connectors#Supportedconnectors-Databaseplatforms) is ```Redshift``` or ```BigQuery```. Both providers use ODBC drivers, which require a configuration file to be included in the containers. The details you provide are used to configure the Data Source Name (DSN). After deployment, the connection string for your Redshift or BigQuery data warehouse would look like this: ```dsn=redshift``` or ```dsn=bigquery```. This references the DSN that was automatically created using the details you provided.
 
 ```
 datawarehouse:
@@ -161,6 +161,10 @@ datawarehouse:
     password: my_redshift_password
 ```
 
+For the selected provider, make sure to complete the appropriate section either ```googleSettings``` or ```amazonSettings``` under ```cloudIdentity``` to supply the credentials required.
+
+**Note:** For both existing RPI v6.x deployments (during an upgrade) and new (greenfield) installations that require [RPI Realtime](https://docs.redpointglobal.com/rpi/rpi-realtime), ensure you complete the steps outlined in the [Configure Realtime](#configure-realtime) section before proceeding to Step 7.
+
 **7. Install RPI**
 
 Make sure you are in the cloned repository's directory and run the Helm install command
@@ -171,6 +175,7 @@ pwd # print working directory
 ├── README.md
 ├── utilities
 ├── redpoint-rpi
+└── chart-release-notes.md
 └── values.yaml
 
 helm install redpoint-rpi redpoint-rpi/ --values values.yaml
@@ -305,43 +310,103 @@ This Helm chart does not enforce any specific storage solution. You are responsi
 
 ### Configure Realtime
 
-**Note: This step is optional** Skip if your RPI deployment does not include Realtime Decisions
+[RPI Realtime](https://docs.redpointglobal.com/rpi/configuring-realtime-queue-providers) consists of a suite of functionality that allows you to make decisions about the most appropriate content to be displayed to a person of interest in real time.
 
-[Queue Providers ](https://docs.redpointglobal.com/rpi/configuring-realtime-queue-providers) are used to provide RPI with message queuing capabilities. To configure a Queue Provider, Open the ```values.yaml``` file and locate the ```realtimeapi.queueProvider``` section. Update this section with Queue provider you intend to use. Supported options are: ```amazonsqs ```, ```googlepubsub```,```azureeventhubs ```, ```azureservicebus```,```rabbitmq```
+- **Queue Providers**
+
+[Queue Providers](https://docs.redpointglobal.com/rpi/configuring-realtime-queue-providers) are used to provide RPI with message queuing capabilities. To configure a Queue Provider, Open the ```values.yaml``` file and locate the ```realtimeapi.queueProvider``` section. Update this section with Queue provider you intend to use. Supported options are: ```amazonsqs ```, ```googlepubsub```,```azureeventhubs ```, ```azureservicebus```,```rabbitmq```
 
 ```
 queueProvider:
   provider: amazonsqs
-  amazonsqs:
-    credentialsType: accessKey
 ```
 
-The [Cache connectors ](https://docs.redpointglobal.com/rpi/cache-configuration) allow RPI to store and access various data quickly, such as Visitor Profiles, Realtime Decisions rules, and content.Open the ```values.yaml``` file and locate the ```realtimeapi.cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```redis``` ,```googlebigtable``` ```inMemorySql```
+- **Cache Providers**
+
+[Cache Providers](https://docs.redpointglobal.com/rpi/cache-configuration) allow RPI to store and access various data quickly, such as Visitor Profiles, Realtime Decisions rules, and content.Open the ```values.yaml``` file and locate the ```realtimeapi.cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```redis``` ,```googlebigtable``` ```inMemorySql```
 
 ```
 cacheProviders:
   provider: mongodb
-  mongodb:
-    connectionString: <my-mongodb-connection-string>
-    databaseName: <my-realtime-cache-db>
-    collectionName: <my-realtime-cache-collection>
 ```
 
 **Note:** When using the RPI SQL Server native cache provider, you can download the necessary setup scripts for SQL Server in-memory cache tables from the deployment service's downloads page: ```https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\In Memory Cache Setup.sql.``` 
 
-A new dedicated  [Queue Reader ](https://docs.redpointglobal.com/rpi/admin-queue-listener-setup) container has been introduced in RPI v7.4, which is responsible for the draining of Queue listener and RPI Realtime queues. This container now handles all work previously undertaken by the Web cache data importer, Web events importer and Web form processor system tasks which have been deprecated.
+- **API authentication (Basic)**
 
-To configure the Queue Reader, open the ```values.yaml``` file and update the ```queueReader``` section
+The default authentication method for the Realtime API is an authentication token in the header of the call to the API endpoint. The token is configured with the following setting in the ```values.yaml```
+
+```
+realtimeapi:
+  authentication:
+    type: basic
+```
+
+- **API authentication (OAuth)**
+
+The Realtime API can also be configured to use OAuth instead of the header token authentication. To configure RPI Realtime to use OAuth, first create the SQL Server or PostgreSQL database required by the OAuth implementation. The scripts to create the database can be downloaded from the Configuration Service ```https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\RealtimeCore.sql.``` 
+
+Once the RealtimeCore database has been created, enable the OAuth configuration in the ```values.yaml```
+
+```
+realtimeapi:
+  authentication:
+    type: oauth
+```
+
+- **Multi-tenancy**
+
+RPI Realtime currently supports a single-tenant architecture. This means that a separate instance of Realtime must be deployed for each RPI tenant, with dedicated queues and cache resources isolated per tenant. For instance, if your RPI cluster includes two tenants such as ```rpi-tenant1``` and ```rpi-tenant2```, you'll need to deploy Realtime separately for each. This is achieved by customizing individual ```values.yaml``` files.
+
+Follow the steps below to set up a multi-tenant deployment.
+
+**Tenant 1**
+   -  Define a values file for the tenant e.g ```values-realtime-tenant1.yaml```
+   -  Configure the values file with tenant specific queue and cache settings
+   -  Disable all other services, ensuring only realtimeapi remains enabled
+
+   ```
+   realtimeapi:
+     enabled: true
+   interactionapi:
+     enabled: false
+   executionservice:
+     enabled: false
+   ```
+
+   -  Deploy the tenant
+
+      ```
+      helm install realtime-tenant1 redpoint-rpi \
+      --values values-realtime-tenant1.yaml --namespace redpoint-rpi
+      ```
+**Tenant 1**
+
+Repeat the same steps above for Tenant 2, using a separate ```values-realtime-tenant2.yaml``` file configured with tenant-specific queue and cache resources.
+
+### RPI Queue Reader
+
+The [RPI Queue Reader ](https://docs.redpointglobal.com/rpi/admin-queue-reader-setup) service is used to drain Queue Listener and RPI Realtime queues. This container now handles all work previously undertaken by the Web cache data importer, Web events importer and Web form processor system tasks which have been deprecated.
+
+To enabled and configure the Queue Reader, open the ```values.yaml``` file and update the ```queueReader``` section
 
 ```
 queueReader: 
+  enabled: true
   isFormProcessingEnabled: true
   isEventProcessingEnabled: true
   isCacheProcessingEnabled: true
-  isDistributed: false 
   tenantIds:
-    - "00000000-0000-0000-0000-000000000000"
-    - "11111111-1111-1111-1111-111111111111"
+    - "<my-rpi-client-id>"
+```
+
+The queue reader exposes the following operational endpoints which are available via Ingress:
+
+```
+/api/operations/start     – Initiates an operation
+/api/operations/status    – Retrieves the current status of an operation
+/api/operations/stop      – Stops an ongoing operation
+/api/operations/stats     – Returns execution statistics
 ```
 
 ### Post Greenfield Deployment Configuration
@@ -539,15 +604,26 @@ curl -X 'POST' \
 
 A successful activation returns a ```200 OK ``` response. Once RPI is upgraded and the license activated, you're ready to proceed with downloading the Client executable for login and post upgrade validation
 
+ - **Update system configuration**
+
+RPI stores certain tenant level settings in the operational databases. When cloning the v6 operational databases, these settings are carried over and must be updated to align with the v7 environment. For example, the ```FileOutputDirectory``` used in your v6 cluster might differ from the one intended for your v7 cluster. After the upgrade completes successfully, the RPI administrator should review and update the following settings via the Configuration tab in the RPI client:
+
+```Environment > FileExportLocation```: Sets the Export destinations where: 0 = File Output Directory, 1 = Default FTP Location, 2 = External Content Provider
+
+```Environment > FileOutputDirectory```: Specifies the path within the RPI v7 containers where the FileOutputDirectory volume is mounted. The default path is /fileoutputdir, but consult your Kubernetes administrator if the volume was mounted to a different location.
+
+```Environment > DataManagementUploadDirectory```: Specifies the path within the RPI v7 containers where the DataManagementUploadDirectory volume is mounted. The default path is /rpdmuploaddirectory, but consult your Kubernetes administrator if the volume was mounted to a different location.
+
+```Channels >  Channel name```:  Update relevant configuration to match your v7 requirements
+
 ### Configure Open ID Connect
-RPI supports OpenID Connect (OIDC) for authentication. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file. Adjust these values to match your environment's configuration
+RPI supports the use of the Okta and KeyCloak [OpenID connection (OIDC) ](https://docs.redpointglobal.com/rpi/admin-authentication) providers to be used to authenticate users accessing RPI. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file. Adjust these values to match your environment's configuration
 
 ```
-OpenIdEnabled: true
 OpenIdProviders:
-  Name: AzureAD
+  enabled: true
+  name: keycloak
 ```
-For more information related to these settings please refer to  [Admin: Appendix B - Open ID Connect (OIDC) configuration ](https://docs.redpointglobal.com/rpi/admin-appendix-b-open-id-connect-oidc-configuratio)
 
 ### Configure Security Context
 RPI containers run under a preconfigured non-root user and group ```(uid: 7777, gid: 777)``` in alignment with container security best practices. While Kubernetes does allow overriding this securityContext, doing so introduces a challenge: the application directory (/app) and its contents are owned by the default user ```(7777:777)```, and changing the runtime user requires reconciling file ownership and permissions within the container.

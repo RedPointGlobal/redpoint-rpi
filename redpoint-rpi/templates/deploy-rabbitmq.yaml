@@ -1,21 +1,20 @@
-{{- if .Values.realtimeapi.enabled }}
-{{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+{{- if .Values.realtimeapi.queueProvider.rabbitmq.internal }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: rpi-rabbitmq
+  name: realtime-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rabbitmq
+    app: realtime-rabbitmq
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-rabbitmq
+  name: realtime-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rabbitmq
+    app: realtime-rabbitmq
 spec:
   ports:
   - name: http
@@ -27,32 +26,32 @@ spec:
     protocol: TCP
     targetPort: 15672
   selector:
-    app: rpi-rabbitmq
+    app: realtime-rabbitmq
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-rabbitmq
+  name: realtime-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rabbitmq
+    app: realtime-rabbitmq
 spec:
-  replicas: 1
+  replicas: {{ .Values.realtimeapi.queueProvider.rabbitmq.replicas }}
   selector:
     matchLabels:
-      app: rpi-rabbitmq
+      app: realtime-rabbitmq
   template:
     metadata:
       labels:
-        app: rpi-rabbitmq
+        app: realtime-rabbitmq
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: rpi-rabbitmq
+      serviceAccountName: realtime-rabbitmq
       containers:
-      - name: rpi-rabbitmq
-        image: {{ .Values.global.deployment.images.rabbitmq }}
+      - name: realtime-rabbitmq
+        image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         ports:
         - name: port-one
@@ -65,9 +64,12 @@ spec:
         - name: RABBITMQ_DEFAULT_USER
           value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
         - name: RABBITMQ_DEFAULT_PASS
-          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.password | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RABBITMQ_Password
         - name: RABBITMQ_DEFAULT_VHOST
-          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtual_host | quote }}
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
         livenessProbe:
           exec:
             command:
@@ -78,7 +80,6 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 6
-      hostname: rpi-rabbitmq
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
@@ -90,5 +91,4 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
-{{- end }}
 {{- end }}

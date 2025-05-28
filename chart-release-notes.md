@@ -14,6 +14,12 @@
   - Implemented Horizontal Pod Autoscaling (HPA) and custom metrics support.
   - Added Prometheus annotations for metrics scraping:
 
+- **Support for OAuth authenticaion for RPI Realtime API** ([CE-2437](#)):  
+  - Implemented OAuth 2.0 authentication for secure access to the RPI Realtime API.
+
+- **Support for RPI Realtime Multi-tenancy** ([CE-2468](#)):  
+  - Enabled multi-tenant support for RPI Realtime by allowing per-tenant deployments through customized values.yaml configurations.
+
 ---
 
 ### Enhancements

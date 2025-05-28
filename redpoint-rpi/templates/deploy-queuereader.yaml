@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.queuereader.serviceAccount.name }}
+  name: {{ .Values.queuereader.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-queuereader
@@ -24,19 +24,21 @@ metadata:
   {{- end }}
   {{- end }}
 {{- end }}
+{{- end }}
 
+{{- if .Values.queuereader.enabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-queuereader
+  name: {{ .Values.queuereader.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-queuereader
 spec:
   ports:
   - name: http
-    port: {{ .Values.services.port }}
+    port: {{ .Values.queuereader.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
@@ -46,7 +48,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rpi-queuereader
+  name: {{ .Values.queuereader.name }}
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-queuereader
@@ -97,13 +99,19 @@ spec:
       containers:
       - env:
         - name: Logging__LogLevel__Default
-          value: {{ .Values.queuereader.logging.logLevel | quote }} 
+          value: {{ .Values.queuereader.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ .Values.queuereader.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ .Values.queuereader.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ .Values.queuereader.logging.rpiError | quote }}
         - name: RPI__ServiceHostName
           value: "http://rpi-interactionapi"
+        - name: RPI__ServiceHostPortNumber
+          value: {{ .Values.interactionapi.service.port | quote }}
         - name: RealtimeAPIAddressOverride
           value: "http://rpi-realtimeapi"
-        - name: RPI__ServiceHostPortNumber
-          value: {{ .Values.services.port | quote }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
@@ -119,6 +127,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
         - name: KeyVault__Provider
           value: "Azure"
         - name: KeyVault__UseForAppSettings
@@ -132,6 +141,7 @@ spec:
         - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
           value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
+        {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Google" }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
@@ -143,12 +153,14 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
         - name: KeyVault__Provider
           value: "Google"
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Amazon" }}
@@ -161,6 +173,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
         - name: KeyVault__Provider
           value: "Amazon"
         - name: KeyVault__UseForAppSettings
@@ -168,13 +181,13 @@ spec:
         - name: KeyVault__UseForConfigPasswords
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
-        {{- if .Values.storage.enabled }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: RPI__FileOutput__Directory
           value: /fileoutputdir
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -185,12 +198,10 @@ spec:
             secretKeyRef:
               key: ConnectionString_Operations_Database
               name: redpoint-rpi-secrets
-        {{- end }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -203,10 +214,8 @@ spec:
               name: redpoint-rpi-secrets
         {{- end }}
         {{- end }}
-        {{- end }}   
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -217,59 +226,6 @@ spec:
             secretKeyRef:
               key: ConnectionString_Operations_Database
               name: redpoint-rpi-secrets
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.realtimeapi.cacheProvider.provider "mongodb" }}
-        {{- if .Values.queuereader.isDistributed }}
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Assembly
-          value: "RedPoint.Resonance.MongoDBCache"
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Class
-          value: "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler"
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Key
-          value: "Database"
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__0__Value
-          value: {{ .Values.realtimeapi.cacheProvider.mongodb.databaseName | quote }}
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Key
-          value: "CollectionName"
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__2__Value
-          value: {{ .Values.realtimeapi.cacheProvider.mongodb.collectionName | quote }}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
-        {{- if eq .Values.realtimeapi.cacheProvider.provider "mongodb" }}
-        {{- if .Values.queuereader.isDistributed }}
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Key
-          value: "ConnectionString"
-        - name: QueueService__RealtimeConfiguration__DistributedCache__Settings__1__Value
-          valueFrom:
-            secretKeyRef:
-              key: RealtimeAPI_MongoCache_ConnectionString
-              name: redpoint-rpi-secrets
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.realtimeapi.cacheProvider.provider "inMemorySql" }}
-        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Name
-          value: "InMemorySQL"
-        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Assembly
-          value: "RedPoint.Resonance.Web.Shared"
-        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Class
-          value: "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache"
-        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Key
-          value: "ConnectionString"
-        {{- end }}
-        {{- if eq .Values.realtimeapi.cacheProvider.provider "inMemorySql" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
-        - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Value
-          valueFrom:
-            secretKeyRef:
-              name: redpoint-rpi-secrets
-              key: RealtimeAPI_inMemorySql_ConnectionString
-        {{- end }}
         {{- end }}
         {{- end }}
         - name: QueueService__QueueListener__IsEnabled
@@ -291,24 +247,207 @@ spec:
         - name: QueueService__RealtimeConfiguration__IsCacheProcessingEnabled
           value: {{ .Values.queuereader.isCacheProcessingEnabled | quote }}
         - name: QueueService__RealtimeConfiguration__TenantIDs
-          value: '{{ toJson .Values.queuereader.tenantIds }}'
+          value: '{{ toJson .Values.queuereader.realtimeConfiguration.tenantIds }}'
+        - name: QueueService__QueueListener__ListenerQueueNonActiveQueuePath
+          value: {{ .Values.queuereader.listenerQueueNonActiveQueuePath | quote}}
+        - name: QueueService__QueueListener__ListenerQueueNonActiveTTLDays
+          value: {{ .Values.queuereader.listenerQueueNonActiveTTLDays | quote}}
+        - name: QueueService__QueueListener__ListenerQueueErrorQueuePath
+          value: {{ .Values.queuereader.listenerQueueErrorQueuePath | quote}}
+        - name: QueueService__QueueListener__ListenerQueueErrorTTLDays
+          value: {{ .Values.queuereader.listenerQueueErrorTTLDays | quote}}
         - name: QueueService__RealtimeConfiguration__IsDistributed
-          value: {{ .Values.queuereader.isDistributed | quote }}
-        {{- if eq .Values.realtimeapi.cacheProvider.provider "redis" }}
-        {{- if .Values.queuereader.isDistributed }}
+          value: {{ .Values.queuereader.realtimeConfiguration.isDistributed | quote }}
+        {{- if .Values.queuereader.realtimeConfiguration.isDistributed }}
+        {{- if eq .Values.queuereader.realtimeConfiguration.distributedCache.provider "Redis" }}
         - name: QueueService__RealtimeConfiguration__DistributedCache__Provider
-          value: "Redis"
+          value: {{ .Values.queuereader.realtimeConfiguration.distributedCache.provider | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if .Values.queuereader.realtimeConfiguration.isDistributed }}
         - name: QueueService__RealtimeConfiguration__DistributedQueue__RedisSettings__IPAddress
-          value: {{ .Values.realtimeapi.cacheProvider.redis.connectionstring | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_RedisCache_ConnectionString
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
+          value: "RedPoint.Resonance.RabbitMQAccess"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
+          value: "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
+          value: "Hostname"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.hostname | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
+          value: "VirtualHost"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__2__Key
+          value: "UserName"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__2__Value
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__3__Key
+          value: "Password"
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__3__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RABBITMQ_Password
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "azureservicebus" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
+          value: "RedPoint.Azure.Server"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
+          value: "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
+          value: "QueueType"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
+          value: "ServiceBus"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
+          value: "ConnectionString"
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "azureservicebus" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_ServiceBus_ConnectionString
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
+          value: "RedPoint.Azure.Server"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
+          value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
+          value: "AccessKey"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_QueueSettings_AccessKey
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
+          value: "SecretKey"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_QueueSettings_SecretKey
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "googlepubsub" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
+          value: "RedPoint.Azure.Server"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
+          value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
+          value: "ProjectId"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
+          value: {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
+          value: "RedPoint.Azure.Server"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
+          value: "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
+          value: "EventHubName"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
+          value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.eventHubName | quote }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
+          value: "EventHubConnectionString"
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_EventHub_ConnectionString
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
+          value: "RedPoint.Resonance.KafkaQueueAccess"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
+          value: "RedPoint.Resonance.KafkaQueueAccess.KafkaQueueFactory"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
+          value: "BootstrapServers"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
+          value: {{ .Values.realtimeapi.queueProvider.amazonmsk.bootstrapServers | quote }}
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
+          value: "AccessKey"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_QueueSettings_AccessKey
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__2__Key
+          value: "SecretKey"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__2__Value
+          valueFrom:
+            secretKeyRef:
+              name: redpoint-rpi-secrets
+              key: RealtimeAPI_QueueSettings_SecretKey
         {{- end }}
         {{- end }}
         image: {{ .Values.global.deployment.images.queuereader }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         name: rpi-queuereader
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: {{ .Values.queuereader.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.queuereader.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.queuereader.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.queuereader.livenessProbe.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: {{ .Values.queuereader.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.queuereader.readinessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.queuereader.readinessProbe.failureThreshold }}
+          timeoutSeconds: {{ .Values.queuereader.readinessProbe.timeoutSeconds }}
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: {{ .Values.queuereader.startupProbe.failureThreshold }}
+          periodSeconds: {{ .Values.queuereader.startupProbe.periodSeconds }}
+        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
         lifecycle:
           postStart:
             exec:
               command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -321,21 +460,66 @@ spec:
             cpu: {{ .Values.queuereader.resources.requests.cpu }}
             memory: {{ .Values.queuereader.resources.requests.memory }}
         volumeMounts:
+          {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
-          {{- if .Values.storage.enabled }}
+          {{- end }}
+          {{- end }}
+          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          {{- end }}
+          {{- end }}
+          {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          - name: snowflake-creds
+            mountPath: {{ .Values.databases.datawarehouse.snowflake.mountPath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}
+            subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
           - name: rpifileoutputdir
-            mountPath: /rpifileoutputdir
+            mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}    
+          - name: rpdmuploaddirectory
+            mountPath: {{  .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
       volumes:
+        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
         - name: odbc-config
           configMap:
             name: odbc-config
-        {{- if .Values.storage.enabled }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        - name: snowflake-creds
+          configMap:
+            name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
-            claimName: {{ .Values.storage.persistentVolumeClaim }}
+            claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:

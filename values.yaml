@@ -9,22 +9,25 @@ global:
     # "selfhosted" is intended for on-premise or non-cloud based kubernetes deployments.
     platform: amazon
 
-    # Image list
+    # List of images
     images:
       interactionapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi
       integrationapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-integrationapi
       executionservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-executionservice
       nodemanager: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-nodemanager
-      realtimeapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-realtimeapi
       callbackapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-callbackapi
-      queuereader: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-queuereader
       deploymentapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-deploymentapi
-      init: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-init:latest
-      rabbitmq: rg1acrpub.azurecr.io/rpi/ancillary/queues/rabbitmq-3-management:latest
+      # If not using RPI Realtime, these are not needed
+      realtimeapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-realtimeapi
+      queuereader: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-queuereader
+      # If using external (BYO) Redis or RabbitMQ servers, these are not needed.
+      rabbitmq: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rabbitmq
+      rediscache: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rediscache
+      # If using external (BYO) ingress controller, this is not needed
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.2025-0503-1541
+      tag: 7.6.2025-0522-1016
       # Pull the image only if it's not already present on the node
       imagepullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -54,10 +57,17 @@ databases:
     pulse_logging_database_name: <my-logging-database-name>
     # The schema to be used within the database
     databaseSchema: dbo
+    # When set to true, appends `Encrypt=True` to the SQL Server connection string.
+    # If your SQL Server enforces encryption (e.g., Force Encryption is enabled) this must be set to true
+    encrypt: true
 
   # Datawarehouse Providers
+  # This section only applies if your datawarehouse is one of Redshift, BigQuery or snowflake. 
+  # Redshift and BigQuery use ODBC drivers, which require a configuration file to be included in the containers. 
+  # The details you provide are used to configure the Data Source Name (DSN). 
+  # After deployment, the connection string for your Redshift or BigQuery data warehouse would look 
+  # like this: ```dsn=redshift``` or ```dsn=bigquery``` 
   datawarehouse:
-    # Enable datawarehouse configuration.
     enabled: true
     # Only update the fields relevant to your chosen option and leave the others unchanged.
     # For example, if you're using Redshift, update the Redshift fields and leave Snowflake, BigQuery fields as-is.
@@ -90,8 +100,14 @@ databases:
       email: my-google-svs-account@my-project.iam.gserviceaccount.com    
       # Path to the service account JSON key file
       ConfigMapFilePath: /app/odbc-google-creds-config/google-service-account.json
+
     # ==========================
-    # Configuration for Snowflake
+    # Snowflake Configuration
+    #
+    # This section configures access to a Snowflake data warehouse using RSA key pair authentication,
+    # which provides enhanced security compared to basic authentication (username and password).
+    #
+    # Apply this configuration if your Snowflake instance requires RSA key-based authentication.
     snowflake:
       # Name of the ConfigMap storing Snowflake credentials
       ConfigMapName: snowflake-creds
@@ -99,6 +115,8 @@ databases:
       keyName: my_snowflake_rsa_key.p8
       # Mount path for the credentials in the container
       mountPath: /app/snowflake-creds
+      # In RPI, use the following format for the Snowflake connection string:
+      # User=<snowflakeUser>;Db=<snowflakeDB>;host=<snowflakeHost>;Account=<snowflake account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/my_snowflake_rsa_key.p8;PRIVATE_KEY_PWD=<privateKeyPassword>
 
 # ==========================
 cloudIdentity:
@@ -144,49 +162,80 @@ cloudIdentity:
     projectId: your_google_project_id
   amazonSettings:
     credentialsType: accessKey
-    accessKeyId: DUMMYACCESSKEY123456
-    secretAccessKey: DUMMYSECRETKEY7890abcdEFGH
+    accessKeyId: <my-aws-iam-access-key>
+    secretAccessKey: <my-aws-iam-secret-access-key>
     region: us-east-1  
 
 # ==========================      
 storage:
-  # Configure storage for the RPI File Output Directory.
+  # Configure storage for the RPI File Output and Data Management (RPDM) upload directories.
   # This chart is intentionally storage agnostic and does not enforce any specific storage solution.
   # You are responsible for creating the appropriate storage configuration based on your cloud provider’s requirements.
   # Provide the name of the Persistent Volume Claim (PVC) to be used below.
   # If storage is not needed, set 'enabled' to false.
-  enabled: false
-  persistentVolumeClaim: rpifileoutputdir
-
-services:
-  # The port on which the Kubernetes services will be exposed.
-  # This can be customized to align with the customer's internal port policies or conventions.
-  port: 80
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: false
+      claimName: rpifileoutputdir
+      mountPath: /rpifileoutputdir
+    DataManagementUploadDirectory:
+      enabled: false
+      claimName: rpdmuploaddirectory
+      mountPath: /rpdmuploaddirectory
 
 # ==========================
 realtimeapi:
-  # If disabled, Realtime Decisions will not be deployed
+  # If disabled, the realtime pod will not be deployed
   enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
+  name: rpi-realtimeapi
   serviceAccount: 
     enabled: true
-    name: rpi-realtimeapi
+  # Ensure this matches your target RPI client ID.
+  rpiClientID: 00000000-0000-0000-0000-000000000000
+  # The default authentication method for the Realtime API is an authentication 
+  # token in the header of the call to the API endpoint
+  authentication:
+    # Supported options are 
+    # - basic
+    # - oauth
+    type: basic
+    # With basic authentication, methods protected by the Standard role do not require an RPIAuthKey 
+    # authentication token whereas the rest require a token.
+    basic:
+      authToken: 00000000-0000-0000-0000-000000000000
+      standard: false
+      forms: true
+      listenerQueue: true
+      recommendations: true
+    # Once OAuth authentication is enabled, it takes precedence over the usage of static token authentication.
+    oauth:
+      databaseName: RPIRealtimeCore
+      accessTokenLifetimeSeconds: 360
+      refreshTokenLifetimeSeconds: 360
+  # Expose the Realtime API Swagger page for API exploration and testing.
+  enableHelpPages: true 
   enableEventListening: true
   realtimeProcessingEnabled: true
   CORSOrigins: ["*"]
   ThresholdBetweenSiteVisitsMinutes: 30
-  NoDaysPersistWebEvents: 365
   CacheWebFormData: true
   decisionCacheDuration: 60
-  pluginAssemblyPath: /app/plugins
   enableAuditMetricsInHeaders: true
+  # If set, profile data will be sent via queue to RPI
   cacheOutputQueueEnabled: true
-  # Unique identifier for the RPI client. Ensure this matches your registered RPI client ID.
-  rpiClientID: 00000000-0000-0000-0000-000000000000
-  # Set the RPIAuthToken to the same value as the RealtimeAPIKey that is configured in the RPI client. 
-  rpiAuthToken: 00000000-0000-0000-0000-000000000000 
-  # Set to `true` to make the Realtime API Swagger page available for API exploration and testing.
-  enableHelpPages: true 
+  RealtimeServerCookieEnabled: false
+  ThresholdBetweenSiteVisitsMinutes: 120
+  ThresholdBetweenPageVisitsMinutes: 1
+  CacheOutputCollectIPAddress: true
+  CacheWebFormData: false
+  HashVisitorID: false
+  EventListeningLocalCacheDuration: 60
+  RealtimeServerCookieHttpOnly: false
+  RealtimeServerCookieName: rg-visitor
+  RealtimeServerCookieExpires: 60
+  RealtimeServerCookieDomain: ""
   cacheProvider:
     # This section defines the settings for the real-time cache provider.
     # Update only the fields relevant to your chosen provider and leave the others unchanged.
@@ -195,7 +244,6 @@ realtimeapi:
     # Choose your cache provider
     # Supported options: (mongodb, azureredis, redis, inMemorySql).
     provider: mongodb
-
     # If using MongoDB as the provider
     mongodb:
       # Provide the MongoDB connection string.
@@ -210,14 +258,23 @@ realtimeapi:
 
     # If using Redis as the provider
     redis:
-      # Provide the Redis cache connection string.
+      # Set to true to deploy an internal Redis container.
+      # Set to false if using an external (BYO) Redis instance.
+      internal: false
+      replicas: 2
+      # Redis connection string used when 'internal' is false.
+      # Format: <hostname>:<port>,ssl=<true|false>,abortConnect=<true|false>,user=<username>,password=<password>
       connectionstring: <my-redis-hostname>:6379,ssl=True,abortConnect=false,user=<my-username>,password=<my-username>
       
+    # In-memory SQL cache configuration
     inMemorySql:
-      server_host: <my-cache-database-server-host>
-      databaseName: <my-cache-database-name>
-      username: <my-cache-database-username>
-      password: <my-cache-database-password>
+      # Hostname or IP address of the cache database server
+      serverHost: "<your-cache-database-server-host>"
+      # Name of the in-memory SQL database
+      databaseName: "<your-cache-database-name>"
+      # Credentials for database access
+      username: "<your-cache-database-username>"
+      password: "<your-cache-database-password>"
 
   queueProvider:
     # This section defines the settings for the real-time message queue provider.
@@ -234,8 +291,8 @@ realtimeapi:
       eventsQueuePath: RPIWebEvents
       cacheOutputQueuePath: RPIWebCacheData
       recommendationsQueuePath: RPIWebRecommendations
+      # Overrides the standard queue settings for event stream processing
       listenerQueuePath: RPIQueueListener
-      # Queue required for the RPI callback service (Sendgrid)
       callbackServiceQueuePath: RPICallbackApiQueue
     # Update only the fields relevant to your chosen provider and leave the others unchanged.
     # If using AWS SQS as the provider
@@ -259,41 +316,62 @@ realtimeapi:
     azureeventhubs:
       # Provide the Azure Event Hub connection string
       connectionstring: Endpoint=sb://<your-event-hubs-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-policy-name>;SharedAccessKey=<your-policy-key>;EntityPath=<your-event-hub-name>
+      eventHubName: RPIQueueListener
 
     # If using RabbitMQ as the queue provider
     rabbitmq:
-      hostname: rpi-rabbitmq
-      virtual_host: /
+      # Set to true to deploy an internal Redis container.
+      # Set to false if using an external (BYO) Redis instance.
+      internal: false
+      # Number of RabbitMQ replicas (only applicable when 'internal' is true)
+      replicas: 2
+      # RabbitMQ hostname or service name
+      hostname: realtime-rabbitmq
+      # Virtual host to use within RabbitMQ
+      virtualHost: "/"
+      # Credentials for RabbitMQ access
       username: redpointdev
-      password: .RedPoint2021
-
-  DataMaps:
-    VisitorProfile:
+      password: <your-secure-password>
+    
+    # If using Amazon Managed Kafka (MSK) as the queue provider
+    amazonmsk:
+      region: <my-aws-region>
+      accessKeyId: <my-aws-iam-access-key>
+      secretAccessKey: <my-aws-iam-secret-access-key>
+      bootstrapServers: <my-server1.c2.kafka.us-east-1.amazonaws.com:9198>
+      Acks: None
+      CompressionType: Snappy
+      MaxRetryAttempt: 10
+      BatchSize: "1000000"
+      LingerTime: 0
+      UseAwsMsk: True
+  dataMaps:
+    visitorProfile:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
       CompressData: true
-    VisitorHistory:
+    visitorHistory:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
       CompressData: true
-    NonVisitorData:
+    nonVisitorData:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
       CompressData: true
-    ProductRecommendation:
+    productRecommendation:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
       CompressData: true
-    OfferHistory:
+    offerHistory:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
       CompressData: true
-    MessageHistory:
+    messageHistory:
       DaysToPersist: 365
       Cache: Default
       DaysToPersist: 365
@@ -308,6 +386,10 @@ realtimeapi:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -325,7 +407,10 @@ realtimeapi:
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -338,7 +423,7 @@ realtimeapi:
     # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
     #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
     #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
     # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
@@ -367,20 +452,36 @@ realtimeapi:
       minReplicaCount: 2
       # Maximum number of pods to scale up to when the load increases.
       maxReplicaCount: 5
-
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Readiness probe checks if the app is ready to receive traffic. 
+  # If it fails, traffic is paused.
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Startup probe checks if the app has finished starting.
+  # Until it passes, liveness and readiness probes are ignored.
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
 
 # ==========================
 callbackapi:
+  # If disabled, the callbackapi pod will not be deployed
+  enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
-  # The RPI Callback Service is used to retrieve results from the following channel providers:
-  # Sendgrid and MPulse
-
-  # Enable or disable the CallbackService queue
-  queueEnabled: true
+  name: rpi-callbackapi
   channelLabel: SendGrid
   serviceAccount: 
     enabled: true 
-    name: rpi-callbackapi
   # Default resource requests and limits per deployment.
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
@@ -391,6 +492,10 @@ callbackapi:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -408,7 +513,10 @@ callbackapi:
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -421,7 +529,7 @@ callbackapi:
     # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
     #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
     #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
     # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
@@ -450,16 +558,39 @@ callbackapi:
       minReplicaCount: 2
       # Maximum number of pods to scale up to when the load increases.
       maxReplicaCount: 5
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Readiness probe checks if the app is ready to receive traffic. 
+  # If it fails, traffic is paused.
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Startup probe checks if the app has finished starting.
+  # Until it passes, liveness and readiness probes are ignored.
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
+
 
 # ==========================      
 executionservice:
+  # If disabled, the executionservice pod will not be deployed
+  enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
+  name: rpi-executionservice
   RPIExecution__QueueListener__IsEnabled: false 
   RPIExecution_MaxThreadsPerExecutionService: 100
   enableRPIAuthentication: true
   serviceAccount: 
     enabled: true 
-    name: rpi-executionservice
   # Default resource requests and limits per deployment.
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
@@ -470,6 +601,10 @@ executionservice:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -487,7 +622,10 @@ executionservice:
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -500,7 +638,7 @@ executionservice:
     # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
     #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
     #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
     # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
@@ -529,15 +667,37 @@ executionservice:
       minReplicaCount: 2
       # Maximum number of pods to scale up to when the load increases.
       maxReplicaCount: 5
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Readiness probe checks if the app is ready to receive traffic. 
+  # If it fails, traffic is paused.
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Startup probe checks if the app has finished starting.
+  # Until it passes, liveness and readiness probes are ignored.
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
 
 # ========================== 
 interactionapi: 
+  # If disabled, the interactionapi pod will not be deployed
+  enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
+  name: rpi-interactionapi
   enableRPIAuthentication: true
   enableSwagger: true
   serviceAccount: 
     enabled: true 
-    name: rpi-interactionapi
   allowSavingLoginDetails: true
   alwaysShowClientsAtLogin: true
   # Default resource requests and limits per deployment.
@@ -550,6 +710,10 @@ interactionapi:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -567,7 +731,10 @@ interactionapi:
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -580,7 +747,7 @@ interactionapi:
     # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
     #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
     #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
     # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
@@ -609,14 +776,36 @@ interactionapi:
       minReplicaCount: 2
       # Maximum number of pods to scale up to when the load increases.
       maxReplicaCount: 5
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Readiness probe checks if the app is ready to receive traffic. 
+  # If it fails, traffic is paused.
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Startup probe checks if the app has finished starting.
+  # Until it passes, liveness and readiness probes are ignored.
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
 
 # ========================== 
 integrationapi:
+  # If disabled, the integrationapi pod will not be deployed
+  enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
+  name: rpi-integrationapi
   enableSwagger: true
   serviceAccount: 
     enabled: true 
-    name: rpi-integrationapi
   enableRPIAuthentication: true
   # Default resource requests and limits per deployment.
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
@@ -628,6 +817,10 @@ integrationapi:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -644,7 +837,10 @@ integrationapi:
     prometheus_scrape: false
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -657,7 +853,7 @@ integrationapi:
     # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
     #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
     #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
     # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
@@ -686,13 +882,35 @@ integrationapi:
       minReplicaCount: 2
       # Maximum number of pods to scale up to when the load increases.
       maxReplicaCount: 5
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Readiness probe checks if the app is ready to receive traffic. 
+  # If it fails, traffic is paused.
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Startup probe checks if the app has finished starting.
+  # Until it passes, liveness and readiness probes are ignored.
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
 
 # ========================== 
 nodemanager:
+  # If disabled, the nodemanager pod will not be deployed
+  enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
+  name: rpi-nodemanager
   serviceAccount: 
     enabled: true 
-    name: rpi-nodemanager
   enableRPIAuthentication: true
   enableSwagger: true
   # Default resource requests and limits per deployment.
@@ -705,6 +923,10 @@ nodemanager:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -722,7 +944,10 @@ nodemanager:
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -735,7 +960,7 @@ nodemanager:
     # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
     #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
     #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
     # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
@@ -764,13 +989,35 @@ nodemanager:
       minReplicaCount: 2
       # Maximum number of pods to scale up to when the load increases.
       maxReplicaCount: 5
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Readiness probe checks if the app is ready to receive traffic. 
+  # If it fails, traffic is paused.
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Startup probe checks if the app has finished starting.
+  # Until it passes, liveness and readiness probes are ignored.
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
 
 # ========================== 
 deploymentapi:
+  # If disabled, the deploymentapi pod will not be deployed
+  enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
+  name: rpi-deploymentapi
   serviceAccount: 
     enabled: true 
-    name: rpi-deploymentapi
   # Default resource requests and limits per deployment.
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
@@ -781,6 +1028,10 @@ deploymentapi:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -798,34 +1049,49 @@ deploymentapi:
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
 
 # ==========================
 queuereader: 
+  # If disabled, the queuereader pod will not be deployed
+  enabled: true
+  # Number of pod replicas to deploy
   replicas: 1
+  name: rpi-queuereader
   # Configuration for the Queue Reader container introduced in RPI v7.4
   # This component handles the draining of Queue Listener and RPI Realtime queues.
-
-  # Enable or disable the Queue Reader container
-  enabled: true
   serviceAccount: 
     enabled: true 
-    name: rpi-queuereader
-
   # Enable or disable processing for specific queues
   isFormProcessingEnabled: true
   isEventProcessingEnabled: true
   isCacheProcessingEnabled: true
   queueListenerEnabled: true
-
-  # Distribution mode for high-performance or high-volume transactions
-  # Set to true if you require distributed processing
-  isDistributed: false 
-
-  # Comma separated List of RPI client IDs associated with your RPI cluster 
-  tenantIds:
-    - 00000000-0000-0000-0000-000000000000
-    - 11111111-1111-1111-1111-111111111111
+  # Queue for storing messages received by inactive triggers.
+  # You can customize the queue name as needed.
+  listenerQueueNonActiveQueuePath: listenerQueueNonActive
+  # Time-to-live (TTL) in days for messages in the inactive trigger queue.
+  listenerQueueNonActiveTTLDays: 14
+  # Queue for storing messages that encountered errors during processing.
+  # You can customize the queue name as needed.
+  listenerQueueErrorQueuePath: listenerQueueError
+  # Time-to-live (TTL) in days for messages in the error queue.
+  listenerQueueErrorTTLDays: 14
+  realtimeConfiguration:
+    # Distribution mode for high-performance or high-volume transactions
+    # Set to true if you require distributed processing
+    isDistributed: true
+    distributedCache:
+      # Only Redis is currently supported
+      provider: Redis
+      connectionString: <my-redis-connection-string>
+    # Comma separated List of RPI client IDs associated with your RPI cluster 
+    tenantIds:
+      - 00000000-0000-0000-0000-000000000000
+      - 11111111-1111-1111-1111-111111111111
   # Thread pool configuration
   threadPoolSize: 10
   # Timeout duration for processing, in minutes
@@ -840,6 +1106,10 @@ queuereader:
     limits:
       cpu: 875m
       memory: 2048Mi
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
   # These will be added in addition to the default labels.
   # Example: environment: prod, team: marketing
@@ -857,7 +1127,10 @@ queuereader:
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
-    logLevel: Error
+    default: Error
+    database: Error
+    rpiTrace: Error
+    rpiError: Error
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -870,7 +1143,7 @@ queuereader:
     # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
     #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
     #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custome metrics, use "keda".
+    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
     # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
@@ -899,30 +1172,51 @@ queuereader:
       minReplicaCount: 2
       # Maximum number of pods to scale up to when the load increases.
       maxReplicaCount: 5
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Readiness probe checks if the app is ready to receive traffic. 
+  # If it fails, traffic is paused.
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 2
+  # Startup probe checks if the app has finished starting.
+  # Until it passes, liveness and readiness probes are ignored.
+  startupProbe:
+    failureThreshold: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
 
-# Supported Providers are azure, okta, keycloak, Auth0, Gigya, pingIdentity
 OpenIdProviders:
+  # Enable OpenID Connect settings
   enabled: false
-  MetadataHost: "https://example.com"
+  # Name of the OpenID Connect provider. Supported Providers 
+  # - KeyCloak
+  # - Okta
+  # https://docs.redpointglobal.com/rpi/admin-authentication
+  name: KeyCloak
   # Microsoft Entra ID App registration Client ID
-  ClientID: 00000000-0000-0000-0000-000000000000
-  # Name of the OpenID Connect provider. Azure AD in this example
-  Name: AzureAD
-  # Audience for the OpenID Connect authentication request
-  Audience: api://00000000-0000-0000-0000-000000000000
   # Authorization host for OpenID Connect
-  AuthorizationHost: "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/v2.0/authorize"
-  # Enable or disable refresh tokens
-  EnableRefreshTokens: true
-  # Custom scopes for OpenID Connect
-  CustomScopes: ["api://00000000-0000-0000-0000-000000000000/Interaction.Clients"]
-  # Parameter for id_token_hint during logout
-  LogoutIdTokenParameter: id_token_hint
+  authorizationHost: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/v2.0/authorize
+  clientID: 00000000-0000-0000-0000-000000000000
+  # Audience for the OpenID Connect authentication request
+  audience: api://00000000-0000-0000-0000-000000000000
+  redirectURL: your_rpi_client_hostname
+  enableRefreshTokens: true
   # Validate issuer of the OpenID Connect provider
-  ValidateIssuer: false
+  validateIssuer: true
+  # Enable or disable refresh tokens
   # Validate audience of the OpenID Connect provider
-  ValidateAudience: true
-  RedirectURL: your_rpi_client_hostname
+  validateAudience: true
+  # Parameter for id_token_hint during logout
+  logoutIdTokenParameter: id_token_hint
+  # Custom scopes for OpenID Connect
+  customScopes: ["api://00000000-0000-0000-0000-000000000000/Interaction.Clients"]
 
 SMTPSettings:
   SMTP_SenderAddress: noreply-rpi@example.com
@@ -958,24 +1252,24 @@ ingress:
   customLabels: 
     environment: prod
     team: marketing
+  service:
+    port: 80
   customAnnotations:
     prometheus.io/scrape: "false"
   # Define hostnames for different services in your application.
   hosts:
     # Configuration service
     config: rpi-deploymentapi
-    
     # Client Login service
     client: rpi-interactionapi
-
     # Integration API
     integration: rpi-integrationapi
-
     # Real-time service 
     realtime: rpi-realtimeapi
-
     # Callback API
     callbackapi: rpi-callbackapi
+    # Queue Reader Operational endpoints
+    queuereader: rpi-queuereader
 
 securityContext:
   # Enable this to enforce running the container as a non-root user.
@@ -1020,7 +1314,6 @@ redpointAI:
     ChatGptEngine: gpt-4-32k
     # Temperature for ChatGPT responses (e.g., 0.7)        
     ChatGptTemp: 0.5
-  
   cognitiveSearch:
     # Azure Cognitive Search endpoint URL
     SearchEndpoint: https://example.search.windows.net
@@ -1030,7 +1323,6 @@ redpointAI:
     VectorSearchProfile: vector-profile-000000000000
     # Azure Cognitive Search vector config name 
     VectorSearchConfig:  vector-config-000000000000 
-
   modelStorage:
     # Azure Blob Storage connection string for model artifacts
     ConnectionString: DefaultEndpointsProtocol=https;AccountName=my_account_name;AccountKey=my_account_access_key 

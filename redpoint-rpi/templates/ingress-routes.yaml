@@ -21,9 +21,9 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-interactionapi
+              name: {{ .Values.interactionapi.name }}
               port:
-                number: {{ .Values.services.port }}
+                number: {{ .Values.interactionapi.service.port }}
     - host: {{ .Values.ingress.hosts.config }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -31,9 +31,21 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-deploymentapi
+              name: {{ .Values.deploymentapi.name }}
               port:
-                number: {{ .Values.services.port }}
+                number: {{ .Values.deploymentapi.service.port }}
+    {{- if .Values.queuereader.enabled }}
+    - host: {{ .Values.ingress.hosts.queuereader }}.{{ .Values.ingress.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-queuereader
+              port:
+                number: 80
+    {{- end }}
     - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -41,9 +53,9 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-integrationapi
+              name: {{ .Values.integrationapi.name }}
               port:
-                number: {{ .Values.services.port }}
+                number: {{ .Values.integrationapi.service.port }}
     - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -51,9 +63,9 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-realtimeapi
+              name: {{ .Values.realtimeapi.name }}
               port:
-                number: {{ .Values.services.port }}
+                number: {{ .Values.realtimeapi.service.port }}
     - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -61,122 +73,22 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: rpi-callbackapi
+              name: {{ .Values.callbackapi.name }}
               port:
-                number: {{ .Values.services.port }}
+                number: {{ .Values.callbackapi.service.port }}
     {{- if .Values.realtimeapi.enabled }}
     {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+    {{- if .Values.realtimeapi.queueProvider.rabbitmq.internal }}
     - host: rabbitmq-console.{{ .Values.ingress.domain }}
       http:
         paths:
         - backend:
             service:
-              name: rpi-rabbitmq
+              name: realtime-rabbitmq
               port:
                 number: 15672
           path: /
           pathType: Prefix
     {{- end }}
     {{- end }}
-    {{- if .Values.realtimeapi.enabled }}
-    {{- if eq .Values.realtimeapi.queueProvider.provider "redis" }}
-    - host: redis-console.{{ .Values.ingress.domain }}
-      http:
-        paths:
-        - backend:
-            service:
-              name: rpi-rediscache
-              port:
-                number: 80
-          path: /
-          pathType: Prefix
     {{- end }}
-    {{- end }}
-
----
-{{- if eq .Values.global.deployment.platform "demo" }}
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: redpoint-rpi
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 99m
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-spec:
-  ingressClassName: redpointdemo
-  tls:
-  - secretName: demo-tls
-  rules:
-    - host: rpi-interactionapi.redpointdemo.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-interactionapi
-              port:
-                number: {{ .Values.services.port }}
-    - host: rpi-deploymentapi.redpointdemo.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-deploymentapi
-              port:
-                number: {{ .Values.services.port }}
-    - host: rpi-integrationapi.redpointdemo.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-integrationapi
-              port:
-                number: {{ .Values.services.port }}
-    - host: rpi-realtimeapi.redpointdemo.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-realtimeapi
-              port:
-                number: {{ .Values.services.port }}
-    - host: rpi-callbackapi.redpointdemo.com
-      http:
-        paths:
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-callbackapi
-              port:
-                number: {{ .Values.services.port }}
-    - host: rabbitmq-console.redpointdemo.com
-      http:
-        paths:
-        - backend:
-            service:
-              name: rabbitmq-management
-              port:
-                number: 15672
-          path: /
-          pathType: Prefix
-    - host: redis-console.redpointdemo.com
-      http:
-        paths:
-        - backend:
-            service:
-              name: rpi-rediscache
-              port:
-                number: 6379
-          path: /
-          pathType: Prefix
-{{- end }}
