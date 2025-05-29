@@ -5,3 +5,4 @@ test-aws-psql.yaml
 test-gcp-msql.yaml
 test-gcp-psql.yaml
 deploy.yaml
+test-azure-pvc.yaml

@@ -1203,11 +1203,11 @@ OpenIdProviders:
   name: KeyCloak
   # Microsoft Entra ID App registration Client ID
   # Authorization host for OpenID Connect
-  authorizationHost: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/v2.0/authorize
+  authorizationHost: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0
   clientID: 00000000-0000-0000-0000-000000000000
   # Audience for the OpenID Connect authentication request
   audience: api://00000000-0000-0000-0000-000000000000
-  redirectURL: your_rpi_client_hostname
+  redirectURL: https://rpi-interactionapi.example.com
   enableRefreshTokens: true
   # Validate issuer of the OpenID Connect provider
   validateIssuer: true
@@ -1217,7 +1217,8 @@ OpenIdProviders:
   # Parameter for id_token_hint during logout
   logoutIdTokenParameter: id_token_hint
   # Custom scopes for OpenID Connect
-  customScopes: ["api://00000000-0000-0000-0000-000000000000/Interaction.Clients"]
+  customScopes:
+    - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
 
 SMTPSettings:
   SMTP_SenderAddress: noreply-rpi@example.com
