@@ -107,6 +107,13 @@ databases:
       keyName: my-google-svs-account.json
       # Path to the service account JSON key file
       ConfigMapFilePath: /app/google-creds
+      # AllowLargeResults: When set to 1, the driver allows for result sets in responses to be larger than 128 MB.
+      allowLargeResults: 0
+      # LargeResultsDataSetId: DatasetId to store temporary tables created.  This is a required setting if AllowLargeResults is set to 1.
+      largeResultsDataSetId: _bqodbc_temp_tables
+      # LargeResultsTempTableExpirationTime: Time in milliseconds before the temporary tables created expire.  
+      # This is a required setting if AllowLargeResults is set to 1.
+      largeResultsTempTableExpirationTime: "3600000"
 
     # ==========================
     # Snowflake Configuration

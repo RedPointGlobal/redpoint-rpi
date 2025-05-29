@@ -80,6 +80,9 @@ data:
     Driver=/app/odbc-lib/bigquery/SimbaODBCDriverforGoogleBigQuery64/lib/libgooglebigqueryodbc_sb64.so
     Catalog={{ .Values.databases.datawarehouse.bigquery.projectId }}
     SQLDialect={{ .Values.databases.datawarehouse.bigquery.sqlDialect }}
+    AllowLargeResults={{ .Values.databases.datawarehouse.bigquery.allowLargeResults }}
+    LargeResultsDataSetId={{ .Values.databases.datawarehouse.bigquery.largeResultsDataSetId }}
+    LargeResultsTempTableExpirationTime={{ .Values.databases.datawarehouse.bigquery.largeResultsTempTableExpirationTime }}
     OAuthMechanism={{ .Values.databases.datawarehouse.bigquery.OAuthMechanism }}
     Email={{ .Values.databases.datawarehouse.bigquery.serviceAccountEmail }}
     KeyFilePath={{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}
