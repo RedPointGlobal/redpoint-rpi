@@ -679,17 +679,7 @@ Open the ```values.yaml``` file and navigate to the ```redpointAI``` section. Up
 
 ```
 redpointAI:
-  enabled: true  
-  naturalLanguage:
-    ApiKey: <my-api-key>         
-    ApiBase: <my-api-base-url>         
-    ApiVersion: <my-api-version>         
-    ChatGptEngine: <my-gpt-engine>
-  cognitiveSearch:
-    SearchEndpoint: <my-search-endpoint>  
-    SearchKey: <my-search-key>   
-    VectorSearchProfile: <my-search-profile>
-    VectorSearchConfig: <my-search-config>  
+  enabled: true 
 ```
 ### Configure Custom Metrics
 
