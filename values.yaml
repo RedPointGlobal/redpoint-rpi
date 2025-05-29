@@ -1199,8 +1199,9 @@ OpenIdProviders:
   # Name of the OpenID Connect provider. Supported Providers 
   # - KeyCloak
   # - Okta
+  # - AzureAD
   # https://docs.redpointglobal.com/rpi/admin-authentication
-  name: KeyCloak
+  name: AzureAD
   # Microsoft Entra ID App registration Client ID
   # Authorization host for OpenID Connect
   authorizationHost: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0
