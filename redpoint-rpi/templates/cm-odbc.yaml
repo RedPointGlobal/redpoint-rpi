@@ -81,7 +81,7 @@ data:
     Catalog={{ .Values.databases.datawarehouse.bigquery.projectId }}
     SQLDialect={{ .Values.databases.datawarehouse.bigquery.sqlDialect }}
     OAuthMechanism={{ .Values.databases.datawarehouse.bigquery.OAuthMechanism }}
-    Email={{ .Values.databases.datawarehouse.bigquery.email }}
-    KeyFilePath={{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}
+    Email={{ .Values.databases.datawarehouse.bigquery.serviceAccountEmail }}
+    KeyFilePath={{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}
 {{- end }}
 {{- end }}

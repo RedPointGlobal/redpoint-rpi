@@ -440,16 +440,27 @@ spec:
             subPath: odbc2.ini
           {{- end }}
           {{- end }}
-          {{- if eq .Values.global.deployment.platform "google" }}
-          {{- if .Values.cloudIdentity.googleSettings.serviceAccount.enabled }}
-          - name: {{ .Values.cloudIdentity.googleSettings.serviceAccountName }}
-            mountPath: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
-            subPath: "{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
+          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
+          - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
+            mountPath: "{{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+            subPath: "{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
+          - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
+            mountPath: "{{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+            subPath: "{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+          {{- end }}
           {{- end }}
           {{- end }}
           {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
           - name: snowflake-creds
-            mountPath: {{ .Values.databases.datawarehouse.snowflake.mountPath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}
+            mountPath: "{{ .Values.databases.datawarehouse.snowflake.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}"
             subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
           {{- end }}
           {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
@@ -471,11 +482,13 @@ spec:
             name: odbc-config
         {{- end }}
         {{- end }}
-        {{- if eq .Values.global.deployment.platform "google" }}
-        {{- if .Values.cloudIdentity.googleSettings.serviceAccount.enabled }}
-        - name: {{ .Values.cloudIdentity.googleSettings.serviceAccountName | quote }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
+        - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
           configMap:
-            name: {{ .Values.cloudIdentity.googleSettings.serviceAccount.configMapName | quote }}
+            name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
+        {{- end }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
