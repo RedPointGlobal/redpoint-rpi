@@ -303,9 +303,16 @@ RPI uses File Share storage (SMB or NFS) for storing any file assets exported vi
 This Helm chart does not enforce any specific storage solution. You are responsible for provisioning the storage based on your hosting platform's offering. Once that is done, provide the name of the Persistent Volume Claim (PVC) to be used in the ```values.yaml``` as shown below. If storage is not needed, set 'enabled' to false and skip this step
 
 ```
-  storage:
-    enabled: true
-    persistentVolumeClaim: rpifileoutputdir
+storage:
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: true
+      claimName: rpifileoutputdir
+      mountPath: /rpifileoutputdir
+    DataManagementUploadDirectory:
+      enabled: true
+      claimName: rpdmuploaddirectory
+      mountPath: /rpdmuploaddirectory
 ```
 
 ### Configure Realtime
