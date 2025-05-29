@@ -127,6 +127,8 @@ databases:
       # User=<snowflakeUser>;Db=<snowflakeDB>;host=<snowflakeHost>;Account=<snowflake account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/my_snowflake_rsa_key.p8;PRIVATE_KEY_PWD=<privateKeyPassword>
 
 # ==========================
+# Certain RPI functionality (e.g., secret managers, Azure and GCP plugins) is able to make use of 
+# cloud provider identity to authenticate with cloud services.
 cloudIdentity:
   enabled: false
   # Authentication method for accessing cloud services.
@@ -140,8 +142,7 @@ cloudIdentity:
     # - Use 'kubernetes' to have the Helm chart automatically create the secrets within your Kubernetes cluster.
     # - Use 'keyvault' to disable Kubernetes secret creation and pull secrets from an external key vault.
     #
-    # For more information, refer to the RPI Secret Management documentation:
-    # https://docs.redpointglobal.com/rpi/admin-secret-management
+    # For more information, refer to the ```Configure Secrets Management``` in the README.md
     secretsProvider: kubernetes
     # If secretsProvider is kubernetes - Let the Helm chart automatically create the secret
     autoCreateSecrets: true
