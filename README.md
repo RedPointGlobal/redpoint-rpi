@@ -611,7 +611,7 @@ curl -X 'POST' \
 
 A successful activation returns a ```200 OK ``` response. Once RPI is upgraded and the license activated, you're ready to proceed with downloading the Client executable for login and post upgrade validation
 
- - **Update system configuration**
+ - **Update System Configuration**
 
 RPI stores certain tenant level settings in the operational databases. When cloning the v6 operational databases, these settings are carried over and must be updated to align with the v7 environment. For example, the ```FileOutputDirectory``` used in your v6 cluster might differ from the one intended for your v7 cluster. After the upgrade completes successfully, the RPI administrator should review and update the following settings via the Configuration tab in the RPI client:
 
