@@ -192,12 +192,16 @@ storage:
   persistentVolumeClaims:
     FileOutputDirectory:
       enabled: false
-      claimName: rpifileoutputdir
-      mountPath: /rpifileoutputdir
+      claimName: rpifileshare
+      mountPath: /rpifileshare/rpifileoutputdir
+    Plugins:
+      enabled: false
+      claimName: rpifileshare
+      mountPath: /rpifileshare/plugins
     DataManagementUploadDirectory:
       enabled: false
-      claimName: rpdmuploaddirectory
-      mountPath: /rpdmuploaddirectory
+      claimName: rpifileshare
+      mountPath: /rpifileshare/rpdmuploaddirectory
 
 # ==========================
 realtimeapi:
@@ -236,7 +240,6 @@ realtimeapi:
   enableHelpPages: true 
   enableEventListening: true
   realtimeProcessingEnabled: true
-  pluginAssemblyPath: /app/plugins
   CORSOrigins: ["*"]
   ThresholdBetweenSiteVisitsMinutes: 30
   CacheWebFormData: true

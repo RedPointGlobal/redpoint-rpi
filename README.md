@@ -298,21 +298,34 @@ RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value
 
 ### Configure Storage
 
-RPI uses File Share storage (SMB or NFS) for storing any file assets exported via interactions or selection rules to a [File Output directory ](https://docs.redpointglobal.com/rpi/file-output-directory) 
+RPI uses File Share storage for storing files such as those exported via interactions or selection rules to a [File Output directory ](https://docs.redpointglobal.com/rpi/file-output-directory), custom plugins or files shared with Redpoint Data Management (RPDM). In Azure, AWS, or Google Cloud, this storage is backed by their respective managed file share services such as ```Azure Files```, ```Amazon EFS``` and ```Google Filestore```
 
-This Helm chart does not enforce any specific storage solution. You are responsible for provisioning the storage based on your hosting platform's offering. Once that is done, provide the name of the Persistent Volume Claim (PVC) to be used in the ```values.yaml``` as shown below. If storage is not needed, set 'enabled' to false and skip this step
+You are responsible for provisioning the storage based on your hosting platform's offering. Once the storage has been provisioned, create the following directory structure within your file share.
+
+```
+.
+├── plugins
+├── rpdmuploaddirectory
+└── rpifileoutputdir
+```
+
+Next, create a PersistentVolumeClaim (PVC) and reference its name in the ```values.yaml``` file.
 
 ```
 storage:
   persistentVolumeClaims:
     FileOutputDirectory:
       enabled: true
-      claimName: rpifileoutputdir
-      mountPath: /rpifileoutputdir
+      claimName: rpifileshare
+      mountPath: /rpifileshare/rpifileoutputdir
+    Plugins:
+      enabled: true
+      claimName: rpifileshare
+      mountPath: /rpifileshare/plugins
     DataManagementUploadDirectory:
       enabled: true
-      claimName: rpdmuploaddirectory
-      mountPath: /rpdmuploaddirectory
+      claimName: rpifileshare
+      mountPath: /rpifileshare/rpdmuploaddirectory
 ```
 
 ### Configure Realtime

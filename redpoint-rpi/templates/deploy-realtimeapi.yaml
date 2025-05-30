@@ -334,7 +334,7 @@ spec:
           {{- end }}
           {{- end }}
           - name: RealtimeAPIConfiguration__AppSettings__PluginAssemblyPath
-            value: {{ .Values.realtimeapi.pluginAssemblyPath | quote }}
+            value: {{ .Values.storage.persistentVolumeClaims.Plugins.mountPath | quote }}
           - name: RealtimeAPIConfiguration__AppSettings__IsWebFormProcessorOnly
             value: "false"
           - name: RealtimeAPIConfiguration__AppSettings__MessageDaysExpiry
