@@ -361,6 +361,8 @@ realtimeapi:
     type: oauth
 ```
 
+- **Token endpoint**
+
 To authenticate with RPI Realtime using OAuth, you must request a bearer token from the token endpoint ```https://rpi-realtimeapi.example.com/connect/token```. This endpoint accepts a ```username``` and ```password``` to authenticate the user and returns a ```bearer token```. The bearer token is a time limited credential that authorizes the user to make subsequent calls to the Realtime API.
 
 Example: Requesting a Token and Calling the API
