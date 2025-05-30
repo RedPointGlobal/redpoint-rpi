@@ -351,7 +351,7 @@ realtimeapi:
 
 - **API authentication (OAuth)**
 
-The Realtime API can also be configured to use OAuth instead of the header token authentication. To configure RPI Realtime to use OAuth, first create the SQL Server or PostgreSQL database required by the OAuth implementation. The scripts to create the database can be downloaded from the Configuration Service ```https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\RealtimeCore.sql.``` 
+The Realtime API can also be configured to use [OAuth](https://docs.redpointglobal.com/rpi/rpi-realtime-authentication) instead of the header token authentication. To configure RPI Realtime to use OAuth, first create the SQL Server or PostgreSQL database required by the OAuth implementation. The scripts to create the database can be downloaded from the Configuration Service ```https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\RealtimeCore.sql.```. It's recommended to create this database on the same SQL server hosting the RPI operational databases.
 
 Once the RealtimeCore database has been created, enable the OAuth configuration in the ```values.yaml```
 
@@ -359,6 +359,29 @@ Once the RealtimeCore database has been created, enable the OAuth configuration 
 realtimeapi:
   authentication:
     type: oauth
+```
+
+To authenticate with RPI Realtime using OAuth, you must request a bearer token from the token endpoint ```https://rpi-realtimeapi.example.com/connect/token```. This endpoint accepts a ```username``` and ```password``` to authenticate the user and returns a ```bearer token```. The bearer token is a time limited credential that authorizes the user to make subsequent calls to the Realtime API.
+
+Example: Requesting a Token and Calling the API
+
+```
+# Requesting a Token
+
+TOKEN=$(curl -L -X POST \
+  "http://$REALTIME_API_ADDRESS/connect/token/" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "grant_type=password" \
+  --data-urlencode "client_id=$CLIENT_ID" \
+  --data-urlencode "username=$USERNAME" \
+  --data-urlencode "password=$PASSWORD" \
+  --data-urlencode "client_secret=$CLIENT_SECRET" | jq -r '.access_token')
+
+# Get version information for Realtime API and Realtime Agent
+curl -X GET "https://$REALTIME_API_ADDRESS/api/v2/system/version" \
+ -H "accept: application/json" \
+ -H "Authorization: Bearer $TOKEN" | jq 
+
 ```
 
 - **Multi-tenancy**

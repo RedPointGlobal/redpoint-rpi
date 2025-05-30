@@ -226,6 +226,8 @@ realtimeapi:
       listenerQueue: true
       recommendations: true
     # Once OAuth authentication is enabled, it takes precedence over the usage of static token authentication.
+    # An RPI Realtime authentication database must be made available, and 
+    # Refer to https://docs.redpointglobal.com/rpi/rpi-realtime-authentication
     oauth:
       databaseName: RPIRealtimeCore
       accessTokenLifetimeSeconds: 360
@@ -234,6 +236,7 @@ realtimeapi:
   enableHelpPages: true 
   enableEventListening: true
   realtimeProcessingEnabled: true
+  pluginAssemblyPath: /app/plugins
   CORSOrigins: ["*"]
   ThresholdBetweenSiteVisitsMinutes: 30
   CacheWebFormData: true
