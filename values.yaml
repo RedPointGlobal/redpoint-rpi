@@ -1322,12 +1322,11 @@ securityContext:
   enabled: true
   # Indicates whether a custom user/group is being provided.
   # If false, the default 7777 will be used
-  # NOTE: We highly recommend you dont change these settings and let it use the defaults).
+  # We highly recommend you dont change these settings and let it use the defaults).
   isCustom: true
   runAsUser: 7777
   runAsGroup: 7777
   fsGroup: 7777
- # NOTE: `runAsNonRoot: true` is hardcoded in the template to ensure best practices.
 
 # NodeSelector is used to control scheduling by specifying node labels.
 # When enabled, the deployment will only be scheduled on nodes that match the provided key-value pair.
