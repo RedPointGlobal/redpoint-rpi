@@ -258,28 +258,6 @@ realtimeapi:
   RealtimeServerCookieName: rg-visitor
   RealtimeServerCookieExpires: 60
   RealtimeServerCookieDomain: ""
-  Plugins:
-    preProcessing:
-      enabled: false
-      name: PreProcessing
-      type: Predecision
-      # apiContentFilterOperator is used to Include or Exclude whether 
-      # a pre-processing plugin is to be invoked. Supported Options are Include or Execlude
-      apiContentFilterOperator: Include
-      apiContextFilters: 
-        - PrePluginTest
-      ApiContextFilters: ["apply-plugin"]
-      ParameterName: MySmartAssetPluginCounter
-      settings:
-        key: Param
-        value: Foo
-    postProcessing:
-      enabled: false
-      name: PostProcessingExample
-      settings:
-        key: Param
-        value: Foo
-
   cacheProvider:
     # This section defines the settings for the real-time cache provider.
     # Update only the fields relevant to your chosen provider and leave the others unchanged.
