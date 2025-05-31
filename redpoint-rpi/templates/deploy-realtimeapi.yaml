@@ -906,6 +906,10 @@ spec:
             - name: rpifileoutputdir
               mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
             {{- end }}
+            {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}    
+            - name: rpdmuploaddirectory
+              mountPath: {{  .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
+            {{- end }}
       volumes:
         {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
         {{- if .Values.databases.datawarehouse.enabled }}
@@ -941,6 +945,11 @@ spec:
         - name: rpifileoutputdir
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:

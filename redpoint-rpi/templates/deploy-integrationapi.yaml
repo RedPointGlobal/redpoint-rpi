@@ -399,14 +399,23 @@ spec:
             subPath: odbc2.ini
           {{- end }}
           {{- end }}
+          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+          {{- if .Values.databases.datawarehouse.enabled }}
+          {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
+          - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
+            mountPath: "{{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+            subPath: "{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+          {{- end }}
+          {{- end }}
+          {{- end }}
           {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
           {{- if .Values.databases.datawarehouse.enabled }}
           - name: snowflake-creds
-            mountPath: {{ .Values.databases.datawarehouse.snowflake.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}
+            mountPath: "{{ .Values.databases.datawarehouse.snowflake.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}"
             subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
           {{- end }}
           {{- end }}
-          {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
+          {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
           - name: rpifileoutputdir
             mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
           {{- end }}
@@ -445,16 +454,16 @@ spec:
             name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
         {{- end }}
         {{- end }}
-      {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: rpifileoutputdir
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
-      {{- end }}
-      {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
         - name: rpdmuploaddirectory
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
-      {{- end }}
+        {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
