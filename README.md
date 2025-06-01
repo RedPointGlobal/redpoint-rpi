@@ -300,32 +300,23 @@ RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value
 
 RPI uses File Share storage for storing files such as those exported via interactions or selection rules to a [File Output directory ](https://docs.redpointglobal.com/rpi/file-output-directory), custom plugins or files shared with Redpoint Data Management (RPDM). In Azure, AWS, or Google Cloud, this storage is backed by their respective managed file share services such as ```Azure Files```, ```Amazon EFS``` and ```Google Filestore```
 
-You are responsible for provisioning the storage based on your hosting platform's offering. Once the storage has been provisioned, create the following directory structure within your file share.
-
-```
-.
-├── plugins
-├── rpdmuploaddirectory
-└── rpifileoutputdir
-```
-
-Next, create a PersistentVolumeClaim (PVC) and reference its name in the ```values.yaml``` file.
+You are responsible for provisioning the storage based on your hosting platform's offering. Once the storage has been provisioned, create a PersistentVolumeClaim (PVC) and reference its name in the ```values.yaml``` file.
 
 ```
 storage:
   persistentVolumeClaims:
     FileOutputDirectory:
       enabled: true
-      claimName: rpifileshare
-      mountPath: /rpifileshare/rpifileoutputdir
+      claimName: rpifileoutputdir
+      mountPath: /rpifileoutputdir
     Plugins:
       enabled: true
-      claimName: rpifileshare
-      mountPath: /rpifileshare/plugins
+      claimName: realtimeplugins
+      mountPath: /realtimeplugins
     DataManagementUploadDirectory:
       enabled: true
-      claimName: rpifileshare
-      mountPath: /rpifileshare/rpdmuploaddirectory
+      claimName: rpdmuploaddirectory
+      mountPath: /rpdmuploaddirectory
 ```
 
 ### Configure Realtime

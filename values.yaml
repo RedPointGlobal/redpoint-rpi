@@ -192,16 +192,16 @@ storage:
   persistentVolumeClaims:
     FileOutputDirectory:
       enabled: false
-      claimName: rpifileshare
-      mountPath: /rpifileshare/rpifileoutputdir
+      claimName: rpifileoutputdir
+      mountPath: /rpifileoutputdir
     Plugins:
       enabled: false
-      claimName: rpifileshare
-      mountPath: /rpifileshare/plugins
+      claimName: realtimeplugins
+      mountPath: /realtimeplugins
     DataManagementUploadDirectory:
       enabled: false
-      claimName: rpifileshare
-      mountPath: /rpifileshare/rpdmuploaddirectory
+      claimName: rpdmuploaddirectory
+      mountPath: /rpdmuploaddirectory
 
 # ==========================
 realtimeapi:
@@ -264,7 +264,7 @@ realtimeapi:
     # Set to true to enable real-time cache configuration.
     enabled: true  
     # Choose your cache provider
-    # Supported options: (mongodb, azureredis, redis, inMemorySql).
+    # Supported options: (mongodb, azureredis, redis, inMemorySql, googlebigtable).
     provider: mongodb
     # If using MongoDB as the provider
     mongodb:
@@ -276,7 +276,7 @@ realtimeapi:
     # If using Azure Redis as the provider
     azureredis: 
       # Provide the Azure Redis server host URL.
-      connectionstring: redis://<your-redis-name>.redis.cache.windows.net:6380?ssl=true&password=<your-access-key>
+      connectionstring: redis://<my-redis-name>.redis.cache.windows.net:6380?ssl=true&password=<my-access-key>
 
     # If using Redis as the provider
     redis:
@@ -291,13 +291,17 @@ realtimeapi:
     # In-memory SQL cache configuration
     inMemorySql:
       # Hostname or IP address of the cache database server
-      serverHost: "<your-cache-database-server-host>"
+      serverHost: "<my-cache-database-server-host>"
       # Name of the in-memory SQL database
-      databaseName: "<your-cache-database-name>"
+      databaseName: "<my-cache-database-name>"
       # Credentials for database access
-      username: "<your-cache-database-username>"
-      password: "<your-cache-database-password>"
-
+      username: "<my-cache-database-username>"
+      password: "<my-cache-database-password>"
+    
+    googlebigtable:
+      projectId: <my-bigtable-project-id>
+      instanceId: <my-bigtable-instance-id>
+      
   queueProvider:
     # This section defines the settings for the real-time message queue provider.
     # Set to true to enable real-time queue configuration
@@ -327,7 +331,7 @@ realtimeapi:
     # If using Azure Service Bus as the queue provider
     azureservicebus:
       # Provide the Azure Service Bus connection string
-      connectionstring: Endpoint=sb://<your-service-bus-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-policy-name>;SharedAccessKey=<your-policy-key>
+      connectionstring: Endpoint=sb://<my-service-bus-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy-name>;SharedAccessKey=<my-policy-key>
 
     # If using Google Pub/Sub as the queue provider
     googlepubsub:
@@ -337,7 +341,7 @@ realtimeapi:
     # If using Azure Event Hubs as the queue provider
     azureeventhubs:
       # Provide the Azure Event Hub connection string
-      connectionstring: Endpoint=sb://<your-event-hubs-namespace>.servicebus.windows.net/;SharedAccessKeyName=<your-policy-name>;SharedAccessKey=<your-policy-key>;EntityPath=<your-event-hub-name>
+      connectionstring: Endpoint=sb://<my-event-hubs-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy-name>;SharedAccessKey=<my-policy-key>;EntityPath=<my-event-hub-name>
       eventHubName: RPIQueueListener
 
     # If using RabbitMQ as the queue provider
@@ -353,7 +357,7 @@ realtimeapi:
       virtualHost: "/"
       # Credentials for RabbitMQ access
       username: redpointdev
-      password: <your-secure-password>
+      password: <my-secure-password>
     
     # If using Amazon Managed Kafka (MSK) as the queue provider
     amazonmsk:

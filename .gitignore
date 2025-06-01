@@ -6,4 +6,4 @@ test-gcp-msql.yaml
 test-gcp-psql.yaml
 deploy.yaml
 test-azure-pvc.yaml
-.json
+google-service-account.json

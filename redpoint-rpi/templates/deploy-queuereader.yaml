@@ -184,7 +184,7 @@ spec:
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: RPI__FileOutput__Directory
-          value: /fileoutputdir
+          value: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
@@ -355,7 +355,7 @@ spec:
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
           value: "ProjectId"
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
-          value: {{ .Values.queueProviders.googlepubsub.projectId | quote }}
+          value: {{ .Values.realtimeapi.queueProvider.googlepubsub.projectId | quote }}
         {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
@@ -491,12 +491,8 @@ spec:
           {{- end }}
           {{- end }}
           {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
-          - name: rpifileoutputdir
+          - name: rpifileshare
             mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
-          {{- end }}
-          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}    
-          - name: rpdmuploaddirectory
-            mountPath: {{  .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
       volumes:
         {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
@@ -530,14 +526,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
-        - name: rpifileoutputdir
+        - name: rpifileshare
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
-        {{- end }}
-        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
-        - name: rpdmuploaddirectory
-          persistentVolumeClaim:
-            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
