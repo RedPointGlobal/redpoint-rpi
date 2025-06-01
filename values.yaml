@@ -173,6 +173,8 @@ cloudIdentity:
     # Create a ConfigMap containing the service account JSON credentials file 
     # and provide the name below
     configMapName: my-google-svs-account
+    keyName: my-google-svs-account.json
+    ConfigMapFilePath: /app/google-creds
     serviceAccountEmail: my-google-svs-account@my-project.iam.gserviceaccount.com
     # Name of google project
     projectId: your_google_project_id
@@ -1109,7 +1111,7 @@ queuereader:
   realtimeConfiguration:
     # Distribution mode for high-performance or high-volume transactions
     # Set to true if you require distributed processing
-    isDistributed: true
+    isDistributed: false
     distributedCache:
       # Only Redis is currently supported
       provider: Redis

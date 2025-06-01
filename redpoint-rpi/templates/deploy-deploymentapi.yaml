@@ -139,14 +139,10 @@ spec:
           value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
         {{- end }}
-        {{- if .Values.cloudIdentity.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Google" }}
+        {{- if eq .Values.global.deployment.platform "google" }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
-        - name: CloudIdentity__Google_ProjectId
-          value: {{ .Values.cloudIdentity.googleSettings.projectId | quote }}
         - name: GOOGLE_APPLICATION_CREDENTIALS 
-          value: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
-        {{- end }}
+          value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}

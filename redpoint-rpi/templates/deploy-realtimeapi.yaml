@@ -185,14 +185,10 @@ spec:
             value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
           {{- end }}
           {{- end }}
-          {{- if .Values.cloudIdentity.enabled }}
-          {{- if eq .Values.cloudIdentity.provider "Google" }}
+          {{- if eq .Values.global.deployment.platform "google" }}
           {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
-          - name: CloudIdentity__Google_ProjectId
-            value: {{ .Values.cloudIdentity.googleSettings.projectId | quote }}
           - name: GOOGLE_APPLICATION_CREDENTIALS 
-            value: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
-          {{- end }}
+            value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
           {{- end }}
           {{- end }}
           {{- if .Values.cloudIdentity.secretsManagement.enabled }}
@@ -391,6 +387,7 @@ spec:
             value: {{ .Values.realtimeapi.enableAuditMetricsInHeaders | quote }}
           - name: RealtimeAPIConfiguration__AppSettings__EnableEventListening
             value: {{ .Values.realtimeapi.enableEventListening | quote }}
+          {{- if eq .Values.global.deployment.platform "azure" }}
           - name: RealtimeAPIConfiguration__Queues__FormQueuePath
             value: {{ .Values.realtimeapi.queueProvider.queueNames.formQueuePath | quote }}
           - name: RealtimeAPIConfiguration__Queues__EventsQueuePath
@@ -401,6 +398,43 @@ spec:
             value: {{ .Values.realtimeapi.queueProvider.queueNames.recommendationsQueuePath | quote }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueuePath
             value: {{ .Values.realtimeapi.queueProvider.queueNames.listenerQueuePath | quote }}
+          {{- end }}
+          {{- if eq .Values.global.deployment.platform "amazon" }}
+          - name: RealtimeAPIConfiguration__Queues__FormQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.formQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__EventsQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.eventsQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__CacheOutputQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.cacheOutputQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__RecommendationsQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.recommendationsQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.listenerQueuePath | quote }}
+          {{- end }}
+          {{- if eq .Values.global.deployment.platform "google" }}
+          - name: RealtimeAPIConfiguration__Queues__FormQueuePath
+            value: "{{ .Values.realtimeapi.queueProvider.queueNames.formQueuePath }}/{{ .Values.realtimeapi.queueProvider.queueNames.formQueuePath }}"
+          - name: RealtimeAPIConfiguration__Queues__EventsQueuePath
+            value: "{{ .Values.realtimeapi.queueProvider.queueNames.eventsQueuePath }}/{{ .Values.realtimeapi.queueProvider.queueNames.eventsQueuePath }}"
+          - name: RealtimeAPIConfiguration__Queues__CacheOutputQueuePath
+            value: "{{ .Values.realtimeapi.queueProvider.queueNames.cacheOutputQueuePath }}/{{ .Values.realtimeapi.queueProvider.queueNames.cacheOutputQueuePath }}"
+          - name: RealtimeAPIConfiguration__Queues__RecommendationsQueuePath
+            value: "{{ .Values.realtimeapi.queueProvider.queueNames.recommendationsQueuePath }}/{{ .Values.realtimeapi.queueProvider.queueNames.recommendationsQueuePath }}"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueuePath
+            value: "{{ .Values.realtimeapi.queueProvider.queueNames.listenerQueuePath }}/{{ .Values.realtimeapi.queueProvider.queueNames.listenerQueuePath }}"
+          {{- end }}
+          {{- if eq .Values.global.deployment.platform "selfhosted" }}
+          - name: RealtimeAPIConfiguration__Queues__FormQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.formQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__EventsQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.eventsQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__CacheOutputQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.cacheOutputQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__RecommendationsQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.recommendationsQueuePath | quote }}
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueuePath
+            value: {{ .Values.realtimeapi.queueProvider.queueNames.listenerQueuePath | quote }}
+          {{- end }}
           {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Assembly
             value: "RedPoint.Amazon.Server"

@@ -108,8 +108,22 @@ spec:
           value: {{ .Values.callbackapi.logging.rpiError | quote }}
         - name: CallbackServiceConfig__QueueEnabled
           value: "true"
+        {{- if eq .Values.global.deployment.platform "azure" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
           value: {{ .Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath | quote }}
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "amazon" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ .Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath | quote }}
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "selfhosted" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ .Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath | quote }}
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "google" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: "{{ .Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath }}/{{ .Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath }}"
+        {{- end }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
           value: "*"
         - name: CallbackServiceConfig__QueueProvider__ChannelLabel
@@ -140,14 +154,10 @@ spec:
           value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
         {{- end }}
         {{- end }}
-        {{- if .Values.cloudIdentity.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Google" }}
+        {{- if eq .Values.global.deployment.platform "google" }}
         {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
-        - name: CloudIdentity__Google_ProjectId
-          value: {{ .Values.cloudIdentity.googleSettings.projectId | quote }}
         - name: GOOGLE_APPLICATION_CREDENTIALS 
-          value: "/app/google-creds/{{ .Values.cloudIdentity.googleSettings.serviceAccountName }}.json"
-        {{- end }}
+          value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
