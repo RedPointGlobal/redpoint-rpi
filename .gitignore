@@ -1,9 +1,2 @@
-test-azure-msql.yaml
-test-azure-psql.yaml
-test-aws-msql.yaml
-test-aws-psql.yaml
-test-gcp-msql.yaml
-test-gcp-psql.yaml
-deploy.yaml
-test-azure-pvc.yaml
-google-service-account.json
+*.json
+test-*
