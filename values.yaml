@@ -1245,8 +1245,7 @@ OpenIdProviders:
   # Parameter for id_token_hint during logout
   logoutIdTokenParameter: id_token_hint
   # Custom scopes for OpenID Connect
-  customScopes:
-    - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
+  customScopes: api://00000000-0000-0000-0000-000000000000/Interaction.Clients
 
 SMTPSettings:
   SMTP_SenderAddress: noreply-rpi@example.com
