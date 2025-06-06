@@ -188,8 +188,8 @@ spec:
           value: {{ .Values.OpenIdProviders.validateAudience | quote }}
         - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
           value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
-        - name: Authentication__OpenIdProviders__0__CustomScopes
-          value: '{{ toJson .Values.OpenIdProviders.customScopes }}'
+        - name: Authentication__OpenIdProviders__0__CustomScopes__0
+          value: {{ .Values.OpenIdProviders.customScopes | quote }}
         {{- end }}
         {{- end }}
         {{- if .Values.OpenIdProviders.enabled }}
