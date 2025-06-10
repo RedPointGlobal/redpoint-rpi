@@ -449,8 +449,8 @@ realtimeapi:
           type: RealtimeExamplePlugin.Decisions.PostDecisionFactory
         type:
           name: Postdecision
-         # Optional: Possible values are Include, Exclude
-         apiContentFilterOperator: "" 
+          # Optional: Possible values are Include, Exclude
+          apiContentFilterOperator: "" 
           # Optional: Define one or more API context filters.
           # Uncomment to add a filter.
           apiContextFilters:
