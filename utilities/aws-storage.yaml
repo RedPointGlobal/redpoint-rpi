@@ -1,0 +1,108 @@
+# This example shows how to create a static provisioned Amazon EFS storage
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: redpointrpi
+provisioner: efs.csi.aws.com
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rpi-fileoutput
+  namespace: redpoint-rpi
+spec:
+  capacity:
+    storage: 50Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  storageClassName: redpointrpi
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: efs.csi.aws.com
+    # replace the volumeHandle value with your Amazon EFS file system ID
+    volumeHandle: fs-0d0e8dbbeb02db61e
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpi-fileoutput
+  namespace: redpoint-rpi
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: redpointrpi
+  volumeMode: Filesystem
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rpi-plugins
+  namespace: redpoint-rpi
+spec:
+  capacity:
+    storage: 50Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  storageClassName: redpointrpi
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: efs.csi.aws.com
+    # replace the volumeHandle value with your Amazon EFS file system ID
+    volumeHandle: fs-0d0e8dbbeb02db61e
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpi-plugins
+  namespace: redpoint-rpi
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: redpointrpi
+  volumeMode: Filesystem
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rpdmupload
+  namespace: redpoint-rpi
+spec:
+  capacity:
+    storage: 50Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  storageClassName: redpointrpi
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: efs.csi.aws.com
+    # replace the volumeHandle value with your Amazon EFS file system ID
+    volumeHandle: fs-0d0e8dbbeb02db61e
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpdmupload
+  namespace: redpoint-rpi
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: redpointrpi
+  volumeMode: Filesystem

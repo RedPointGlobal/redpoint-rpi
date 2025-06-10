@@ -1,10 +1,12 @@
+# This example shows how to create a static provisioned Azure File Share Storage
+
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   annotations:
     pv.kubernetes.io/provisioned-by: file.csi.azure.com
-  name: rpifileoutputdir
-  namespace: redpoint-rpi
+  name: rpi-plugins
+  namespace: {{ .Release.Namespace }}
 spec:
   capacity:
     storage: 100Gi
@@ -16,12 +18,12 @@ spec:
     driver: file.csi.azure.com
     # make sure this volumeid is unique for every identical share in the cluster
     # "{resource-group-name}#{storage-account-name}#{file-share-name}" 
-    volumeHandle: "RGOC-nonprod-eus2#aksrgocnonprodeus2#fileoutputdir"
+    volumeHandle: "ResourceGroupName#storageAccountName#fileShareName"
     volumeAttributes:
-      shareName: rpifileoutputdir
+      shareName: rpi-plugins
     nodeStageSecretRef:
-      name: azurefiles
-      namespace: redpoint-rpi
+      name: myK8sSecretName
+      namespace: {{ .Release.Namespace }}
   mountOptions:
     - dir_mode=0777
     - file_mode=0777
@@ -38,8 +40,8 @@ kind: PersistentVolume
 metadata:
   annotations:
     pv.kubernetes.io/provisioned-by: file.csi.azure.com
-  name: rpdmuploaddirectory
-  namespace: redpoint-rpi
+  name: rpdmupload
+  namespace: {{ .Release.Namespace }}
 spec:
   capacity:
     storage: 100Gi
@@ -51,12 +53,47 @@ spec:
     driver: file.csi.azure.com
     # make sure this volumeid is unique for every identical share in the cluster
     # "{resource-group-name}#{storage-account-name}#{file-share-name}" 
-    volumeHandle: "RGOC-nonprod-eus2#aksrgocnonprodeus2#rpdmuploaddirectory"
+    volumeHandle: "ResourceGroupName#storageAccountName#fileShareName"
     volumeAttributes:
       shareName: rpdmuploaddirectory
     nodeStageSecretRef:
-      name: azurefiles
-      namespace: redpoint-rpi
+      name: myK8sSecretName
+      namespace: {{ .Release.Namespace }}
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+    - uid=0
+    - gid=0
+    - mfsymlinks
+    - cache=strict
+    - nosharesock
+    - nobrl 
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: file.csi.azure.com
+  name: rpi-fileoutput
+  namespace: {{ .Release.Namespace }}
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: azurefile-csi
+  csi:
+    driver: file.csi.azure.com
+    # make sure this volumeid is unique for every identical share in the cluster
+    # "{resource-group-name}#{storage-account-name}#{file-share-name}" 
+    volumeHandle: "ResourceGroupName#storageAccountName#fileShareName"
+    volumeAttributes:
+      shareName: rpifileoutputdir
+    nodeStageSecretRef:
+      name: myK8sSecretName
+      namespace: {{ .Release.Namespace }}
   mountOptions:
     - dir_mode=0777
     - file_mode=0777
@@ -71,13 +108,13 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rpifileoutputdir
-  namespace: redpoint-rpi
+  name: rpi-fileoutput
+  namespace: {{ .Release.Namespace }}
 spec:
   accessModes:
     - ReadWriteMany
   storageClassName: azurefile-csi
-  volumeName: rpifileoutputdir
+  volumeName: rpi-fileoutput
   resources:
     requests:
       storage: 100Gi
@@ -86,13 +123,28 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rpdmuploaddirectory
-  namespace: redpoint-rpi
+  name: rpi-plugins
+  namespace: {{ .Release.Namespace }}
 spec:
   accessModes:
     - ReadWriteMany
   storageClassName: azurefile-csi
-  volumeName: rpdmuploaddirectory
+  volumeName: rpi-plugins
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpdmupload
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  volumeName: rpdmupload
   resources:
     requests:
       storage: 100Gi
