@@ -106,6 +106,32 @@ spec:
           value: {{ .Values.executionservice.logging.rpiTrace | quote }}
         - name: Logging__Database__RPIError
           value: {{ .Values.executionservice.logging.rpiError | quote }}
+        - name: RPIExecution__InternalAddress
+          value: {{ .Values.executionservice.jobExecution.internalAddress | quote }}
+        - name: RPIExecution__AuditTaskEvents
+          value: {{ .Values.executionservice.jobExecution.auditTaskEvents | quote }}
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: {{ .Values.executionservice.jobExecution.maxThreadsPerExecutionService | quote }}
+        - name: RPIExecution__ExecutionShutdownWaitForActivity
+          value: {{ .Values.executionservice.jobExecution.executionShutdownWaitForActivity | quote }}
+        - name: RPIExecution__OverrideCustomSQLReservedWords
+          value: {{ .Values.executionservice.jobExecution.overrideCustomSQLReservedWords | quote }}
+        - name: RPIExecution__RPDMOApiPrefixUri
+          value: {{ .Values.executionservice.jobExecution.rpdmOApiPrefixUri | quote }}
+        - name: RPIExecution__TaskTimeout
+          value: {{ .Values.executionservice.jobExecution.taskTimeout | quote }}
+        - name: RPIExecution__TriggerCheckCriteriaInterval
+          value: {{ .Values.executionservice.jobExecution.triggerCheckCriteriaInterval | quote }}
+        - name: RPIExecution__TriggersMaxDaysInactive
+          value: {{ .Values.executionservice.jobExecution.triggersMaxDaysInactive | quote }}
+        - name: RPIExecution__DefaultMaintenanceModeBufferTime
+          value: {{ .Values.executionservice.jobExecution.defaultMaintenanceModeBufferTime | quote }}
+        - name: RPIExecution__WorkflowPrioritization__Enabled
+          value: {{ .Values.executionservice.jobExecution.workflowPrioritization.enabled | quote }}
+        - name: RPIExecution__WorkflowPrioritization__MaxConcurrentWorkflowActivities
+          value: {{ .Values.executionservice.jobExecution.workflowPrioritization.maxConcurrentWorkflowActivities | quote }}
+        - name: RPIExecution__WorkflowPrioritization__MaximumQueueTime
+          value: {{ .Values.executionservice.jobExecution.workflowPrioritization.maximumQueueTime | quote }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Azure" }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -193,10 +219,6 @@ spec:
               key: SMTP_Password
         {{- end }}
         {{- end }}
-        - name: RPIExecution__QueueListener__IsEnabled
-          value: {{ .Values.executionservice.RPIExecution__QueueListener__IsEnabled | quote }}
-        - name: RPIExecution__MaxThreadsPerExecutionService
-          value: {{ .Values.executionservice.RPIExecution_MaxThreadsPerExecutionService | quote }}
         - name: RPIClient__ApplicationSupportURL
           value: "https://support.redpointglobal.com"
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
@@ -375,8 +397,16 @@ spec:
           {{- end }}
           {{- end }}
           {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
-          - name: rpifileshare
+          - name: fileoutputdirectory
             mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}  
+          - name: realtimeplugins
+            mountPath: {{ .Values.storage.persistentVolumeClaims.Plugins.mountPath }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }} 
+          - name: rpdmuploaddirectory
+            mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
       volumes:
         {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
@@ -410,9 +440,19 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
-        - name: rpifileshare
+        - name: fileoutputdirectory
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}
+        - name: realtimeplugins
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.Plugins.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:

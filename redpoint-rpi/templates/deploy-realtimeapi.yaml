@@ -923,6 +923,37 @@ spec:
             value: {{ .Values.realtimeapi.dataMaps.offerHistory.DaysToPersist | quote }}
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__5__CompressData
             value: {{ .Values.realtimeapi.dataMaps.offerHistory.CompressData | quote }}
+          {{- if .Values.realtimeapi.customPlugins.enabled }}
+          {{- range $pIndex, $plugin := .Values.realtimeapi.customPlugins.list }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Name
+            value: {{ $plugin.name | quote }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Factory__Assembly
+            value: {{ $plugin.factory.assembly | quote }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Factory__Type
+            value: {{ $plugin.factory.type | quote }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Type__Name
+            value: {{ $plugin.type.name | quote }}
+          {{- range $fIndex, $filter := $plugin.type.apiContextFilters }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Type__ApiContextFilters__{{ $fIndex }}
+            value: {{ $filter | quote }}
+          {{- end }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Type__ApiContentFilterOperator
+            value: {{ $plugin.type.apiContentFilterOperator | quote }}
+          {{- range $sIndex, $setting := $plugin.settings }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Settings__{{ $sIndex }}__Key
+            value: {{ $setting.key | quote }}
+          {{- if hasKey $setting "value" }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Settings__{{ $sIndex }}__Value
+            value: {{ $setting.value | quote }}
+          {{- else if hasKey $setting "values" }}
+            {{- range $vIndex, $val := $setting.values }}
+          - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Settings__{{ $sIndex }}__Values__{{ $vIndex }}
+            value: {{ $val | quote }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
           volumeMounts:
             {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
             {{- if .Values.databases.datawarehouse.enabled }}
@@ -955,8 +986,16 @@ spec:
             {{- end }}
             {{- end }}
             {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
-            - name: rpifileshare
+            - name: fileoutputdirectory
               mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+            {{- end }}
+            {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}  
+            - name: realtimeplugins
+              mountPath: {{ .Values.storage.persistentVolumeClaims.Plugins.mountPath }}
+            {{- end }}
+            {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }} 
+            - name: rpdmuploaddirectory
+              mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
             {{- end }}
       volumes:
         {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
@@ -990,9 +1029,19 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
-        - name: rpifileshare
+        - name: fileoutputdirectory
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}
+        - name: realtimeplugins
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.Plugins.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:

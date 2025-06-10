@@ -242,8 +242,8 @@ spec:
           value: {{ .Values.queuereader.isEventProcessingEnabled | quote }}
         - name: QueueService__RealtimeConfiguration__IsCacheProcessingEnabled
           value: {{ .Values.queuereader.isCacheProcessingEnabled | quote }}
-        - name: QueueService__RealtimeConfiguration__TenantIDs
-          value: '{{ toJson .Values.queuereader.realtimeConfiguration.tenantIds }}'
+        - name: QueueService__RealtimeConfiguration__TenantIDs__0
+          value: {{ .Values.queuereader.realtimeConfiguration.tenantIds | quote }}
         - name: QueueService__QueueListener__ListenerQueueNonActiveQueuePath
           value: {{ .Values.queuereader.listenerQueueNonActiveQueuePath | quote}}
         - name: QueueService__QueueListener__ListenerQueueNonActiveTTLDays
@@ -345,7 +345,7 @@ spec:
         {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "googlepubsub" }}
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
-          value: "RedPoint.Azure.Server"
+          value: "RedPoint.Google.Server"
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
           value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
@@ -487,8 +487,16 @@ spec:
           {{- end }}
           {{- end }}
           {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
-          - name: rpifileshare
+          - name: fileoutputdirectory
             mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}  
+          - name: realtimeplugins
+            mountPath: {{ .Values.storage.persistentVolumeClaims.Plugins.mountPath }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }} 
+          - name: rpdmuploaddirectory
+            mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
       volumes:
         {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
@@ -522,9 +530,19 @@ spec:
         {{- end }}
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
-        - name: rpifileshare
+        - name: fileoutputdirectory
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}
+        - name: realtimeplugins
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.Plugins.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:

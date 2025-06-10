@@ -199,7 +199,7 @@ storage:
     Plugins:
       enabled: false
       claimName: realtimeplugins
-      mountPath: /realtimeplugins
+      mountPath: /app/plugins
     DataManagementUploadDirectory:
       enabled: false
       claimName: rpdmuploaddirectory
@@ -404,6 +404,194 @@ realtimeapi:
       Cache: Default
       DaysToPersist: 365
       CompressData: true
+      
+  # Custom plugin configuration
+  customPlugins:
+    # Enable of disabled the configuration
+    enabled: false
+    # List of plugin definitions to inject into the application via environment variables.
+    # To define multiple plugins, simply add each as a new entry in the list below.
+    # To remove a plugin, simply remove the entry from the list.
+    list:
+      # --------------------- Pre-Decision Example
+      - name: Pre-Decision Example
+        factory:
+          assembly: RedPoint.Realtime.Example.Plugins
+          type: RealtimeExamplePlugin.Decisions.PreDecisionPluginFactory
+        type:
+          name: Predecision
+          # Optional: Possible values are Include, Exclude
+          apiContentFilterOperator: "Include" 
+          # Optional: Define one or more API context filters.
+          # Uncomment to add a filter.
+          apiContextFilters:
+            - apply-plugin
+        settings:
+          - key: Param1
+            value: my-custom-parameter1
+          - key: Param2
+            value: my-custom-parameter2
+          #- key: key2
+          #  value: value2
+          #- key: key3
+          #  value: value3
+          # If a setting requires a collection of values, these can be supplied as per the example below
+          # Uncomment and customize the block below as needed:
+          #- key: ParamList 
+          #  values:
+          #    - val1
+          #    - val2
+          #    - val3
+      # --------------------- Post-Decision Example
+      - name: Post-Decision Example
+        factory:
+          assembly: RedPoint.Realtime.Example.Plugins
+          type: RealtimeExamplePlugin.Decisions.PostDecisionFactory
+        type:
+          name: Postdecision
+         # Optional: Possible values are Include, Exclude
+         apiContentFilterOperator: "" 
+          # Optional: Define one or more API context filters.
+          # Uncomment to add a filter.
+          apiContextFilters:
+          #  - filter1
+        settings:
+          - key: Prefix
+            value: my-custom-prefix
+          - key: Suffix
+            value: my-custom-suffix
+          #- key: key2
+          #  value: value2
+          #- key: key3
+          #  value: value3
+          # If a setting requires a collection of values, these can be supplied as per the example below
+          # Uncomment and customize the block below as needed:
+          #- key: ParamList 
+          #  values:
+          #    - val1
+          #    - val2
+          #    - val3
+      # --------------------- Smart Asset Result Example
+      - name: Smart Asset Result Plugin Example
+        factory:
+          assembly: RedPoint.Realtime.Example.Plugins
+          type: RealtimeExamplePlugin.Decisions.SmartAssetPluginFactory
+        type:
+          name: SmartAssetResults
+          # Optional: Possible values are Include, Exclude
+          apiContentFilterOperator: "" 
+          # Optional: Define one or more API context filters.
+          # Uncomment to add a filter.
+          apiContextFilters:
+            - apply-plugin
+          #  - filter2
+        settings:
+          - key: ParameterName1
+            value: MySmartAssetPluginCounter1
+          - key: ParameterName2
+            value: MySmartAssetPluginCounter2
+          #- key: key2
+          #  value: value2
+          #- key: key3
+          #  value: value3
+          # If a setting requires a collection of values, these can be supplied as per the example below
+          # Uncomment and customize the block below as needed:
+          #- key: ParamList 
+          #  values:
+          #    - val1
+          #    - val2
+          #    - val3
+      # --------------------- Event Plugin Example
+      - name: Event Plugin Example
+        factory:
+          assembly: RedPoint.Realtime.Example.Plugins
+          type: RealtimeExamplePlugin.Events.EventPluginFactory
+        type:
+          name: Event
+          # Optional: Possible values are Include, Exclude
+          apiContentFilterOperator: "" 
+          # Optional: Define one or more API context filters.
+          # Uncomment to add a filter.
+          apiContextFilters:
+          #  - apply-plugin
+          #  - filter2
+        settings:
+          - key: Param1
+            value: my-custom-parameter1
+          - key: Param2
+            value: my-custom-parameter2
+          #- key: key2
+          #  value: value2
+          #- key: key3
+          #  value: value3
+          # If a setting requires a collection of values, these can be supplied as per the example below
+          # Uncomment and customize the block below as needed:
+          #- key: ParamList 
+          #  values:
+          #    - val1
+          #    - val2
+          #    - val3
+      # --------------------- Form Processing Plugin Example
+      - name: Form Processing Plugin Example
+        factory:
+          assembly: RedPoint.Realtime.Example.Plugins
+          type: RealtimeExamplePlugin.Forms.FormProcessingFactory
+        type:
+          name: FormProcessing
+          # Optional: Possible values are Include, Exclude
+          apiContentFilterOperator: "" 
+          # Optional: Define one or more API context filters.
+          # Uncomment to add a filter.
+          apiContextFilters:
+          #  - apply-plugin
+          #  - filter2
+        settings:
+          - key: extrafield1
+            value: my-value
+          - key: extrafield2
+            value: my-value
+          #- key: key2
+          #  value: value2
+          #- key: key3
+          #  value: value3
+          # If a setting requires a collection of values, these can be supplied as per the example below
+          # Uncomment and customize the block below as needed:
+          #- key: ParamList 
+          #  values:
+          #    - val1
+          #    - val2
+          #    - val3
+      # --------------------- Visitor Profile Plugin Example
+      - name: Visitor Profile Plugin Example
+        factory:
+          assembly: RedPoint.Realtime.Example.Plugins
+          type: RealtimeExamplePlugin.Visitor.VisitorCachePluginFactory
+        type:
+          name: Visitor
+          # Optional: Possible values are Include, Exclude
+          apiContentFilterOperator: "" 
+          # Optional: Define one or more API context filters.
+          # Uncomment to add a filter.
+          apiContextFilters:
+          #  - apply-plugin
+          #  - filter2
+        settings:
+          - key: Param1
+            value: my-custom-parameter
+          - key: Param2
+            value: my-custom-parameter
+          #- key: key2
+          #  value: value2
+          #- key: key3
+          #  value: value3
+          # If a setting requires a collection of values, these can be supplied as per the example below
+          # Uncomment and customize the block below as needed:
+          #- key: ParamList 
+          #  values:
+          #    - val1
+          #    - val2
+          #    - val3
+          
   # Default resource requests and limits per deployment.
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
@@ -614,11 +802,24 @@ executionservice:
   # Number of pod replicas to deploy
   replicas: 1
   name: rpi-executionservice
-  RPIExecution__QueueListener__IsEnabled: false 
-  RPIExecution_MaxThreadsPerExecutionService: 100
   enableRPIAuthentication: true
   serviceAccount: 
     enabled: true 
+  jobExecution:
+    internalAddress: ""
+    auditTaskEvents: true
+    maxThreadsPerExecutionService: 50
+    executionShutdownWaitForActivity: "00:08:00"
+    overrideCustomSQLReservedWords: false
+    rpdmOApiPrefixUri: /v1/
+    taskTimeout: 60
+    triggerCheckCriteriaInterval: 60
+    triggersMaxDaysInactive: 180
+    defaultMaintenanceModeBufferTime: "00:05:00"
+    workflowPrioritization:
+      enabled: true
+      maxConcurrentWorkflowActivities: 100
+      maximumQueueTime: "24:00:00"
   # Default resource requests and limits per deployment.
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
@@ -1117,9 +1318,7 @@ queuereader:
       provider: Redis
       connectionString: <my-redis-connection-string>
     # Comma separated List of RPI client IDs associated with your RPI cluster 
-    tenantIds:
-      - 00000000-0000-0000-0000-000000000000
-      - 11111111-1111-1111-1111-111111111111
+    tenantIds: 00000000-0000-0000-0000-000000000000
   # Thread pool configuration
   threadPoolSize: 10
   # Timeout duration for processing, in minutes
@@ -1238,7 +1437,7 @@ OpenIdProviders:
   redirectURL: https://rpi-interactionapi.example.com
   enableRefreshTokens: true
   # Validate issuer of the OpenID Connect provider
-  validateIssuer: true
+  validateIssuer: false
   # Enable or disable refresh tokens
   # Validate audience of the OpenID Connect provider
   validateAudience: true
@@ -1303,10 +1502,6 @@ ingress:
 securityContext:
   # Enable this to enforce running the container as a non-root user.
   enabled: true
-  # Indicates whether a custom user/group is being provided.
-  # If false, the default 7777 will be used
-  # We highly recommend you dont change these settings and let it use the defaults).
-  isCustom: true
   runAsUser: 7777
   runAsGroup: 7777
   fsGroup: 7777
@@ -1350,7 +1545,7 @@ redpointAI:
     # Azure Cognitive Search vector profile name    
     VectorSearchProfile: vector-profile-000000000000
     # Azure Cognitive Search vector config name 
-    VectorSearchConfig:  vector-config-000000000000 
+    VectorSearchConfig: vector-config-000000000000 
   modelStorage:
     # Azure Blob Storage connection string for model artifacts
     ConnectionString: DefaultEndpointsProtocol=https;AccountName=my_account_name;AccountKey=my_account_access_key 

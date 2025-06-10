@@ -20,6 +20,9 @@
 - **Support for RPI Realtime Multi-tenancy** ([CE-2468](#)):  
   - Enabled multi-tenant support for RPI Realtime by allowing per-tenant deployments through customized values.yaml configurations.
 
+- **Support for RPI Realtime Custom Plugins** ([CE-2489](#)):  
+  - Added support for injecting custom plugin configurations into the RPI Realtime service via Helm values. This allows defining plugin assemblies, types, and settings (including key/value pairs and value lists) dynamically.
+
 ---
 
 ### Enhancements
