@@ -312,7 +312,7 @@ storage:
     Plugins:
       enabled: true
       claimName: realtimeplugins
-      mountPath: /realtimeplugins
+      mountPath: /app/plugins
     DataManagementUploadDirectory:
       enabled: true
       claimName: rpdmuploaddirectory
