@@ -88,7 +88,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ .Values.queuereader.serviceAccount.name }}
+      serviceAccountName: {{ .Values.queuereader.name }}
       {{- if .Values.securityContext.enabled }}
       securityContext:
         runAsNonRoot: true

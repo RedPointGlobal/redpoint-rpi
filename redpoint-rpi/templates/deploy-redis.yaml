@@ -35,7 +35,7 @@ spec:
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: redpoint-rpi
+      serviceAccountName: realtime-rediscache
       containers:
       - name: realtime-rediscache
         image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}

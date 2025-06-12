@@ -82,7 +82,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ .Values.deploymentapi.serviceAccount.name }}
+      serviceAccountName: {{ .Values.deploymentapi.name }}
       {{- if .Values.securityContext.enabled }}
       securityContext:
         runAsNonRoot: true
