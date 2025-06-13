@@ -321,7 +321,7 @@ spec:
         {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
-          value: "RedPoint.Azure.Server"
+          value: "RedPoint.Amazon.Server"
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
           value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
         {{- end }}
