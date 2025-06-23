@@ -2,19 +2,19 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: realtime-rabbitmq
+  name: rpi-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: realtime-rabbitmq
+    app: rpi-rabbitmq
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: realtime-rabbitmq
+  name: rpi-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: realtime-rabbitmq
+    app: rpi-rabbitmq
 spec:
   ports:
   - name: http
@@ -26,31 +26,31 @@ spec:
     protocol: TCP
     targetPort: 15672
   selector:
-    app: realtime-rabbitmq
+    app: rpi-rabbitmq
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: realtime-rabbitmq
+  name: rpi-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: realtime-rabbitmq
+    app: rpi-rabbitmq
 spec:
   replicas: {{ .Values.realtimeapi.queueProvider.rabbitmq.replicas }}
   selector:
     matchLabels:
-      app: realtime-rabbitmq
+      app: rpi-rabbitmq
   template:
     metadata:
       labels:
-        app: realtime-rabbitmq
+        app: rpi-rabbitmq
     spec:
       imagePullSecrets:
         - name: redpoint-rpi
-      serviceAccountName: realtime-rabbitmq
+      serviceAccountName: rpi-rabbitmq
       containers:
-      - name: realtime-rabbitmq
+      - name: rpi-rabbitmq
         image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         ports:

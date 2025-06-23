@@ -332,6 +332,31 @@ queueProvider:
   provider: amazonsqs
 ```
 
+- **Personalized Content Queues**
+
+RabbitMQ is currently the only supported queue provider for personalized content delivery, though support for additional providers is coming soon. For now, you have two options:
+
+  - Use your own external RabbitMQ broker (BYO), or
+  - Use the default free and open source RabbitMQ instance provisioned by the Helm chart.
+
+If you are already using another queue provider (e.g. Amazon SQS for Realtime), RabbitMQ will run in parallel specifically for personalized content.
+
+To use the default RabbitMQ, Open your values.yaml file and locate the ```realtimeapi.queueProvider.rabbitmq``` section. Set ```queueProvider.rabbitmq.internal: true``` and specify your preferred username and password. To use an external broker (BYO), simply set ```queueProvider.rabbitmq.internal: false``` and provide the rest of the connection details.
+
+```
+queueProvider:
+  rabbitmq:
+    internal: true
+    hostname: rpi-rabbitmq
+    virtualHost: "/"
+    username: redpointdev
+    password: <my-secure-password>
+```
+
+Once RabbitMQ is running, login to the RPI Client and configure the personalized content setup. The hostname for the built-in RabbitMQ instance is always ```rpi-rabbitmq``` while web console access is available at ```https://rpi-rabbitmq-console.example.com```. You can retrieve the actual console URL by inspecting your configured ingress endpoints.
+
+![image](https://github.com/user-attachments/assets/8cf151fc-a47f-4de8-bf89-6884387a726c)
+
 - **Cache Providers**
 
 [Cache Providers](https://docs.redpointglobal.com/rpi/cache-configuration) allow RPI to store and access various data quickly, such as Visitor Profiles, Realtime Decisions rules, and content.Open the ```values.yaml``` file and locate the ```realtimeapi.cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```redis``` ,```googlebigtable``` ```inMemorySql```

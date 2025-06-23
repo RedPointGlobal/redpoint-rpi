@@ -27,7 +27,7 @@ global:
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20250606.1333
+      tag: 7.6.20250617.942
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -354,7 +354,7 @@ realtimeapi:
       # Number of RabbitMQ replicas (only applicable when 'internal' is true)
       replicas: 2
       # RabbitMQ hostname or service name
-      hostname: realtime-rabbitmq
+      hostname: rpi-rabbitmq
       # Virtual host to use within RabbitMQ
       virtualHost: "/"
       # Credentials for RabbitMQ access
@@ -1494,18 +1494,20 @@ ingress:
     prometheus.io/scrape: "false"
   # Define hostnames for different services in your application.
   hosts:
-    # Configuration service
+    # Deployment API
     config: rpi-deploymentapi
-    # Client Login service
+    # Interaction API
     client: rpi-interactionapi
     # Integration API
     integration: rpi-integrationapi
-    # Real-time service 
+    # Realtime API 
     realtime: rpi-realtimeapi
     # Callback API
     callbackapi: rpi-callbackapi
-    # Queue Reader Operational endpoints
+    # Queue Reader 
     queuereader: rpi-queuereader
+    # RabbitMQ console
+    rabbitmqconsole: rpi-rabbitmq-console
 
 securityContext:
   # Enable this to enforce running the container as a non-root user.

@@ -84,19 +84,15 @@ spec:
               port:
                 number: {{ .Values.callbackapi.service.port }}
     {{- end }}
-    {{- if .Values.realtimeapi.enabled }}
-    {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
     {{- if .Values.realtimeapi.queueProvider.rabbitmq.internal }}
-    - host: rabbitmq-console.{{ .Values.ingress.domain }}
+    - host: {{ .Values.ingress.hosts.rabbitmqconsole }}.{{ .Values.ingress.domain }}
       http:
         paths:
         - backend:
             service:
-              name: realtime-rabbitmq
+              name: rpi-rabbitmq
               port:
                 number: 15672
           path: /
           pathType: Prefix
-    {{- end }}
-    {{- end }}
     {{- end }}
