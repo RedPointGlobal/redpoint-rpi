@@ -106,6 +106,8 @@ spec:
           value: {{ .Values.callbackapi.logging.rpiTrace | quote }}
         - name: Logging__Database__RPIError
           value: {{ .Values.callbackapi.logging.rpiError | quote }}
+        - name: Logging__Console__LogLevel__Default
+          value: {{ .Values.callbackapi.logging.Console | quote }}
         - name: CallbackServiceConfig__QueueEnabled
           value: "true"
         {{- if eq .Values.global.deployment.platform "azure" }}

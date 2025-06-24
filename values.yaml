@@ -627,6 +627,7 @@ realtimeapi:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -734,6 +735,7 @@ callbackapi:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -857,6 +859,7 @@ executionservice:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -967,6 +970,7 @@ interactionapi:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1074,6 +1078,7 @@ integrationapi:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1182,6 +1187,7 @@ nodemanager:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1288,6 +1294,7 @@ deploymentapi:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
 
 # ==========================
 queuereader: 
@@ -1364,6 +1371,7 @@ queuereader:
     database: Error
     rpiTrace: Error
     rpiError: Error
+    Console: None
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true

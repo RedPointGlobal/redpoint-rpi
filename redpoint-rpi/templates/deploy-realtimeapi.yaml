@@ -159,6 +159,8 @@ spec:
             value: {{ .Values.realtimeapi.logging.rpiTrace | quote }}
           - name: Logging__Database__RPIError
             value: {{ .Values.realtimeapi.logging.rpiError | quote }}
+          - name: Logging__Console__LogLevel__Default
+            value: {{ .Values.realtimeapi.logging.Console | quote }}
           {{- if .Values.cloudIdentity.enabled }}
           {{- if eq .Values.cloudIdentity.provider "Azure" }}
           {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}

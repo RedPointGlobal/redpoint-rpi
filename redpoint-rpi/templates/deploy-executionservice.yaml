@@ -106,6 +106,8 @@ spec:
           value: {{ .Values.executionservice.logging.rpiTrace | quote }}
         - name: Logging__Database__RPIError
           value: {{ .Values.executionservice.logging.rpiError | quote }}
+        - name: Logging__Console__LogLevel__Default
+          value: {{ .Values.executionservice.logging.Console | quote }}
         - name: RPIExecution__InternalAddress
           value: {{ .Values.executionservice.jobExecution.internalAddress | quote }}
         - name: RPIExecution__AuditTaskEvents
