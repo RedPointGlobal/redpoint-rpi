@@ -132,7 +132,7 @@ spec:
         - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
           value: '["System.Runtime", "Microsoft.Extensions.Diagnostics.ResourceMonitoring"]'
         - name: RPI__Diagnostics__UseDotNetTools__UseGcDump
-          value: {{ .Values.integrationapi.diagnosticsMode.dotNetTools.useGcDump | quote }}
+          value: "true"
         {{- end }}
         {{- if .Values.nodemanager.diagnosticsMode.copytoSftp }}
         - name: RPI__Diagnostics__CopyToSFTP__Host
