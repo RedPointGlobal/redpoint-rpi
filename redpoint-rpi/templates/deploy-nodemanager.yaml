@@ -108,6 +108,46 @@ spec:
           value: {{ .Values.nodemanager.logging.rpiError | quote }}
         - name: Logging__Console__LogLevel__Default
           value: {{ .Values.nodemanager.logging.Console | quote }}
+        {{- if .Values.nodemanager.diagnosticsMode.copytoAzureBlob }}
+        - name: RPI__Diagnostics__CopyToAzure__IsEnabled
+          value: "true"
+        - name: RPI__Diagnostics__CopyToAzure__StorageAccount
+          value: {{ .Values.nodemanager.diagnosticsMode.azure.accountName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AccessKey
+          value: {{ .Values.nodemanager.diagnosticsMode.azure.accessKey | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__ContainerName
+          value: {{ .Values.nodemanager.diagnosticsMode.azure.containerName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__BlobServiceEndpoint
+          value: {{ .Values.nodemanager.diagnosticsMode.azure.blobServiceEndpoint | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__EnableCdn
+          value: {{ .Values.nodemanager.diagnosticsMode.azure.enableCdn | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AzureUseDataLakeStorageGen2
+          value: {{ .Values.nodemanager.diagnosticsMode.azure.UseDataLakeStorageGen2 | quote }}
+        {{- end }}
+        {{- if .Values.nodemanager.diagnosticsMode.dotNetTools }}
+        - name: RPI__Diagnostics__UseDotNetTools__Path
+          value: "/app/.dotnet-tools"
+        - name: RPI__Diagnostics__UseDotNetTools__UseCounters
+          value: {{ .Values.nodemanager.diagnosticsMode.dotNetTools.useCounters | quote }}
+        - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
+          value: '["System.Runtime", "Microsoft.Extensions.Diagnostics.ResourceMonitoring"]'
+        - name: RPI__Diagnostics__UseDotNetTools__UseGcDump
+          value: {{ .Values.nodemanager.diagnosticsMode.dotNetTools.useGcDump | quote }}
+        {{- end }}
+        {{- if .Values.nodemanager.diagnosticsMode.copytoSftp }}
+        - name: RPI__Diagnostics__CopyToSFTP__Host
+          value: {{ .Values.nodemanager.diagnosticsMode.sftp.host | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__Username
+          value: {{ .Values.nodemanager.diagnosticsMode.sftp.username | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__Password
+          value: {{ .Values.nodemanager.diagnosticsMode.sftp.password | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__Port
+          value: {{ .Values.nodemanager.diagnosticsMode.sftp.port | quote }}
+        - name: RPI__Diagnostics__UseSFTP
+          value: "true"
+        - name: RPI__Diagnostics__CopyToSFTP__IsEnabled
+          value: "true"
+        {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Azure" }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
