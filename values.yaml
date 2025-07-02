@@ -896,35 +896,6 @@ executionservice:
     rpiTrace: Error
     rpiError: Error
     Console: None
-  diagnosticsMode:
-    # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: false
-    # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: false
-    # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: false
-    azure:
-      # Azure Storage account name used for uploading diagnostics
-      accountName: "yourstorageaccount"
-      # Access key for authenticating with the Azure Storage account
-      accessKey: "youraccesskey"
-      # Name of the Azure Blob Storage container where logs will be uploaded
-      containerName: "yourcontainer"
-      # Endpoint URL for the Azure Blob service; e.g., https://yourstorage.blob.core.windows.net
-      blobServiceEndpoint: "https://yourstorage.blob.core.windows.net"
-      # Enable or disable Azure CDN integration for faster access to blobs
-      enableCdn: false
-      # Enable using Azure Data Lake Storage Gen2 features with the storage account
-      UseDataLakeStorageGen2: true
-    sftp:
-      # Hostname or IP address of the target SFTP server for diagnostics upload
-      host: <sftp-host>
-      # Username for authenticating with the SFTP server
-      username: <sftp-username>
-      # Password for authenticating with the SFTP server
-      password: <sftp-password>
-      # Port used for connecting to the SFTP server (default is 22)
-      port: "22"
 
   # Enable Horizontal autoscaling
   autoscaling:
@@ -1037,35 +1008,6 @@ interactionapi:
     rpiTrace: Error
     rpiError: Error
     Console: None
-  diagnosticsMode:
-    # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: false
-    # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: false
-    # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: false
-    azure:
-      # Azure Storage account name used for uploading diagnostics
-      accountName: "yourstorageaccount"
-      # Access key for authenticating with the Azure Storage account
-      accessKey: "youraccesskey"
-      # Name of the Azure Blob Storage container where logs will be uploaded
-      containerName: "yourcontainer"
-      # Endpoint URL for the Azure Blob service; e.g., https://yourstorage.blob.core.windows.net
-      blobServiceEndpoint: "https://yourstorage.blob.core.windows.net"
-      # Enable or disable Azure CDN integration for faster access to blobs
-      enableCdn: false
-      # Enable using Azure Data Lake Storage Gen2 features with the storage account
-      UseDataLakeStorageGen2: true
-    sftp:
-      # Hostname or IP address of the target SFTP server for diagnostics upload
-      host: <sftp-host>
-      # Username for authenticating with the SFTP server
-      username: <sftp-username>
-      # Password for authenticating with the SFTP server
-      password: <sftp-password>
-      # Port used for connecting to the SFTP server (default is 22)
-      port: "22"
 
   # Enable Horizontal autoscaling
   autoscaling:
@@ -1175,35 +1117,6 @@ integrationapi:
     rpiTrace: Error
     rpiError: Error
     Console: None
-  diagnosticsMode:
-    # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: false
-    # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: false
-    # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: false
-    azure:
-      # Azure Storage account name used for uploading diagnostics
-      accountName: "yourstorageaccount"
-      # Access key for authenticating with the Azure Storage account
-      accessKey: "youraccesskey"
-      # Name of the Azure Blob Storage container where logs will be uploaded
-      containerName: "yourcontainer"
-      # Endpoint URL for the Azure Blob service; e.g., https://yourstorage.blob.core.windows.net
-      blobServiceEndpoint: "https://yourstorage.blob.core.windows.net"
-      # Enable or disable Azure CDN integration for faster access to blobs
-      enableCdn: false
-      # Enable using Azure Data Lake Storage Gen2 features with the storage account
-      UseDataLakeStorageGen2: true
-    sftp:
-      # Hostname or IP address of the target SFTP server for diagnostics upload
-      host: <sftp-host>
-      # Username for authenticating with the SFTP server
-      username: <sftp-username>
-      # Password for authenticating with the SFTP server
-      password: <sftp-password>
-      # Port used for connecting to the SFTP server (default is 22)
-      port: "22"
 
   # Enable Horizontal autoscaling
   autoscaling:
@@ -1314,35 +1227,6 @@ nodemanager:
     rpiTrace: Error
     rpiError: Error
     Console: None
-  diagnosticsMode:
-    # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: false
-    # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: false
-    # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: false
-    azure:
-      # Azure Storage account name used for uploading diagnostics
-      accountName: "yourstorageaccount"
-      # Access key for authenticating with the Azure Storage account
-      accessKey: "youraccesskey"
-      # Name of the Azure Blob Storage container where logs will be uploaded
-      containerName: "yourcontainer"
-      # Endpoint URL for the Azure Blob service; e.g., https://yourstorage.blob.core.windows.net
-      blobServiceEndpoint: "https://yourstorage.blob.core.windows.net"
-      # Enable or disable Azure CDN integration for faster access to blobs
-      enableCdn: false
-      # Enable using Azure Data Lake Storage Gen2 features with the storage account
-      UseDataLakeStorageGen2: true
-    sftp:
-      # Hostname or IP address of the target SFTP server for diagnostics upload
-      host: <sftp-host>
-      # Username for authenticating with the SFTP server
-      username: <sftp-username>
-      # Password for authenticating with the SFTP server
-      password: <sftp-password>
-      # Port used for connecting to the SFTP server (default is 22)
-      port: "22"
 
   # Enable Horizontal autoscaling
   autoscaling:
@@ -1528,35 +1412,6 @@ queuereader:
     rpiTrace: Error
     rpiError: Error
     Console: None
-  diagnosticsMode:
-    # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: false
-    # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: false
-    # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: false
-    azure:
-      # Azure Storage account name used for uploading diagnostics
-      accountName: "yourstorageaccount"
-      # Access key for authenticating with the Azure Storage account
-      accessKey: "youraccesskey"
-      # Name of the Azure Blob Storage container where logs will be uploaded
-      containerName: "yourcontainer"
-      # Endpoint URL for the Azure Blob service; e.g., https://yourstorage.blob.core.windows.net
-      blobServiceEndpoint: "https://yourstorage.blob.core.windows.net"
-      # Enable or disable Azure CDN integration for faster access to blobs
-      enableCdn: false
-      # Enable using Azure Data Lake Storage Gen2 features with the storage account
-      UseDataLakeStorageGen2: true
-    sftp:
-      # Hostname or IP address of the target SFTP server for diagnostics upload
-      host: <sftp-host>
-      # Username for authenticating with the SFTP server
-      username: <sftp-username>
-      # Password for authenticating with the SFTP server
-      password: <sftp-password>
-      # Port used for connecting to the SFTP server (default is 22)
-      port: "22"
 
   # Enable Horizontal autoscaling
   autoscaling:
