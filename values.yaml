@@ -27,7 +27,7 @@ global:
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-7.6.20250627.1508
+      tag: 7.6.20250627.1508
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -329,6 +329,7 @@ realtimeapi:
       # Supported options:
       #   - accessKey: Use static AWS access key and secret key (configure these under the cloudIdentity.amazonSettings section above).
       credentialsType: accessKey
+      visibilityTimeout: "301"
 
     # If using Azure Service Bus as the queue provider
     azureservicebus:
@@ -404,7 +405,38 @@ realtimeapi:
       Cache: Default
       DaysToPersist: 365
       CompressData: true
-      
+  idValidation:
+    enableVisitorIDValidation: true
+    visitorID:
+      minimumLength: 1
+      maximumLength: 36
+      enableLetters: true
+      enableNumbers: true
+      permittedCharacters:
+        - "-"
+        - "_"
+        - "/"
+        - "."
+        - "@"
+        - "#"
+        - "&"
+        - "?"
+    enableDeviceIDValidation: true
+    deviceID:
+      minimumLength: 1
+      maximumLength: 36
+      enableLetters: true
+      enableNumbers: true
+      permittedCharacters:
+        - "-"
+        - "_"
+        - "/"
+        - "."
+        - "@"
+        - "#"
+        - "&"
+        - "?"
+
   # Custom plugin configuration
   customPlugins:
     # Enable of disabled the configuration
@@ -824,6 +856,10 @@ executionservice:
       enabled: true
       maxConcurrentWorkflowActivities: 100
       maximumQueueTime: "24:00:00"
+  seedService:
+    memoryCacheSize: "10"
+    maxNumberRetries: "100"
+    maxRetryDelay: "00:01:00"
   # Default resource requests and limits per deployment.
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
@@ -1435,7 +1471,7 @@ queuereader:
     timeoutSeconds: 2
 
 OpenIdProviders:
-  # Enable OpenID Connect settings
+  # Set to true to enable OpenID Connect settings.
   enabled: false
   # Name of the OpenID Connect provider. Supported Providers 
   # - KeyCloak
@@ -1443,24 +1479,34 @@ OpenIdProviders:
   # - AzureAD
   # https://docs.redpointglobal.com/rpi/admin-authentication
   name: AzureAD
-  # Microsoft Entra ID App registration Client ID
   # Authorization host for OpenID Connect
   authorizationHost: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0
+  # The Client ID configured within the OpenID provider.
   clientID: 00000000-0000-0000-0000-000000000000
   # Audience for the OpenID Connect authentication request
   audience: api://00000000-0000-0000-0000-000000000000
+  # The redirect URL used for retrieving the token, as configured within the OpenID provider.
   redirectURL: https://rpi-interactionapi.example.com
+  # Enable or disable refresh tokens
+  #  - If refresh tokens are disabled, the client will be logged off once the token expires,
+  #  - per the period configured within the OpenID provider.
   enableRefreshTokens: true
   # Validate issuer of the OpenID Connect provider
+  #  - When set to true, validates issuer of the OpenID Connect provider 
+  #  - (i.e., the authorizationHost must match the issuer name supplied in the access token).
   validateIssuer: false
-  # Enable or disable refresh tokens
   # Validate audience of the OpenID Connect provider
+  #  - When set to true, validates audience of the OpenID Connect provider 
+  #  - (i.e., the audience must match the audience name supplied in the access token)
   validateAudience: true
   # Parameter for id_token_hint during logout
   logoutIdTokenParameter: id_token_hint
   # Custom scopes for OpenID Connect
+  #  - This is the list of custom scopes required to request the OpenID access token.
   customScopes: 
   - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
+  # Enable or disable management of RPI users directly within OIDC provider (as well as native user management
+  supportsUserManagement: false
 
 SMTPSettings:
   SMTP_SenderAddress: noreply-rpi@example.com

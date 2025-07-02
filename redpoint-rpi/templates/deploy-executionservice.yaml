@@ -314,6 +314,12 @@ spec:
               name: redpoint-rpi-secrets
         {{- end }}
         {{- end }}
+        - name: SeedService__MemoryCacheSize
+          value: {{ .Values.executionservice.seedService.memoryCacheSize | quote }}
+        - name: SeedService__MaxNumberRetries
+          value: {{ .Values.executionservice.seedService.maxNumberRetries | quote }}
+        - name: SeedService__MaxRetryDelay
+          value: {{ .Values.executionservice.seedService.maxRetryDelay | quote }}
         image: {{ .Values.global.deployment.images.executionservice }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         name: rpi-executionservice

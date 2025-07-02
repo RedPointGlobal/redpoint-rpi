@@ -236,7 +236,6 @@ spec:
           value: "PostgreSQL"
         {{- end }}
         {{- end }}
-        {{- if eq .Values.global.deployment.platform "amazon" }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
           value: "RedPoint.Amazon.Server"
@@ -244,7 +243,7 @@ spec:
           value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
           value: "AccessKey"
-        {{- if eq .Values.global.deployment.platform "amazon" }}
+        {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
@@ -254,10 +253,10 @@ spec:
               key: RealtimeAPI_QueueSettings_AccessKey
         {{- end }}
         {{- end }}
-        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
           value: "SecretKey"
-        {{- if eq .Values.global.deployment.platform "amazon" }}
+        {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
@@ -267,14 +266,16 @@ spec:
               key: RealtimeAPI_QueueSettings_SecretKey
         {{- end }}
         {{- end }}
-        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
           value: "RegionEndpoint"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
-          value: {{ .Values.cloudIdentity.amazonSettings.region| quote }}
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
+          value: "VisibilityTimeout"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Value
+          value: {{ .Values.realtimeapi.queueProvider.amazonsqs.visibilityTimeout | quote }}
         {{- end }}
-        {{- end }}
-        {{- if eq .Values.global.deployment.platform "azure" }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "azureservicebus" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
           value: "RedPoint.Azure.Server"
@@ -286,7 +287,7 @@ spec:
           value: "ServiceBus"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
           value: "ConnectionString"
-        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- end }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "azureservicebus" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
@@ -296,10 +297,6 @@ spec:
               key: RealtimeAPI_ServiceBus_ConnectionString
         {{- end }}
         {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.global.deployment.platform "azure" }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
           value: "RedPoint.Azure.Server"
@@ -311,7 +308,7 @@ spec:
           value: {{ .Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
           value: "EventHubConnectionString"
-        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- end }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
@@ -321,10 +318,6 @@ spec:
               key: RealtimeAPI_EventHub_ConnectionString
         {{- end }}
         {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.global.deployment.platform "google" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "googlepubsub" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
@@ -335,7 +328,6 @@ spec:
           value: "ProjectId"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
           value: {{ .Values.realtimeapi.queueProvider.googlepubsub.projectId | quote }}
-        {{- end }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
@@ -357,6 +349,7 @@ spec:
           value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
           value: "Password"
+        {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Value
@@ -366,9 +359,7 @@ spec:
               key: RABBITMQ_Password
         {{- end }}
         {{- end }}
-        {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
-        {{- if eq .Values.global.deployment.platform "amazon" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
           value: "RedPoint.Resonance.KafkaQueueAccess"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
@@ -379,9 +370,9 @@ spec:
           value: {{ .Values.realtimeapi.queueProvider.amazonmsk.bootstrapServers | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
           value: "AccessKey"
+        {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if eq .Values.global.deployment.platform "amazon" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
           valueFrom:
             secretKeyRef:
@@ -389,12 +380,12 @@ spec:
               key: RealtimeAPI_QueueSettings_AccessKey
         {{- end }}
         {{- end }}
-        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
           value: "SecretKey"
+        {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        {{- if eq .Values.global.deployment.platform "amazon" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
           valueFrom:
             secretKeyRef:
@@ -402,7 +393,7 @@ spec:
               key: RealtimeAPI_QueueSettings_SecretKey
         {{- end }}
         {{- end }}
-        {{- end }}
+        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
           value: "RegionEndpoint"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Value
@@ -431,7 +422,6 @@ spec:
           value: "UseAwsMsk"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__9__Value
           value: {{ .Values.realtimeapi.queueProvider.amazonmsk.UseAwsMsk | quote }}
-        {{- end }}
         {{- end }}
         image: {{ .Values.global.deployment.images.callbackapi }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}

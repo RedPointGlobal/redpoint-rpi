@@ -188,6 +188,8 @@ spec:
           value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateAudience
           value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__SupportsUserManagement
+          value: {{ .Values.OpenIdProviders.supportsUserManagement | quote }}
         - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
           value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
         {{- range $index, $scope := .Values.OpenIdProviders.customScopes }}
@@ -214,6 +216,8 @@ spec:
           value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateAudience
           value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__SupportsUserManagement
+          value: {{ .Values.OpenIdProviders.supportsUserManagement | quote }}
         - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
           value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
         {{- range $index, $scope := .Values.OpenIdProviders.customScopes }}
@@ -240,6 +244,8 @@ spec:
           value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateAudience
           value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__SupportsUserManagement
+          value: {{ .Values.OpenIdProviders.supportsUserManagement | quote }}
         - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
           value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
         {{- range $index, $scope := .Values.OpenIdProviders.customScopes }}

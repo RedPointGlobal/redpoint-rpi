@@ -925,6 +925,30 @@ spec:
             value: {{ .Values.realtimeapi.dataMaps.offerHistory.DaysToPersist | quote }}
           - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__5__CompressData
             value: {{ .Values.realtimeapi.dataMaps.offerHistory.CompressData | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__EnableVisitorIDValidation
+            value: {{ .Values.realtimeapi.idValidation.enableVisitorIDValidation | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__MinimumLength
+            value: {{ .Values.realtimeapi.idValidation.visitorID.minimumLength | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__MaximumLength
+            value: {{ .Values.realtimeapi.idValidation.visitorID.maximumLength | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__EnableLetters
+            value: {{ .Values.realtimeapi.idValidation.visitorID.enableLetters | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__EnableNumbers
+            value: {{ .Values.realtimeapi.idValidation.visitorID.enableNumbers | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__PermittedCharacters
+            value: '{{ toJson .Values.realtimeapi.idValidation.visitorID.permittedCharacters }}'
+          - name: RealtimeAPIConfiguration__IDValidationSettings__EnableDeviceIDValidation
+            value: {{ .Values.realtimeapi.idValidation.enableDeviceIDValidation | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__MinimumLength
+            value: {{ .Values.realtimeapi.idValidation.deviceID.minimumLength | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__MaximumLength
+            value: {{ .Values.realtimeapi.idValidation.deviceID.maximumLength | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__EnableLetters
+            value: {{ .Values.realtimeapi.idValidation.deviceID.enableLetters | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__EnableNumbers
+            value: {{ .Values.realtimeapi.idValidation.deviceID.enableNumbers | quote }}
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__PermittedCharacters
+            value: '{{ toJson .Values.realtimeapi.idValidation.deviceID.permittedCharacters }}'
           {{- if .Values.realtimeapi.customPlugins.enabled }}
           {{- range $pIndex, $plugin := .Values.realtimeapi.customPlugins.list }}
           - name: RealtimeAPIConfiguration__Plugins__{{ $pIndex }}__Name
