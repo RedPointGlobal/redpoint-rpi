@@ -128,7 +128,7 @@ spec:
         - name: RPI__Diagnostics__UseDotNetTools__Path
           value: "/app/.dotnet-tools"
         - name: RPI__Diagnostics__UseDotNetTools__UseCounters
-          value: {{ .Values.integrationapi.diagnosticsMode.dotNetTools.useCounters | quote }}
+          value: "true"
         - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
           value: '["System.Runtime", "Microsoft.Extensions.Diagnostics.ResourceMonitoring"]'
         - name: RPI__Diagnostics__UseDotNetTools__UseGcDump

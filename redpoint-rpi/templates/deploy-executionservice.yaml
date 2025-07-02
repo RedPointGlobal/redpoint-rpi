@@ -124,15 +124,15 @@ spec:
         - name: RPI__Diagnostics__CopyToAzure__AzureUseDataLakeStorageGen2
           value: {{ .Values.executionservice.diagnosticsMode.azure.UseDataLakeStorageGen2 | quote }}
         {{- end }}
-        {{- if .Values.executionservice.diagnosticsMode.dotNetTools }}
+        {{- if .Values.integrationapi.diagnosticsMode.dotNetTools }}
         - name: RPI__Diagnostics__UseDotNetTools__Path
           value: "/app/.dotnet-tools"
         - name: RPI__Diagnostics__UseDotNetTools__UseCounters
-          value: {{ .Values.executionservice.diagnosticsMode.dotNetTools.useCounters | quote }}
+          value: "true"
         - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
           value: '["System.Runtime", "Microsoft.Extensions.Diagnostics.ResourceMonitoring"]'
         - name: RPI__Diagnostics__UseDotNetTools__UseGcDump
-          value: {{ .Values.executionservice.diagnosticsMode.dotNetTools.useGcDump | quote }}
+          value: {{ .Values.integrationapi.diagnosticsMode.dotNetTools.useGcDump | quote }}
         {{- end }}
         {{- if .Values.executionservice.diagnosticsMode.copytoSftp }}
         - name: RPI__Diagnostics__CopyToSFTP__Host

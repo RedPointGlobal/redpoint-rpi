@@ -925,15 +925,7 @@ executionservice:
       password: <sftp-password>
       # Port used for connecting to the SFTP server (default is 22)
       port: "22"
-    dotNetTools:
-      # Enable or disable the .NET diagnostic tools block entirely
-      enabled: true
-      # Whether to collect .NET performance counters (e.g., CPU, GC, etc.)
-      useCounters: "true"
-      # Comma-separated list of .NET EventCounter providers to include
-      counterProviderList: "System.Runtime,System.Threading"
-      # Whether to collect a GC (Garbage Collector) dump for memory analysis
-      useGcDump: "false"
+
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1074,15 +1066,6 @@ interactionapi:
       password: <sftp-password>
       # Port used for connecting to the SFTP server (default is 22)
       port: "22"
-    dotNetTools:
-      # Enable or disable the .NET diagnostic tools block entirely
-      enabled: true
-      # Whether to collect .NET performance counters (e.g., CPU, GC, etc.)
-      useCounters: "true"
-      # Comma-separated list of .NET EventCounter providers to include
-      counterProviderList: "System.Runtime,System.Threading"
-      # Whether to collect a GC (Garbage Collector) dump for memory analysis
-      useGcDump: "false"
 
   # Enable Horizontal autoscaling
   autoscaling:
@@ -1221,15 +1204,7 @@ integrationapi:
       password: <sftp-password>
       # Port used for connecting to the SFTP server (default is 22)
       port: "22"
-    dotNetTools:
-      # Enable or disable the .NET diagnostic tools block entirely
-      enabled: true
-      # Whether to collect .NET performance counters (e.g., CPU, GC, etc.)
-      useCounters: "true"
-      # Comma-separated list of .NET EventCounter providers to include
-      counterProviderList: "System.Runtime,System.Threading"
-      # Whether to collect a GC (Garbage Collector) dump for memory analysis
-      useGcDump: "false"
+
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1368,15 +1343,7 @@ nodemanager:
       password: <sftp-password>
       # Port used for connecting to the SFTP server (default is 22)
       port: "22"
-    dotNetTools:
-      # Enable or disable the .NET diagnostic tools block entirely
-      enabled: true
-      # Whether to collect .NET performance counters (e.g., CPU, GC, etc.)
-      useCounters: "true"
-      # Comma-separated list of .NET EventCounter providers to include
-      counterProviderList: "System.Runtime,System.Threading"
-      # Whether to collect a GC (Garbage Collector) dump for memory analysis
-      useGcDump: "false"
+
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1590,15 +1557,7 @@ queuereader:
       password: <sftp-password>
       # Port used for connecting to the SFTP server (default is 22)
       port: "22"
-    dotNetTools:
-      # Enable or disable the .NET diagnostic tools block entirely
-      enabled: true
-      # Whether to collect .NET performance counters (e.g., CPU, GC, etc.)
-      useCounters: "true"
-      # Comma-separated list of .NET EventCounter providers to include
-      counterProviderList: "System.Runtime,System.Threading"
-      # Whether to collect a GC (Garbage Collector) dump for memory analysis
-      useGcDump: "false"
+
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
