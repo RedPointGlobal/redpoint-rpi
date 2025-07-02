@@ -124,7 +124,7 @@ spec:
         - name: RPI__Diagnostics__CopyToAzure__AzureUseDataLakeStorageGen2
           value: {{ .Values.executionservice.diagnosticsMode.azure.UseDataLakeStorageGen2 | quote }}
         {{- end }}
-        {{- if .Values.integrationapi.diagnosticsMode.dotNetTools }}
+        {{- if .Values.executionservice.diagnosticsMode.dotNetTools }}
         - name: RPI__Diagnostics__UseDotNetTools__Path
           value: "/app/.dotnet-tools"
         - name: RPI__Diagnostics__UseDotNetTools__UseCounters
