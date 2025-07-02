@@ -898,11 +898,11 @@ executionservice:
     Console: None
   diagnosticsMode:
     # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: true
+    copytoAzureBlob: false
     # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: true
+    copytoSftp: false
     # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: true
+    dotNetTools: false
     azure:
       # Azure Storage account name used for uploading diagnostics
       accountName: "yourstorageaccount"
@@ -1047,11 +1047,11 @@ interactionapi:
     Console: None
   diagnosticsMode:
     # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: true
+    copytoAzureBlob: false
     # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: true
+    copytoSftp: false
     # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: true
+    dotNetTools: false
     azure:
       # Azure Storage account name used for uploading diagnostics
       accountName: "yourstorageaccount"
@@ -1194,11 +1194,11 @@ integrationapi:
     Console: None
   diagnosticsMode:
     # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: true
+    copytoAzureBlob: false
     # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: true
+    copytoSftp: false
     # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: true
+    dotNetTools: false
     azure:
       # Azure Storage account name used for uploading diagnostics
       accountName: "yourstorageaccount"
@@ -1341,11 +1341,11 @@ nodemanager:
     Console: None
   diagnosticsMode:
     # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: true
+    copytoAzureBlob: false
     # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: true
+    copytoSftp: false
     # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: true
+    dotNetTools: false
     azure:
       # Azure Storage account name used for uploading diagnostics
       accountName: "yourstorageaccount"
@@ -1563,11 +1563,11 @@ queuereader:
     Console: None
   diagnosticsMode:
     # Enable or disable copying diagnostic logs to Azure Blob Storage
-    copytoAzureBlob: true
+    copytoAzureBlob: false
     # Enable or disable copying diagnostic logs to an SFTP server
-    copytoSftp: true
+    copytoSftp: false
     # Enable or disable .NET diagnostic tools (counters, GC dumps, etc.)
-    dotNetTools: true
+    dotNetTools: false
     azure:
       # Azure Storage account name used for uploading diagnostics
       accountName: "yourstorageaccount"
