@@ -678,7 +678,7 @@ RPI stores certain tenant level settings in the operational databases. When clon
 ```Channels >  Channel name```:  Update relevant configuration to match your v7 requirements
 
 ### Configure Open ID Connect
-RPI supports the use of the AzureAD, Okta and KeyCloak providers to be used to authenticate users accessing RPI. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file as shown in the example below. Adjust these values to match your environment's configuration
+RPI supports the use of the AzureAD, Okta, and KeyCloak [OpenID connection (OIDC) providers](https://docs.redpointglobal.com/rpi/admin-appendix-b-open-id-connect-oidc-configuratio) to authenticate users accessing RPI. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file as shown in the example below. Adjust these values to match your environment's configuration
 
 ```
 OpenIdProviders:

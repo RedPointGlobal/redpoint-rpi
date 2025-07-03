@@ -110,6 +110,48 @@ spec:
           value: {{ .Values.integrationapi.logging.Console | quote }}
         - name: Authentication__EnableRPIAuthentication
           value: {{ .Values.integrationapi.enableRPIAuthentication | quote }}
+        - name: RPI__DateTimeSource
+          value: {{ .Values.databases.operational.dateTimeSource | quote }}
+        {{- if .Values.diagnosticsMode.copytoAzureBlob.enabled }}
+        - name: RPI__Diagnostics__CopyToAzure__IsEnabled
+          value: "true"
+        - name: RPI__Diagnostics__CopyToAzure__StorageAccount
+          value: {{ .Values.diagnosticsMode.copytoAzureBlob.accountName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AccessKey
+          value: {{ .Values.diagnosticsMode.copytoAzureBlob.accessKey | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__ContainerName
+          value: {{ .Values.diagnosticsMode.copytoAzureBlob.containerName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__BlobServiceEndpoint
+          value: {{ .Values.diagnosticsMode.copytoAzureBlob.blobServiceEndpoint | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__EnableCdn
+          value: {{ .Values.diagnosticsMode.copytoAzureBlob.enableCdn | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AzureUseDataLakeStorageGen2
+          value: {{ .Values.diagnosticsMode.copytoAzureBlob.UseDataLakeStorageGen2 | quote }}
+        {{- end }}
+        {{- if .Values.diagnosticsMode.copytoSftp.enabled }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPHost
+          value: {{ .Values.diagnosticsMode.copytoSftp.sftpHost | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPUsername
+          value: {{ .Values.diagnosticsMode.copytoSftp.sftpUsername | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPPassword
+          value: {{ .Values.diagnosticsMode.copytoSftp.sftpPassword | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__PortNumber
+          value: {{ .Values.diagnosticsMode.copytoSftp.sftpPort | quote }}
+        - name: RPI__Diagnostics__UseSFTP
+          value: "true"
+        - name: RPI__Diagnostics__CopyToSFTP__IsEnabled
+          value: "true"
+        {{- end }}
+        {{- if .Values.diagnosticsMode.dotNetTools.enabled }}
+        - name: RPI__Diagnostics__UseDotNetTools__Path
+          value: "/app/.dotnet-tools"
+        - name: RPI__Diagnostics__UseDotNetTools__UseCounters
+          value: {{ .Values.diagnosticsMode.dotNetTools.useCounters | quote }}
+        - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
+          value: '["System.Runtime", "Microsoft.Extensions.Diagnostics.ResourceMonitoring"]'
+        - name: RPI__Diagnostics__UseDotNetTools__UseGcDump
+          value: {{ .Values.diagnosticsMode.dotNetTools.useGcDump | quote }}
+        {{- end }}
         - name: Authentication__RPIAuthentication__AuthorizationHost
           value: "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
         - name: Authentication__RPIAuthentication__AuthMetaHttpHost

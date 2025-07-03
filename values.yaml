@@ -60,6 +60,8 @@ databases:
     # When set to true, appends `Encrypt=True` to the SQL Server connection string.
     # If your SQL Server enforces encryption (e.g., Force Encryption is enabled) this must be set to true
     encrypt: true
+    # Supported options are OperatingSystem, Database
+    dateTimeSource: OperatingSystem
 
   # Datawarehouse Providers
   # This section only applies if your datawarehouse is one of Redshift, BigQuery or snowflake. 
@@ -1474,6 +1476,28 @@ queuereader:
     failureThreshold: 60
     periodSeconds: 10
     timeoutSeconds: 2
+
+diagnosticsMode:
+  # Enable or disable copying diagnostic logs to Azure Blob Storage
+  copytoAzureBlob: 
+    enabled: false
+    accountName: <yourstorageaccount>
+    accessKey: <yourstorageaccount-access-key>
+    containerName: <yourstorageaccount-container-name>
+    blobServiceEndpoint: https://yourstorage.blob.core.windows.net
+    enableCdn: false
+    UseDataLakeStorageGen2: false
+  # Enable or disable copying diagnostic logs to an SFTP server
+  copytoSftp: 
+    enabled: false
+    sftpHost: <your-sftp-host>
+    sftpUsername: <your-sftp-username>
+    sftpPassword: <your-sftp-password>
+    sftpPort: "22" # <your-sftp-port>
+  dotNetTools: 
+    enabled: false
+    useGcDump: false
+    useCounters: false
 
 OpenIdProviders:
   # Set to true to enable OpenID Connect settings.
