@@ -274,7 +274,7 @@ This Helm chart supports three modes of managing application secrets:
 
 **2) External:** Kubernetes Secrets are created and managed outside the Helm chart. This involves the following steps
   - Disable Helm-managed secret creation 
-  - Manually create a Kubernetes secret named ```redpoint-rpi-secrets.```. 
+  - Manually create a Kubernetes secret named ```redpoint-rpi-secrets.```
   - Ensure the secret follows the expected format defined in ```redpoint-rpi/templates/deploy-secrets.yaml```
   - Do not include any sensitive values in the ```values.yaml``` file.
   - Update your ```values``` configuration as below
