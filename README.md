@@ -14,6 +14,7 @@ This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
 - [Download Client Executable ](#download-client-executable)
 - [Configure Storage ](#configure-storage)
 - [Configure Realtime](#configure-realtime)
+- [Configure Secrets Management](#configure-secrets-management)
 - [Configure Open ID Connect](#configure-open-id-connect)
 - [Configure Content Generation Tools](#configure-content-generation-tools)
 - [Configure Custom Metrics](#configure-custom-metrics)
@@ -267,9 +268,42 @@ amazonSettings:
 
 ### Configure Secrets Management
 
-**Note: This step is optional**. You can skip it if you're comfortable using native Kubernetes secrets.
+This Helm chart supports three modes of managing application secrets:
 
-By default, the Helm chart creates Kubernetes secrets for passwords and connection strings defined in the ```values.yaml``` file. You can disable this behavior and use an external key vault. Currently, the supported key vaults are ```Azure Key Vault```, and ```Google Secrets Manager```. To use an external key vault, configure the ```cloudIdentity``` section as shown below: 
+**1) Default:** Kubernetes Secrets are automatically created based on the values provided in ```values.yaml```
+
+**2) External:** Kubernetes Secrets are created and managed outside the Helm chart. This involves the following steps
+  - Disable Helm-managed secret creation 
+  - Manually create a Kubernetes secret named ```redpoint-rpi-secrets.```. 
+  - Ensure the secret follows the expected format defined in ```redpoint-rpi/templates/deploy-secrets.yaml```
+  - Do not include any sensitive values in the ```values.yaml``` file.
+  - Update your ```values``` configuration as below
+
+```
+cloudIdentity:
+  enabled: false
+  secretsManagement:
+    enabled: false
+    secretsProvider: kubernetes
+    autoCreateSecrets: false
+    secretName: redpoint-rpi-secrets
+```
+
+If you originally deployed using the ```Default``` mode and now wish to switch to ```External``` mode, follow these steps:
+
+  - Export the existing secret to a file: ```kubectl get secret redpoint-rpi-secrets -o yaml > redpoint-rpi-secrets.yaml```
+  - Remove all sensitive values from your ```values.yaml```
+  - Update your ```values``` configuration as above
+  - Recreate the Kubernetes secret manually: ```kubectl apply -f redpoint-rpi-secrets.yaml```
+
+**3) Key Vault:** Secrets are sourced directly from a cloud key vault service. Currently supported providers are ```Azure Key Vault``` and ```Google Secrets Manager```. If deploying in AWS, you can only use the ```Default``` or ```External``` modes.
+
+- **Azure Key Vault Setup**
+
+  - Create a managed identity with a federated credential.
+  - Enable Workload Identity Federation on your AKS cluster.
+  - Grant the managed identity access to the Azure Key Vault.
+  - Update your ```values``` configuration as below
 
 ```
 cloudIdentity:
@@ -280,17 +314,47 @@ cloudIdentity:
     secretsProvider: keyvault
     autoCreateSecrets: false
     vaultUri: https://myvault.vault.azure.net/
-    appSettingsVaultUri: https://myvault.vault.azure.net/
+  azureSettings:
+    credentialsType: workloadIdentity
+    managedIdentityClientId: your_managed_identity_client_id
 ```
 
-The name of each Key Vault secret must match the corresponding environment variable name, with underscores (_) replaced by hyphens (-). For example, an environment variable like ConnectionStrings__OperationalDatabase should be stored in Key Vault as: ```ConnectionStrings--OperationalDatabase```. Below is an example of secrets created in Azure Key Vault.
+- **Google Secret Manager Setup**
+
+  - Create a Google Cloud Service Account
+  - Grant the service account secret access permissions
+  - Enable Workload Identity Federation on GKE
+  - Update Helm Chart Configuration
 
 ```
+cloudIdentity:
+  enabled: true
+  provider: Google
+  secretsManagement:
+    enabled: true
+    secretsProvider: keyvault
+    autoCreateSecrets: false
+  googleSettings:
+    credentialsType: serviceAccount
+    configMapName: my-google-svs-account
+    keyName: my-google-svs-account.json
+    ConfigMapFilePath: /app/google-creds
+    serviceAccountEmail: my-google-svs-account@my-project.iam.gserviceaccount.com
+    projectId: your_google_project_id
+```
+
+The name of each Key Vault secret must match the corresponding environment variable name, with underscores (_) replaced by hyphens (-). For example, an environment variable like ConnectionStrings__OperationalDatabase should be stored in Key Vault as: ```ConnectionStrings--OperationalDatabase```. 
+
+Below are examples of correctly named secrets as stored in Azure Key Vault
+
+```
+# Operational database secrets
 ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password
 ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username
 ConnectionStrings--LoggingDatabase
 ConnectionStrings--OperationalDatabase
 
+# Realtime cache secrets
 RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey
 RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value
 RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value
@@ -355,7 +419,7 @@ queueProvider:
 
 Once RabbitMQ is running, login to the RPI Client and configure the personalized content setup. The hostname for the built-in RabbitMQ instance is always ```rpi-rabbitmq``` while web console access is available at ```https://rpi-rabbitmq-console.example.com```. You can retrieve the actual console URL by inspecting your configured ingress endpoints.
 
-![image](https://github.com/user-attachments/assets/8cf151fc-a47f-4de8-bf89-6884387a726c)
+![image](https://cdn.redpointglobal.com/devops/rabbit_mq_personalized_content_queue.png)
 
 - **Cache Providers**
 
