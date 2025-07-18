@@ -259,7 +259,7 @@ spec:
         - name: RPI__SMTP__Password
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: SMTP_Password
         {{- end }}
         {{- end }}
@@ -275,12 +275,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }} 
         {{- end }}  
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
@@ -289,12 +289,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
@@ -303,12 +303,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
         {{- end }}
@@ -343,17 +343,17 @@ spec:
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_API_KEY
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: RPI__NLP__SearchKey
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_SEARCH_KEY
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: RPI__NLP__Model__ConnectionString
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_MODEL_CONNECTION_STRING
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}
         {{- end }}
         - name: SeedService__MemoryCacheSize
@@ -408,13 +408,27 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
+        {{- if .Values.executionservice.resources.enabled }}
         resources:
+          {{- if .Values.executionservice.resources.limits }}
           limits:
+            {{- if .Values.executionservice.resources.limits.cpu }}
             cpu: {{ .Values.executionservice.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.executionservice.resources.limits.memory }}
             memory: {{ .Values.executionservice.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.executionservice.resources.requests }}
           requests:
+            {{- if .Values.executionservice.resources.requests.cpu }}
             cpu: {{ .Values.executionservice.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.executionservice.resources.requests.memory }}
             memory: {{ .Values.executionservice.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
         volumeMounts:
           {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
           {{- if .Values.databases.datawarehouse.enabled }}

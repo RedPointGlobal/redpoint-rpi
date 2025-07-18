@@ -404,6 +404,14 @@ metadata:
     service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{.Values.ingress.subnetName | quote }}
     {{- end }}
     {{- end }}
+    {{- if .Values.ingress.privateLink.azure.enabled }}
+    service.beta.kubernetes.io/azure-pls-create: "true"
+    service.beta.kubernetes.io/azure-pls-name: {{ .Release.Namespace }}
+    service.beta.kubernetes.io/azure-pls-ip-configuration-subnet: {{.Values.ingress.subnetName | quote }}
+    service.beta.kubernetes.io/azure-pls-ip-configuration-ip-address-count: "1"
+    service.beta.kubernetes.io/azure-pls-proxy-protocol: "false"
+    service.beta.kubernetes.io/azure-pls-visibility: "*"
+    {{- end }}
     {{- if eq .Values.global.deployment.platform "amazon" }}
     service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"

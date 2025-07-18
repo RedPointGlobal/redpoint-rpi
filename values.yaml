@@ -27,7 +27,7 @@ global:
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20250711.1554
+      tag: 7.6.20250715.1020
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -291,7 +291,15 @@ realtimeapi:
       # Redis connection string used when 'internal' is false.
       # Format: <hostname>:<port>,ssl=<true|false>,abortConnect=<true|false>,user=<username>,password=<password>
       connectionstring: <my-redis-hostname>:6379,ssl=True,abortConnect=false,user=<my-username>,password=<my-username>
-      
+      resources:
+        enabled: true
+        requests:
+          cpu: 500m
+          memory: 750Mi
+        limits:
+          cpu: 875m
+          memory: 2048Mi
+
     # In-memory SQL cache configuration
     inMemorySql:
       # Hostname or IP address of the cache database server
@@ -312,7 +320,7 @@ realtimeapi:
     enabled: true  
     # Choose your message queue provider
     # Supported options: (amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq)
-    provider: amazonsqs  
+    provider: azureeventhubs  
     queueNames: 
       # Queues required by the RPI Realtime service
       # Ensure that you replace these values with the actual names of the queues 
@@ -348,6 +356,12 @@ realtimeapi:
       # Provide the Azure Event Hub connection string
       connectionstring: Endpoint=sb://<my-event-hubs-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy-name>;SharedAccessKey=<my-policy-key>;EntityPath=<my-event-hub-name>
       eventHubName: RPIQueueListener
+      SendMessageBatchSize: 200
+      ReceiveMessageBatchSize: 200
+      NamespaceName: my_eventhub_namespace_name
+      PartitionId:
+        - "0"
+        - "1"
 
     # If using RabbitMQ as the queue provider
     rabbitmq:
@@ -363,7 +377,15 @@ realtimeapi:
       # Credentials for RabbitMQ access
       username: redpointdev
       password: <my-secure-password>
-    
+      resources:
+        enabled: true
+        requests:
+          cpu: 500m
+          memory: 750Mi
+        limits:
+          cpu: 875m
+          memory: 2048Mi
+
     # If using Amazon Managed Kafka (MSK) as the queue provider
     amazonmsk:
       region: <my-aws-region>
@@ -630,6 +652,7 @@ realtimeapi:
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -738,6 +761,7 @@ callbackapi:
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -866,6 +890,7 @@ executionservice:
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -978,6 +1003,7 @@ interactionapi:
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -1088,6 +1114,7 @@ integrationapi:
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -1197,6 +1224,7 @@ nodemanager:
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -1305,6 +1333,7 @@ deploymentapi:
   # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -1382,6 +1411,7 @@ queuereader:
   maxBatchSize: 50
   useMessageLocks: true
   resources:
+    enabled: true
     requests:
       cpu: 500m
       memory: 750Mi
@@ -1554,6 +1584,9 @@ ingress:
   # Set mode to internal for private ingress and public for public ingress
   mode: public 
   # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
+  privateLink:
+    azure:
+      enabled: false
   certificateSource: kubernetes # acm
   tlsSecretName: ingress-tls
   className: nginx-redpoint-rpi

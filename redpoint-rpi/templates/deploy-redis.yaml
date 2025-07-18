@@ -44,6 +44,27 @@ spec:
         - containerPort: 6379
           name: web-port
           protocol: TCP
+        {{- if .Values.realtimeapi.cacheProvider.redis.resources.enabled }}
+        resources:
+          {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits }}
+          limits:
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
+            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
+            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests }}
+          requests:
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
+            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
+            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

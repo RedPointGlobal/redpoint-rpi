@@ -232,12 +232,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
@@ -246,12 +246,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
@@ -260,12 +260,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}
         {{- end }}
         - name: QueueService__QueueListener__IsEnabled
@@ -309,7 +309,7 @@ spec:
         - name: QueueService__RealtimeConfiguration__DistributedQueue__RedisSettings__IPAddress
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RealtimeAPI_RedisCache_ConnectionString
         {{- end }}
         {{- end }}
@@ -338,7 +338,7 @@ spec:
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__3__Value
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RABBITMQ_Password
         {{- end }}
         {{- end }}
@@ -359,7 +359,7 @@ spec:
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RealtimeAPI_ServiceBus_ConnectionString
         {{- end }}
         {{- end }}
@@ -376,14 +376,14 @@ spec:
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RealtimeAPI_QueueSettings_AccessKey
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
           value: "SecretKey"
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RealtimeAPI_QueueSettings_SecretKey
         {{- end }}
         {{- end }}
@@ -406,15 +406,31 @@ spec:
           value: "EventHubName"
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
           value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.eventHubName | quote }}
-        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key
+          value: "NamespaceName"
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value
+          value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.NamespaceName | quote }}
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__2__Key
+          value: "SendMessageBatchSize"
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__2__Value
+          value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.SendMessageBatchSize | quote }}
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Key
+          value: "ReceiveMessageBatchSize"
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Value
+          value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.ReceiveMessageBatchSize | quote }}
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__4__Key
+          value: "PartitionId"
+        - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__4__Value
+          value: '{{ .Values.realtimeapi.queueProvider.azureeventhubs.PartitionId | toJson }}'
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__5__Key
           value: "EventHubConnectionString"
         {{- end }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
-        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__5__Value
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RealtimeAPI_EventHub_ConnectionString
         {{- end }}
         {{- end }}
@@ -435,14 +451,14 @@ spec:
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RealtimeAPI_QueueSettings_AccessKey
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__2__Key
           value: "SecretKey"
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__2__Value
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RealtimeAPI_QueueSettings_SecretKey
         {{- end }}
         {{- end }}
@@ -492,13 +508,27 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
+        {{- if .Values.queuereader.resources.enabled }}
         resources:
+          {{- if .Values.queuereader.resources.limits }}
           limits:
+            {{- if .Values.queuereader.resources.limits.cpu }}
             cpu: {{ .Values.queuereader.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.queuereader.resources.limits.memory }}
             memory: {{ .Values.queuereader.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.queuereader.resources.requests }}
           requests:
+            {{- if .Values.queuereader.resources.requests.cpu }}
             cpu: {{ .Values.queuereader.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.queuereader.resources.requests.memory }}
             memory: {{ .Values.queuereader.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
         volumeMounts:
           {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
           {{- if .Values.databases.datawarehouse.enabled }}

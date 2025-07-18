@@ -209,20 +209,34 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: Operations_Database_Server_Password
         {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
+        {{- if .Values.deploymentapi.resources.enabled }}
         resources:
+          {{- if .Values.deploymentapi.resources.limits }}
           limits:
+            {{- if .Values.deploymentapi.resources.limits.cpu }}
             cpu: {{ .Values.deploymentapi.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.deploymentapi.resources.limits.memory }}
             memory: {{ .Values.deploymentapi.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.deploymentapi.resources.requests }}
           requests:
+            {{- if .Values.deploymentapi.resources.requests.cpu }}
             cpu: {{ .Values.deploymentapi.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.deploymentapi.resources.requests.memory }}
             memory: {{ .Values.deploymentapi.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

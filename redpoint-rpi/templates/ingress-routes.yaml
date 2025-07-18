@@ -62,6 +62,7 @@ spec:
               port:
                 number: {{ .Values.integrationapi.service.port }}
     {{- end }}
+    {{- if .Values.realtimeapi.enabled }}
     - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
       http:
         paths:
@@ -72,6 +73,7 @@ spec:
               name: {{ .Values.realtimeapi.name }}
               port:
                 number: {{ .Values.realtimeapi.service.port }}
+    {{- end }}
     {{- if .Values.callbackapi.enabled }}
     - host: {{ .Values.ingress.hosts.callbackapi }}.{{ .Values.ingress.domain }}
       http:

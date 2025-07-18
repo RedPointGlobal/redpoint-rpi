@@ -226,12 +226,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}   
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
@@ -240,12 +240,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
@@ -254,12 +254,12 @@ spec:
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
         {{- end }}
@@ -270,17 +270,17 @@ spec:
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_API_KEY
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: RPI__NLP__SearchKey
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_SEARCH_KEY
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: RPI__NLP__Model__ConnectionString
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_MODEL_CONNECTION_STRING
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         {{- end }}
         {{- end }}
         {{- if .Values.redpointAI.enabled }}
@@ -337,13 +337,27 @@ spec:
         - containerPort: 8080
           name: web-port
           protocol: TCP
+        {{- if .Values.nodemanager.resources.enabled }}
         resources:
+          {{- if .Values.nodemanager.resources.limits }}
           limits:
+            {{- if .Values.nodemanager.resources.limits.cpu }}
             cpu: {{ .Values.nodemanager.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.nodemanager.resources.limits.memory }}
             memory: {{ .Values.nodemanager.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.nodemanager.resources.requests }}
           requests:
+            {{- if .Values.nodemanager.resources.requests.cpu }}
             cpu: {{ .Values.nodemanager.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.nodemanager.resources.requests.memory }}
             memory: {{ .Values.nodemanager.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
         volumeMounts:
           {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
           {{- if .Values.databases.datawarehouse.enabled }}

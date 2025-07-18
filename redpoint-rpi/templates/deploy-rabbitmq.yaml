@@ -60,13 +60,34 @@ spec:
         - name: port-two
           containerPort: 15672
           protocol: TCP
+        {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.enabled }}
+        resources:
+          {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.limits }}
+          limits:
+            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.cpu }}
+            cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.memory }}
+            memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.requests }}
+          requests:
+            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.cpu }}
+            cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.memory }}
+            memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
         env:
         - name: RABBITMQ_DEFAULT_USER
           value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
         - name: RABBITMQ_DEFAULT_PASS
           valueFrom:
             secretKeyRef:
-              name: redpoint-rpi-secrets
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: RABBITMQ_Password
         - name: RABBITMQ_DEFAULT_VHOST
           value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
