@@ -320,7 +320,7 @@ realtimeapi:
     enabled: true  
     # Choose your message queue provider
     # Supported options: (amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq)
-    provider: azureeventhubs  
+    provider: amazonsqs  
     queueNames: 
       # Queues required by the RPI Realtime service
       # Ensure that you replace these values with the actual names of the queues 
@@ -358,6 +358,7 @@ realtimeapi:
       eventHubName: RPIQueueListener
       SendMessageBatchSize: 200
       ReceiveMessageBatchSize: 200
+      # EventHub namespace name
       NamespaceName: my_eventhub_namespace_name
       PartitionId:
         - "0"
