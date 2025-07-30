@@ -36,6 +36,13 @@ spec:
       imagePullSecrets:
         - name: redpoint-rpi
       serviceAccountName: realtime-rediscache
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+      {{- end }}
       containers:
       - name: realtime-rediscache
         image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
@@ -44,6 +51,17 @@ spec:
         - containerPort: 6379
           name: web-port
           protocol: TCP
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
         {{- if .Values.realtimeapi.cacheProvider.redis.resources.enabled }}
         resources:
           {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits }}

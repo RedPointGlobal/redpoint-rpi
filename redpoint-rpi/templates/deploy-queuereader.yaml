@@ -91,10 +91,10 @@ spec:
       serviceAccountName: {{ .Values.queuereader.name }}
       {{- if .Values.securityContext.enabled }}
       securityContext:
-        runAsNonRoot: true
         runAsUser: {{ .Values.securityContext.runAsUser }}
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
       {{- end }}
       containers:
       - env:
@@ -110,6 +110,8 @@ spec:
           value: {{ .Values.queuereader.logging.Console | quote }}
         - name: RPI__DateTimeSource
           value: {{ .Values.databases.operational.dateTimeSource | quote }}
+        - name: ODBCINI
+          value: "/odbc-config/odbc.ini"
         {{- if .Values.diagnosticsMode.copytoAzureBlob.enabled }}
         - name: RPI__Diagnostics__CopyToAzure__IsEnabled
           value: "true"
@@ -270,6 +272,8 @@ spec:
         {{- end }}
         - name: QueueService__QueueListener__IsEnabled
           value: {{ .Values.queuereader.queueListenerEnabled | quote }}
+        - name: QueueService__RealtimeConfiguration__IsCallbackServiceProcessingEnabled
+          value: {{ .Values.queuereader.isCallbackServiceProcessingEnabled | quote }}
         - name: QueueService__QueueListener__QueuePath
           value: {{ .Values.realtimeapi.queueProvider.queueNames.listenerQueuePath | quote }}
         - name: QueueService__QueueListener__ThreadPoolSize
@@ -493,7 +497,7 @@ spec:
         lifecycle:
           postStart:
             exec:
-              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
@@ -501,13 +505,24 @@ spec:
         lifecycle:
           postStart:
             exec:
-              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /app/odbc-config/odbc.ini"]
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
         {{- end }}
         {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
         {{- if .Values.queuereader.resources.enabled }}
         resources:
           {{- if .Values.queuereader.resources.limits }}
@@ -535,6 +550,8 @@ spec:
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
           {{- end }}
           {{- end }}
           {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
@@ -542,6 +559,8 @@ spec:
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
           {{- end }}
           {{- end }}
           {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
@@ -578,6 +597,9 @@ spec:
         - name: odbc-config
           configMap:
             name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
@@ -585,6 +607,9 @@ spec:
         - name: odbc-config
           configMap:
             name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}

@@ -27,7 +27,7 @@ global:
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20250723.1344
+      tag: 7.6.20250728.1439
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -79,17 +79,22 @@ databases:
     # ==========================
     # Configuration for Redshift
     redshift:
-      # The endpoint for your Redshift cluster
-      server: <my-redshift-endpoint>
-      # Default port for Redshift
-      port: 5439
-      # Name of the Redshift database
-      database: <my-redshift-database-name>
-      # Redshift database username
-      username: <my-redshift-username>
-      # Redshift database password
-      password: <my-redshift-password>
-      
+      connections:
+        # Redshift credentials for Tenant 1
+        - name: tenant1
+          server: redshift-tenant1.endpoint.aws
+          port: 5439
+          database: db_tenant1
+          username: user1
+          password: pass1
+        # Redshift credentials for Tenant 2
+        - name: tenant2
+          server: redshift-tenant2.endpoint.aws
+          port: 5439
+          database: db_tenant2
+          username: user2
+          password: pass2
+          
     # ==========================
     # Configuration for BigQuery
     bigquery:
@@ -363,7 +368,6 @@ realtimeapi:
       PartitionId:
         - "0"
         - "1"
-
     # If using RabbitMQ as the queue provider
     rabbitmq:
       # Set to true to deploy an internal Redis container.
@@ -689,44 +693,11 @@ realtimeapi:
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
-    #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
-    kedaScaledObject:
-      # The Prometheus server address where metrics are queried.
-      serverAddress: <my-prometheus-query-endpoint>
-      # The name of the RPI custom metric KEDA will use to trigger scaling.
-      metricName: <my-metrics-name>
-      # The Prometheus query that fetches the metric value for scaling decisions.
-      # This example filters the metric `execution_max_thread_count` based on:
-      # - Namespace: "redpoint-rpi"
-      # - Application: "rpi-executionservice"
-      # - Azure Workload Identity: "true"
-      #
-      # Update these labels if your namespace, app, or identity settings are different.
-      query: count(execution_tasks_executing_count{kubernetes_namespace="redpoint-rpi", app="rpi-execution-service", azure_workload_identity_use="true"})
-      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
-      # It defines the limit on how many work items an execution service can take on.
-      threshold: "90"
-      # Frequency (in seconds) at which KEDA checks the metric value.
-      pollingInterval: 15
-      # Minimum number of pods to maintain, even if the load is low
-      minReplicaCount: 2
-      # Maximum number of pods to scale up to when the load increases.
-      maxReplicaCount: 5
+    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -798,44 +769,11 @@ callbackapi:
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
-    #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
-    kedaScaledObject:
-      # The Prometheus server address where metrics are queried.
-      serverAddress: <my-prometheus-query-endpoint>
-      # The name of the RPI custom metric KEDA will use to trigger scaling.
-      metricName: <my-metrics-name>
-      # The Prometheus query that fetches the metric value for scaling decisions.
-      # This example filters the metric `execution_max_thread_count` based on:
-      # - Namespace: "redpoint-rpi"
-      # - Application: "rpi-executionservice"
-      # - Azure Workload Identity: "true"
-      #
-      # Update these labels if your namespace, app, or identity settings are different.
-      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
-      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
-      # It defines the limit on how many work items an execution service can take on.
-      threshold: "90"
-      # Frequency (in seconds) at which KEDA checks the metric value.
-      pollingInterval: 15
-      # Minimum number of pods to maintain, even if the load is low
-      minReplicaCount: 2
-      # Maximum number of pods to scale up to when the load increases.
-      maxReplicaCount: 5
+    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -856,7 +794,6 @@ callbackapi:
     failureThreshold: 60
     periodSeconds: 10
     timeoutSeconds: 2
-
 
 # ==========================      
 executionservice:
@@ -928,44 +865,69 @@ executionservice:
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
+    # Available options:
+    # - "keda": Enables scaling based on custom RPI metrics from Prometheus using KEDA. 
+    #    Requires KEDA to be installed in your cluster.
+    #    Installation guides: 
+    #      - https://keda.sh/docs/latest/deploy/
+    #      - https://learn.microsoft.com/en-us/azure/aks/keda-about
+    #      - https://learn.microsoft.com/en-us/azure/aks/keda-workload-identity?source=recommendations
     #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
-    type: hpa
+    # - "hpa": Uses the native Kubernetes Horizontal Pod Autoscaler to scale
+    #   based on CPU and/or memory usage. Does not require any additional components.
+    # Note: **KEDA is the recommended scaling solution for the Execution Service**
+    type: keda
+    # HPA Settings
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    
+    # KEDA Settings
     kedaScaledObject:
-      # The Prometheus server address where metrics are queried.
+       # The Prometheus server URL that KEDA will query for metrics.
       serverAddress: <my-prometheus-query-endpoint>
-      # The name of the RPI custom metric KEDA will use to trigger scaling.
-      metricName: <my-metrics-name>
-      # The Prometheus query that fetches the metric value for scaling decisions.
-      # This example filters the metric `execution_max_thread_count` based on:
-      # - Namespace: "redpoint-rpi"
-      # - Application: "rpi-executionservice"
-      # - Azure Workload Identity: "true"
-      #
+      # Name of the TriggerAuthentication resource for KEDA to authenticate with Prometheus.
+      authenticationRef: rpi-executionservice
+      # If using Azure Managed Prometheus in AKS with Workload Identity.
+      # - This should be the Client ID of the User-Assigned Managed Identity (UAMI).
+      # - The identity must be referenced in the TriggerAuthentication resource.
+      # - Relevant Docs: https://learn.microsoft.com/en-us/azure/aks/keda-workload-identity
+      identityId: <my-workload_identity-id>
+      # The name of the Prometheus metric used by KEDA to make scaling decisions.
+      metricName: execution_total_executing_count
+      # PromQL query to fetch the current value of the custom metric.
+      # Example filters:
+      # - Kubernetes Namespace: "<my-rpi-namespace>"
+      # - App Label: "rpi-executionservice"
+      # - Azure Workload Identity Label: "true"
       # Update these labels if your namespace, app, or identity settings are different.
-      query: count(execution_tasks_executing_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
-      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
-      # It defines the limit on how many work items an execution service can take on.
-      threshold: "90"
-      # Frequency (in seconds) at which KEDA checks the metric value.
-      pollingInterval: 15
-      # Minimum number of pods to maintain, even if the load is low
+      query: sum(execution_total_executing_count{kubernetes_namespace=\"<my-rpi-namespace>\",app=\"rpi-executionservice\",azure_workload_identity_use=\"true\"})
+      # The target value for the metric. When the metric exceeds this threshold,
+      # KEDA will trigger a scale-out event.
+      threshold: "80"
+      # How often (in seconds) KEDA polls Prometheus for the metric value.
+      pollingInterval: 30
+      # The minimum number of pods to maintain at all times, even when there is little or no load.
       minReplicaCount: 2
-      # Maximum number of pods to scale up to when the load increases.
-      maxReplicaCount: 5
+      # The maximum number of pods KEDA can scale up to, based on the metric value and scaling policies.
+      maxReplicaCount: 10
+      fallback:
+        failureThreshold: 3
+        replicas: 2
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds:
+          policies:
+            type: Percent
+            value: 100
+            periodSeconds: 60
+        scaleDown:
+          stabilizationWindowSeconds:
+          policies:
+            type: Percent
+            value: 100
+            periodSeconds: 60
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -1056,29 +1018,7 @@ interactionapi:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
-    kedaScaledObject:
-      # The Prometheus server address where metrics are queried.
-      serverAddress: <my-prometheus-query-endpoint>
-      # The name of the RPI custom metric KEDA will use to trigger scaling.
-      metricName: <my-metrics-name>
-      # The Prometheus query that fetches the metric value for scaling decisions.
-      # This example filters the metric `execution_max_thread_count` based on:
-      # - Namespace: "redpoint-rpi"
-      # - Application: "rpi-executionservice"
-      # - Azure Workload Identity: "true"
-      #
-      # Update these labels if your namespace, app, or identity settings are different.
-      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
-      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
-      # It defines the limit on how many work items an execution service can take on.
-      threshold: "90"
-      # Frequency (in seconds) at which KEDA checks the metric value.
-      pollingInterval: 15
-      # Minimum number of pods to maintain, even if the load is low
-      minReplicaCount: 2
-      # Maximum number of pods to scale up to when the load increases.
-      maxReplicaCount: 5
+    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -1166,29 +1106,7 @@ integrationapi:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
-    kedaScaledObject:
-      # The Prometheus server address where metrics are queried.
-      serverAddress: <my-prometheus-query-endpoint>
-      # The name of the RPI custom metric KEDA will use to trigger scaling.
-      metricName: <my-metrics-name>
-      # The Prometheus query that fetches the metric value for scaling decisions.
-      # This example filters the metric `execution_max_thread_count` based on:
-      # - Namespace: "redpoint-rpi"
-      # - Application: "rpi-executionservice"
-      # - Azure Workload Identity: "true"
-      #
-      # Update these labels if your namespace, app, or identity settings are different.
-      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
-      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
-      # It defines the limit on how many work items an execution service can take on.
-      threshold: "90"
-      # Frequency (in seconds) at which KEDA checks the metric value.
-      pollingInterval: 15
-      # Minimum number of pods to maintain, even if the load is low
-      minReplicaCount: 2
-      # Maximum number of pods to scale up to when the load increases.
-      maxReplicaCount: 5
+    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -1262,44 +1180,11 @@ nodemanager:
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
-    #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
-    kedaScaledObject:
-      # The Prometheus server address where metrics are queried.
-      serverAddress: <my-prometheus-query-endpoint>
-      # The name of the RPI custom metric KEDA will use to trigger scaling.
-      metricName: <my-metrics-name>
-      # The Prometheus query that fetches the metric value for scaling decisions.
-      # This example filters the metric `execution_max_thread_count` based on:
-      # - Namespace: "redpoint-rpi"
-      # - Application: "rpi-executionservice"
-      # - Azure Workload Identity: "true"
-      #
-      # Update these labels if your namespace, app, or identity settings are different.
-      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
-      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
-      # It defines the limit on how many work items an execution service can take on.
-      threshold: "90"
-      # Frequency (in seconds) at which KEDA checks the metric value.
-      pollingInterval: 15
-      # Minimum number of pods to maintain, even if the load is low
-      minReplicaCount: 2
-      # Maximum number of pods to scale up to when the load increases.
-      maxReplicaCount: 5
+    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -1384,6 +1269,7 @@ queuereader:
   isEventProcessingEnabled: true
   isCacheProcessingEnabled: true
   queueListenerEnabled: true
+  isCallbackServiceProcessingEnabled: true
   # Queue for storing messages received by inactive triggers.
   # You can customize the queue name as needed.
   listenerQueueNonActiveQueuePath: listenerQueueNonActive
@@ -1449,44 +1335,11 @@ queuereader:
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
-    #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
-    kedaScaledObject:
-      # The Prometheus server address where metrics are queried.
-      serverAddress: <my-prometheus-query-endpoint>
-      # The name of the RPI custom metric KEDA will use to trigger scaling.
-      metricName: <my-metrics-name>
-      # The Prometheus query that fetches the metric value for scaling decisions.
-      # This example filters the metric `execution_max_thread_count` based on:
-      # - Namespace: "redpoint-rpi"
-      # - Application: "rpi-executionservice"
-      # - Azure Workload Identity: "true"
-      #
-      # Update these labels if your namespace, app, or identity settings are different.
-      query: count(execution_max_thread_count{kubernetes_namespace="redpoint-rpi",app="rpi-executionservice",azure_workload_identity_use="true"})
-      # Threshold for the value configured for `RPIExecution__MaxThreadsPerExecutionService`
-      # It defines the limit on how many work items an execution service can take on.
-      threshold: "90"
-      # Frequency (in seconds) at which KEDA checks the metric value.
-      pollingInterval: 15
-      # Minimum number of pods to maintain, even if the load is low
-      minReplicaCount: 2
-      # Maximum number of pods to scale up to when the load increases.
-      maxReplicaCount: 5
+    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -1529,6 +1382,7 @@ diagnosticsMode:
     enabled: false
     useGcDump: false
     useCounters: false
+    useDotNetTools__Path: /app/.dotnet-tools
 
 OpenIdProviders:
   # Set to true to enable OpenID Connect settings.
@@ -1599,9 +1453,11 @@ ingress:
   domain: example.com
   # Add any specific annotations required for your ingress setup here.
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 99m
+    nginx.ingress.kubernetes.io/proxy-body-size: 4096m
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+
   customLabels: 
     environment: prod
     team: marketing
@@ -1632,6 +1488,12 @@ securityContext:
   runAsUser: 7777
   runAsGroup: 7777
   fsGroup: 7777
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  privileged: false
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
 
 # NodeSelector is used to control scheduling by specifying node labels.
 # When enabled, the deployment will only be scheduled on nodes that match the provided key-value pair.

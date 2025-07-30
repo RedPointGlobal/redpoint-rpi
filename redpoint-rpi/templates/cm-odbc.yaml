@@ -1,28 +1,31 @@
 {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-{{- if  .Values.databases.datawarehouse.enabled }}
+{{- if .Values.databases.datawarehouse.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: odbc-config
 data:
   odbc2.ini: |
-
     [ODBC]
     Trace=no
 
     [ODBC Data Sources]
-    {{ .Values.databases.datawarehouse.provider }}=Amazon Redshift DSN 64=Amazon Redshift (x64)
+    {{- range .Values.databases.datawarehouse.redshift.connections }}
+    {{ .name }}==Amazon Redshift DSN 64=Amazon Redshift (x64)
+    {{- end }}
 
-    [{{ .Values.databases.datawarehouse.provider }}]
-    Description=Amazon Redshift ODBC Driver (64-bit) DSN
+    {{- range .Values.databases.datawarehouse.redshift.connections }}
+    [{{ .name }}]
+    Description=Amazon Redshift ODBC Driver for {{ .name }}
     Driver=/app/odbc-lib/redshift/lib/libamazonredshiftodbc64.so
-
-    Server={{ .Values.databases.datawarehouse.redshift.server }}
-    Port={{ .Values.databases.datawarehouse.redshift.port }}
-    Database={{ .Values.databases.datawarehouse.redshift.database }}
-    UID={{ .Values.databases.datawarehouse.redshift.username }}
-    PWD={{ .Values.databases.datawarehouse.redshift.password }}
+    Server={{ .server }}
+    Port={{ .port }}
+    Database={{ .database }}
+    UID={{ .username }}
+    PWD={{ .password }}
     locale=en-US
+
+    {{- end }}
 {{- end }}
 {{- end }}
 

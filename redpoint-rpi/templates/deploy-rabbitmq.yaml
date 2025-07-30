@@ -49,6 +49,13 @@ spec:
       imagePullSecrets:
         - name: redpoint-rpi
       serviceAccountName: rpi-rabbitmq
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+      {{- end }}
       containers:
       - name: rpi-rabbitmq
         image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
@@ -60,6 +67,17 @@ spec:
         - name: port-two
           containerPort: 15672
           protocol: TCP
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
         {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.enabled }}
         resources:
           {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.limits }}

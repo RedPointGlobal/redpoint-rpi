@@ -21,11 +21,29 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-executionservice
+  fallback:
+    failureThreshold: {{ .Values.executionservice.autoscaling.kedaScaledObject.fallback.failureThreshold }} 
+    replicas: {{ .Values.executionservice.autoscaling.kedaScaledObject.fallback.replicas }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleUp.stabilizationWindowSeconds }} 
+          policies:
+            - type: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleUp.policies.type }} 
+              value: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleUp.policies.value }}
+              periodSeconds: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleUp.policies.periodSeconds }}
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleDown.stabilizationWindowSeconds }} 
+          policies:
+            - type: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleDown.policies.type }} 
+              value: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleDown.policies.value }}
+              periodSeconds: {{ .Values.executionservice.autoscaling.kedaScaledObject.behavior.scaleDown.policies.periodSeconds }}
   triggers:
     - type: prometheus
       metadata:
         serverAddress: {{ .Values.executionservice.autoscaling.kedaScaledObject.serverAddress | quote }}
-        metricName: execution_tasks_executing_count
+        metricName: execution_total_executing_count
         query: {{ .Values.executionservice.autoscaling.kedaScaledObject.query | quote }}
         threshold: {{ .Values.executionservice.autoscaling.kedaScaledObject.threshold | quote }}
       authenticationRef:

@@ -91,10 +91,10 @@ spec:
       serviceAccountName: {{ .Values.integrationapi.name }}
       {{- if .Values.securityContext.enabled }}
       securityContext:
-        runAsNonRoot: true
         runAsUser: {{ .Values.securityContext.runAsUser }}
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
       {{- end }}
       containers:
       - env:
@@ -112,6 +112,8 @@ spec:
           value: {{ .Values.integrationapi.enableRPIAuthentication | quote }}
         - name: RPI__DateTimeSource
           value: {{ .Values.databases.operational.dateTimeSource | quote }}
+        - name: ODBCINI
+          value: "/odbc-config/odbc.ini"
         {{- if .Values.diagnosticsMode.copytoAzureBlob.enabled }}
         - name: RPI__Diagnostics__CopyToAzure__IsEnabled
           value: "true"
@@ -419,10 +421,37 @@ spec:
             port: 8080
           failureThreshold: {{ .Values.integrationapi.startupProbe.failureThreshold }}
           periodSeconds: {{ .Values.integrationapi.startupProbe.periodSeconds }}
+        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
+        {{- if .Values.databases.datawarehouse.enabled }}
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+        {{- end }}
+        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
           protocol: TCP
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
         {{- if .Values.integrationapi.resources.enabled }}
         resources:
           {{- if .Values.integrationapi.resources.limits }}
@@ -450,6 +479,8 @@ spec:
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
           {{- end }}
           {{- end }}
           {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
@@ -457,6 +488,8 @@ spec:
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
           {{- end }}
           {{- end }}
           {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
@@ -493,6 +526,9 @@ spec:
         - name: odbc-config
           configMap:
             name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
@@ -500,6 +536,9 @@ spec:
         - name: odbc-config
           configMap:
             name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
         {{- end }}
         {{- end }}
         {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
