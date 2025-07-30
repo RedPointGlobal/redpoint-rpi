@@ -1489,7 +1489,7 @@ securityContext:
   runAsGroup: 7777
   fsGroup: 7777
   runAsNonRoot: true
-  readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: false
   privileged: false
   allowPrivilegeEscalation: false
   capabilities:
