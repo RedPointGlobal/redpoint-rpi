@@ -929,7 +929,7 @@ executionservice:
           stabilizationWindowSeconds: 300
           policies:
             type: Percent
-            value: 100
+            value: 50
             periodSeconds: 60
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.

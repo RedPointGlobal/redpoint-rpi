@@ -920,7 +920,7 @@ spec:
           stabilizationWindowSeconds: 300
           policies:
             - type: Percent 
-              value: 100
+              value: 50
               periodSeconds: 60
   triggers:
     - type: prometheus
