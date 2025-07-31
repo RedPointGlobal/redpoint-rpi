@@ -1002,21 +1002,9 @@ interactionapi:
     rpiTrace: Error
     rpiError: Error
     Console: None
-
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
-    #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
     maxReplicas: 5
@@ -1090,21 +1078,9 @@ integrationapi:
     rpiTrace: Error
     rpiError: Error
     Console: None
-
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
-    #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 1
     maxReplicas: 5
@@ -1179,7 +1155,6 @@ nodemanager:
     rpiTrace: Error
     rpiError: Error
     Console: None
-
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1334,7 +1309,6 @@ queuereader:
     rpiTrace: Error
     rpiError: Error
     Console: None
-
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
