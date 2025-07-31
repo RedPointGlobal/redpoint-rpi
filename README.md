@@ -222,7 +222,7 @@ https://rpi-interactionapi.example.com/api/deployment/download     # Client Down
 
 ### Download Client Executable
 
-You can download the RPI Client from the Post-release Product Updates section of the RPI v7.6 Release Notes. Be sure to download the version that matches the deployed RPI version in your environment.
+You can download the RPI Client from the Post-release Product Updates section at the link below. Be sure to download the version that matches the deployed RPI version in your environment.
 
 - [Client Download](https://docs.redpointglobal.com/rpi/rpi-v7-6-release-notes#RPIv7.6releasenotes-Post-releaseproductupdates)
 
