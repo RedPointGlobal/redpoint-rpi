@@ -891,7 +891,7 @@ executionservice:
       authenticationRef: rpi-executionservice
 ```
 
-Once the above configurations are in place, the Helm chart will automatically generate a KEDA ```ScaledObject``` using the Prometheus server details specified in the ```values.yaml``` file. The resulting resource will resemble the following example
+Once the above configurations are in place, the Helm chart will automatically deploy a KEDA ```ScaledObject``` using the Prometheus server details specified in the ```values.yaml``` file. The resulting resource will resemble the following example
 
 ```
 apiVersion: keda.sh/v1alpha1
