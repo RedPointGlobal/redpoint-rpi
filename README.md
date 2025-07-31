@@ -869,7 +869,7 @@ This mode is recommended for the **Execution Service** which handles both short 
 - ```terminationGracePeriodSeconds``` (recommended: 24h) ensures long-running tasks complete before termination. If tasks routinely exceed this, optimization is advised.
 
 **Prerequisites**
-- Install [external content generation](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/prometheus/prometheus-operator/) Prometheus in your cluster.
+- Install [Prometheus](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/prometheus/prometheus-operator/) Prometheus in your cluster.
 - Install [KEDA](https://keda.sh/docs/2.17/deploy/) .
 - Enable metrics scraping for the Execution Service
 
