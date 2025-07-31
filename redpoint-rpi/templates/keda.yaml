@@ -1,5 +1,6 @@
 {{- if .Values.executionservice.autoscaling.enabled }}
 {{- if eq .Values.executionservice.autoscaling.type "keda" }}
+{{- if .Values.executionservice.autoscaling.kedaScaledObject.useTriggerAuthentication }}
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:
@@ -9,8 +10,12 @@ spec:
   podIdentity:
       provider: azure-workload
       identityId: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
-
+{{- end }}
+{{- end }}
+{{- end }}
 ---
+{{- if .Values.executionservice.autoscaling.enabled }}
+{{- if eq .Values.executionservice.autoscaling.type "keda" }}
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -43,11 +48,13 @@ spec:
     - type: prometheus
       metadata:
         serverAddress: {{ .Values.executionservice.autoscaling.kedaScaledObject.serverAddress | quote }}
-        metricName: execution_total_executing_count
+        metricName: {{ .Values.executionservice.autoscaling.kedaScaledObject.metricName | quote }}
         query: {{ .Values.executionservice.autoscaling.kedaScaledObject.query | quote }}
         threshold: {{ .Values.executionservice.autoscaling.kedaScaledObject.threshold | quote }}
+      {{- if .Values.executionservice.autoscaling.kedaScaledObject.useTriggerAuthentication }}
       authenticationRef:
         name: rpi-executionservice
+      {{- end }}
   pollingInterval: {{ .Values.executionservice.autoscaling.kedaScaledObject.pollingInterval }}
   minReplicaCount: {{ .Values.executionservice.autoscaling.kedaScaledObject.minReplicaCount }}
   maxReplicaCount: {{ .Values.executionservice.autoscaling.kedaScaledObject.maxReplicaCount }}

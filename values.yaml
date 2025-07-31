@@ -27,7 +27,7 @@ global:
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20250723.1344
+      tag: 7.6.20250728.1439
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -876,7 +876,8 @@ executionservice:
     # - "hpa": Uses the native Kubernetes Horizontal Pod Autoscaler to scale
     #   based on CPU and/or memory usage. Does not require any additional components.
     # Note: **KEDA is the recommended scaling solution for the Execution Service**
-    type: keda
+    type: hpa
+
     # HPA Settings
     minReplicas: 1
     maxReplicas: 5
@@ -887,6 +888,8 @@ executionservice:
     kedaScaledObject:
        # The Prometheus server URL that KEDA will query for metrics.
       serverAddress: <my-prometheus-query-endpoint>
+      # Set to false if Prometheus doesn't require authentication
+      useTriggerAuthentication: true
       # Name of the TriggerAuthentication resource for KEDA to authenticate with Prometheus.
       authenticationRef: rpi-executionservice
       # If using Azure Managed Prometheus in AKS with Workload Identity.
@@ -895,14 +898,14 @@ executionservice:
       # - Relevant Docs: https://learn.microsoft.com/en-us/azure/aks/keda-workload-identity
       identityId: <my-workload_identity-id>
       # The name of the Prometheus metric used by KEDA to make scaling decisions.
-      metricName: execution_total_executing_count
+      metricName: execution_max_thread_count
       # PromQL query to fetch the current value of the custom metric.
       # Example filters:
       # - Kubernetes Namespace: "<my-rpi-namespace>"
       # - App Label: "rpi-executionservice"
       # - Azure Workload Identity Label: "true"
       # Update these labels if your namespace, app, or identity settings are different.
-      query: sum(execution_total_executing_count{kubernetes_namespace=\"<my-rpi-namespace>\",app=\"rpi-executionservice\",azure_workload_identity_use=\"true\"})
+      query: sum(execution_max_thread_count{kubernetes_namespace="<my-rpi-namespace>", app="rpi-executionservice"})
       # The target value for the metric. When the metric exceeds this threshold,
       # KEDA will trigger a scale-out event.
       threshold: "80"
@@ -917,13 +920,13 @@ executionservice:
         replicas: 2
       behavior:
         scaleUp:
-          stabilizationWindowSeconds:
+          stabilizationWindowSeconds: 300
           policies:
             type: Percent
             value: 100
             periodSeconds: 60
         scaleDown:
-          stabilizationWindowSeconds:
+          stabilizationWindowSeconds: 300
           policies:
             type: Percent
             value: 100
@@ -1489,7 +1492,7 @@ securityContext:
   runAsGroup: 7777
   fsGroup: 7777
   runAsNonRoot: true
-  readOnlyRootFilesystem: false
+  readOnlyRootFilesystem: true
   privileged: false
   allowPrivilegeEscalation: false
   capabilities:

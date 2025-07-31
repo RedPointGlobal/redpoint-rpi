@@ -18,8 +18,7 @@ This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
 - [Configure Open ID Connect](#configure-open-id-connect)
 - [Configure Content Generation Tools](#configure-content-generation-tools)
 - [Configure Custom Metrics](#configure-custom-metrics)
-- [Configure High Availability ](#configure-high-availability)
-- [Configure Autoscaling with custom metrics](#configure-autoscaling-with-custom-metrics)
+- [Configure Autoscaling](#configure-autoscaling)
 - [RPI Documentation](#rpi-documentation)
 - [Getting Support](#getting-support)
 
@@ -841,32 +840,13 @@ customMetrics:
   enabled: true
 ```
 
-### Configure High Availability
+### Configure Autoscaling
 
-This chart deploys RPI in HA mode using Kubernetes' native Horizontal Pod Autoscaler (HPA). Alternatively, you can disable the HPA and configure fixed replica counts directly in the ```values.yaml```, as demonstrated below
+RPI services support two modes of autoscaling:
 
-- **HA mode with static replicasets**
+**1) Resource-Based Autoscaling with Kubernetes HPA**
 
-```
-realtimeapi:
-  autoscaling:
-    enabled: false
-  replicas: 2
-interactionapi:
-  autoscaling:
-    enabled: false
-  replicas: 2
-executionservice:
-  autoscaling:
-    enabled: false
-  replicas: 2
-nodemanager:
-  autoscaling:
-    enabled: false
-  replicas: 2
-```
-
-- **HA mode with kubernetes autoscaling (HPA)**
+This is the default autoscaling mode using Kubernetes' native Horizontal Pod Autoscaler (HPA) to scale pods based on CPU and memory utilization. To adjust the default HPA, update the ```values.yaml``` file as follows:
 
 ```
 autoscaling:
@@ -875,58 +855,45 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
 ```
 
-### Configure Autoscaling with custom metrics
+**2) Custom Metrics-Based Autoscaling with KEDA and Prometheus**
 
-When you enable custom metrics as described in the [Configure Custom Metrics](#configure-custom-metrics) section above. You can leverage [ KEDA ](https://keda.sh/), a Kubernetes-based Event Driven Autoscaler to act on them. Prepare your cluster by:
+This mode is recommended for the **Execution Service** which handles both short and long-running tasks and requires graceful shutdown during scale-in. KEDA scales the service based on the custom RPI metric ```execution_max_thread_count``` which represents the limit on how many work items an execution service can take on in relation to  ```execution_total_executing_count``` which represents the number of currently executing work items.
 
-- Install and configure KEDA according to your Kubernetes platform's setup instructions
-- Set the autoscaling type to ```keda``` in the ```values.yaml```.
+**Overview of the Setup:**
+- Prometheus scrapes the ```execution_total_executing_count``` and ```execution_max_thread_count``` metrics from the Execution Service's ```/metrics``` endpoint.
+- KEDA uses the ```execution_max_thread_count``` count to Scale out when the count exceeds a defined threshold and Scale in when the count falls below the threshold.
+- A Kubernetes preStop lifecycle hook allows a graceful scale-in by calling ```/api/operations/sleep``` to stop accepting new tasks and polling ```/metrics``` until ```execution_total_executing_count``` drops to 0.
+- ```terminationGracePeriodSeconds``` (recommended: 24h) ensures long-running tasks complete before termination. If tasks routinely exceed this, optimization is advised.
 
-The Helm Chart will deploy a ```ScaledObject``` that instructs KEDA to query Prometheus for the value of the specified metric for example ```execution_max_thread_count```. When the metric reaches a predefined threshold, KEDA triggers horizontal scaling, increasing the ```maxReplicaCount``` to accommodate the additional load. Conversely, when the load decreases, KEDA scales the replicas back down ```minReplicaCount```, optimizing resource usage and reducing costs.
-
-To configure autoscaling based on custom metrics, update your ```values.yaml``` with the following values:
+**Prerequisites**
+- Install [external content generation](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/prometheus/prometheus-operator/) Prometheus in your cluster.
+- Install [KEDA](https://keda.sh/docs/2.17/deploy/) .
+- Enable metrics scraping for the Execution Service
 
 ```
-autoscaling:
+customMetrics:
   enabled: true
-  type: keda
-  kedaScaledObject:
-    serverAddress: <my-prometheus-query-endpoint>
-    metricName: <my-metrics-name>.
-    query: <my-prometheus-promq-query>
-    threshold: "90"
-    pollingInterval: 15
-    minReplicaCount: 2
-    maxReplicaCount: 5
+  prometheus_scrape: true
 ```
-
-Enable the preferred autoscaling type for each service independently by setting autoscaling.type to either keda or hpa in the values.yaml configuration. Both types can coexist, allowing you to fine-tune autoscaling strategies on a per-service basis.
+- Enable KEDA in the Execution Service section
 
 ```
-NAME                  REFERENCE                     TARGETS       MINPODS   MAXPODS   REPLICAS
-keda-hpa              Deployment/executionservice   1/90 (avg)       2         5         2
-rpi-callbackapi       Deployment/callbackapi        cpu: 0%/80%      1         5         1
-rpi-integrationapi    Deployment/integrationapi     cpu: 0%/80%      1         5         1
-rpi-interactionapi    Deployment/interactionapi     cpu: 15%/80%     1         5         1
-rpi-realtimeapi       Deployment/realtimeapi        cpu: 0%/80%      1         5         1
+executionservice:
+  autoscaling:
+    enabled: true
+    type: keda
+    kedaScaledObject:
+      serverAddress: <my-prometheus-query-endpoint>
+      useTriggerAuthentication: true
+      authenticationRef: rpi-executionservice
+```
+
+Once the above configurations are in place, the Helm chart will automatically generate a KEDA ```ScaledObject``` using the Prometheus server details specified in the ```values.yaml``` file. The resulting resource will resemble the following example
 
 ```
-The Helm Chart deploys a scaling object for a single custom metric, but you can extend it to create more ScaledObjects. Below is an example of configuring a custom ScaledObject with Azure Workload Identity authentication.
-
-```
-apiVersion: keda.sh/v1alpha1
-kind: TriggerAuthentication
-metadata:
-  name: rpi-executionservice
-  namespace: redpoint-rpi
-spec:
-  podIdentity:
-      provider: azure-workload
-      identityId: <my-workload-identity-id>
-
----
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -937,18 +904,51 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-executionservice
+  fallback:
+    failureThreshold: 3 
+    replicas: 2
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 300
+          policies:
+            - type: Percent 
+              value: 100
+              periodSeconds: 60
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+            - type: Percent 
+              value: 100
+              periodSeconds: 60
   triggers:
     - type: prometheus
       metadata:
-        serverAddress: https://my-example.prometheus.com
-        metricName: execution_tasks_executing_count
-        query:  <my-prometheus-promq-query>
+        serverAddress: "<my-prometheus-query-endpoint>"
+        metricName: "execution_max_thread_count"
+        query: "sum(execution_max_thread_count{kubernetes_namespace=\"<my-rpi-namespace>\", app=\"rpi-executionservice\"})"
         threshold: "80"
-        authenticationRef:
-          name: rpi-executionservice
-  pollingInterval: 15
+      authenticationRef:
+        name: rpi-executionservice
+  pollingInterval: 30
   minReplicaCount: 2
-  maxReplicaCount: 5
+  maxReplicaCount: 10
+```
+
+**NOTE:** ```The authenticationRef``` field in the ScaledObject references a KEDA ```TriggerAuthentication``` resource, which is only required if your Prometheus server enforces authentication (e.g., bearer token, basic auth, or Azure Workload Identity). If no authentication is needed, update the ```values.yaml``` and set ```useTriggerAuthentication``` to ```false```
+
+```
+executionservice:
+    kedaScaledObject:
+      useTriggerAuthentication: false
+```
+
+- Verify that KEDA is running and the ScaledObject is recognized by running ```kubectl get ScaledObject``` and you should see the expected output as below;
+
+```
+NAME                   SCALETARGETKIND          SCALETARGETNAME        MIN   MAX   READY
+rpi-executionservice   apps/v1.Deployment       rpi-executionservice   2     10    True  
 ```
 
 ### RPI Documentation
@@ -956,6 +956,10 @@ To explore in-depth documentation and stay updated with the latest release notes
 
 ### Getting Support 
 If you encounter any challenges specific to the RPI application, our dedicated support team is here to assist you. Please reach out to us with details of the issue for prompt and expert help using [support@redpointglobal.com](support@redpointglobal.com)
+
+### Helm Chart Customization
+
+Common settings like image overrides, annotations, security contexts, and required fields are already supported and documented directly in ```values.yaml```. No need to modify templates just update the values file accordingly.
 
 ```Note on Scope of Support```
 While we are fully equipped to address issues directly related to the RPI application, please be aware that challenges pertaining to Kubernetes configurations, network connectivity, or other external system issues fall outside our support scope. For these, we recommend consulting with your IT infrastructure team or seeking assistance from relevant technical forums.

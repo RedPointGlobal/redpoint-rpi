@@ -407,6 +407,32 @@ spec:
               command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
         {{- end }}
         {{- end }}
+        {{- if .Values.executionservice.autoscaling.enabled }}
+        {{- if eq .Values.executionservice.autoscaling.type "keda" }}
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "[PreStop] Putting the Execution Service to Sleep...." 
+                  curl -s http://localhost:8080/api/operations/sleep
+                  while true; do
+                    count=$(curl -s http://localhost:8080/metrics | grep '^execution_total_executing_count' | awk '{print $2}')
+                    if [ "$count" = "" ]; then
+                      echo "[preStop] Metric not found, assuming 0"
+                      break
+                    fi
+                    if [ "$count" = "0" ]; then
+                      echo "[preStop] No executing tasks. Proceeding with shutdown."
+                      break
+                    fi
+                    echo "[preStop] Still executing ($count tasks). Sleeping..."
+                    sleep 5
+                  done
+        {{- end }}
+        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
