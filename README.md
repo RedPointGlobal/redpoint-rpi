@@ -222,10 +222,9 @@ https://rpi-interactionapi.example.com/api/deployment/download     # Client Down
 
 ### Download Client Executable
 
-To connect to the RPI server, download the client application provided by the Interaction API. You have two options:
+You can download the RPI Client from the Post-release Product Updates section of the RPI v7.6 Release Notes. Be sure to download the version that matches the deployed RPI version in your environment.
 
-- Visit the Interaction API splash page to find the download link.
-- Use the direct link: ```https://rpi-interactionapi.example.com/download```
+- [Client Download](https://docs.redpointglobal.com/rpi/rpi-v7-6-release-notes#RPIv7.6releasenotes-Post-releaseproductupdates)
 
 ### Configure Cloud Identity
 
