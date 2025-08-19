@@ -27,7 +27,7 @@ global:
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20250813.1356
+      tag: 7.6.20250815.923
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -308,9 +308,9 @@ realtimeapi:
     # In-memory SQL cache configuration
     inMemorySql:
       # Hostname or IP address of the cache database server
-      serverHost: "<my-cache-database-server-host>"
+      server_host: "<my-cache-database-server-host>"
       # Name of the in-memory SQL database
-      databaseName: "<my-cache-database-name>"
+      database_name: "<my-cache-database-name>"
       # Credentials for database access
       username: "<my-cache-database-username>"
       password: "<my-cache-database-password>"
