@@ -274,7 +274,7 @@ realtimeapi:
     enabled: true  
     # Choose your cache provider
     # Supported options: (mongodb, azureredis, redis, inMemorySql, googlebigtable).
-    provider: mongodb
+    provider: inMemorySql
     # If using MongoDB as the provider
     mongodb:
       # Provide the MongoDB connection string.
@@ -406,32 +406,20 @@ realtimeapi:
   dataMaps:
     visitorProfile:
       DaysToPersist: 365
-      Cache: Default
-      DaysToPersist: 365
       CompressData: true
     visitorHistory:
-      DaysToPersist: 365
-      Cache: Default
       DaysToPersist: 365
       CompressData: true
     nonVisitorData:
       DaysToPersist: 365
-      Cache: Default
-      DaysToPersist: 365
       CompressData: true
     productRecommendation:
-      DaysToPersist: 365
-      Cache: Default
       DaysToPersist: 365
       CompressData: true
     offerHistory:
       DaysToPersist: 365
-      Cache: Default
-      DaysToPersist: 365
       CompressData: true
     messageHistory:
-      DaysToPersist: 365
-      Cache: Default
       DaysToPersist: 365
       CompressData: true
   idValidation:
