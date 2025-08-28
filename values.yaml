@@ -274,7 +274,7 @@ realtimeapi:
     enabled: true  
     # Choose your cache provider
     # Supported options: (mongodb, azureredis, redis, inMemorySql, googlebigtable).
-    provider: inMemorySql
+    provider: mongodb
     # If using MongoDB as the provider
     mongodb:
       # Provide the MongoDB connection string.
