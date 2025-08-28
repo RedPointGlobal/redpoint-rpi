@@ -692,7 +692,7 @@ spec:
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Name
             value: {{ .Values.realtimeapi.cacheProvider.provider | quote }}
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Assembly
-            value: "RedPoint.Shared"
+            value: "RedPoint.Resonance.Web.Shared"
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Class
             value: "RedPoint.Resonance.Web.Shared.Cache.SQLServerCache"
           - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Key
