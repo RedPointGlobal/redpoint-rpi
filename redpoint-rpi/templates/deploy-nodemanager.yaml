@@ -221,7 +221,7 @@ spec:
         - name: DisableHttpRedirect
           value: "true"
         - name: RealtimeAPIAddressOverride
-          value: "http://rpi-realtimeapi"
+          value: "http://{{ .Values.realtimeapi.name }}"
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE

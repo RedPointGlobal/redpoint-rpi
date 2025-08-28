@@ -157,7 +157,7 @@ spec:
         - name: RPI__ServiceHostPortNumber
           value: {{ .Values.interactionapi.service.port | quote }}
         - name: RealtimeAPIAddressOverride
-          value: "http://rpi-realtimeapi"
+          value: "http://{{ .Values.realtimeapi.name }}"
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"

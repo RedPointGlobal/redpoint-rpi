@@ -367,7 +367,7 @@ spec:
           - name: Authentication__RootServiceURL
             value: "https://{{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}"
           - name: Authentication__HttpMetaRootServiceURL
-            value: "http://rpi-realtimeapi"
+            value: {{ .Values.realtimeapi.name }}
           - name: Authentication__AccessTokenLifetimeSeconds
             value: {{ .Values.realtimeapi.authentication.oauth.accessTokenLifetimeSeconds | quote }}
           - name: Authentication__RefreshTokenLifetimeSeconds

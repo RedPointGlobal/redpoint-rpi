@@ -1,0 +1,2236 @@
+---
+# Source: redpoint-rpi/templates/deploy-callbackapi.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-callbackapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-callbackapi
+---
+# Source: redpoint-rpi/templates/deploy-deploymentapi.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-deploymentapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-deploymentapi
+---
+# Source: redpoint-rpi/templates/deploy-executionservice.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-executionservice
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-executionservice
+---
+# Source: redpoint-rpi/templates/deploy-integrationapi.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-integrationapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-integrationapi
+---
+# Source: redpoint-rpi/templates/deploy-interactionapi.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-interactionapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-interactionapi
+---
+# Source: redpoint-rpi/templates/deploy-nodemanager.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-nodemanager
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-nodemanager
+---
+# Source: redpoint-rpi/templates/deploy-queuereader.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-queuereader
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-queuereader
+---
+# Source: redpoint-rpi/templates/deploy-realtimeapi.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-realtimeapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-realtimeapi
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx-qarc-aa9820
+  namespace: qarc-aa9820
+automountServiceAccountToken: true
+---
+# Source: redpoint-rpi/templates/deploy-secrets.yaml
+# ========================== sqlserver
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "redpoint-rpi-secrets"
+  namespace: qarc-aa9820
+data:
+  ConnectionString_Logging_Database: U2VydmVyPXRjcDo8bXktZGF0YWJhc2Utc2VydmVyLWhvc3Q+LDE0MzM7RGF0YWJhc2U9PG15LWxvZ2dpbmctZGF0YWJhc2UtbmFtZT47VXNlciBJRD08bXktZGF0YWJhc2Utc2VydmVyLXVzZXJuYW1lPjtQYXNzd29yZD08bXktZGF0YWJhc2Utc2VydmVyLXBhc3N3b3JkPjtFbmNyeXB0PVRydWU7VHJ1c3RTZXJ2ZXJDZXJ0aWZpY2F0ZT1UcnVlO0Nvbm5lY3Rpb24gVGltZW91dD0zMDs=
+  ConnectionString_Operations_Database: U2VydmVyPXRjcDo8bXktZGF0YWJhc2Utc2VydmVyLWhvc3Q+LDE0MzM7RGF0YWJhc2U9PG15LXB1bHNlLWRhdGFiYXNlLW5hbWU+O1VzZXIgSUQ9PG15LWRhdGFiYXNlLXNlcnZlci11c2VybmFtZT47UGFzc3dvcmQ9PG15LWRhdGFiYXNlLXNlcnZlci1wYXNzd29yZD47RW5jcnlwdD1UcnVlO1RydXN0U2VydmVyQ2VydGlmaWNhdGU9VHJ1ZTtDb25uZWN0aW9uIFRpbWVvdXQ9MzA7
+  Operations_Database_Server_Password: PG15LWRhdGFiYXNlLXNlcnZlci1wYXNzd29yZD4=
+  RealtimeAPI_MongoCache_ConnectionString: bW9uZ29kYjovLzxteV91c2VybmFtZT46PG15X3Bhc3N3b3JkPkBteXNlcnZlci5tb25nb2RiLm5ldDoyNzAxNy9QdWxzZT9hdXRoU291cmNlPWFkbWluJnNzbD10cnVl
+  RealtimeAPI_MongoCache_ConnectionKey: Q29ubmVjdGlvblN0cmluZw==
+  RealtimeAPI_QueueSettings_AccessKey: PG15LWF3cy1pYW0tYWNjZXNzLWtleT4=
+  RealtimeAPI_QueueSettings_SecretKey: PG15LWF3cy1pYW0tc2VjcmV0LWFjY2Vzcy1rZXk+
+  RealtimeAPI_QueueSettings_0_Key: QWNjZXNzS2V5
+  RealtimeAPI_QueueSettings_1_Key: U2VjcmV0S2V5
+  RealtimeAPI_Auth_Token: MDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAw
+  SMTP_Password: eW91cl9zbXRwX3NlcnZlcl9wYXNzd29yZA==
+type: Opaque
+
+# ==========================  Postgresql
+---
+# Source: redpoint-rpi/templates/cm-odbc.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odbc-config
+data:
+  odbc2.ini: |
+    [ODBC]
+    Trace=no
+
+    [ODBC Data Sources]
+    tenant1==Amazon Redshift DSN 64=Amazon Redshift (x64)
+    tenant2==Amazon Redshift DSN 64=Amazon Redshift (x64)
+    [tenant1]
+    Description=Amazon Redshift ODBC Driver for tenant1
+    Driver=/app/odbc-lib/redshift/lib/libamazonredshiftodbc64.so
+    Server=redshift-tenant1.endpoint.aws
+    Port=5439
+    Database=db_tenant1
+    UID=user1
+    PWD=pass1
+    locale=en-US
+    [tenant2]
+    Description=Amazon Redshift ODBC Driver for tenant2
+    Driver=/app/odbc-lib/redshift/lib/libamazonredshiftodbc64.so
+    Server=redshift-tenant2.endpoint.aws
+    Port=5439
+    Database=db_tenant2
+    UID=user2
+    PWD=pass2
+    locale=en-US
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx-config
+  namespace: qarc-aa9820
+data:
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: tcp-services
+  namespace: qarc-aa9820
+data:
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+  name: nginx-qarc-aa9820
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+  - get
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+  name: nginx-qarc-aa9820
+  namespace: qarc-aa9820
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nginx-qarc-aa9820
+subjects:
+- kind: ServiceAccount
+  name: nginx-qarc-aa9820
+  namespace: qarc-aa9820
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+  name: nginx-qarc-aa9820
+  namespace: qarc-aa9820
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resourceNames:
+  - nginx-qarc-aa9820
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - nginx-qarc-aa9820
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+  - get
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+  name: nginx-qarc-aa9820
+  namespace: qarc-aa9820
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: nginx-qarc-aa9820
+subjects:
+- kind: ServiceAccount
+  name: nginx-qarc-aa9820
+  namespace: qarc-aa9820
+---
+# Source: redpoint-rpi/templates/deploy-callbackapi.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-callbackapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-callbackapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-callbackapi
+---
+# Source: redpoint-rpi/templates/deploy-deploymentapi.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-deploymentapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-deploymentapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-deploymentapi
+---
+# Source: redpoint-rpi/templates/deploy-executionservice.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-executionservice
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-executionservice
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-executionservice
+---
+# Source: redpoint-rpi/templates/deploy-integrationapi.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-integrationapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-integrationapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-integrationapi
+---
+# Source: redpoint-rpi/templates/deploy-interactionapi.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-interactionapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-interactionapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-interactionapi
+---
+# Source: redpoint-rpi/templates/deploy-nodemanager.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-nodemanager
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-nodemanager
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-nodemanager
+---
+# Source: redpoint-rpi/templates/deploy-queuereader.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-queuereader
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-queuereader
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-queuereader
+---
+# Source: redpoint-rpi/templates/deploy-realtimeapi.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-realtimeapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-realtimeapi
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-realtimeapi
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx-qarc-aa9820
+  namespace: qarc-aa9820
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ipFamilyPolicy: SingleStack
+  ipFamilies:
+    - IPv4
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+      appProtocol: http
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+      appProtocol: https
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/component: controller
+---
+# Source: redpoint-rpi/templates/deploy-callbackapi.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-callbackapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-callbackapi
+    environment: prod
+    team: marketing
+spec:
+  selector:
+    matchLabels:
+      app: rpi-callbackapi
+  template:
+    metadata:
+      labels:
+        app: rpi-callbackapi
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-callbackapi
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__RPIError
+          value: "Error"
+        - name: Logging__Console__LogLevel__Default
+          value: "None"
+        - name: CallbackServiceConfig__QueueEnabled
+          value: "true"
+        - name: RPI__DateTimeSource
+          value: "OperatingSystem"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: "RPICallbackApiQueue"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
+          value: "*"
+        - name: CallbackServiceConfig__QueueProvider__ChannelLabel
+          value: "SendGrid"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: "redpoint-rpi-secrets"
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: "redpoint-rpi-secrets"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Amazon.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "AccessKey"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          valueFrom:
+            secretKeyRef:
+              name: "redpoint-rpi-secrets"
+              key: RealtimeAPI_QueueSettings_AccessKey
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "SecretKey"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: "redpoint-rpi-secrets"
+              key: RealtimeAPI_QueueSettings_SecretKey
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
+          value: "RegionEndpoint"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
+          value: "us-east-1"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
+          value: "VisibilityTimeout"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Value
+          value: "301"
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-callbackapi:7.6.20250827.905
+        imagePullPolicy: IfNotPresent
+        name: callbackapi
+        ports:
+        - name: http
+          containerPort: 8080
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 875m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 750Mi
+        volumeMounts:
+      volumes:
+---
+# Source: redpoint-rpi/templates/deploy-deploymentapi.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-deploymentapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-deploymentapi
+    environment: prod
+    team: marketing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rpi-deploymentapi
+  template:
+    metadata:
+      labels:
+        app: rpi-deploymentapi
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-deploymentapi
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      containers:
+      - name: rpi-deploymentapi
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-deploymentapi:7.6.20250827.905
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: "<my-pulse-database-name>"
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: "<my-logging-database-name>"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: "<my-database-server-host>"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: "dbo"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: "<my-database-server-username>"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          valueFrom:
+            secretKeyRef:
+              name: "redpoint-rpi-secrets"
+              key: Operations_Database_Server_Password
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 875m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 750Mi
+---
+# Source: redpoint-rpi/templates/deploy-executionservice.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-executionservice
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-executionservice
+    environment: prod
+    team: marketing
+spec:
+  selector:
+    matchLabels:
+      app: rpi-executionservice
+  template:
+    metadata:
+      labels:
+        app: rpi-executionservice
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-executionservice
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      terminationGracePeriodSeconds: 120
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__RPIError
+          value: "Error"
+        - name: Logging__Console__LogLevel__Default
+          value: "None"
+        - name: RPI__DateTimeSource
+          value: "OperatingSystem"
+        - name: ODBCINI
+          value: "/odbc-config/odbc.ini"
+        - name: RPIExecution__InternalAddress
+          value: ""
+        - name: RPIExecution__AuditTaskEvents
+          value: "true"
+        - name: RPIExecution__MaxThreadsPerExecutionService
+          value: "50"
+        - name: RPIExecution__ExecutionShutdownWaitForActivity
+          value: "00:08:00"
+        - name: RPIExecution__OverrideCustomSQLReservedWords
+          value: "false"
+        - name: RPIExecution__RPDMOApiPrefixUri
+          value: "/v1/"
+        - name: RPIExecution__TaskTimeout
+          value: "60"
+        - name: RPIExecution__TriggerCheckCriteriaInterval
+          value: "60"
+        - name: RPIExecution__TriggersMaxDaysInactive
+          value: "180"
+        - name: RPIExecution__DefaultMaintenanceModeBufferTime
+          value: "00:05:00"
+        - name: RPIExecution__WorkflowPrioritization__Enabled
+          value: "true"
+        - name: RPIExecution__WorkflowPrioritization__MaxConcurrentWorkflowActivities
+          value: "100"
+        - name: RPIExecution__WorkflowPrioritization__MaximumQueueTime
+          value: "24:00:00"
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        - name: RPI__SMTP__EmailSenderAddress
+          value: "noreply-rpi@example.com"
+        - name: RPI__SMTP__Address
+          value: "your_smtp_host"
+        - name: RPI__SMTP__Port
+          value: "587"
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: "your_smtp_server_username"
+        - name: RPI__SMTP__Password
+          valueFrom:
+            secretKeyRef:
+              name: "redpoint-rpi-secrets"
+              key: SMTP_Password
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: "redpoint-rpi-secrets"
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: "redpoint-rpi-secrets"
+        - name: SeedService__MemoryCacheSize
+          value: "10"
+        - name: SeedService__MaxNumberRetries
+          value: "100"
+        - name: SeedService__MaxRetryDelay
+          value: "00:01:00"
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-executionservice:7.6.20250827.905
+        imagePullPolicy: IfNotPresent
+        name: rpi-executionservice
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 2
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: 60
+          periodSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 875m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 750Mi
+        volumeMounts:
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
+      volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
+---
+# Source: redpoint-rpi/templates/deploy-integrationapi.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-integrationapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-integrationapi
+    environment: prod
+    team: marketing
+spec:
+  selector:
+    matchLabels:
+      app: rpi-integrationapi
+  template:
+    metadata:
+      labels:
+        app: rpi-integrationapi
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-integrationapi
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__RPIError
+          value: "Error"
+        - name: Logging__Console__LogLevel__Default
+          value: "None"
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: RPI__DateTimeSource
+          value: "OperatingSystem"
+        - name: ODBCINI
+          value: "/odbc-config/odbc.ini"
+        - name: Authentication__RPIAuthentication__AuthorizationHost
+          value: "https://rpi-integrationapi.example.com"
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://rpi-integrationapi"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        - name: EnableSwagger
+          value: "true"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: "redpoint-rpi-secrets"
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: "redpoint-rpi-secrets"
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-integrationapi:7.6.20250827.905
+        imagePullPolicy: IfNotPresent
+        name: rpi-integrationapi
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 2
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: 60
+          periodSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 875m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 750Mi
+        volumeMounts:
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
+      volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
+---
+# Source: redpoint-rpi/templates/deploy-interactionapi.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-interactionapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-interactionapi
+    environment: prod
+    team: marketing
+spec:
+  selector:
+    matchLabels:
+      app: rpi-interactionapi
+  template:
+    metadata:
+      labels:
+        app: rpi-interactionapi
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-interactionapi
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__RPIError
+          value: "Error"
+        - name: Logging__Console__LogLevel__Default
+          value: "None"
+        - name: RPI__DateTimeSource
+          value: "OperatingSystem"
+        - name: ODBCINI
+          value: "/odbc-config/odbc.ini"
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: Authentication__RPIAuthentication__AuthorizationHost
+          value: "https://rpi-interactionapi.example.com"
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://rpi-interactionapi"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        - name: EnableSwagger
+          value: "true"
+        - name: RPI__SMTP__EmailSenderAddress
+          value: "noreply-rpi@example.com"
+        - name: RPI__SMTP__Address
+          value: "your_smtp_host"
+        - name: RPI__SMTP__Port
+          value: "587"
+        - name: RPI__SMTP__EnableSSL
+          value: "true"
+        - name: RPI__SMTP__UseCredentials
+          value: "true"
+        - name: RPI__SMTP__Username
+          value: "your_smtp_server_username"
+        - name: RPI__SMTP__Password
+          valueFrom:
+            secretKeyRef:
+              name: "redpoint-rpi-secrets"
+              key: SMTP_Password
+        - name: RPIClient__AllowSavingLoginDetails
+          value: "true"
+        - name: RPIClient__AlwaysShowClientsAtLogin
+          value: "true"
+        - name: RPIClient__ApplicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: "redpoint-rpi-secrets"
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: "redpoint-rpi-secrets"
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi:7.6.20250827.905
+        imagePullPolicy: IfNotPresent
+        name: rpi-interactionapi
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 2
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: 60
+          periodSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 875m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 750Mi
+        volumeMounts:
+          - name: clientupgrade
+            mountPath: /tmp
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
+      volumes:
+        - name: clientupgrade
+          emptyDir: {}
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
+---
+# Source: redpoint-rpi/templates/deploy-nodemanager.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-nodemanager
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-nodemanager
+    environment: prod
+    team: marketing
+spec:
+  selector:
+    matchLabels:
+      app: rpi-nodemanager
+  template:
+    metadata:
+      labels:
+        app: rpi-nodemanager
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-nodemanager
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__RPIError
+          value: "Error"
+        - name: Logging__Console__LogLevel__Default
+          value: "None"
+        - name: RPI__DateTimeSource
+          value: "OperatingSystem"
+        - name: ODBCINI
+          value: "/odbc-config/odbc.ini"
+        - name: RPIClient__applicationSupportURL
+          value: "https://support.redpointglobal.com"
+        - name: Authentication__EnableRPIAuthentication
+          value: "true"
+        - name: DisableHttpRedirect
+          value: "true"
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: "redpoint-rpi-secrets"
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: "redpoint-rpi-secrets"
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-nodemanager:7.6.20250827.905
+        imagePullPolicy: IfNotPresent
+        name: rpi-nodemanager
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 2
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: 60
+          periodSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 875m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 750Mi
+        volumeMounts:
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
+      volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
+---
+# Source: redpoint-rpi/templates/deploy-queuereader.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-queuereader
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-queuereader
+    environment: prod
+    team: marketing
+spec:
+  selector:
+    matchLabels:
+      app: rpi-queuereader
+  template:
+    metadata:
+      labels:
+        app: rpi-queuereader
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-queuereader
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__LogLevel__Default
+          value: "Error"
+        - name: Logging__Database__RPITrace
+          value: "Error"
+        - name: Logging__Database__RPIError
+          value: "Error"
+        - name: Logging__Console__LogLevel__Default
+          value: "None"
+        - name: RPI__DateTimeSource
+          value: "OperatingSystem"
+        - name: ODBCINI
+          value: "/odbc-config/odbc.ini"
+        - name: RPI__ServiceHostName
+          value: "http://rpi-interactionapi"
+        - name: RPI__ServiceHostPortNumber
+          value: "80"
+        - name: RealtimeAPIAddressOverride
+          value: "http://rpi-realtimeapi"
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: "redpoint-rpi-secrets"
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: "redpoint-rpi-secrets"
+        - name: QueueService__QueueListener__IsEnabled
+          value: "true"
+        - name: QueueService__RealtimeConfiguration__IsCallbackServiceProcessingEnabled
+          value: "true"
+        - name: QueueService__QueueListener__QueuePath
+          value: "RPIQueueListener"
+        - name: QueueService__QueueListener__ThreadPoolSize
+          value: "10"
+        - name: QueueService__QueueListener__TimeoutMinutes
+          value: "60"
+        - name: QueueService__QueueListener__MaxBatchSize
+          value: "50"
+        - name: QueueService__QueueListener__UseMessageLocks
+          value: "true"
+        - name: QueueService__RealtimeConfiguration__IsFormProcessingEnabled
+          value: "true"
+        - name: QueueService__RealtimeConfiguration__IsEventProcessingEnabled
+          value: "true"
+        - name: QueueService__RealtimeConfiguration__IsCacheProcessingEnabled
+          value: "true"
+        - name: QueueService__RealtimeConfiguration__TenantIDs__0
+          value: "00000000-0000-0000-0000-000000000000"
+        - name: QueueService__QueueListener__ListenerQueueNonActiveQueuePath
+          value: "listenerQueueNonActive"
+        - name: QueueService__QueueListener__ListenerQueueNonActiveTTLDays
+          value: "14"
+        - name: QueueService__QueueListener__ListenerQueueErrorQueuePath
+          value: "listenerQueueError"
+        - name: QueueService__QueueListener__ListenerQueueErrorTTLDays
+          value: "14"
+        - name: QueueService__RealtimeConfiguration__IsDistributed
+          value: "false"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Assembly
+          value: "RedPoint.Amazon.Server"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
+          value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Key
+          value: "AccessKey"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__0__Value
+          valueFrom:
+            secretKeyRef:
+              name: "redpoint-rpi-secrets"
+              key: RealtimeAPI_QueueSettings_AccessKey
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Key
+          value: "SecretKey"
+        - name: QueueService__RealtimeConfiguration__DistributedQueue__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: "redpoint-rpi-secrets"
+              key: RealtimeAPI_QueueSettings_SecretKey
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-queuereader:7.6.20250827.905
+        imagePullPolicy: IfNotPresent
+        name: rpi-queuereader
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+          timeoutSeconds: 2
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          failureThreshold: 60
+          periodSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 875m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 750Mi
+        volumeMounts:
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
+      volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
+---
+# Source: redpoint-rpi/templates/deploy-realtimeapi.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-realtimeapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-realtimeapi
+    environment: prod
+    team: marketing
+spec:
+  selector:
+    matchLabels:
+      app: rpi-realtimeapi
+  template:
+    metadata:
+      labels:
+        app: rpi-realtimeapi
+        environment: prod
+        team: marketing
+      annotations:
+        my-custom-annotation: my-value
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      serviceAccountName: rpi-realtimeapi
+      securityContext:
+        runAsUser: 7777
+        runAsGroup: 7777
+        fsGroup: 7777
+        runAsNonRoot: true
+      containers:
+        - name: rpi-realtimeapi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 2
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            failureThreshold: 60
+            periodSeconds: 10
+          image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-realtimeapi:7.6.20250827.905
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
+          ports:
+          - containerPort: 8080
+            name: web-port
+            protocol: TCP
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            limits:
+              cpu: 875m
+              memory: 2048Mi
+            requests:
+              cpu: 500m
+              memory: 750Mi
+          env:
+          - name: Logging__LogLevel__Default
+            value: "Error"
+          - name: Logging__Database__LogLevel__Default
+            value: "Error"
+          - name: Logging__Database__RPITrace
+            value: "Error"
+          - name: Logging__Database__RPIError
+            value: "Error"
+          - name: Logging__Console__LogLevel__Default
+            value: "None"
+          - name: RPI__DateTimeSource
+            value: "OperatingSystem"
+          - name: ODBCINI
+            value: "/odbc-config/odbc.ini"
+          - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+            valueFrom:
+              secretKeyRef:
+                key: ConnectionString_Logging_Database
+                name: "redpoint-rpi-secrets"
+          - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+            valueFrom:
+              secretKeyRef:
+                key: ConnectionString_Operations_Database
+                name: "redpoint-rpi-secrets"
+          - name: RealtimeAPIConfiguration__AppSettings__RPIAuthToken
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_Auth_Token
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeAPIKey
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_Auth_Token
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeAgentAuthToken
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_Auth_Token
+          - name: RealtimeAPIConfiguration__AppSettings__PluginAssemblyPath
+            value: "/app/plugins"
+          - name: RealtimeAPIConfiguration__AppSettings__IsWebFormProcessorOnly
+            value: "false"
+          - name: RealtimeAPIConfiguration__AppSettings__MessageDaysExpiry
+            value: "30"
+          - name: RealtimeAPIConfiguration__AppSettings__CheckForProfileUpdatesOnSave
+            value: "false"
+          - name: RealtimeAPIConfiguration__BasicAuthenticationRequireToken__Standard
+            value: "false"
+          - name: RealtimeAPIConfiguration__BasicAuthenticationRequireToken__Forms
+            value: "true"
+          - name: RealtimeAPIConfiguration__BasicAuthenticationRequireToken__ListenerQueue
+            value: "true"
+          - name: RealtimeAPIConfiguration__BasicAuthenticationRequireToken__Recommendations
+            value: "true"
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeServerCookieEnabled
+            value: "false"
+          - name: RealtimeAPIConfiguration__AppSettings__ThresholdBetweenSiteVisitsMinutes
+            value: "120"
+          - name: RealtimeAPIConfiguration__AppSettings__ThresholdBetweenPageVisitsMinutes
+            value: "1"
+          - name: RealtimeAPIConfiguration__AppSettings__CacheOutputCollectIPAddress
+            value: "true"
+          - name: RealtimeAPIConfiguration__AppSettings__HashVisitorID
+            value: "false"
+          - name: RealtimeAPIConfiguration__AppSettings__EventListeningLocalCacheDuration
+            value: "60"
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeServerCookieHttpOnly
+            value: "false"
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeServerCookieName
+            value: "rg-visitor"
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeServerCookieExpires
+            value: "60"
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeServerCookieDomain
+            value: ""
+          - name: RealtimeAPIConfiguration__AppSettings__RealtimeAgentInProcessEnabled
+            value: "true"
+          - name: RealtimeAPIConfiguration__AppSettings__NoDaysPersistWebEvents
+            value: "365"
+          - name: RealtimeAPIConfiguration__Queues__CacheOutputQueueEnabled
+            value: "true"
+          - name: RealtimeAPIConfiguration__AppSettings__CacheWebFormData
+            value: "false"
+          - name: RealtimeAPIConfiguration__AppSettings__EnableHelpPages
+            value: "true"
+          - name: RealtimeAPIConfiguration__AppSettings__CORSOrigins
+            value: "[*]"
+          - name: RealtimeAPIConfiguration__AppSettings__DecisionCacheDuration
+            value: "60"
+          - name: RealtimeAPIConfiguration__AppSettings__RPIClientID
+            value: "00000000-0000-0000-0000-000000000000"
+          - name: RealtimeAPIConfiguration__AppSettings__EnableAuditMetricsInHeaders
+            value: "true"
+          - name: RealtimeAPIConfiguration__AppSettings__EnableEventListening
+            value: "true"
+          - name: RealtimeAPIConfiguration__Queues__FormQueuePath
+            value: "RPIWebFormSubmission"
+          - name: RealtimeAPIConfiguration__Queues__EventsQueuePath
+            value: "RPIWebEvents"
+          - name: RealtimeAPIConfiguration__Queues__CacheOutputQueuePath
+            value: "RPIWebCacheData"
+          - name: RealtimeAPIConfiguration__Queues__RecommendationsQueuePath
+            value: "RPIWebRecommendations"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueuePath
+            value: "RPIQueueListener"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Assembly
+            value: "RedPoint.Amazon.Server"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Type
+            value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key
+            value: "AccessKey"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_QueueSettings_AccessKey
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key
+            value: "SecretKey"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_QueueSettings_SecretKey
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__2__Key
+            value: "RegionEndpoint"
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__2__Value
+            value: "us-east-1"
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Assembly
+            value: "RedPoint.Amazon.Server"
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Type
+            value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key
+            value: "AccessKey"
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_QueueSettings_AccessKey
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key
+            value: "SecretKey"
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_QueueSettings_SecretKey
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__2__Key
+            value: "RegionEndpoint"
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__2__Value
+            value: "us-east-1"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Name
+            value: "mongodb"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Assembly
+            value: "RedPoint.Resonance.MongoDBCache"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Class
+            value: "RedPoint.Resonance.MongoDBCache.MongoDBCacheHandler"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Key
+            value: "Database"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__0__Value
+            value: "<my-realtime-cache-db>"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Key
+            value: "ConnectionString"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Value
+            valueFrom:
+              secretKeyRef:
+                name: "redpoint-rpi-secrets"
+                key: RealtimeAPI_MongoCache_ConnectionString
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__2__Key
+            value: "CollectionName"
+          - name: RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__2__Value
+            value: "<my-realtime-cache-collection>"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Type
+            value: "Visitor Profile"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__Cache
+            value: "mongodb"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__DaysToPersist
+            value: "365"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__0__CompressData
+            value: "true"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__1__Type
+            value: "Visitor History"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__1__Cache
+            value: "mongodb"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__1__DaysToPersist
+            value: "365"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__1__CompressData
+            value: "true"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__2__Type
+            value: "Non Visitor Data"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__2__Cache
+            value: "mongodb"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__2__DaysToPersist
+            value: "365"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__2__CompressData
+            value: "true"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__3__Type
+            value: "Product Recommendations"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__3__Cache
+            value: "mongodb"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__3__DaysToPersist
+            value: "365"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__3__CompressData
+            value: "true"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__4__Type
+            value: "Message History"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__4__Cache
+            value: "mongodb"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__4__DaysToPersist
+            value: "365"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__4__CompressData
+            value: "true"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__5__Type
+            value: "Offer History"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__5__Cache
+            value: "mongodb"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__5__DaysToPersist
+            value: "365"
+          - name: RealtimeAPIConfiguration__CacheSettings__DataMaps__5__CompressData
+            value: "true"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__EnableVisitorIDValidation
+            value: "true"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__MinimumLength
+            value: "1"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__MaximumLength
+            value: "36"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__EnableLetters
+            value: "true"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__EnableNumbers
+            value: "true"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__VisitorID__PermittedCharacters
+            value: '["-","_","/",".","@","#","\u0026","?"]'
+          - name: RealtimeAPIConfiguration__IDValidationSettings__EnableDeviceIDValidation
+            value: "true"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__MinimumLength
+            value: "1"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__MaximumLength
+            value: "36"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__EnableLetters
+            value: "true"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__EnableNumbers
+            value: "true"
+          - name: RealtimeAPIConfiguration__IDValidationSettings__DeviceID__PermittedCharacters
+            value: '["-","_","/",".","@","#","\u0026","?"]'
+          volumeMounts:
+            - name: odbc-config
+              mountPath: /app/odbc-config/odbc2.ini
+              subPath: odbc2.ini
+            - name: odbcini
+              mountPath: /odbc-config
+      volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+    environment: prod
+    team: marketing
+  name: ingress-nginx-controller
+  namespace: qarc-aa9820
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+      app.kubernetes.io/instance: ingress-nginx
+      app.kubernetes.io/component: controller
+  revisionHistoryLimit: 10
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/instance: ingress-nginx
+        app.kubernetes.io/component: controller
+        environment: prod
+        team: marketing
+      annotations:
+        prometheus.io/scrape: "false"
+    spec:
+      imagePullSecrets:
+      - name: redpoint-rpi
+      containers:
+        - name: controller
+          image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller:7.6.20250827.905
+          imagePullPolicy: IfNotPresent
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /wait-shutdown
+          args:
+            - /nginx-ingress-controller
+            - --publish-service=qarc-aa9820/nginx-qarc-aa9820
+            - --election-id=nginx-qarc-aa9820
+            - --controller-class=k8s.io/ingress-nginx
+            - --configmap=qarc-aa9820/nginx-config
+            - --tcp-services-configmap=qarc-aa9820/tcp-services
+            - --default-ssl-certificate=qarc-aa9820/ingress-tls
+            - --ingress-class=nginx-redpoint-rpi
+            - --watch-namespace=qarc-aa9820
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LD_PRELOAD
+              value: /usr/local/lib/libmimalloc.so
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 90Mi
+      serviceAccountName: nginx-qarc-aa9820
+      terminationGracePeriodSeconds: 300
+---
+# Source: redpoint-rpi/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-executionservice
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-executionservice
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-executionservice
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: redpoint-rpi/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-interactionapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-interactionapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-interactionapi
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: redpoint-rpi/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-integrationapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-integrationapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-integrationapi
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: redpoint-rpi/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-realtimeapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-realtimeapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-realtimeapi
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: redpoint-rpi/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-callbackapi
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-callbackapi
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-callbackapi
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: redpoint-rpi/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-queuereader
+  namespace: qarc-aa9820
+  labels:
+    app: rpi-queuereader
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-queuereader
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# Source: redpoint-rpi/templates/ingress-controller.yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: controller
+  name: nginx-redpoint-rpi
+spec:
+  controller: k8s.io/ingress-nginx
+---
+# Source: redpoint-rpi/templates/ingress-routes.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redpoint-rpi
+  namespace: qarc-aa9820
+  annotations:
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 4096m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx-redpoint-rpi
+  tls:
+  - secretName: ingress-tls
+  rules:
+    - host: rpi-interactionapi.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: 80
+    - host: rpi-deploymentapi.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-deploymentapi
+              port:
+                number: 80
+    - host: rpi-queuereader.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-queuereader
+              port:
+                number: 80
+    - host: rpi-integrationapi.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: 80
+    - host: rpi-realtimeapi.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-realtimeapi
+              port:
+                number: 80
+    - host: rpi-callbackapi.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callbackapi
+              port:
+                number: 80
+---
+# Source: redpoint-rpi/templates/cm-odbc.yaml
+---
+---
+# Source: redpoint-rpi/templates/deploy-secrets.yaml
+# ========================== sqlserver on vm

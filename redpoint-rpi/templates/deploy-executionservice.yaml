@@ -244,7 +244,7 @@ spec:
         - name: Authentication__EnableRPIAuthentication
           value: {{ .Values.executionservice.enableRPIAuthentication | quote }}
         - name: RealtimeAPIAddressOverride
-          value: "http://rpi-realtimeapi"
+          value: "http://{{ .Values.realtimeapi.name }}"
         - name: RPI__SMTP__EmailSenderAddress
           value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
         - name: RPI__SMTP__Address
