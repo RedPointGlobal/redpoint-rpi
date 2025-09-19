@@ -113,6 +113,17 @@ spec:
           value: {{ .Values.databases.operational.dateTimeSource | quote }}
         - name: ODBCINI
           value: "/odbc-config/odbc.ini"
+        {{- if .Values.executionservice.internalCache.enabled }}
+        - name: InternalCache__IsEnabled
+          value: "true"
+        - name: InternalCache__BackupToOpsDBInterval
+          value: {{ .Values.executionservice.internalCache.backupToOpsDBInterval | quote }}
+        - name: InternalCache__RedisSettings__IPAddress
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: ExecutionService_RedisCache_ConnectionString
+        {{- end }}
         {{- if .Values.diagnosticsMode.copytoAzureBlob.enabled }}
         - name: RPI__Diagnostics__CopyToAzure__IsEnabled
           value: "true"

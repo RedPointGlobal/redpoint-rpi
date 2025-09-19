@@ -95,3 +95,118 @@ spec:
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
 {{- end }}
+
+---
+{{- if .Values.executionservice.internalCache.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: executionservice-rediscache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: executionservice-rediscache
+spec:
+  ports:
+  - name: http
+    port: 6379
+    protocol: TCP
+    targetPort: 6379
+  selector:
+    app: executionservice-rediscache
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: executionservice-rediscache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: executionservice-rediscache
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: executionservice-rediscache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: executionservice-rediscache
+spec:
+  replicas: {{ .Values.realtimeapi.cacheProvider.redis.replicas }}
+  selector:
+    matchLabels:
+      app: executionservice-rediscache
+  template:
+    metadata:
+      labels:
+        app: executionservice-rediscache
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: executionservice-rediscache
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+      {{- end }}
+      containers:
+      - name: executionservice-rediscache
+        image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        ports:
+        - containerPort: 6379
+          name: web-port
+          protocol: TCP
+        volumeMounts:
+        - name: executionservice-rediscache
+          mountPath: /data
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- if .Values.realtimeapi.cacheProvider.redis.resources.enabled }}
+        resources:
+          {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits }}
+          limits:
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
+            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
+            {{- end }}
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
+            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests }}
+          requests:
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
+            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
+            {{- end }}
+            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
+            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      volumes:
+      - name: executionservice-rediscache
+        emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

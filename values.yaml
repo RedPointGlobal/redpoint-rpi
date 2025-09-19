@@ -27,7 +27,7 @@ global:
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
     
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20250912.1642
+      tag: 7.6.20250919.1032
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -292,7 +292,7 @@ realtimeapi:
       # Set to true to deploy an internal Redis container.
       # Set to false if using an external (BYO) Redis instance.
       internal: false
-      replicas: 2
+      replicas: 1
       # Redis connection string used when 'internal' is false.
       # Format: <hostname>:<port>,ssl=<true|false>,abortConnect=<true|false>,user=<username>,password=<password>
       connectionstring: <my-redis-hostname>:6379,ssl=True,abortConnect=false,user=<my-username>,password=<my-username>
@@ -303,7 +303,7 @@ realtimeapi:
           memory: 750Mi
         limits:
           cpu: 875m
-          memory: 2048Mi
+          memory: 4048Mi
 
     # In-memory SQL cache configuration
     inMemorySql:
@@ -808,6 +808,11 @@ executionservice:
       enabled: true
       maxConcurrentWorkflowActivities: 100
       maximumQueueTime: "24:00:00"
+  internalCache:
+    enabled: false
+    backupToOpsDBInterval: "00:00:20"
+    redisSettings: 
+      connectionString: executionservice-rediscache:6379
   seedService:
     memoryCacheSize: "10"
     maxNumberRetries: "100"
