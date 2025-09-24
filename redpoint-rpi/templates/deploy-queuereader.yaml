@@ -98,6 +98,17 @@ spec:
       {{- end }}
       containers:
       - env:
+        {{- if .Values.executionservice.internalCache.enabled }}
+        - name: InternalCache__IsEnabled
+          value: "true"
+        - name: InternalCache__BackupToOpsDBInterval
+          value: {{ .Values.executionservice.internalCache.backupToOpsDBInterval | quote }}
+        - name: InternalCache__RedisSettings__IPAddress
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: ExecutionService_RedisCache_ConnectionString
+        {{- end }}
         - name: Logging__LogLevel__Default
           value: {{ .Values.queuereader.logging.default | quote }}
         - name: Logging__Database__LogLevel__Default
