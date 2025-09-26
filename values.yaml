@@ -60,7 +60,7 @@ databases:
     # When set to true, appends `Encrypt=True` to the SQL Server connection string.
     # If your SQL Server enforces encryption (e.g., Force Encryption is enabled) this must be set to true
     encrypt: true
-    # Supported options are OperatingSystem, Database
+    # Supported options are OperatingSystem and Database. Defaults to OperatingSystem
     dateTimeSource: OperatingSystem
 
   # Datawarehouse Providers
