@@ -36,12 +36,12 @@ This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
 
    - Latest stable version of Kubernetes. Select from this list of [Kubernetes certified solution providers](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). From each provider page, you can learn how to install and setup production ready clusters.
 
-   -  Nodepools Sizing
-        - 8 vCPUs per node
-        - 16 GB of Memory per node
-        - Minimum of 2 nodes for high availability
+   -  A Node Pool with a minimum of two nodes (8vCPU and 32GB RAM) each. Example SKUs per cloud service provider follow
+        - D8s_v5 (Azure)
+        - m5.2xlarge (AWS)
+        - n2-standard-8 (GCP)
 
-The system specs outlined above are for running RPI in a modest environment. Ajust them based on your production environment and specific use case.
+The system specs outlined above are for running RPI in a modest environment. Ajust based on your production environment and specific use case.
 
 ### Prerequisites
 | Ensure that the following requirements are met!                                                                                                                                                                                                                                   |
@@ -222,7 +222,7 @@ https://rpi-interactionapi.example.com/api/deployment/download     # Client Down
 
 ### Download Client Executable
 
-You can download the RPI Client from the Post-release Product Updates section at the link below. Be sure to download the version that matches the deployed RPI version in your environment.
+You can download the RPI Client from the Post-release Product Updates section of the RPI v7.6 Release Notes. Be sure to download the version that matches the deployed RPI version in your environment.
 
 - [Client Download](https://docs.redpointglobal.com/rpi/rpi-v7-6-release-notes#RPIv7.6releasenotes-Post-releaseproductupdates)
 
@@ -266,14 +266,15 @@ amazonSettings:
 
 ### Configure Secrets Management
 
-This Helm chart supports three modes of managing application secrets:
+This Helm chart supports three modes for managing sensitive configuration values, including both Kubernetes Secrets and ConfigMaps that may store passwords or other confidential data.
 
-**1) Default:** Kubernetes Secrets are automatically created based on the values provided in ```values.yaml```
+**1) Default:** Kubernetes Secrets and Configmaps are automatically created based on the values provided in ```values.yaml```. This is the simplest option and requires no additional setup beyond configuring the chart’s values.
 
 **2) External:** Kubernetes Secrets are created and managed outside the Helm chart. This involves the following steps
   - Disable Helm-managed secret creation 
-  - Manually create a Kubernetes secret named ```redpoint-rpi-secrets.```. 
-  - Ensure the secret follows the expected format defined in ```redpoint-rpi/templates/deploy-secrets.yaml```
+  - Create a Kubernetes secret named ```redpoint-rpi-secrets```. 
+  - Create a Kubernetes ConfigMap named ```odbc-config```. 
+  - Ensure both resources follow the format defined in ```redpoint-rpi/templates/deploy-secrets.yaml``` and ```redpoint-rpi/templates/cm-odbc.yaml```
   - Do not include any sensitive values in the ```values.yaml``` file.
   - Update your ```values``` configuration as below
 
@@ -789,7 +790,7 @@ USER "$RUNTIME_UID":"$RUNTIME_GID"
 ```
 ### Configure Content Generation Tools
 
-RPI integrates with OpenAI services and Azure Cognitive Search for [external content generation](https://docs.redpointglobal.com/rpi/configuring-external-content-generation-tools). To enable this integration, provide credentials for your OpenAI APIs and Cognitive Search components. The Model subsection includes storage settings for embedding vectors, such as ModelDimensions, the Azure Storage ConnectionString, and the target ContainerName and BlobFolder where model data is stored.
+RPI integrates with OpenAI services and Azure Cognitive Search for [external content generation](https://docs.redpointglobal.com/rpi/configuring-content-generation-tools). To enable this integration, provide credentials for your OpenAI APIs and Cognitive Search components. The Model subsection includes storage settings for embedding vectors, such as ModelDimensions, the Azure Storage ConnectionString, and the target ContainerName and BlobFolder where model data is stored.
 
 Open the ```values.yaml``` file and navigate to the ```redpointAI``` section. Update this section with your configuration details. Inline comments are included within the values.yaml file to explain each key-value pair
 
@@ -868,7 +869,7 @@ This mode is recommended for the **Execution Service** which handles both short 
 - ```terminationGracePeriodSeconds``` (recommended: 24h) ensures long-running tasks complete before termination. If tasks routinely exceed this, optimization is advised.
 
 **Prerequisites**
-- Install [Prometheus](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/prometheus/prometheus-operator/) in your cluster.
+- Install [Prometheus](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/prometheus/prometheus-operator/) Prometheus in your cluster.
 - Install [KEDA](https://keda.sh/docs/2.17/deploy/) .
 - Enable metrics scraping for the Execution Service
 
@@ -890,7 +891,7 @@ executionservice:
       authenticationRef: rpi-executionservice
 ```
 
-Once the above configurations are in place, the Helm chart will automatically deploy a KEDA ```ScaledObject``` using the Prometheus server details specified in the ```values.yaml``` file. The resulting resource will resemble the following example
+Once the above configurations are in place, the Helm chart will automatically generate a KEDA ```ScaledObject``` using the Prometheus server details specified in the ```values.yaml``` file. The resulting resource will resemble the following example
 
 ```
 apiVersion: keda.sh/v1alpha1
