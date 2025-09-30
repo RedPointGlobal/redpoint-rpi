@@ -288,12 +288,18 @@ cloudIdentity:
     secretName: redpoint-rpi-secrets
 ```
 
-If you originally deployed using the ```Default``` mode and now wish to switch to ```External``` mode, follow these steps:
+**Migrating from Default to External Mode**
 
-  - Export the existing secret to a file: ```kubectl get secret redpoint-rpi-secrets -o yaml > redpoint-rpi-secrets.yaml```
+If you originally deployed the chart using the ```Default``` mode and now want to switch to ```External``` mode, follow the steps below for a smooth transition:
+
+  - Export the existing secret and configmap to a file: 
+       - ```kubectl get secret redpoint-rpi-secrets -o yaml > redpoint-rpi-secrets.yaml```
+       - ```kubectl get configmap odbc-config -o yaml > odbc-config.yaml```
   - Remove all sensitive values from your ```values.yaml```
-  - Update your ```values``` configuration as above
-  - Recreate the Kubernetes secret manually: ```kubectl apply -f redpoint-rpi-secrets.yaml```
+  - Update your ```values``` configuration as described in the ```External``` mode
+  - Recreate the secret and configmap: 
+       - ```kubectl apply -f redpoint-rpi-secrets.yaml```
+       - ```kubectl apply -f odbc-config.yaml```
 
 **3) Key Vault:** Secrets are sourced directly from a cloud key vault service. Currently supported providers are ```Azure Key Vault``` and ```Google Secrets Manager```. If deploying in AWS, you can only use the ```Default``` or ```External``` modes.
 
