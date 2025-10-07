@@ -1,5 +1,6 @@
 {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-{{- if .Values.databases.datawarehouse.enabled }}
+{{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+{{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -28,10 +29,12 @@ data:
     {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if eq .Values.databases.datawarehouse.provider "databricks" }}
-{{- if  .Values.databases.datawarehouse.enabled }}
+{{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+{{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -61,10 +64,12 @@ data:
     HTTPPath=/sql/1.0/warehouses/c546e1e69e8d2ac9
 {{- end }}
 {{- end }}
+{{- end }}
 
 ---
 {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-{{- if  .Values.databases.datawarehouse.enabled }}
+{{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+{{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -89,5 +94,6 @@ data:
     OAuthMechanism={{ .Values.databases.datawarehouse.bigquery.OAuthMechanism }}
     Email={{ .Values.databases.datawarehouse.bigquery.serviceAccountEmail }}
     KeyFilePath={{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}
+{{- end }}
 {{- end }}
 {{- end }}
