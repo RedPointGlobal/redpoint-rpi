@@ -302,10 +302,6 @@ spec:
           value: {{ .Values.interactionapi.enableRPIAuthentication | quote }}
         - name: Authentication__RPIAuthentication__AuthorizationHost
           value: "https://{{ .Values.ingress.hosts.client }}.{{ .Values.ingress.domain }}"
-        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
-          value: "http://rpi-interactionapi"
-        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
-          value: "false"
         - name: EnableSwagger
           value: {{ .Values.interactionapi.enableSwagger | quote }}
         - name: RPI__SMTP__EmailSenderAddress

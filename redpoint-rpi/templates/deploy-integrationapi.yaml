@@ -156,10 +156,6 @@ spec:
         {{- end }}
         - name: Authentication__RPIAuthentication__AuthorizationHost
           value: "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
-        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
-          value: "http://rpi-integrationapi"
-        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
-          value: "false"
         - name: EnableSwagger
           value: {{ .Values.integrationapi.enableSwagger | quote }}
         {{- if .Values.cloudIdentity.enabled }}
