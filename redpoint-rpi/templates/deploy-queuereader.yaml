@@ -103,6 +103,14 @@ spec:
           value: "true"
         - name: InternalCache__BackupToOpsDBInterval
           value: {{ .Values.executionservice.internalCache.backupToOpsDBInterval | quote }}
+        - name: InternalCache__MaxNumberRetries
+          value: {{ .Values.executionservice.internalCache.maxNumberRetries | quote }}
+        - name: InternalCache__MaxRetryDelay
+          value: {{ .Values.executionservice.internalCache.maxRetryDelay | quote }}
+        - name: InternalCache__FailOnPrimaryDataLoss
+          value: {{ .Values.executionservice.internalCache.failOnPrimaryDataLoss | quote }}
+        - name: InternalCache__FailOnCacheConnectionError
+          value: {{ .Values.executionservice.internalCache.failOnCacheConnectionError | quote }}
         - name: InternalCache__RedisSettings__IPAddress
           valueFrom:
             secretKeyRef:

@@ -809,8 +809,12 @@ executionservice:
       maxConcurrentWorkflowActivities: 100
       maximumQueueTime: "24:00:00"
   internalCache:
-    enabled: false
+    enabled: true
     backupToOpsDBInterval: "00:00:20"
+    maxNumberRetries: "100"
+    maxRetryDelay: "00:01:00"
+    failOnPrimaryDataLoss: true
+    failOnCacheConnectionError: true
     redisSettings: 
       connectionString: executionservice-rediscache:6379
   seedService:
