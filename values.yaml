@@ -1037,6 +1037,7 @@ integrationapi:
   replicas: 1
   name: rpi-integrationapi
   enableSwagger: true
+  authMetaHttpEnabled: true
   serviceAccount: 
     enabled: true 
   enableRPIAuthentication: true

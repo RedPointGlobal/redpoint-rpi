@@ -158,6 +158,12 @@ spec:
           value: "https://{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
         - name: EnableSwagger
           value: {{ .Values.integrationapi.enableSwagger | quote }}
+        {{- if .Values.integrationapi.authMetaHttpEnabled }}
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://{{ .Values.integrationapi.name }}"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        {{- end }}
         {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Azure" }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
