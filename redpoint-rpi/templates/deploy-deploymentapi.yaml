@@ -248,6 +248,12 @@ spec:
             {{- end }}
           {{- end }}
         {{- end }}
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+      volumes:
+        - name: tempstore
+          emptyDir: {}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

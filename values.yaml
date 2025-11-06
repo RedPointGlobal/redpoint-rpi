@@ -1358,8 +1358,9 @@ diagnosticsMode:
     enabled: false
     useGcDump: false
     useCounters: false
-    useDotNetTools__Path: /app/.dotnet-tools
-
+    path: /app/dotnet-tools
+    extraction_base_dir: /tmp
+    
 OpenIdProviders:
   # Set to true to enable OpenID Connect settings.
   enabled: false

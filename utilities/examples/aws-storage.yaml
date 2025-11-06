@@ -23,7 +23,7 @@ allowVolumeExpansion: true
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: rpitemptest
+  name: rpifileexports
   namespace: redpoint-rpi 
 spec:
   accessModes:

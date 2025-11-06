@@ -221,8 +221,10 @@ spec:
             value: "true"
           {{- end }}
           {{- if .Values.diagnosticsMode.dotNetTools.enabled }}
+          - name: DOTNET_BUNDLE_EXTRACT_BASE_DIR
+            value: {{ .Values.diagnosticsMode.dotNetTools.extraction_base_dir | quote }} 
           - name: RPI__Diagnostics__UseDotNetTools__Path
-            value: "/app/.dotnet-tools"
+            value: {{ .Values.diagnosticsMode.dotNetTools.path | quote }}
           - name: RPI__Diagnostics__UseDotNetTools__UseCounters
             value: {{ .Values.diagnosticsMode.dotNetTools.useCounters | quote }}
           - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
@@ -1088,6 +1090,8 @@ spec:
           {{- end }}
           {{- end }}
           volumeMounts:
+            - name: tempstore
+              mountPath: /tmp
             {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
             {{- if .Values.databases.datawarehouse.enabled }}
             - name: odbc-config
@@ -1135,6 +1139,8 @@ spec:
               mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
             {{- end }}
       volumes:
+        - name: tempstore
+          emptyDir: {}
         {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
         {{- if .Values.databases.datawarehouse.enabled }}
         - name: odbc-config
