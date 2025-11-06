@@ -1355,11 +1355,17 @@ diagnosticsMode:
     sftpPassword: <your-sftp-password>
     sftpPort: "22" # <your-sftp-port>
   dotNetTools: 
+    # Whether .NET diagnostic tools are enabled
     enabled: false
+    # Whether GC dump collection is enabled       
     useGcDump: false
-    useCounters: false
-    path: /app/dotnet-tools
-    extraction_base_dir: /tmp
+    # Whether performance counters are collected       
+    useCounters: false   
+    # Leave these values below unchanged
+      # Path to .NET tools directory
+    path: /app/dotnet-tools 
+      # Temporary extraction directory
+    extractionBaseDir: /tmp 
     
 OpenIdProviders:
   # Set to true to enable OpenID Connect settings.
