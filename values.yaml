@@ -36,7 +36,7 @@ global:
       cdpsocketio: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-socketio
       cdpmaintenanceservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-maintenance
       keycloak: rg1acrpub.azurecr.io/docker/redpointglobal/releases/keycloak
-      tag: 7.6.20251030.606
+      tag: 7.6.20251107.936
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
