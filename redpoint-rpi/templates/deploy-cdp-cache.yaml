@@ -1,0 +1,227 @@
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cdp-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+{{- end }}
+
+---
+{{- if .Values.cdpcache.podDisruptionBudget.enabled }}
+{{- if .Values.dataActivation.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdp-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  minAvailable: {{ .Values.cdpcache.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-cache
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cdp-cache-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+data:
+  redis.conf: |
+    # Persistent AOF; safer than RDB for most single-node setups
+    appendonly yes
+    appendfsync everysec
+
+    # Limit max memory if you want eviction behavior — uncomment & set:
+    # maxmemory 2gb
+    # maxmemory-policy allkeys-lru
+
+    # Only listen on container interface
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: cdp-cache
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cdp-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  serviceName: cdp-cache
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-cache
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cdp-cache
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["cdp-authservice"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: cdp-cache
+                topologyKey: kubernetes.io/hostname
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      containers:
+        - name: cdp-cache
+          image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
+          imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy }}
+          ports:
+            - containerPort: 6379
+              name: redis
+          command: ["redis-server"]
+          args: ["--save", "\"\"", "--appendonly", "no"]
+          volumeMounts:
+            - name: cdp-cache-data
+              mountPath: /data
+            - name: cdp-cache-config
+              mountPath: /usr/local/etc/redis
+          {{- if .Values.cdpcache.resources.enabled }}
+          resources:
+            {{- if and .Values.cdpcache.resources.limits (ne .Values.cdpcache.resources.limits.enabled false) }}
+            limits:
+              {{- with .Values.cdpcache.resources.limits.cpu }}
+              cpu: {{ . }}
+              {{- end }}
+              {{- with .Values.cdpcache.resources.limits.memory }}
+              memory: {{ . }}
+              {{- end }}
+            {{- end }}
+            {{- if and .Values.cdpcache.resources.requests (ne .Values.cdpcache.resources.requests.enabled false) }}
+            requests:
+              {{- with .Values.cdpcache.resources.requests.cpu }}
+              cpu: {{ . }}
+              {{- end }}
+              {{- with .Values.cdpcache.resources.requests.memory }}
+              memory: {{ . }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          {{- if .Values.securityContext.enabled }}
+          securityContext:
+            privileged: {{ .Values.securityContext.privileged }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+              {{- range .Values.securityContext.capabilities.drop }}
+                - {{ . }}
+              {{- end }}
+          {{- end }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        supplementalGroups:
+          {{- with .Values.securityContext.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+      {{- end }}
+      volumes:
+        - name: cdp-cache-config
+          configMap:
+            name: cdp-cache-config
+  volumeClaimTemplates:
+    - metadata:
+        name: cdp-cache-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.cdpcache.volumeClaimTemplates.storage | quote }}
+{{- end }}

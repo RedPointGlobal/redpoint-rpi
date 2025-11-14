@@ -3,10 +3,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: nginx-{{ .Release.Namespace }}
 rules:
 - apiGroups:
@@ -85,11 +86,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: nginx-{{ .Release.Namespace }}
   namespace: {{ .Release.Namespace }}
 rules:
@@ -191,11 +192,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   labels:
-    app.kubernetes.io/component: controller
-    app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: nginx-{{ .Release.Namespace }}
   namespace: {{ .Release.Namespace }}
 roleRef:
@@ -212,10 +213,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
-    app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/part-of: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: nginx-{{ .Release.Namespace }}
   namespace: {{ .Release.Namespace }}
 roleRef:
@@ -233,10 +235,10 @@ kind: ConfigMap
 metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
-    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: nginx-config
   namespace: {{ .Release.Namespace }}
 data:
@@ -247,10 +249,10 @@ kind: ConfigMap
 metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
-    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: tcp-services
   namespace: {{ .Release.Namespace }}
 data:
@@ -261,10 +263,10 @@ kind: IngressClass
 metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
-    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: {{ .Values.ingress.className }}
 spec:
   controller: k8s.io/ingress-nginx
@@ -275,10 +277,10 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
-    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
     {{- with .Values.ingress.customLabels }}
     {{- toYaml . | nindent 4 }} 
     {{- end }}
@@ -288,16 +290,18 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: ingress-nginx
-      app.kubernetes.io/instance: ingress-nginx
       app.kubernetes.io/component: controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
   revisionHistoryLimit: 10
   minReadySeconds: 0
   template:
     metadata:
       labels:
         app.kubernetes.io/name: ingress-nginx
-        app.kubernetes.io/instance: ingress-nginx
         app.kubernetes.io/component: controller
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.ingress.customLabels }}
         {{- toYaml . | nindent 8 }} 
         {{- end }}
@@ -369,8 +373,8 @@ spec:
               protocol: TCP
           resources:
             requests:
-              cpu: 100m
-              memory: 90Mi
+              cpu: 500m
+              memory: 1Gi
       serviceAccountName: nginx-{{ .Release.Namespace }}
       terminationGracePeriodSeconds: 300
       {{- if .Values.nodeSelector.enabled }}
@@ -389,11 +393,24 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: nginx-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   annotations:
     {{- if eq .Values.ingress.mode "private" }}
     {{- if eq .Values.global.deployment.platform "azure" }}
     service.beta.kubernetes.io/azure-load-balancer-internal: {{.Values.ingress.controller.enabled | quote }}
     service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{.Values.ingress.subnetName | quote }}
+    {{- end }}
+    {{- end }}
+    {{- if eq .Values.ingress.mode "private" }}
+    {{- if eq .Values.global.deployment.platform "google" }}
+    networking.gke.io/load-balancer-type: "Internal"
     {{- end }}
     {{- end }}
     {{- if .Values.ingress.privateLink.azure.enabled }}
@@ -429,14 +446,6 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
     {{- end }}
     {{- end }}
-  labels:
-    app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/component: controller
-  name: nginx-{{ .Release.Namespace }}
-  namespace: {{ .Release.Namespace }}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
@@ -456,8 +465,8 @@ spec:
       appProtocol: https
   selector:
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/instance: ingress-nginx
     app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
 
 ---
 apiVersion: v1
@@ -465,10 +474,10 @@ kind: ServiceAccount
 metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
-    app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 1.12.1
-    app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: nginx-{{ .Release.Namespace }}
   namespace: {{ .Release.Namespace }}
 automountServiceAccountToken: true

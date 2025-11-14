@@ -1,0 +1,198 @@
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cdp-socketio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-socketio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+{{- if .Values.socketio.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdp-socketio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-socketio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  minAvailable: {{ .Values.socketio.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-socketio
+{{- end }} 
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-socketio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-socketio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.socketio.port }}
+    protocol: TCP
+    targetPort: 8930
+  selector:
+    app.kubernetes.io/name: cdp-socketio
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cdp-socketio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-socketio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  replicas: {{ .Values.socketio.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-socketio
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cdp-socketio
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.socketio.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: cdp-socketio
+      {{- if .Values.socketio.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.socketio.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.socketio.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.socketio.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.socketio.securityContext.runAsNonRoot }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: cdp-socketio
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: cdp-socketio
+      containers:
+      - name: cdp-socketio
+        image: {{ .Values.global.deployment.images.cdpsocketio }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        {{- if .Values.socketio.resources.enabled }}
+        resources:
+          {{- if and .Values.socketio.resources.limits (ne .Values.socketio.resources.limits.enabled false) }}
+          limits:
+            {{- with .Values.socketio.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.socketio.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and .Values.socketio.resources.requests (ne .Values.socketio.resources.requests.enabled false) }}
+          requests:
+            {{- with .Values.socketio.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.socketio.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        ports: 
+        - containerPort: 8930 
+        {{- if .Values.socketio.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.socketio.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.socketio.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.socketio.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.socketio.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        env: 
+        - name: SOCKETIO_HOST
+          value: 0.0.0.0
+        - name: SOCKETIO_PORT
+          value: "8930"
+        - name: REDPOINT_MERCURY_REALM
+          value: {{ .Values.keycloak.realm_name }}
+        - name: KEYCLOAK_HOST
+          value: {{ .Values.keycloak.hostname | quote }}
+        - name: KEYCLOAK_PORT
+          value: {{ .Values.keycloak.port | quote }}
+        - name: MONGO_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Mongo_ConnectionString
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

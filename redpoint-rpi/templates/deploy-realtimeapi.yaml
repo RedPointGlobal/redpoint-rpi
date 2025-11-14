@@ -1,12 +1,14 @@
 {{- if .Values.realtimeapi.serviceAccount.enabled }}
-{{- if .Values.realtimeapi.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.realtimeapi.name }}
+  name: rpi-realtimeapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-realtimeapi
+    app.kubernetes.io/name: rpi-realtimeapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
   {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -24,6 +26,24 @@ metadata:
   {{- end }}
   {{- end }}
 {{- end }}
+
+---
+{{- if .Values.realtimeapi.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-realtimeapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  maxUnavailable: {{ .Values.realtimeapi.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-realtimeapi
 {{- end }}
 
 ---
@@ -31,10 +51,13 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.realtimeapi.name }}
+  name: rpi-realtimeapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-realtimeapi
+    app.kubernetes.io/name: rpi-realtimeapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
@@ -42,16 +65,19 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    app: rpi-realtimeapi
+    app.kubernetes.io/name: rpi-realtimeapi
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.realtimeapi.name }}
+  name: rpi-realtimeapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-realtimeapi
+    app.kubernetes.io/name: rpi-realtimeapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
     {{- with .Values.realtimeapi.customLabels }}
     {{- toYaml . | nindent 4 }} 
     {{- end }}
@@ -61,17 +87,22 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app: rpi-realtimeapi
+      app.kubernetes.io/name: rpi-realtimeapi
   template:
     metadata:
       labels:
-        app: rpi-realtimeapi
+        app.kubernetes.io/name: rpi-realtimeapi
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.realtimeapi.customLabels }}
         {{- toYaml . | nindent 8 }} 
         {{- end }}
         {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if .Values.cloudIdentity.enabled }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
         azure.workload.identity/use: "true"
+        {{- end }}
         {{- end }}
         {{- end }}
       annotations:
@@ -88,14 +119,35 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ .Values.realtimeapi.name }}
+      serviceAccountName: rpi-realtimeapi
       {{- if .Values.securityContext.enabled }}
       securityContext:
         runAsUser: {{ .Values.securityContext.runAsUser }}
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         fsGroup: {{ .Values.securityContext.fsGroup }}
         runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        supplementalGroups:
+          {{- with .Values.securityContext.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
       {{- end }}
+      terminationGracePeriodSeconds: 120
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-realtimeapi
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-realtimeapi
       containers:
         - name: rpi-realtimeapi
           livenessProbe:
@@ -121,24 +173,17 @@ spec:
               port: 8080
             failureThreshold: {{ .Values.realtimeapi.startupProbe.failureThreshold }}
             periodSeconds: {{ .Values.realtimeapi.startupProbe.periodSeconds }}
+            initialDelaySeconds: {{ .Values.realtimeapi.startupProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.realtimeapi.startupProbe.timeoutSeconds }}
           image: {{ .Values.global.deployment.images.realtimeapi }}:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
-          {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-          {{- if .Values.databases.datawarehouse.enabled }}
           lifecycle:
             postStart:
               exec:
-                command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
-          {{- end }}
-          {{- end }}
-          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-          {{- if .Values.databases.datawarehouse.enabled }}
-          lifecycle:
-            postStart:
-              exec:
-                command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
-          {{- end }}
-          {{- end }}
+                command:
+                  - /bin/sh
+                  - -c 
+                  - cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini
           ports:
           - containerPort: 8080
             name: web-port
@@ -156,24 +201,24 @@ spec:
           {{- end }}
           {{- if .Values.realtimeapi.resources.enabled }}
           resources:
-            {{- if .Values.realtimeapi.resources.limits }}
+            {{- if and .Values.realtimeapi.resources.limits (ne .Values.realtimeapi.resources.limits.enabled false) }}
             limits:
-              {{- if .Values.realtimeapi.resources.limits.cpu }}
-              cpu: {{ .Values.realtimeapi.resources.limits.cpu }}
+              {{- with .Values.realtimeapi.resources.limits.cpu }}
+              cpu: {{ . }}
               {{- end }}
-              {{- if .Values.realtimeapi.resources.limits.memory }}
-              memory: {{ .Values.realtimeapi.resources.limits.memory }}
+              {{- with .Values.realtimeapi.resources.limits.memory }}
+              memory: {{ . }}
               {{- end }}
             {{- end }}
-            {{- if .Values.realtimeapi.resources.requests }}
+            {{- if and .Values.realtimeapi.resources.requests (ne .Values.realtimeapi.resources.requests.enabled false) }}
             requests:
-              {{- if .Values.realtimeapi.resources.requests.cpu }}
-              cpu: {{ .Values.realtimeapi.resources.requests.cpu }}
+              {{- with .Values.realtimeapi.resources.requests.cpu }}
+              cpu: {{ . }}
               {{- end }}
-              {{- if .Values.realtimeapi.resources.requests.memory }}
-              memory: {{ .Values.realtimeapi.resources.requests.memory }}
+              {{- with .Values.realtimeapi.resources.requests.memory }}
+              memory: {{ . }}
               {{- end }}
-            {{- end }}
+          {{- end }}
           {{- end }}
           env:
           - name: Logging__LogLevel__Default
@@ -196,7 +241,10 @@ spec:
           - name: RPI__Diagnostics__CopyToAzure__StorageAccount
             value: {{ .Values.diagnosticsMode.copytoAzureBlob.accountName | quote }}
           - name: RPI__Diagnostics__CopyToAzure__AccessKey
-            value: {{ .Values.diagnosticsMode.copytoAzureBlob.accessKey | quote }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                key: CopyToAzureBlobAccessKey
           - name: RPI__Diagnostics__CopyToAzure__ContainerName
             value: {{ .Values.diagnosticsMode.copytoAzureBlob.containerName | quote }}
           - name: RPI__Diagnostics__CopyToAzure__BlobServiceEndpoint
@@ -212,8 +260,11 @@ spec:
           - name: RPI__Diagnostics__CopyToSFTP__SecureFTPUsername
             value: {{ .Values.diagnosticsMode.copytoSftp.sftpUsername | quote }}
           - name: RPI__Diagnostics__CopyToSFTP__SecureFTPPassword
-            value: {{ .Values.diagnosticsMode.copytoSftp.sftpPassword | quote }}
-          - name: RPI__Diagnostics__CopyToSFTP__PortNumber
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                key: CopyToSFTPSecureFTPPassword
+          - name: RPI__Diagnostics__CopyToSFTP__PortNumberNumber
             value: {{ .Values.diagnosticsMode.copytoSftp.sftpPort | quote }}
           - name: RPI__Diagnostics__UseSFTP
             value: "true"
@@ -222,9 +273,9 @@ spec:
           {{- end }}
           {{- if .Values.diagnosticsMode.dotNetTools.enabled }}
           - name: DOTNET_BUNDLE_EXTRACT_BASE_DIR
-            value: {{ .Values.diagnosticsMode.dotNetTools.extraction_base_dir | quote }} 
+            value: {{ .Values.diagnosticsMode.dotNetTools.extractionBaseDir | quote }} 
           - name: RPI__Diagnostics__UseDotNetTools__Path
-            value: {{ .Values.diagnosticsMode.dotNetTools.path | quote }}
+            value: {{  .Values.diagnosticsMode.dotNetTools.path  | quote }}
           - name: RPI__Diagnostics__UseDotNetTools__UseCounters
             value: {{ .Values.diagnosticsMode.dotNetTools.useCounters | quote }}
           - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
@@ -260,6 +311,12 @@ spec:
           {{- end }}
           {{- if eq .Values.global.deployment.platform "google" }}
           {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
+          - name: GOOGLE_APPLICATION_CREDENTIALS 
+            value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
+          {{- end }}
+          {{- end }}
+          {{- if eq .Values.global.deployment.platform "azure" }}
+          {{- if .Values.databases.datawarehouse.bigquery.enabled }}
           - name: GOOGLE_APPLICATION_CREDENTIALS 
             value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
           {{- end }}
@@ -369,7 +426,7 @@ spec:
           - name: Authentication__RootServiceURL
             value: "https://{{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}"
           - name: Authentication__HttpMetaRootServiceURL
-            value: {{ .Values.realtimeapi.name }}
+            value: "http://rpi-realtimeapi"
           - name: Authentication__AccessTokenLifetimeSeconds
             value: {{ .Values.realtimeapi.authentication.oauth.accessTokenLifetimeSeconds | quote }}
           - name: Authentication__RefreshTokenLifetimeSeconds
@@ -712,6 +769,16 @@ spec:
           {{- end }}
           {{- end }}
           {{- end }}
+          {{- if .Values.cloudIdentity.enabled }}
+          {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+          {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Key
+            value: "NamespaceName"
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Value
+            value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.NamespaceName | quote }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
           {{- if eq .Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Assembly
             value: "RedPoint.Azure.Server"
@@ -721,10 +788,6 @@ spec:
             value: "EventHubName"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value
             value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.eventHubName | quote }}
-          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Key
-            value: "NamespaceName"
-          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Value
-            value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.NamespaceName | quote }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__4__Key
             value: "SendMessageBatchSize"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__4__Value
@@ -734,9 +797,9 @@ spec:
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__5__Value
             value: {{ .Values.realtimeapi.queueProvider.azureeventhubs.ReceiveMessageBatchSize | quote }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__6__Key
-            value: "PartitionId"
+            value: "PartitionIds"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__6__Value
-            value: '{{ .Values.realtimeapi.queueProvider.azureeventhubs.PartitionId | toJson }}'
+            value: '{{ .Values.realtimeapi.queueProvider.azureeventhubs.PartitionIds | toJson }}'
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key
             value: "EventHubConnectionString"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Assembly
@@ -772,15 +835,15 @@ spec:
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key
             value: "Hostname"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value
-            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.hostname | quote }}
+            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.hostname | quote }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key
             value: "VirtualHost"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value
-            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
+            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.virtualhost | quote }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__2__Key
             value: "Username"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__2__Value
-            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
+            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.username | quote }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Key
             value: "Password"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Assembly
@@ -790,15 +853,15 @@ spec:
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key
             value: "Hostname"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value
-            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.hostname | quote }}
+            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.hostname | quote }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key
             value: "VirtualHost"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value
-            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
+            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.virtualhost | quote }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__2__Key
             value: "Username"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__2__Value
-            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
+            value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.username | quote }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__3__Key
             value: "Password"
           {{- end }}
@@ -808,12 +871,12 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-                key: RABBITMQ_Password
+                key: RealtimeAPI_RabbitMQ_Password
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__3__Value
             valueFrom:
               secretKeyRef:
                 name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-                key: RABBITMQ_Password
+                key: RealtimeAPI_RabbitMQ_Password
           {{- end }}
           {{- end }}
           {{- if eq .Values.realtimeapi.cacheProvider.provider "redis" }}
@@ -1090,39 +1153,27 @@ spec:
           {{- end }}
           {{- end }}
           volumeMounts:
+            - name: odbc-config
+              mountPath: /app/odbc-config/odbc2.ini
+              subPath: odbc2.ini
+            - name: odbcini
+              mountPath: /odbc-config
             - name: tempstore
               mountPath: /tmp
-            {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-            {{- if .Values.databases.datawarehouse.enabled }}
-            - name: odbc-config
-              mountPath: /app/odbc-config/odbc2.ini
-              subPath: odbc2.ini
-            - name: odbcini
-              mountPath: /odbc-config
-            {{- end }}
-            {{- end }}
-            {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-            {{- if .Values.databases.datawarehouse.enabled }}
-            - name: odbc-config
-              mountPath: /app/odbc-config/odbc2.ini
-              subPath: odbc2.ini
-            - name: odbcini
-              mountPath: /odbc-config
-            {{- end }}
-            {{- end }}
-            {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-            {{- if .Values.databases.datawarehouse.enabled }}
-            {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
-            - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
-              mountPath: "{{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}"
-              subPath: "{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+            {{- if .Values.databases.datawarehouse.bigquery.enabled }}
+            {{- range .Values.databases.datawarehouse.bigquery.connections }}
+            {{- if eq .credentialsType "serviceAccount" }}
+            - name: {{ .configMapName | quote }}
+              mountPath: {{ .ConfigMapFilePath }}/{{ .keyName }}
+              subPath: {{ .keyName }}
+              readOnly: true
             {{- end }}
             {{- end }}
             {{- end }}
-            {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
-            {{- if .Values.databases.datawarehouse.enabled }}
-            - name: snowflake-creds
-              mountPath: {{ .Values.databases.datawarehouse.snowflake.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}
+            {{- if .Values.databases.datawarehouse.snowflake.enabled }}
+            {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
+            - name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
+              mountPath: "{{ .Values.databases.datawarehouse.snowflake.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}"
               subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
             {{- end }}
             {{- end }}
@@ -1139,42 +1190,28 @@ spec:
               mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
             {{- end }}
       volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
         - name: tempstore
           emptyDir: {}
-        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        - name: odbc-config
+        {{- if .Values.databases.datawarehouse.bigquery.enabled }}
+        {{- range .Values.databases.datawarehouse.bigquery.connections }}
+        {{- if eq .credentialsType "serviceAccount" }}
+        - name: {{ .configMapName | quote }}
           configMap:
-            name: odbc-config
-            defaultMode: 0777
-        - name: odbcini
-          emptyDir: {}
+            name: {{ .configMapName | quote }}
         {{- end }}
         {{- end }}
-        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        - name: odbc-config
-          configMap:
-            name: odbc-config
-            defaultMode: 0777
-        - name: odbcini
-          emptyDir: {}
         {{- end }}
-        {{- end }}
-        {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        - name: snowflake-creds
+        {{- if .Values.databases.datawarehouse.snowflake.enabled }}
+        {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
+        - name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
           configMap:
             name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
-        - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
-          configMap:
-            name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
-        {{- end }}
         {{- end }}
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
@@ -1204,3 +1241,4 @@ spec:
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
 {{- end }}
+

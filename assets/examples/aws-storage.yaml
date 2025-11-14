@@ -1,0 +1,35 @@
+
+# 1- Create Storage Class     
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: sc-rpi-efs              # Name referenced by PVC   
+parameters:
+  directoryPerms: "755"         # Default directory permissions        
+  ensureUniqueDirectory: "true" # Creates unique dir for each claim    
+  fileSystemId: fs-00000000000  # Your AWS EFS filesystem ID 
+  gidRangeStart: "7000"         # Start of and End GID range (Covers 7777 used by RPI)          
+  gidRangeEnd: "8000"           # Use EFS access points for provisioning             
+  provisioningMode: efs-ap      # Use EFS access points for provisioning  
+  reuseAccessPoint: "false"     # Creates new access point for each PVC          
+  subPathPattern: ${.PVC.namespace}/${.PVC.name} # Organizes EFS dirs by namespace/name
+provisioner: efs.csi.aws.com    # AWS EFS CSI driver        
+reclaimPolicy: Retain           # Retain storage and data when PVC is removed        
+volumeBindingMode: Immediate    # Bind immediately (not delayed until pod scheduling)
+allowVolumeExpansion: true      # Allows increasing PVC size without recreation
+
+# 2 Create Persistent VolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rpifileoutputdir  # Unique name for the PVC        
+  namespace: redpoint-rpi # Target namespace for this claim      
+spec:
+  accessModes:
+  - ReadWriteMany         # Allows multiple pods to read/write concurrently          
+  resources:
+    requests:
+      storage: 500Gi           # Requested storage capacity           
+  storageClassName: sc-rpi-efs # Must match the StorageClass below   
+  volumeMode: Filesystem       # Mount as a filesystem (not block)
+

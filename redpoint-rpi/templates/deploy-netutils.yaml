@@ -1,0 +1,91 @@
+{{- if .Values.diagnosticsMode.netutils.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: net-utils
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: net-utils
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: net-utils
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: net-utils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: net-utils
+  template:
+    metadata:
+      labels:
+        app: net-utils
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: net-utils
+      {{- with .Values.diagnosticsMode.netutils.securityContext }}
+      securityContext:
+        runAsNonRoot: {{ .runAsNonRoot }}
+        runAsUser: {{ .runAsUser }}
+        runAsGroup: {{ .runAsGroup }}
+      {{- end }}
+      containers:
+      - name: net-utils
+        image: {{ .Values.global.deployment.images.net_utils }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        volumeMounts:
+        - name: tempdata
+          mountPath: /tmp
+        {{- with .Values.diagnosticsMode.netutils.securityContext }}
+        securityContext:
+          runAsNonRoot: {{ .runAsNonRoot }}
+          runAsUser: {{ .runAsUser }}
+          runAsGroup: {{ .runAsGroup }}
+          readOnlyRootFilesystem: {{ .readOnlyRootFilesystem }}
+          allowPrivilegeEscalation: {{ .allowPrivilegeEscalation }}
+          privileged: {{ .privileged }}
+          {{- if or .capabilities.add .capabilities.drop }}
+          capabilities:
+            {{- if .capabilities.drop }}
+            drop:
+              {{- range .capabilities.drop }}
+              - {{ . }}
+              {{- end }}
+            {{- end }}
+            {{- if .capabilities.add }}
+            add:
+              {{- range .capabilities.add }}
+              - {{ . }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+      volumes:
+      - name: tempdata
+        emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

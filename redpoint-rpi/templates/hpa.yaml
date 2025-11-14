@@ -1,11 +1,11 @@
-{{- if .Values.executionservice.autoscaling.enabled }}
-{{- if eq .Values.executionservice.autoscaling.type "hpa" }}
-{{- if .Values.executionservice.enabled }}
+{{- if $.Values.executionservice.autoscaling.enabled }}
+{{- if eq $.Values.executionservice.autoscaling.type "hpa" }}
+{{- if $.Values.executionservice.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.executionservice.name }}
-  namespace: {{ .Release.Namespace }}
+  name: rpi-executionservice
+  namespace: {{ $.Release.Namespace }}
   labels:
     app: rpi-executionservice
 spec:
@@ -13,24 +13,24 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-executionservice
-  minReplicas: {{ .Values.executionservice.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.executionservice.autoscaling.maxReplicas }}
+  minReplicas: {{ $.Values.executionservice.autoscaling.minReplicas }}
+  maxReplicas: {{ $.Values.executionservice.autoscaling.maxReplicas }}
   metrics:
-    {{- if .Values.executionservice.autoscaling.targetCPUUtilizationPercentage }}
+    {{- if $.Values.executionservice.autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.executionservice.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ $.Values.executionservice.autoscaling.targetCPUUtilizationPercentage }}
     {{- end }}
-    {{- if .Values.executionservice.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- if $.Values.executionservice.autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.executionservice.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ $.Values.executionservice.autoscaling.targetMemoryUtilizationPercentage }}
     {{- end }}
 {{- end }}
 {{- end }}
@@ -43,7 +43,7 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.interactionapi.name }}
+  name: rpi-interactionapi
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-interactionapi
@@ -82,7 +82,7 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.integrationapi.name }}
+  name: rpi-integrationapi
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-integrationapi
@@ -121,7 +121,7 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.realtimeapi.name }}
+  name: rpi-realtimeapi
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-realtimeapi
@@ -160,7 +160,7 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.callbackapi.name }}
+  name: rpi-callbackapi
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-callbackapi
@@ -199,7 +199,7 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Values.queuereader.name }}
+  name: rpi-queuereader
   namespace: {{ .Release.Namespace }}
   labels:
     app: rpi-queuereader
@@ -231,3 +231,41 @@ spec:
 {{- end }}
 {{- end }}
 
+---
+{{- if .Values.nodemanager.autoscaling.enabled }}
+{{- if .Values.nodemanager.enabled }}
+{{- if eq .Values.nodemanager.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-nodemanager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rpi-nodemanager
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-nodemanager
+  minReplicas: {{ .Values.nodemanager.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.nodemanager.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.nodemanager.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.nodemanager.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.nodemanager.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.nodemanager.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

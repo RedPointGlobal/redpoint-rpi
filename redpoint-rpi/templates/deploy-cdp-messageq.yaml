@@ -1,0 +1,203 @@
+{{- if .Values.dataActivation.enabled }}
+{{- if .Values.messageq.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdp-messageq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-messageq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: cdp
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  minAvailable: {{ .Values.messageq.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-messageq
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cdp-messageq-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-messageq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: cdp
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+data:
+  rabbitmq.conf: |
+    # Default RabbitMQ configuration
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
+    loopback_users.guest = false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-messageq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-messageq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: cdp
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  clusterIP: None
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+  selector:
+    app.kubernetes.io/name: cdp-messageq
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cdp-messageq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-messageq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: cdp
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  serviceName: cdp-messageq
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-messageq
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cdp-messageq
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: cdp
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    spec:
+      terminationGracePeriodSeconds: 90
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["cdp-init"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: cdp-messageq
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: cdp-messageq
+      {{- if .Values.messageq.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.messageq.nodeSelector.key }}: {{ .Values.messageq.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.messageq.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.messageq.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.messageq.nodeSelector.value }}
+      {{- end }}
+      containers:
+        - name: cdp-messageq
+          image: {{ .Values.global.deployment.images.messageq }}:{{ .Values.global.deployment.images.tag }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+              protocol: TCP
+            - name: management
+              containerPort: 15672
+              protocol: TCP
+          resources:
+            limits:
+              memory: {{ .Values.messageq.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.messageq.resources.requests.cpu }}
+              memory: {{ .Values.messageq.resources.requests.memory }}
+          env:
+            - name: RABBITMQ_DEFAULT_PASS
+              value: guest
+            - name: RABBITMQ_DEFAULT_USER
+              value: guest
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: /
+            - name: RABBITMQ_ERLANG_COOKIE
+              value: '1234'
+          volumeMounts:
+            - name: cdp-messageq-data
+              mountPath: /data
+            - name: cdp-messageq-config
+              mountPath: /config
+          livenessProbe:
+            exec:
+              command:
+              - "rabbitmq-diagnostics"
+              - "-q"
+              - "ping"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- if .Values.messageq.securityContext.enabled }}
+          securityContext:
+            privileged: {{ .Values.messageq.securityContext.privileged }}
+            allowPrivilegeEscalation: {{ .Values.messageq.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.messageq.securityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+              {{- range .Values.messageq.securityContext.capabilities.drop }}
+                - {{ . }}
+              {{- end }}
+          {{- end }}
+      {{- if .Values.messageq.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.messageq.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.messageq.securityContext.runAsGroup }}
+        runAsNonRoot: {{ .Values.messageq.securityContext.runAsNonRoot }}
+      {{- end }}
+      volumes:
+        - name: cdp-messageq-config
+          configMap:
+            name: cdp-messageq-config
+  volumeClaimTemplates:
+    - metadata:
+        name: cdp-messageq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.messageq.volumeClaimTemplates.storage | quote }}
+{{- end }}

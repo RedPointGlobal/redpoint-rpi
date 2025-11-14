@@ -1,0 +1,257 @@
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cdp-authservice
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-authservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+{{- if .Values.authservice.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdp-authservice
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-authservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  minAvailable: {{ .Values.authservice.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-authservice
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-authservice
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-authservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.authservice.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: cdp-authservice
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: cdp-authservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  name: cdp-authservice
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.authservice.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-authservice
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cdp-authservice
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.authservice.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: cdp-authservice
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+      {{- end }}
+      terminationGracePeriodSeconds: 120
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: cdp-authservice
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: cdp-authservice
+      containers:
+      - name: cdp-authservice
+        image: {{ .Values.global.deployment.images.cdpauthservices }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /api-rg1-auth/v1/healthcheck
+            port: 8080
+          periodSeconds: {{ .Values.authservice.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.authservice.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.authservice.livenessProbe.failureThreshold }}
+        startupProbe:
+          httpGet:
+            path: /api-rg1-auth/v1/healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: {{ .Values.authservice.startupProbe.periodSeconds }}
+          failureThreshold: {{ .Values.authservice.startupProbe.failureThreshold }}
+        {{- if .Values.authservice.resources.enabled }}
+        resources:
+          {{- if and .Values.authservice.resources.limits (ne .Values.authservice.resources.limits.enabled false) }}
+          limits:
+            {{- with .Values.authservice.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.authservice.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and .Values.authservice.resources.requests (ne .Values.authservice.resources.requests.enabled false) }}
+          requests:
+            {{- with .Values.authservice.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.authservice.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        ports: 
+        - containerPort: 8080 
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        env: 
+        - name: LOG_LEVEL
+          value: {{ .Values.authservice.logging.verbosity | quote }}
+        - name: RPI_SHARED_USER
+          value: {{ .Values.integrationapi.username | quote }}
+        - name: RPI_SHARED_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Integration_Password
+        - name: RPI_NAME
+          value: "{{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}"
+        - name: RPI_PORT
+          value: "443"
+        - name: CACHE_HOST
+          value: "cdp-cache-0.cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
+        - name: CACHE_PORT
+          value: "6379"
+        - name: _JAVA_OPTIONS
+          value: -Xmx750m
+        - name: SMTP_HOST
+          value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+        - name: SMTP_PORT
+          value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+        - name: SMTP_USER
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+        - name: SMTP_PROTOCOL
+          value: SMTP
+        - name: SMTP_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: SMTP_Password
+        - name: SMTP_FROM_DISPLAY_NAME
+          value: {{ .Values.SMTPSettings.SMTP_SenderName | quote }}
+        - name: KEYCLOAK_HOST
+          value: {{ .Values.keycloak.hostname | quote }}
+        - name: KEYCLOAK_PORT
+          value: {{ .Values.keycloak.port | quote }}
+        - name: KEYCLOAK_ADMIN_USER
+          value: {{ .Values.keycloak.username | quote }}
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Keycloak_Admin_Password
+        - name: DEFAULT_DCC_ADMIN_USER
+          value: {{ .Values.authservice.default_username | quote }}
+        - name: DEFAULT_DCC_ADMIN_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Default_Password
+        - name: MONGODB_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Mongo_ConnectionString
+        - name: MONGODB_MERCURY_DB
+          value: {{ .Values.initservice.database.operational.name | quote }}
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

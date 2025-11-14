@@ -1,0 +1,240 @@
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+
+---
+{{- if .Values.dataActivation.enabled }}
+{{- if .Values.keycloak.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  minAvailable: {{ .Values.keycloak.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak
+{{- end }}     
+{{- end }}  
+
+---
+{{- if .Values.dataActivation.enabled }}
+{{- if eq .Values.keycloak.type "internal" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.keycloak.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: keycloak
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.keycloak.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ .Values.keycloak.rollingUpdate.maxUnavailable | default "25%" }}
+      maxSurge: {{ .Values.keycloak.rollingUpdate.maxSurge | default "25%" }}
+  progressDeadlineSeconds: {{ .Values.keycloak.progressDeadlineSeconds | default 600 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.keycloak.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/keycloak: {{ .Values.keycloak.securityContext.appArmorProfile }}
+        {{- with .Values.keycloak.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: keycloak
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.keycloak.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.keycloak.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.keycloak.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.keycloak.securityContext.runAsNonRoot }}
+      {{- end }}
+      terminationGracePeriodSeconds: 120
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: keycloak
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: keycloak
+      containers:
+      - name: keycloak
+        image: {{ .Values.global.deployment.images.keycloak }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /auth/health/live
+            port: 9000
+          periodSeconds: {{ .Values.keycloak.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.keycloak.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.keycloak.livenessProbe.failureThreshold }}
+        startupProbe:
+          httpGet:
+            path: /auth/health/live
+            port: 9000
+            scheme: HTTP
+          periodSeconds: {{ .Values.keycloak.startupProbe.periodSeconds }}
+          failureThreshold: {{ .Values.keycloak.startupProbe.failureThreshold }}
+        {{- if .Values.keycloak.resources.enabled }}
+        resources:
+          {{- if and .Values.keycloak.resources.limits (ne .Values.keycloak.resources.limits.enabled false) }}
+          limits:
+            {{- with .Values.keycloak.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.keycloak.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and .Values.keycloak.resources.requests (ne .Values.keycloak.resources.requests.enabled false) }}
+          requests:
+            {{- with .Values.keycloak.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.keycloak.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        ports:
+        - containerPort: 8080
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.keycloak.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.keycloak.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.keycloak.securityContext.readOnlyRootFilesystem }}
+#          capabilities:
+#            drop:
+#            {{- range .Values.securityContext.capabilities.drop }}
+#              - {{ . }}
+#            {{- end }}
+        {{- end }}
+        env:
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        - name: KEYCLOAK_DATABASE_VENDOR
+          value: mssql
+        - name: KC_DB
+          value: "mssql"
+        - name: KC_DB_URL
+          value: "jdbc:sqlserver://{{ .Values.databases.operational.server_host }};databaseName={{ .Values.keycloak.database_name }};"
+        - name: KC_DB_USERNAME
+          value: {{ .Values.databases.operational.server_username | quote }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: Operations_Database_Server_Password
+        {{- end }}
+        {{- end }}
+        - name: KEYCLOAK_PRODUCTION
+          value: "false"
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          value: {{ .Values.keycloak.username | quote }}
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Keycloak_Admin_Password
+        - name: KEYCLOAK_EXTRA_ARGS
+          value: "-Dkeycloak.frontendUrl=https://{{ .Values.ingress.hosts.webui }}.{{ .Values.ingress.domain }}"
+        - name: KEYCLOAK_DATABASE_NAME
+          value: {{ .Values.keycloak.database_name | quote }}
+        - name: KEYCLOAK_PROXY_HEADERS
+          value: "xforwarded"
+        - name: KEYCLOAK_HOSTNAME_STRICT
+          value: 'false'
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+{{- end }}

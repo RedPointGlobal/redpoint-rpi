@@ -1,203 +1,160 @@
-{{- if .Values.realtimeapi.cacheProvider.redis.internal }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: realtime-rediscache
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: realtime-rediscache
-spec:
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: 6379
-  selector:
-    app: realtime-rediscache
-
 ---
-apiVersion: apps/v1
-kind: Deployment
+{{- if .Values.queuereader.realtimeConfiguration.isDistributed }}
+{{- if eq .Values.queuereader.realtimeConfiguration.distributedCache.provider "redis" }}
+{{- if eq .Values.queuereader.realtimeConfiguration.distributedCache.type "internal" }}
+{{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
 metadata:
-  name: realtime-rediscache
+  name: rpi-queuereader-cache
   namespace: {{ .Release.Namespace }}
   labels:
-    app: realtime-rediscache
+    app.kubernetes.io/name: rpi-queuereader-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
-  replicas: {{ .Values.realtimeapi.cacheProvider.redis.replicas }}
+  maxUnavailable: {{ .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.podDisruptionBudget.maxUnavailable }}
   selector:
     matchLabels:
-      app: realtime-rediscache
-  template:
-    metadata:
-      labels:
-        app: realtime-rediscache
-    spec:
-      imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: realtime-rediscache
-      {{- if .Values.securityContext.enabled }}
-      securityContext:
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
-      {{- end }}
-      containers:
-      - name: realtime-rediscache
-        image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
-        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
-        ports:
-        - containerPort: 6379
-          name: web-port
-          protocol: TCP
-        {{- if .Values.securityContext.enabled }}
-        securityContext:
-          privileged: {{ .Values.securityContext.privileged }}
-          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
-          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
-          capabilities:
-            drop:
-            {{- range .Values.securityContext.capabilities.drop }}
-              - {{ . }}
-            {{- end }}
-        {{- end }}
-        {{- if .Values.realtimeapi.cacheProvider.redis.resources.enabled }}
-        resources:
-          {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits }}
-          limits:
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
-            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
-            {{- end }}
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
-            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
-            {{- end }}
-          {{- end }}
-          {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests }}
-          requests:
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
-            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
-            {{- end }}
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
-            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
-      {{- if .Values.nodeSelector.enabled }}
-      nodeSelector:
-        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
-      {{- end }}
-      {{- if .Values.tolerations.enabled }}
-      tolerations:
-        - effect: NoSchedule
-          key: {{ .Values.nodeSelector.key }}
-          operator: Equal
-          value: {{ .Values.nodeSelector.value }}
-      {{- end }}
+      app.kubernetes.io/name: rpi-queuereader-cache
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end }}
 
 ---
-{{- if .Values.executionservice.internalCache.enabled }}
+{{- if .Values.queuereader.realtimeConfiguration.isDistributed }}
+{{- if eq .Values.queuereader.realtimeConfiguration.distributedCache.provider "redis" }}
+{{- if eq .Values.queuereader.realtimeConfiguration.distributedCache.type "internal" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-queuereader-cache-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-queuereader-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+data:
+  redis.conf: |
+    # Memory (pod limit = 3048Mi ≈ 3.0Gi)
+    maxmemory 2300mb
+    maxmemory-policy allkeys-lfu
+    maxmemory-samples 10
+
+    appendonly yes
+    appendfsync everysec
+    aof-use-rdb-preamble yes
+    aof-rewrite-incremental-fsync yes
+    # disable RDB snapshots for a pure cache
+    save ""                           
+
+    # Safety / Ops
+    stop-writes-on-bgsave-error no
+    supervised no                    
+
+    # Networking / timeouts
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    timeout 300
+    tcp-keepalive 60
+    tcp-backlog 511
+
+    maxclients 2000
+
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: executionservice-rediscache
+  name: rpi-queuereader-cache
   namespace: {{ .Release.Namespace }}
   labels:
-    app: executionservice-rediscache
+    app.kubernetes.io/name: rpi-queuereader-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
-  ports:
-  - name: http
-    port: 6379
-    protocol: TCP
-    targetPort: 6379
+  clusterIP: None
   selector:
-    app: executionservice-rediscache
+    app.kubernetes.io/name: rpi-queuereader-cache
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: executionservice-rediscache
+  name: rpi-queuereader-cache
   namespace: {{ .Release.Namespace }}
   labels:
-    app: executionservice-rediscache
+    app.kubernetes.io/name: rpi-queuereader-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: executionservice-rediscache
+  name: rpi-queuereader-cache
   namespace: {{ .Release.Namespace }}
   labels:
-    app: executionservice-rediscache
+    app.kubernetes.io/name: rpi-queuereader-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
-  replicas: {{ .Values.realtimeapi.cacheProvider.redis.replicas }}
+  serviceName: rpi-queuereader-cache
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
   selector:
     matchLabels:
-      app: executionservice-rediscache
+      app.kubernetes.io/name: rpi-queuereader-cache
   template:
     metadata:
       labels:
-        app: executionservice-rediscache
+        app.kubernetes.io/name: rpi-queuereader-cache
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
-      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: executionservice-rediscache
-      {{- if .Values.securityContext.enabled }}
-      securityContext:
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
-      {{- end }}
-      containers:
-      - name: executionservice-rediscache
-        image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
-        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
-        ports:
-        - containerPort: 6379
-          name: web-port
-          protocol: TCP
-        volumeMounts:
-        - name: executionservice-rediscache
-          mountPath: /data
-        {{- if .Values.securityContext.enabled }}
-        securityContext:
-          privileged: {{ .Values.securityContext.privileged }}
-          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
-          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
-          capabilities:
-            drop:
-            {{- range .Values.securityContext.capabilities.drop }}
-              - {{ . }}
-            {{- end }}
-        {{- end }}
-        {{- if .Values.realtimeapi.cacheProvider.redis.resources.enabled }}
-        resources:
-          {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits }}
-          limits:
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
-            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.cpu }}
-            {{- end }}
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
-            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.limits.memory }}
-            {{- end }}
-          {{- end }}
-          {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests }}
-          requests:
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
-            cpu: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.cpu }}
-            {{- end }}
-            {{- if .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
-            memory: {{ .Values.realtimeapi.cacheProvider.redis.resources.requests.memory }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
-      volumes:
-      - name: executionservice-rediscache
-        emptyDir: {}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rpi-queuereader"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-queuereader-cache
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-queuereader-cache
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
@@ -209,4 +166,376 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: rpi-queuereader-cache
+          image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
+          imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy }}
+          ports:
+            - containerPort: 6379
+              name: redis
+          command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  key: QueueService_RedisCache_Password
+          volumeMounts:
+            {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-queuereader-cache-data
+              mountPath: /data
+            {{- end }}
+            {{- if not .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-queuereader-cache-data
+              mountPath: /data
+            {{- end }}
+            - name: rpi-queuereader-cache-config
+              mountPath: /usr/local/etc/redis
+          {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.enabled }}
+          resources:
+            {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.limits }}
+            limits:
+              {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.limits.cpu }}
+              cpu: {{ .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.limits.cpu | quote }}
+              {{- end }}
+              {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.limits.memory }}
+              memory: {{ .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.limits.memory }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.requests }}
+            requests:
+              {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.requests.cpu | quote }}
+              cpu: {{ .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.requests.cpu }}
+              {{- end }}
+              {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.requests.memory }}
+              memory: {{ .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.resources.requests.memory }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          {{- if .Values.securityContext.enabled }}
+          securityContext:
+            privileged: {{ .Values.securityContext.privileged }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+              {{- range .Values.securityContext.capabilities.drop }}
+                - {{ . }}
+              {{- end }}
+          {{- end }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        supplementalGroups:
+          {{- with .Values.securityContext.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+      {{- end }}
+      volumes:
+        - name: rpi-queuereader-cache-config
+          configMap:
+            name: rpi-queuereader-cache-config
+        {{- if not .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
+        - name: rpi-executionservice-cache-data
+          emptyDir: {}
+        {{- end }}
+  {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: rpi-queuereader-cache-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.storage | quote }}
+  {{- end }}
 {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.executionservice.enabled }}
+{{- if eq .Values.executionservice.internalCache.type "internal" }}
+{{- if .Values.executionservice.internalCache.redisSettings.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rpi-executionservice-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-executionservice-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  maxUnavailable: {{ .Values.executionservice.internalCache.redisSettings.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-executionservice-cache
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.executionservice.enabled }}
+{{- if eq .Values.executionservice.internalCache.type "internal" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-executionservice-cache-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-executionservice-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+data:
+  redis.conf: |
+    # Memory (pod limit = 3048Mi ≈ 3.0Gi)
+    maxmemory 2300mb
+    maxmemory-policy allkeys-lfu
+    maxmemory-samples 10
+
+    appendonly yes
+    appendfsync everysec
+    aof-use-rdb-preamble yes
+    aof-rewrite-incremental-fsync yes
+    # disable RDB snapshots for a pure cache
+    save ""                           
+
+    # Safety / Ops
+    stop-writes-on-bgsave-error no
+    supervised no                    
+
+    # Networking / timeouts
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    timeout 300
+    tcp-keepalive 60
+    tcp-backlog 511
+
+    maxclients 2000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-executionservice-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-executionservice-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: rpi-executionservice-cache
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-executionservice-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-executionservice-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rpi-executionservice-cache
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-executionservice-cache
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  serviceName: rpi-executionservice-cache
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: {{ .Values.executionservice.internalCache.redisSettings.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-executionservice-cache
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rpi-executionservice-cache
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rpi-executionservice"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-executionservice-cache
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-executionservice-cache
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      containers:
+        - name: rpi-executionservice-cache
+          image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
+          imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy }}
+          ports:
+            - containerPort: 6379
+              name: redis
+          command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  key: ExecutionService_RedisCache_Password
+          volumeMounts:
+            {{- if .Values.executionservice.internalCache.redisSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-executionservice-cache-data
+              mountPath: /data
+            {{- end }}
+            {{- if not .Values.executionservice.internalCache.redisSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-executionservice-cache-data
+              mountPath: /data
+            {{- end }}
+            - name: rpi-executionservice-cache-config
+              mountPath: /usr/local/etc/redis
+          {{- if .Values.executionservice.internalCache.redisSettings.resources.enabled }}
+          resources:
+            {{- if .Values.executionservice.internalCache.redisSettings.resources.limits }}
+            limits:
+              {{- if .Values.executionservice.internalCache.redisSettings.resources.limits.cpu }}
+              cpu: {{ .Values.executionservice.internalCache.redisSettings.resources.limits.cpu | quote }}
+              {{- end }}
+              {{- if .Values.executionservice.internalCache.redisSettings.resources.limits.memory }}
+              memory: {{ .Values.executionservice.internalCache.redisSettings.resources.limits.memory }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.executionservice.internalCache.redisSettings.resources.requests }}
+            requests:
+              {{- if .Values.executionservice.internalCache.redisSettings.resources.requests.cpu | quote }}
+              cpu: {{ .Values.executionservice.internalCache.redisSettings.resources.requests.cpu }}
+              {{- end }}
+              {{- if .Values.executionservice.internalCache.redisSettings.resources.requests.memory }}
+              memory: {{ .Values.executionservice.internalCache.redisSettings.resources.requests.memory }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          {{- if .Values.securityContext.enabled }}
+          securityContext:
+            privileged: {{ .Values.securityContext.privileged }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+              {{- range .Values.securityContext.capabilities.drop }}
+                - {{ . }}
+              {{- end }}
+          {{- end }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        supplementalGroups:
+          {{- with .Values.securityContext.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+      {{- end }}
+      volumes:
+        - name: rpi-executionservice-cache-config
+          configMap:
+            name: rpi-executionservice-cache-config
+        {{- if not .Values.executionservice.internalCache.redisSettings.volumeClaimTemplates.enabled }}
+        - name: rpi-executionservice-cache-data
+          emptyDir: {}
+        {{- end }}
+  {{- if .Values.executionservice.internalCache.redisSettings.volumeClaimTemplates.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: rpi-executionservice-cache-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.executionservice.internalCache.redisSettings.volumeClaimTemplates.storage | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}
+

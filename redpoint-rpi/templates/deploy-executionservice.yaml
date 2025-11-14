@@ -1,12 +1,14 @@
 {{- if .Values.executionservice.serviceAccount.enabled }}
-{{- if .Values.executionservice.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.executionservice.name }}
+  name: rpi-executionservice
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-executionservice
+    app.kubernetes.io/name: rpi-executionservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
   {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -24,6 +26,24 @@ metadata:
   {{- end }}
   {{- end }}
 {{- end }}
+
+---
+{{- if .Values.executionservice.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rpi-executionservice
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-executionservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  maxUnavailable: {{ .Values.executionservice.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-executionservice
 {{- end }}
 
 ---
@@ -31,10 +51,13 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.executionservice.name }}
+  name: rpi-executionservice
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-executionservice
+    app.kubernetes.io/name: rpi-executionservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
@@ -42,16 +65,19 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    app: rpi-executionservice
+    app.kubernetes.io/name: rpi-executionservice
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.executionservice.name }}
+  name: rpi-executionservice
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-executionservice
+    app.kubernetes.io/name: rpi-executionservice
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
     {{- with .Values.executionservice.customLabels }}
     {{- toYaml . | nindent 4 }} 
     {{- end }}
@@ -61,11 +87,14 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app: rpi-executionservice
+      app.kubernetes.io/name: rpi-executionservice
   template:
     metadata:
       labels:
-        app: rpi-executionservice
+        app.kubernetes.io/name: rpi-executionservice
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.executionservice.customLabels }}
         {{- toYaml . | nindent 8 }} 
         {{- end }}
@@ -88,15 +117,35 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ .Values.executionservice.name }}
+      serviceAccountName: rpi-executionservice
       {{- if .Values.securityContext.enabled }}
       securityContext:
         runAsUser: {{ .Values.securityContext.runAsUser }}
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         fsGroup: {{ .Values.securityContext.fsGroup }}
         runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        supplementalGroups:
+          {{- with .Values.securityContext.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
       {{- end }}
-      terminationGracePeriodSeconds: 120
+      terminationGracePeriodSeconds: {{ .Values.executionservice.autoscaling.kedaScaledObject.terminationGracePeriodSeconds }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-executionservice
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-executionservice
       containers:
       - env:
         - name: Logging__LogLevel__Default
@@ -113,6 +162,14 @@ spec:
           value: {{ .Values.databases.operational.dateTimeSource | quote }}
         - name: ODBCINI
           value: "/odbc-config/odbc.ini"
+        - name: RPIExecution__MaxSmartAssetInstancesForOfferCodes
+          value: {{ .Values.executionservice.jobExecution.maxSmartAssetInstancesForOfferCodes | quote }}
+        {{- range .Values.executionservice.extraEnvs }}
+        {{- if .enabled }}
+        - name: {{ .name }}
+          value: {{ quote .value }}
+        {{- end }}
+        {{- end }}
         {{- if .Values.executionservice.internalCache.enabled }}
         - name: InternalCache__IsEnabled
           value: "true"
@@ -126,11 +183,15 @@ spec:
           value: {{ .Values.executionservice.internalCache.failOnPrimaryDataLoss | quote }}
         - name: InternalCache__FailOnCacheConnectionError
           value: {{ .Values.executionservice.internalCache.failOnCacheConnectionError | quote }}
+        {{- end }}
+        {{- if .Values.executionservice.internalCache.enabled }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: InternalCache__RedisSettings__IPAddress
           valueFrom:
             secretKeyRef:
               name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: ExecutionService_RedisCache_ConnectionString
+        {{- end }}
         {{- end }}
         {{- if .Values.diagnosticsMode.copytoAzureBlob.enabled }}
         - name: RPI__Diagnostics__CopyToAzure__IsEnabled
@@ -138,7 +199,10 @@ spec:
         - name: RPI__Diagnostics__CopyToAzure__StorageAccount
           value: {{ .Values.diagnosticsMode.copytoAzureBlob.accountName | quote }}
         - name: RPI__Diagnostics__CopyToAzure__AccessKey
-          value: {{ .Values.diagnosticsMode.copytoAzureBlob.accessKey | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CopyToAzureBlobAccessKey
         - name: RPI__Diagnostics__CopyToAzure__ContainerName
           value: {{ .Values.diagnosticsMode.copytoAzureBlob.containerName | quote }}
         - name: RPI__Diagnostics__CopyToAzure__BlobServiceEndpoint
@@ -154,7 +218,10 @@ spec:
         - name: RPI__Diagnostics__CopyToSFTP__SecureFTPUsername
           value: {{ .Values.diagnosticsMode.copytoSftp.sftpUsername | quote }}
         - name: RPI__Diagnostics__CopyToSFTP__SecureFTPPassword
-          value: {{ .Values.diagnosticsMode.copytoSftp.sftpPassword | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CopyToSFTPSecureFTPPassword
         - name: RPI__Diagnostics__CopyToSFTP__PortNumberNumber
           value: {{ .Values.diagnosticsMode.copytoSftp.sftpPort | quote }}
         - name: RPI__Diagnostics__UseSFTP
@@ -164,9 +231,9 @@ spec:
         {{- end }}
         {{- if .Values.diagnosticsMode.dotNetTools.enabled }}
         - name: DOTNET_BUNDLE_EXTRACT_BASE_DIR
-          value: {{ .Values.diagnosticsMode.dotNetTools.extraction_base_dir | quote }} 
+          value: {{ .Values.diagnosticsMode.dotNetTools.extractionBaseDir | quote }} 
         - name: RPI__Diagnostics__UseDotNetTools__Path
-          value: {{ .Values.diagnosticsMode.dotNetTools.path | quote }}
+          value: {{  .Values.diagnosticsMode.dotNetTools.path  | quote }}
         - name: RPI__Diagnostics__UseDotNetTools__UseCounters
           value: {{ .Values.diagnosticsMode.dotNetTools.useCounters | quote }}
         - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
@@ -232,6 +299,12 @@ spec:
           value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
         {{- end }}
         {{- end }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if .Values.databases.datawarehouse.bigquery.enabled }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS 
+          value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
+        {{- end }}
+        {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
         {{- if eq .Values.cloudIdentity.provider "Google" }}
         - name: KeyVault__Provider
@@ -265,7 +338,7 @@ spec:
         - name: Authentication__EnableRPIAuthentication
           value: {{ .Values.executionservice.enableRPIAuthentication | quote }}
         - name: RealtimeAPIAddressOverride
-          value: "http://{{ .Values.realtimeapi.name }}"
+          value: "http://{{ .Values.realtimeapi.name }}:{{ .Values.realtimeapi.service.port }}"
         - name: RPI__SMTP__EmailSenderAddress
           value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
         - name: RPI__SMTP__Address
@@ -389,6 +462,7 @@ spec:
         image: {{ .Values.global.deployment.images.executionservice }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         name: rpi-executionservice
+        {{- if .Values.executionservice.probes.enabled }}
         livenessProbe:
           httpGet:
             path: /health/live
@@ -412,25 +486,16 @@ spec:
             port: 8080
           failureThreshold: {{ .Values.executionservice.startupProbe.failureThreshold }}
           periodSeconds: {{ .Values.executionservice.startupProbe.periodSeconds }}
-        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
+          initialDelaySeconds: {{ .Values.executionservice.startupProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.executionservice.startupProbe.timeoutSeconds }}
+        {{- end }}
         lifecycle:
           postStart:
             exec:
-              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        lifecycle:
-          postStart:
-            exec:
-              command: ["/bin/sh", "-c", "cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini"]
-        {{- end }}
-        {{- end }}
-        {{- if .Values.executionservice.autoscaling.enabled }}
-        {{- if eq .Values.executionservice.autoscaling.type "keda" }}
-        lifecycle:
+              command:
+                - /bin/sh
+                - -c 
+                - cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini
           preStop:
             exec:
               command:
@@ -452,8 +517,6 @@ spec:
                     echo "[preStop] Still executing ($count tasks). Sleeping..."
                     sleep 5
                   done
-        {{- end }}
-        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -471,58 +534,46 @@ spec:
         {{- end }}
         {{- if .Values.executionservice.resources.enabled }}
         resources:
-          {{- if .Values.executionservice.resources.limits }}
+          {{- if and .Values.executionservice.resources.limits (ne .Values.executionservice.resources.limits.enabled false) }}
           limits:
-            {{- if .Values.executionservice.resources.limits.cpu }}
-            cpu: {{ .Values.executionservice.resources.limits.cpu }}
+            {{- with .Values.executionservice.resources.limits.cpu }}
+            cpu: {{ . }}
             {{- end }}
-            {{- if .Values.executionservice.resources.limits.memory }}
-            memory: {{ .Values.executionservice.resources.limits.memory }}
+            {{- with .Values.executionservice.resources.limits.memory }}
+            memory: {{ . }}
             {{- end }}
           {{- end }}
-          {{- if .Values.executionservice.resources.requests }}
+          {{- if and .Values.executionservice.resources.requests (ne .Values.executionservice.resources.requests.enabled false) }}
           requests:
-            {{- if .Values.executionservice.resources.requests.cpu }}
-            cpu: {{ .Values.executionservice.resources.requests.cpu }}
+            {{- with .Values.executionservice.resources.requests.cpu }}
+            cpu: {{ . }}
             {{- end }}
-            {{- if .Values.executionservice.resources.requests.memory }}
-            memory: {{ .Values.executionservice.resources.requests.memory }}
+            {{- with .Values.executionservice.resources.requests.memory }}
+            memory: {{ . }}
             {{- end }}
-          {{- end }}
+        {{- end }}
         {{- end }}
         volumeMounts:
+          - name: odbc-config
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          - name: odbcini
+            mountPath: /odbc-config
           - name: tempstore
             mountPath: /tmp
-          {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-          {{- if .Values.databases.datawarehouse.enabled }}
-          - name: odbc-config
-            mountPath: /app/odbc-config/odbc2.ini
-            subPath: odbc2.ini
-          - name: odbcini
-            mountPath: /odbc-config
-          {{- end }}
-          {{- end }}
-          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-          {{- if .Values.databases.datawarehouse.enabled }}
-          - name: odbc-config
-            mountPath: /app/odbc-config/odbc2.ini
-            subPath: odbc2.ini
-          - name: odbcini
-            mountPath: /odbc-config
-          {{- end }}
-          {{- end }}
-          {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-          {{- if .Values.databases.datawarehouse.enabled }}
-          {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
-          - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
-            mountPath: "{{ .Values.databases.datawarehouse.bigquery.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.bigquery.keyName }}"
-            subPath: "{{ .Values.databases.datawarehouse.bigquery.keyName }}"
+          {{- if .Values.databases.datawarehouse.bigquery.enabled }}
+          {{- range .Values.databases.datawarehouse.bigquery.connections }}
+          {{- if eq .credentialsType "serviceAccount" }}
+          - name: {{ .configMapName | quote }}
+            mountPath: {{ .ConfigMapFilePath }}/{{ .keyName }}
+            subPath: {{ .keyName }}
+            readOnly: true
           {{- end }}
           {{- end }}
           {{- end }}
-          {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
-          {{- if .Values.databases.datawarehouse.enabled }}
-          - name: snowflake-creds
+          {{- if .Values.databases.datawarehouse.snowflake.enabled }}
+          {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
+          - name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
             mountPath: "{{ .Values.databases.datawarehouse.snowflake.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}"
             subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
           {{- end }}
@@ -540,40 +591,26 @@ spec:
             mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
       volumes:
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0777
+        - name: odbcini
+          emptyDir: {}
         - name: tempstore
           emptyDir: {}
-        {{- if eq .Values.databases.datawarehouse.provider "redshift" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        - name: odbc-config
+        {{- if .Values.databases.datawarehouse.bigquery.enabled }}
+        {{- range .Values.databases.datawarehouse.bigquery.connections }}
+        {{- if eq .credentialsType "serviceAccount" }}
+        - name: {{ .configMapName | quote }}
           configMap:
-            name: odbc-config
-            defaultMode: 0777
-        - name: odbcini
-          emptyDir: {}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        - name: odbc-config
-          configMap:
-            name: odbc-config
-            defaultMode: 0777
-        - name: odbcini
-          emptyDir: {}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.databases.datawarehouse.provider "bigquery" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        {{- if eq .Values.databases.datawarehouse.bigquery.credentialsType "serviceAccount" }}
-        - name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
-          configMap:
-            name: {{ .Values.databases.datawarehouse.bigquery.configMapName | quote }}
+            name: {{ .configMapName | quote }}
         {{- end }}
         {{- end }}
         {{- end }}
-        {{- if eq .Values.databases.datawarehouse.provider "snowflake" }}
-        {{- if .Values.databases.datawarehouse.enabled }}
-        - name: snowflake-creds
+        {{- if .Values.databases.datawarehouse.snowflake.enabled }}
+        {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
+        - name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
           configMap:
             name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
         {{- end }}
@@ -605,3 +642,4 @@ spec:
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
 {{- end }}
+

@@ -3,10 +3,13 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.deploymentapi.name }}
+  name: rpi-deploymentapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-deploymentapi
+    app.kubernetes.io/name: rpi-deploymentapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
   {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -32,10 +35,13 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.deploymentapi.name }}
+  name: rpi-deploymentapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-deploymentapi
+    app.kubernetes.io/name: rpi-deploymentapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
@@ -43,16 +49,19 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    app: rpi-deploymentapi
+    app.kubernetes.io/name: rpi-deploymentapi
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.deploymentapi.name }}
+  name: rpi-deploymentapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-deploymentapi
+    app.kubernetes.io/name: rpi-deploymentapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
     {{- with .Values.deploymentapi.customLabels }}
     {{- toYaml . | nindent 4 }} 
     {{- end }}
@@ -60,11 +69,14 @@ spec:
   replicas: {{ .Values.deploymentapi.replicas }}
   selector:
     matchLabels:
-      app: rpi-deploymentapi
+      app.kubernetes.io/name: rpi-deploymentapi
   template:
     metadata:
       labels:
-        app: rpi-deploymentapi
+        app.kubernetes.io/name: rpi-deploymentapi
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.deploymentapi.customLabels }}
         {{- toYaml . | nindent 8 }} 
         {{- end }}
@@ -82,7 +94,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ .Values.deploymentapi.name }}
+      serviceAccountName: rpi-deploymentapi
       {{- if .Values.securityContext.enabled }}
       securityContext:
         runAsUser: {{ .Values.securityContext.runAsUser }}
@@ -90,6 +102,23 @@ spec:
         fsGroup: {{ .Values.securityContext.fsGroup }}
         runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
       {{- end }}
+      terminationGracePeriodSeconds: 120
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-deploymentapi
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-deploymentapi
       containers:
       - name: rpi-deploymentapi
         image: {{ .Values.global.deployment.images.deploymentapi }}:{{ .Values.global.deployment.images.tag }}
@@ -229,31 +258,40 @@ spec:
           protocol: TCP
         {{- if .Values.deploymentapi.resources.enabled }}
         resources:
-          {{- if .Values.deploymentapi.resources.limits }}
+          {{- if and .Values.deploymentapi.resources.limits (ne .Values.deploymentapi.resources.limits.enabled false) }}
           limits:
-            {{- if .Values.deploymentapi.resources.limits.cpu }}
-            cpu: {{ .Values.deploymentapi.resources.limits.cpu }}
+            {{- with .Values.deploymentapi.resources.limits.cpu }}
+            cpu: {{ . }}
             {{- end }}
-            {{- if .Values.deploymentapi.resources.limits.memory }}
-            memory: {{ .Values.deploymentapi.resources.limits.memory }}
+            {{- with .Values.deploymentapi.resources.limits.memory }}
+            memory: {{ . }}
             {{- end }}
           {{- end }}
-          {{- if .Values.deploymentapi.resources.requests }}
+          {{- if and .Values.deploymentapi.resources.requests (ne .Values.deploymentapi.resources.requests.enabled false) }}
           requests:
-            {{- if .Values.deploymentapi.resources.requests.cpu }}
-            cpu: {{ .Values.deploymentapi.resources.requests.cpu }}
+            {{- with .Values.deploymentapi.resources.requests.cpu }}
+            cpu: {{ . }}
             {{- end }}
-            {{- if .Values.deploymentapi.resources.requests.memory }}
-            memory: {{ .Values.deploymentapi.resources.requests.memory }}
+            {{- with .Values.deploymentapi.resources.requests.memory }}
+            memory: {{ . }}
             {{- end }}
-          {{- end }}
+        {{- end }}
         {{- end }}
         volumeMounts:
           - name: tempstore
             mountPath: /tmp
+          {{- if .Values.deploymentapi.templateTenant.useTemplateFiles }}
+          - name: templatetenantfiles
+            mountPath: {{ .Values.deploymentapi.templateTenant.templateTenantFilesPath | quote }}
+          {{- end }}
       volumes:
         - name: tempstore
           emptyDir: {}
+        {{- if .Values.deploymentapi.templateTenant.useTemplateFiles }}
+        - name: templatetenantfiles
+          persistentVolumeClaim:
+            claimName: {{ .Values.deploymentapi.templateTenant.volumeClaimName | quote }}
+        {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
@@ -266,3 +304,10 @@ spec:
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
 {{- end }}
+
+
+
+
+
+
+

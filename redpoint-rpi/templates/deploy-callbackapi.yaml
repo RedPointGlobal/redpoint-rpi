@@ -3,10 +3,13 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Values.callbackapi.name }}
+  name: rpi-callbackapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-callbackapi
+    app.kubernetes.io/name: rpi-callbackapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
   {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -27,14 +30,36 @@ metadata:
 {{- end }}
 
 ---
+{{- if .Values.callbackapi.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-callbackapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  maxUnavailable: {{ .Values.callbackapi.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-callbackapi
+{{- end }}
+
+---
 {{- if .Values.callbackapi.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.callbackapi.name }}
+  name: rpi-callbackapi
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-callbackapi
+    app.kubernetes.io/name: rpi-callbackapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
@@ -42,15 +67,19 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    app: rpi-callbackapi
+    app.kubernetes.io/name: rpi-callbackapi
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.callbackapi.name }}
+  name: rpi-callbackapi
   namespace: {{ .Release.Namespace }}
   labels:
+    app.kubernetes.io/name: rpi-callbackapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
     app: rpi-callbackapi
     {{- with .Values.callbackapi.customLabels }}
     {{- toYaml . | nindent 4 }} 
@@ -61,11 +90,14 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app: rpi-callbackapi
+      app.kubernetes.io/name: rpi-callbackapi
   template:
     metadata:
       labels:
-        app: rpi-callbackapi
+        app.kubernetes.io/name: rpi-callbackapi
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.callbackapi.customLabels }}
         {{- toYaml . | nindent 8 }} 
         {{- end }}
@@ -88,7 +120,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ .Values.callbackapi.name }}
+      serviceAccountName: rpi-callbackapi
       {{- if .Values.securityContext.enabled }}
       securityContext:
         runAsUser: {{ .Values.securityContext.runAsUser }}
@@ -96,6 +128,23 @@ spec:
         fsGroup: {{ .Values.securityContext.fsGroup }}
         runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
       {{- end }}
+      terminationGracePeriodSeconds: 120
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-callbackapi
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-callbackapi
       containers:
       - env:
         - name: Logging__LogLevel__Default
@@ -118,7 +167,10 @@ spec:
         - name: RPI__Diagnostics__CopyToAzure__StorageAccount
           value: {{ .Values.diagnosticsMode.copytoAzureBlob.accountName | quote }}
         - name: RPI__Diagnostics__CopyToAzure__AccessKey
-          value: {{ .Values.diagnosticsMode.copytoAzureBlob.accessKey | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CopyToAzureBlobAccessKey
         - name: RPI__Diagnostics__CopyToAzure__ContainerName
           value: {{ .Values.diagnosticsMode.copytoAzureBlob.containerName | quote }}
         - name: RPI__Diagnostics__CopyToAzure__BlobServiceEndpoint
@@ -134,7 +186,10 @@ spec:
         - name: RPI__Diagnostics__CopyToSFTP__SecureFTPUsername
           value: {{ .Values.diagnosticsMode.copytoSftp.sftpUsername | quote }}
         - name: RPI__Diagnostics__CopyToSFTP__SecureFTPPassword
-          value: {{ .Values.diagnosticsMode.copytoSftp.sftpPassword | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CopyToSFTPSecureFTPPassword
         - name: RPI__Diagnostics__CopyToSFTP__PortNumber
           value: {{ .Values.diagnosticsMode.copytoSftp.sftpPort | quote }}
         - name: RPI__Diagnostics__UseSFTP
@@ -144,9 +199,9 @@ spec:
         {{- end }}
         {{- if .Values.diagnosticsMode.dotNetTools.enabled }}
         - name: DOTNET_BUNDLE_EXTRACT_BASE_DIR
-          value: {{ .Values.diagnosticsMode.dotNetTools.extraction_base_dir | quote }} 
+          value: {{ .Values.diagnosticsMode.dotNetTools.extractionBaseDir | quote }} 
         - name: RPI__Diagnostics__UseDotNetTools__Path
-          value: {{ .Values.diagnosticsMode.dotNetTools.path | quote }}
+          value: {{  .Values.diagnosticsMode.dotNetTools.path  | quote }}
         - name: RPI__Diagnostics__UseDotNetTools__UseCounters
           value: {{ .Values.diagnosticsMode.dotNetTools.useCounters | quote }}
         - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
@@ -382,15 +437,15 @@ spec:
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
           value: "Hostname"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
-          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.hostname | quote }}
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.hostname | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
           value: "VirtualHost"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
-          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.virtualhost | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
           value: "Username"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
-          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
+          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.username | quote }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
           value: "Password"
         {{- end }}
@@ -400,7 +455,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-              key: RABBITMQ_Password
+              key: RealtimeAPI_RabbitMQ_Password
         {{- end }}
         {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonmsk" }}
@@ -486,28 +541,26 @@ spec:
         {{- end }}
         {{- if .Values.callbackapi.resources.enabled }}
         resources:
-          {{- if .Values.callbackapi.resources.limits }}
+          {{- if and .Values.callbackapi.resources.limits (ne .Values.callbackapi.resources.limits.enabled false) }}
           limits:
-            {{- if .Values.callbackapi.resources.limits.cpu }}
-            cpu: {{ .Values.callbackapi.resources.limits.cpu }}
+            {{- with .Values.callbackapi.resources.limits.cpu }}
+            cpu: {{ . }}
             {{- end }}
-            {{- if .Values.callbackapi.resources.limits.memory }}
-            memory: {{ .Values.callbackapi.resources.limits.memory }}
+            {{- with .Values.callbackapi.resources.limits.memory }}
+            memory: {{ . }}
             {{- end }}
           {{- end }}
-          {{- if .Values.callbackapi.resources.requests }}
+          {{- if and .Values.callbackapi.resources.requests (ne .Values.callbackapi.resources.requests.enabled false) }}
           requests:
-            {{- if .Values.callbackapi.resources.requests.cpu }}
-            cpu: {{ .Values.callbackapi.resources.requests.cpu }}
+            {{- with .Values.callbackapi.resources.requests.cpu }}
+            cpu: {{ . }}
             {{- end }}
-            {{- if .Values.callbackapi.resources.requests.memory }}
-            memory: {{ .Values.callbackapi.resources.requests.memory }}
+            {{- with .Values.callbackapi.resources.requests.memory }}
+            memory: {{ . }}
             {{- end }}
           {{- end }}
         {{- end }}
         volumeMounts:
-          - name: tempstore
-            mountPath: /tmp
           {{- if .Values.cloudIdentity.enabled }}
           {{- if eq .Values.cloudIdentity.provider "Google" }}
           - name: {{ .Values.cloudIdentity.googleSettings.configMapName }}
@@ -516,8 +569,6 @@ spec:
           {{- end }}
           {{- end }}
       volumes:
-        - name: tempstore
-          emptyDir: {}
       {{- if .Values.cloudIdentity.enabled }}
       {{- if eq .Values.cloudIdentity.provider "Google" }}
         - name: {{ .Values.cloudIdentity.googleSettings.configMapName | quote }}
@@ -538,4 +589,606 @@ spec:
       {{- end }}
 {{- end }}
 
+# Multi Tenant RPI 
+---
+{{- if .Values.callbackapi.multitenancy.enabled }}
+{{- if .Values.callbackapi.serviceAccount.enabled }}
+{{- if .Values.callbackapi.enabled }}
+{{- range $instanceIndex, $instance := .Values.callbackapi.instances }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rpi-callbackapi-{{ $instance.name}}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: rpi-callbackapi-{{ $instance.name}}
+  {{- if eq $.Values.global.deployment.platform "azure" }}
+  {{- if $.Values.cloudIdentity.enabled }}
+  {{- if eq $.Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ $.Values.cloudIdentity.azureSettings.managedIdentityClientId | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq $.Values.global.deployment.platform "google" }}
+  {{- if $.Values.cloudIdentity.enabled }}
+  {{- if eq $.Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ $.Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 
+---
+{{- if .Values.callbackapi.multitenancy.enabled }}
+{{- if .Values.callbackapi.enabled }}
+{{- range $instance := .Values.callbackapi.instances }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-callbackapi-{{ $instance.name}}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: rpi-callbackapi-{{ $instance.name}}
+spec:
+  ports:
+  - name: http
+    port: {{ $.Values.callbackapi.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: rpi-callbackapi-{{ $instance.name}}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.callbackapi.multitenancy.enabled }}
+{{- if .Values.callbackapi.enabled }}
+{{- range $instance := .Values.callbackapi.instances }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-callbackapi-{{ $instance.name}}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: rpi-callbackapi-{{ $instance.name}}
+    {{- with $.Values.callbackapi.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+spec:
+  {{- if not $.Values.callbackapi.autoscaling.enabled }}
+  replicas: {{ $.Values.callbackapi.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: rpi-callbackapi-{{ $instance.name}}
+  template:
+    metadata:
+      labels:
+        app: rpi-callbackapi-{{ $instance.name}}
+        {{- with $.Values.callbackapi.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+        {{- if eq $.Values.global.deployment.platform "azure" }}
+        {{- if eq $.Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+        {{- end }}
+      annotations:
+        {{- with $.Values.callbackapi.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if $.Values.callbackapi.customMetrics.enabled }}
+        prometheus.io/scrape: {{ $.Values.callbackapi.customMetrics.prometheus_scrape | quote }}
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        {{- end }}
+    spec:
+      {{- if $.Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ $.Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ $.Values.callbackapi.name }}
+      {{- if $.Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ $.Values.securityContext.runAsUser }}
+        runAsGroup: {{ $.Values.securityContext.runAsGroup }}
+        fsGroup: {{ $.Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ $.Values.securityContext.runAsNonRoot }}
+      {{- end }}
+      terminationGracePeriodSeconds: 120
+      containers:
+      - env:
+        - name: Logging__LogLevel__Default
+          value: {{ $.Values.callbackapi.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ $.Values.callbackapi.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ $.Values.callbackapi.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ $.Values.callbackapi.logging.rpiError | quote }}
+        - name: Logging__Console__LogLevel__Default
+          value: {{ $.Values.callbackapi.logging.Console | quote }}
+        - name: CallbackServiceConfig__QueueEnabled
+          value: "true"
+        - name: RPI__DateTimeSource
+          value: {{ $.Values.databases.operational.dateTimeSource | quote }}
+        {{- if $.Values.diagnosticsMode.copytoAzureBlob.enabled }}
+        - name: RPI__Diagnostics__CopyToAzure__IsEnabled
+          value: "true"
+        - name: RPI__Diagnostics__CopyToAzure__StorageAccount
+          value: {{ $.Values.diagnosticsMode.copytoAzureBlob.accountName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AccessKey
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CopyToAzureBlobAccessKey
+        - name: RPI__Diagnostics__CopyToAzure__ContainerName
+          value: {{ $.Values.diagnosticsMode.copytoAzureBlob.containerName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__BlobServiceEndpoint
+          value: {{ $.Values.diagnosticsMode.copytoAzureBlob.blobServiceEndpoint | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__EnableCdn
+          value: {{ $.Values.diagnosticsMode.copytoAzureBlob.enableCdn | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AzureUseDataLakeStorageGen2
+          value: {{ $.Values.diagnosticsMode.copytoAzureBlob.UseDataLakeStorageGen2 | quote }}
+        {{- end }}
+        {{- if $.Values.diagnosticsMode.copytoSftp.enabled }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPHost
+          value: {{ $.Values.diagnosticsMode.copytoSftp.sftpHost | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPUsername
+          value: {{ $.Values.diagnosticsMode.copytoSftp.sftpUsername | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPPassword
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CopyToSFTPSecureFTPPassword
+        - name: RPI__Diagnostics__CopyToSFTP__PortNumber
+          value: {{ $.Values.diagnosticsMode.copytoSftp.sftpPort | quote }}
+        - name: RPI__Diagnostics__UseSFTP
+          value: "true"
+        - name: RPI__Diagnostics__CopyToSFTP__IsEnabled
+          value: "true"
+        {{- end }}
+        {{- if $.Values.diagnosticsMode.dotNetTools.enabled }}
+        - name: RPI__Diagnostics__UseDotNetTools__Path
+          value: {{  $.Values.diagnosticsMode.dotNetTools.path  | quote }}
+        - name: RPI__Diagnostics__UseDotNetTools__UseCounters
+          value: {{ $.Values.diagnosticsMode.dotNetTools.useCounters | quote }}
+        - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
+          value: '["System.Runtime", "Microsoft.Extensions.Diagnostics.ResourceMonitoring"]'
+        - name: RPI__Diagnostics__UseDotNetTools__UseGcDump
+          value: {{ $.Values.diagnosticsMode.dotNetTools.useGcDump | quote }}
+        {{- end }}
+        {{- if eq $.Values.global.deployment.platform "azure" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ $.Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath | quote }}
+        {{- end }}
+        {{- if eq $.Values.global.deployment.platform "amazon" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ $.Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath | quote }}
+        {{- end }}
+        {{- if eq $.Values.global.deployment.platform "selfhosted" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: {{ $.Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath | quote }}
+        {{- end }}
+        {{- if eq $.Values.global.deployment.platform "google" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueuePath
+          value: "{{ $.Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath }}/{{ $.Values.realtimeapi.queueProvider.queueNames.callbackServiceQueuePath }}"
+        {{- end }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__AllowedHosts
+          value: "*"
+        - name: CallbackServiceConfig__QueueProvider__ChannelLabel
+          value: {{ $.Values.callbackapi.channelLabel | quote }}
+        {{- if $.Values.cloudIdentity.enabled }}
+        {{- if eq $.Values.cloudIdentity.provider "Azure" }}
+        {{- if eq $.Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        - name: CloudIdentity__Azure__CredentialType
+          value: "AzureIdentity"
+        - name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
+          value: {{ $.Values.cloudIdentity.azureSettings.UseADTokenForDatabaseConnection | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if $.Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq $.Values.cloudIdentity.provider "Azure" }}
+        - name: KeyVault__Provider
+          value: "Azure"
+        - name: KeyVault__UseForAppSettings
+          value: {{ $.Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ $.Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        - name: KeyVault__AzureSettings__VaultURI
+          value: {{ $.Values.cloudIdentity.azureSettings.vaultUri | quote }}
+        - name: KeyVault__AzureSettings__AppSettingsVaultURI
+          value: {{ $.Values.cloudIdentity.azureSettings.appSettingsVaultUri | quote }}
+        - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
+          value: {{ $.Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.global.deployment.platform "google" }}
+        {{- if eq $.Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS 
+          value: "{{ $.Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ $.Values.cloudIdentity.googleSettings.keyName }}"
+        {{- end }}
+        {{- end }}
+        {{- if $.Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq $.Values.cloudIdentity.provider "Google" }}
+        - name: KeyVault__Provider
+          value: "Google"
+        - name: KeyVault__UseForAppSettings
+          value: {{ $.Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ $.Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if $.Values.cloudIdentity.enabled }}
+        {{- if eq $.Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+        - name: CloudIdentity__Amazon__AccessKeyId
+          value: {{ $.Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
+        - name: CloudIdentity__Amazon__SecretAccessKey
+          value: {{ $.Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if $.Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq $.Values.cloudIdentity.provider "Amazon" }}
+        - name: KeyVault__Provider
+          value: "Amazon"
+        - name: KeyVault__UseForAppSettings
+          value: {{ $.Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ $.Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.databases.operational.provider "sqlserver" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.databases.operational.provider "sqlserveronvm" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.databases.operational.provider "postgresql" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Amazon.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "AccessKey"
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: RealtimeAPI_QueueSettings_AccessKey
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "SecretKey"
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: RealtimeAPI_QueueSettings_SecretKey
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
+          value: "RegionEndpoint"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
+          value: {{ $.Values.cloudIdentity.amazonSettings.region | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
+          value: "VisibilityTimeout"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonsqs.visibilityTimeout | quote }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "azureservicebus" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Azure.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Azure.Server.AzureQueue.AzureServiceBusQueueFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "QueueType"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: "ServiceBus"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "ConnectionString"
+        {{- end }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "azureservicebus" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: RealtimeAPI_ServiceBus_ConnectionString
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Azure.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Azure.Server.AzureEventHubs.AzureEventHubsFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "EventHubName"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ $.Values.realtimeapi.queueProvider.azureeventhubs.eventHubName | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "EventHubConnectionString"
+        {{- end }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "azureeventhubs" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: RealtimeAPI_EventHub_ConnectionString
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "googlepubsub" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Google.Server"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "ProjectId"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ $.Values.realtimeapi.queueProvider.googlepubsub.projectId | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Resonance.RabbitMQAccess"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "Hostname"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ $.Values.realtimeapi.queueProvider.rabbitmq.hostname | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "VirtualHost"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          value: {{ $.Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
+          value: "Username"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
+          value: {{ $.Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
+          value: "Password"
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Value
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: RABBITMQ_Password
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonmsk" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
+          value: "RedPoint.Resonance.KafkaQueueAccess"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
+          value: "RedPoint.Resonance.KafkaQueueAccess.KafkaQueueFactory"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "BootstrapServers"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonmsk.bootstrapServers | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
+          value: "AccessKey"
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonmsk" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: RealtimeAPI_QueueSettings_AccessKey
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonmsk" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Key
+          value: "SecretKey"
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonmsk" }}
+        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__2__Value
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: RealtimeAPI_QueueSettings_SecretKey
+        {{- end }}
+        {{- end }}
+        {{- if eq $.Values.realtimeapi.queueProvider.provider "amazonmsk" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Key
+          value: "RegionEndpoint"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__3__Value
+          value: {{ $.Values.cloudIdentity.amazonSettings.region | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__4__Key
+          value: "Acks"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__4__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonmsk.Acks | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__5__Key
+          value: "CompressionType"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__5__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonmsk.CompressionType | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__6__Key
+          value: "MaxRetryAttempt"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__6__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonmsk.MaxRetryAttempt | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__7__Key
+          value: "BatchSize"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__7__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonmsk.BatchSize | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__8__Key
+          value: "LingerTime"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__8__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonmsk.LingerTime | quote }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__9__Key
+          value: "UseAwsMsk"
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__9__Value
+          value: {{ $.Values.realtimeapi.queueProvider.amazonmsk.UseAwsMsk | quote }}
+        {{- end }}
+        image: {{ $.Values.global.deployment.images.callbackapi }}:{{ $.Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  $.Values.global.deployment.images.imagePullPolicy }}
+        name: callbackapi
+        ports:
+        - name: http
+          containerPort: 8080
+        {{- if $.Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ $.Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ $.Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ $.Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range $.Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- if $.Values.callbackapi.resources.enabled }}
+        resources:
+          {{- if $.Values.callbackapi.resources.limits }}
+          limits:
+            {{- if $.Values.callbackapi.resources.limits.cpu }}
+            cpu: {{ $.Values.callbackapi.resources.limits.cpu }}
+            {{- end }}
+            {{- if $.Values.callbackapi.resources.limits.memory }}
+            memory: {{ $.Values.callbackapi.resources.limits.memory }}
+            {{- end }}
+          {{- end }}
+          {{- if $.Values.callbackapi.resources.requests }}
+          requests:
+            {{- if $.Values.callbackapi.resources.requests.cpu }}
+            cpu: {{ $.Values.callbackapi.resources.requests.cpu }}
+            {{- end }}
+            {{- if $.Values.callbackapi.resources.requests.memory }}
+            memory: {{ $.Values.callbackapi.resources.requests.memory }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        volumeMounts:
+          {{- if $.Values.cloudIdentity.enabled }}
+          {{- if eq $.Values.cloudIdentity.provider "Google" }}
+          - name: {{ $.Values.cloudIdentity.googleSettings.configMapName }}
+            mountPath: "/app/google-creds/{{ $.Values.cloudIdentity.googleSettings.configMapName }}.json"
+            subPath: "{{ $.Values.cloudIdentity.googleSettings.configMapName }}.json"
+          {{- end }}
+          {{- end }}
+      volumes:
+      {{- if $.Values.cloudIdentity.enabled }}
+      {{- if eq $.Values.cloudIdentity.provider "Google" }}
+        - name: {{ $.Values.cloudIdentity.googleSettings.configMapName | quote }}
+          configMap:
+            name: {{ $.Values.cloudIdentity.googleSettings.configMapName | quote }}
+      {{- end }}
+      {{- end }}   
+      {{- if $.Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ $.Values.nodeSelector.key }}: {{ $.Values.nodeSelector.value }}
+      {{- end }}
+      {{- if $.Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ $.Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ $.Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.callbackapi.autoscaling.enabled }}
+{{- if .Values.callbackapi.multitenancy.enabled }}
+{{- if .Values.callbackapi.enabled }}
+{{- if eq .Values.callbackapi.autoscaling.type "hpa" }}
+{{- range $instance := .Values.callbackapi.instances }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-callbackapi-{{ $instance.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app: rpi-callbackapi-{{ $instance.name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-callbackapi-{{ $instance.name }}
+  minReplicas: {{ $.Values.callbackapi.autoscaling.minReplicas }}
+  maxReplicas: {{ $.Values.callbackapi.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $.Values.callbackapi.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $.Values.callbackapi.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $.Values.callbackapi.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $.Values.callbackapi.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

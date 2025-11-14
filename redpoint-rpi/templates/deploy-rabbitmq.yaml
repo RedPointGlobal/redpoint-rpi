@@ -1,124 +1,125 @@
-{{- if .Values.realtimeapi.queueProvider.rabbitmq.internal }}
-apiVersion: v1
-kind: ServiceAccount
+---
+{{- if .Values.queuereader.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
 metadata:
-  name: rpi-rabbitmq
+  name: rpi-queuereader-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rabbitmq
+    app.kubernetes.io/name: rpi-queuereader-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  maxUnavailable: {{ .Values.queuereader.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-queuereader-rabbitmq
+{{- end }}
+
+---
+{{- if .Values.queuereader.realtimeConfiguration.isDistributed }}
+{{- if eq .Values.queuereader.realtimeConfiguration.distributedQueue.provider "rabbitmq" }}
+{{- if eq .Values.queuereader.realtimeConfiguration.distributedQueue.type "internal" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-queuereader-rabbitmq-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-queuereader-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+data:
+  rabbitmq.conf: |
+    # Default RabbitMQ configuration
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
+    loopback_users.guest = false
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: rpi-rabbitmq
+  name: rpi-queuereader-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rabbitmq
+    app.kubernetes.io/name: rpi-queuereader-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
+  clusterIP: None
   ports:
-  - name: http
-    port: 5672
-    protocol: TCP
-    targetPort: 5672
-  - name: console
-    port: 15672
-    protocol: TCP
-    targetPort: 15672
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
   selector:
-    app: rpi-rabbitmq
+    app.kubernetes.io/name: rpi-queuereader-rabbitmq
 
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: rpi-rabbitmq
+  name: rpi-queuereader-rabbitmq
   namespace: {{ .Release.Namespace }}
   labels:
-    app: rpi-rabbitmq
+    app.kubernetes.io/name: rpi-queuereader-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
-  replicas: {{ .Values.realtimeapi.queueProvider.rabbitmq.replicas }}
+  serviceName: rpi-queuereader-rabbitmq
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
   selector:
     matchLabels:
-      app: rpi-rabbitmq
+      app.kubernetes.io/name: rpi-queuereader-rabbitmq
   template:
     metadata:
       labels:
-        app: rpi-rabbitmq
+        app.kubernetes.io/name: rpi-queuereader-rabbitmq
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
     spec:
+      terminationGracePeriodSeconds: 90
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
-        - name: redpoint-rpi
-      serviceAccountName: rpi-rabbitmq
-      {{- if .Values.securityContext.enabled }}
-      securityContext:
-        runAsUser: {{ .Values.securityContext.runAsUser }}
-        runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        fsGroup: {{ .Values.securityContext.fsGroup }}
-        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      containers:
-      - name: rpi-rabbitmq
-        image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
-        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
-        ports:
-        - name: port-one
-          containerPort: 5672
-          protocol: TCP
-        - name: port-two
-          containerPort: 15672
-          protocol: TCP
-        {{- if .Values.securityContext.enabled }}
-        securityContext:
-          privileged: {{ .Values.securityContext.privileged }}
-          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
-          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
-          capabilities:
-            drop:
-            {{- range .Values.securityContext.capabilities.drop }}
-              - {{ . }}
-            {{- end }}
-        {{- end }}
-        {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.enabled }}
-        resources:
-          {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.limits }}
-          limits:
-            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.cpu }}
-            cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.cpu }}
-            {{- end }}
-            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.memory }}
-            memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.limits.memory }}
-            {{- end }}
-          {{- end }}
-          {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.requests }}
-          requests:
-            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.cpu }}
-            cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.cpu }}
-            {{- end }}
-            {{- if .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.memory }}
-            memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.resources.requests.memory }}
-            {{- end }}
-          {{- end }}
-        {{- end }}
-        env:
-        - name: RABBITMQ_DEFAULT_USER
-          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.username | quote }}
-        - name: RABBITMQ_DEFAULT_PASS
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-              key: RABBITMQ_Password
-        - name: RABBITMQ_DEFAULT_VHOST
-          value: {{ .Values.realtimeapi.queueProvider.rabbitmq.virtualHost | quote }}
-        livenessProbe:
-          exec:
-            command:
-            - "rabbitmq-diagnostics"
-            - "-q"
-            - "ping"
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 6
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rpi-queuereader"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-queuereader-rabbitmq
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-queuereader-rabbitmq
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
@@ -130,4 +131,312 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
+      containers:
+        - name: rpi-queuereader-rabbitmq
+          image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+              protocol: TCP
+            - name: management
+              containerPort: 15672
+              protocol: TCP
+          resources:
+            limits:
+              cpu: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.cpu }}
+              memory: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.cpu }}
+              memory: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.memory }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.username | quote }}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  key: QueueService_RabbitMQ_Password
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.virtualhost | quote }}
+            - name: RABBITMQ_CONFIG_FILE
+              value: "/config/rabbitmq.conf"
+          volumeMounts:
+            {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-queuereader-rabbitmq-data
+              mountPath: /data
+            {{- end }}
+            {{- if not .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-queuereader-rabbitmq-data
+              mountPath: /data
+            {{- end }}
+            - name: rpi-queuereader-rabbitmq-config
+              mountPath: /config
+          livenessProbe:
+            exec:
+              command:
+              - "rabbitmq-diagnostics"
+              - "-q"
+              - "ping"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- if .Values.securityContext.enabled }}
+          securityContext:
+            privileged: {{ .Values.securityContext.privileged }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+              {{- range .Values.securityContext.capabilities.drop }}
+                - {{ . }}
+              {{- end }}
+          {{- end }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+      {{- end }}
+      volumes:
+        - name: rpi-queuereader-rabbitmq-config
+          configMap:
+            name: rpi-queuereader-rabbitmq-config
+        {{- if not .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
+        - name: rpi-queuereader-rabbitmq-data
+          emptyDir: {}
+        {{- end }}
+  {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: rpi-queuereader-rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.storage | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+{{- if eq .Values.realtimeapi.queueProvider.rabbitmq.type "internal" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-realtimeapi-rabbitmq-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+data:
+  rabbitmq.conf: |
+    # Default RabbitMQ configuration
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
+    loopback_users.guest = false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-realtimeapi-rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  clusterIP: None
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+  selector:
+    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rpi-realtimeapi-rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  maxUnavailable: {{ .Values.realtimeapi.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rpi-realtimeapi-rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  serviceName: rpi-realtimeapi-rabbitmq
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: rpi
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    spec:
+      terminationGracePeriodSeconds: 90
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rpi-realtimeapi"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: rpi-realtimeapi-rabbitmq
+          image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+              protocol: TCP
+            - name: management
+              containerPort: 15672
+              protocol: TCP
+          resources:
+            limits:
+              cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.cpu }}
+              memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.cpu }}
+              memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.memory }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.username | quote }}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  key: RealtimeAPI_RabbitMQ_Password
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.virtualhost | quote }}
+            - name: RABBITMQ_CONFIG_FILE
+              value: "/config/rabbitmq.conf"
+          volumeMounts:
+            {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-realtimeapi-rabbitmq-data
+              mountPath: /data
+            {{- end }}
+            {{- if not .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
+            - name: rpi-realtimeapi-rabbitmq-data
+              mountPath: /data
+            {{- end }}
+            - name: rpi-realtimeapi-rabbitmq-config
+              mountPath: /config
+          livenessProbe:
+            exec:
+              command:
+              - "rabbitmq-diagnostics"
+              - "-q"
+              - "ping"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- if .Values.securityContext.enabled }}
+          securityContext:
+            privileged: {{ .Values.securityContext.privileged }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+              {{- range .Values.securityContext.capabilities.drop }}
+                - {{ . }}
+              {{- end }}
+          {{- end }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+      {{- end }}
+      volumes:
+        - name: rpi-realtimeapi-rabbitmq-config
+          configMap:
+            name: rpi-realtimeapi-rabbitmq-config
+        {{- if not .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
+        - name: rpi-realtimeapi-rabbitmq-data
+          emptyDir: {}
+        {{- end }}
+  {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: rpi-realtimeapi-rabbitmq-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.storage | quote }}
+  {{- end }}
+{{- end }}
 {{- end }}

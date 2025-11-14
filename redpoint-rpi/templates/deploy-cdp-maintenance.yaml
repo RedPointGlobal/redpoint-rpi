@@ -1,0 +1,213 @@
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cdp-maintenance
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-maintenance
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+{{- if .Values.maintenanceservice.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cdp-maintenance
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-maintenance
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  minAvailable: {{ .Values.maintenanceservice.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-maintenance
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.dataActivation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-maintenance
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-maintenance
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.maintenanceservice.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: cdp-maintenance
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cdp-maintenance
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-maintenance
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  replicas: {{ .Values.maintenanceservice.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cdp-maintenance
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cdp-maintenance
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.maintenanceservice.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: cdp-maintenance
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: cdp-maintenance
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: cdp-maintenance
+      containers:
+      - name: cdp-maintenance
+        image: {{ .Values.global.deployment.images.cdpmaintenanceservice }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /api-rg1-maintenance/v1/healthcheck
+            port: 8080
+          periodSeconds: {{ .Values.maintenanceservice.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.maintenanceservice.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.maintenanceservice.livenessProbe.failureThreshold }}
+        startupProbe:
+          httpGet:
+            path: /api-rg1-maintenance/v1/healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: {{ .Values.maintenanceservice.startupProbe.periodSeconds }}
+          failureThreshold: {{ .Values.maintenanceservice.startupProbe.failureThreshold }}
+        {{- if .Values.maintenanceservice.resources.enabled }}
+        resources:
+          {{- if and .Values.maintenanceservice.resources.limits (ne .Values.maintenanceservice.resources.limits.enabled false) }}
+          limits:
+            {{- with .Values.maintenanceservice.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.maintenanceservice.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and .Values.maintenanceservice.resources.requests (ne .Values.maintenanceservice.resources.requests.enabled false) }}
+          requests:
+            {{- with .Values.maintenanceservice.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with .Values.maintenanceservice.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        ports: 
+        - containerPort: 8080 
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          privileged: {{ .Values.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range .Values.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        env: 
+        - name: SOCKETIO_HOST
+          value: "cdp-socketio"
+        - name: SOCKETIO_PORT
+          value: {{ .Values.socketio.port | quote }}
+        - name: MONGODB_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Mongo_ConnectionString
+        - name: MONGODB_MERCURY_DB
+          value: {{ .Values.initservice.database.operational.name | quote }}
+        - name: API_BASE_URL
+          value: "https://{{ .Values.ingress.hosts.webui }}.{{ .Values.ingress.domain }}"
+        - name: AUTH_BASE_URL
+          value: "http://cdp-authservice/"
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+

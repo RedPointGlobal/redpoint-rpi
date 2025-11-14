@@ -1,9 +1,9 @@
-![rp_cdp_logo](https://github.com/RedPointGlobal/redpoint-rpi/assets/42842390/432d779f-de4e-4936-80fe-3caa4d732603)
+![redpoint_logo](assets/images/logo.png)
 ## Redpoint Interaction (RPI) | Deployment on Kubernetes
 With Redpoint® Interaction you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
 
 This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
-![RPI v7 (3)](https://github.com/user-attachments/assets/376b5fd2-315e-4bb6-9476-774bea85b24b)
+![cover](assets/images/diagram.png)
 ### Table of Contents
 - [System Requirements ](#system-requirements)
 - [Considerations Before you begin ](#considerations-before-you-begin)
@@ -16,9 +16,12 @@ This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
 - [Configure Realtime](#configure-realtime)
 - [Configure Secrets Management](#configure-secrets-management)
 - [Configure Open ID Connect](#configure-open-id-connect)
+- [Configure Microsoft Entra ID](#configure-microsoft-entra-id)
 - [Configure Content Generation Tools](#configure-content-generation-tools)
 - [Configure Custom Metrics](#configure-custom-metrics)
 - [Configure Autoscaling](#configure-autoscaling)
+- [Enable Data Activation](#enable-data-activation)
+- [Customizing This Helm Chart](#customizing-this-helm-chart)
 - [RPI Documentation](#rpi-documentation)
 - [Getting Support](#getting-support)
 
@@ -53,8 +56,7 @@ Before deploying RPI, determine whether you're planning a Greenfield deployment 
 
 - **Upgrade Deployment:** RPI is deployed in an existing version 6.x environment. This means using the existing cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup. The upgrade from RPI v6.x to RPI v7.x is more involved. Before attempting to upgrade, be sure to read the [Redpoint Interaction upgrade path](https://docs.redpointglobal.com/bpd/upgrade-to-rpi-v7-x)
 
-![upgrade-start](https://github.com/user-attachments/assets/c6e517ed-89ba-4045-8686-c5ad8bc8c9a2)
-
+![cover](assets/images/upgrade.png)
 - **Greenfield Deployment:** RPI is deployed in a completely new environment. This means the creation of a new cluster, tenant, operations and logging databases, cache and queue providers. All these components are deployed from scratch, independent of any existing deployments.
 
 Both deployment methods require you deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Greenfield Deployment Configuration](#post-greenfield-deployment-configuration) and [Post Upgrade Deployment Configuration](#post-upgrade-deployment-configuration) sections below.
@@ -746,13 +748,50 @@ RPI stores certain tenant level settings in the operational databases. When clon
 
 ```Channels >  Channel name```:  Update relevant configuration to match your v7 requirements
 
+### Configure Microsoft Entra ID
+RPI supports Microsoft Entra ID (formerly Azure AD) authentication for secure access and single sign-on. Before enabling Microsoft Entra ID authentication in RPI, you must complete the following setup in the Azure Portal:
+
+**1. Register the Interaction Client**
+
+In the Azure Portal, navigate to Microsoft Entra ID → App registrations
+
+- Create New registration.
+- Name the app ```interaction-client``` and make note of the ```Client ID``` and ```Tenant ID```.
+- Go to the Authentication section.
+- Under Redirect URIs, add a new entry of type (Mobile & Desktop) with the following value ```ms-appx-web://Microsoft.AAD.BrokerPlugin/{Client ID}```. 
+- Replace ```{Client ID}``` with the application ID from the ```interaction-client``` app registration.
+
+**2. Register the Interaction API**
+
+- Create another New App registration 
+- Name the app ```interaction-api``` and make note of the ```Client ID``` and ```Tenant ID```.
+- Select Add Application ID URI, then create a custom scope named ```Interaction.Clients```.
+- Set the Name/Description value to ```Access RPI```
+- Set Who can consent value to  ```Admins and users```
+- Under Authorized client applications, add the Interaction Client’s ```Client ID```.
+
+**3. Enable Microsoft Entra ID in the Helm Chart**
+
+Once the above prerequisites are complete, enable Microsoft Entra ID authentication in your RPI deployment by updating your ```values.yaml```.
+
+```
+MicrosoftEntraID:
+  enabled: true
+  name: Microsoft
+  interaction_client_id: < interaction-client Client ID >
+  interaction_api_id: < interaction-api Client ID >
+  tenant_id: < azure tenant id >
+```
+
+**NOTE:** To sign in with Microsoft Entra ID, make sure your RPI account uses the same email address as your Entra ID username for example, ```first.last@example.com```
+
 ### Configure Open ID Connect
-RPI supports the use of the AzureAD, Okta, and KeyCloak [OpenID connection (OIDC) providers](https://docs.redpointglobal.com/rpi/admin-appendix-b-open-id-connect-oidc-configuratio) to authenticate users accessing RPI. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file as shown in the example below. Adjust these values to match your environment's configuration
+RPI supports the use of [OpenID connection (OIDC) providers](https://docs.redpointglobal.com/rpi/admin-appendix-b-open-id-connect-oidc-configuratio) to authenticate users accessing RPI. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file as shown in the example below. Adjust these values to match your environment's configuration
 
 ```
 OpenIdProviders:
   enabled: true
-  name: AzureAD
+  name: Keycloak
 ```
 
 ### Configure Security Context
@@ -956,16 +995,126 @@ executionservice:
 NAME                   SCALETARGETKIND          SCALETARGETNAME        MIN   MAX   READY
 rpi-executionservice   apps/v1.Deployment       rpi-executionservice   2     10    True  
 ```
+### Enable Data Activation
+
+The RPI Data Activation feature enables additional RPI Web UI components required for integration with RPI services.
+
+When ```dataActivation.enabled``` is set to ```true``` in the ```values.yaml```, the following nine services are deployed:
+ 
+- ```cdp-authservices```
+- ```cdp-cache```
+- ```cdp-initservice```
+- ```keycloak```
+- ```cdp-maintenanceservice```
+- ```cdp-messageq```
+- ```cdp-servicesapi```
+- ```cdp-socketio```
+- ```cdp-ui```
+ 
+By default, these services are disabled and are only deployed when the ```dataActivation.enabled``` flag is explicitly set to ```true```.
+
+**Prerequisites**
+
+Before enabling Data Activation, an administrator must ensure that a service account has been created within RPI. This account is used by the CDP Web UI components to authenticate and communicate with the RPI Integration API.
+
+The service account must be a member of the following RPI groups:
+
+- ```Everyone```
+- ```IntegrationAPI```
+- ```Cluster Administrators```
+
+**Example Configuration**
+
+To enable RPI Data Activation, set the following configuration in the ```values.yaml```
+
+```
+dataActivation:
+  enabled: true
+
+```
+
+After enabling, restart all RPI and Web UI pods in the namespace to ensure that all related services are properly deployed and initialized. The Web UI will be automatically exposed via Ingress. To customize the Web UI endpoint, specify the desired configuration in the same ```values.yaml``` file:
+
+```
+ingress:
+  dataactivation: rpi-webui
+```
+
+### Customizing This Helm Chart
+
+Common settings like image overrides, annotations, security contexts, and required fields are already supported and documented directly in ```values.yaml```. However, the chart is also designed to be extensible so that you can safely apply your own specific customizations without modifying the chart’s ```templates/``` directory.
+
+Below are the recommended and most common approaches for customizing a Helm chart in a safe upgrade friendly way.
+
+**1. Customize Using values.yaml (Preferred & Most Stable)**
+
+Helm is designed for values based customization. Redpoint will attempt to keep values stable across versions so your overrides continue to work. Whenever possible, use standard Helm mechanisms. 
+
+- Create your own ```values.yaml``` file (e.g., ```dev-values.yaml```, ```prod-values.yaml``` etc )
+- Update the default entries in the ```values.yaml``` with the appropriate settings for your deployment.
+
+**2. Use Kustomize to Patch the Rendered Manifests**
+
+If you need changes that Helm does not expose through values, you can use **Kustomize** to apply modifications to the chart’s rendered output. More information about Kustomize is available [Here](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) and [Here](https://kustomize.io/) 
+
+When to use Kustomize:
+
+- Adding annotations/labels
+- Injecting environment variables
+- Adding sidecars
+- Tweaking resource fields not exposed through values.yaml
+
+Kustomize also supports JSON 6902 patches when strategic merge is not precise enough. This is demonstrated in the example below.
+
+```
+patchesJson6902:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: rpi
+    patch: |
+      - op: add
+        path: /spec/template/metadata/annotations/example
+        value: "true"
+```
+To ensure smooth upgrades, Do not edit anything under:
+
+```
+templates/
+charts/
+Chart.yaml
+values.yaml  (except for local copies)
+
+```
+Instead, keep all customizations in your own directory, e.g.
+
+```
+customizations/
+  my-values.yaml
+  kustomization.yaml
+  patches/
+    add-sidecar.yaml
+    add-annotations.json
+
+```
+**Best Practices to Prevent Breakage During Upgrades**
+- Prefer ```values.yaml``` overrides first as these are designed to be stable.
+- Target patches narrowly by patching specific resources/fields, not entire objects.
+- Avoid relying on exact line/field ordering and rely on patch paths instead.
+- Test upgrades in a staging environment with ```helm template ... | kustomize build ... | kubectl diff -f -```
+- Review the chart’s CHANGELOG before applying a new version.
+- Avoid patching highly volatile areas such as auto generated names.
+
+**3. When You Need Something Not Currently Supported**
+
+If you find you are patching a field that could reasonably be exposed as a Helm value, please open an issue at ```support@redpointglobal.com``` so that Redpoint can make the customization easier via the standard Helm ```values.yam``` pattern.
 
 ### RPI Documentation
 To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit the [RPI Documentation Site ](https://docs.redpointglobal.com/rpi/)
 
 ### Getting Support 
 If you encounter any challenges specific to the RPI application, our dedicated support team is here to assist you. Please reach out to us with details of the issue for prompt and expert help using [support@redpointglobal.com](support@redpointglobal.com)
-
-### Helm Chart Customization
-
-Common settings like image overrides, annotations, security contexts, and required fields are already supported and documented directly in ```values.yaml```. No need to modify templates just update the values file accordingly.
 
 ```Note on Scope of Support```
 While we are fully equipped to address issues directly related to the RPI application, please be aware that challenges pertaining to Kubernetes configurations, network connectivity, or other external system issues fall outside our support scope. For these, we recommend consulting with your IT infrastructure team or seeking assistance from relevant technical forums.
