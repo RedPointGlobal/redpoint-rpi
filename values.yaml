@@ -26,9 +26,8 @@ global:
       # Optional: If using external (BYO) ingress controller, this is not needed
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
       # Optional: Only required for network-related troubleshooting/debugging.
-      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
-      rediscommander: rg1acrpub.azurecr.io/docker/redpointglobal/releases/redis-commander:latest
-      # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
+      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest 
+      # Optional: Only required for if Data Activation is enabled.     
       cdpauthservices: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-authservice
       cdpinitservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-init
       cdpservicesapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-servicesapi
@@ -36,6 +35,7 @@ global:
       cdpsocketio: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-socketio
       cdpmaintenanceservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-maintenance
       keycloak: rg1acrpub.azurecr.io/docker/redpointglobal/releases/keycloak
+      # Specific version to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
       tag: 7.6.20251107.936
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
