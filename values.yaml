@@ -1786,6 +1786,10 @@ redpointAI:
     BlobFolder: my_blob_container_folder_name
 
 # ==========================
+#**ADVISORY:** 
+# Do not enable Data Activation at this time. 
+# Please leave ```DataActivation.enabled=false``` until further notice.
+# - Functionality requires separate licensing. Contact your Redpoint representative for details.
 dataActivation:
   # Enables RPI - Smart Activation (Web UI)
   enabled: false

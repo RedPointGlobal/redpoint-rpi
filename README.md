@@ -997,7 +997,9 @@ rpi-executionservice   apps/v1.Deployment       rpi-executionservice   2     10 
 ```
 ### Enable Data Activation
 
-The RPI Data Activation feature enables additional RPI Web UI components required for integration with RPI services.
+**ADVISORY:** Do not enable Data Activation at this time. Please leave ```DataActivation.enabled=false``` in your values.yaml file until further notice.
+
+The RPI Data Activation feature enables additional RPI Web UI components required for integration with RPI services. This functionality requires a separate license. Before enabling it, please contact your Redpoint representative for more information
 
 When ```dataActivation.enabled``` is set to ```true``` in the ```values.yaml```, the following nine services are deployed:
  
