@@ -1,4 +1,4 @@
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -7,7 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-socketio
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
@@ -28,7 +28,7 @@ metadata:
 {{- end }}
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 {{- if .Values.socketio.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -48,8 +48,33 @@ spec:
 {{- end }} 
 {{- end }}
 
+
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.socketio.enabled }}
+{{- if eq .Values.socketio.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-socketio-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-socketio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: smartactivation
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.socketio.service.port }}
+    protocol: TCP
+    targetPort: 8930
+  selector:
+    app.kubernetes.io/name: cdp-socketio
+{{- end }} 
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -58,39 +83,53 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-socketio
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
-    port: {{ .Values.socketio.port }}
+    port: {{ .Values.socketio.service.port }}
     protocol: TCP
     targetPort: 8930
   selector:
     app.kubernetes.io/name: cdp-socketio
 
 ---
+{{- if eq .Values.socketio.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.socketio.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: cdp-socketio
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: cdp-socketio
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   replicas: {{ .Values.socketio.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: cdp-socketio
+  {{- if eq .Values.socketio.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: cdp-socketio
+      previewService: cdp-socketio-preview
+      autoPromotionEnabled: {{ .Values.socketio.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.socketio.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: cdp-socketio
         app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/part-of: smartactivation
         app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.socketio.customLabels }}
         {{- toYaml . | nindent 8 }} 
@@ -172,7 +211,7 @@ spec:
         - name: KEYCLOAK_HOST
           value: {{ .Values.keycloak.hostname | quote }}
         - name: KEYCLOAK_PORT
-          value: {{ .Values.keycloak.port | quote }}
+          value: {{ .Values.keycloak.service.port | quote }}
         - name: MONGO_CONNECTION_STRING
           valueFrom:
             secretKeyRef:

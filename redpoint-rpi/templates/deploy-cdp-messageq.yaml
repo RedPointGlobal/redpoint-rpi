@@ -1,4 +1,4 @@
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 {{- if .Values.messageq.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -19,7 +19,7 @@ spec:
 {{- end }}
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -119,20 +119,20 @@ spec:
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: cdp-messageq
-      {{- if .Values.messageq.nodeSelector.enabled }}
+      {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
-        {{ .Values.messageq.nodeSelector.key }}: {{ .Values.messageq.nodeSelector.value }}
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
       {{- end }}
-      {{- if .Values.messageq.tolerations.enabled }}
+      {{- if .Values.tolerations.enabled }}
       tolerations:
         - effect: NoSchedule
-          key: {{ .Values.messageq.nodeSelector.key }}
+          key: {{ .Values.nodeSelector.key }}
           operator: Equal
-          value: {{ .Values.messageq.nodeSelector.value }}
+          value: {{ .Values.nodeSelector.value }}
       {{- end }}
       containers:
         - name: cdp-messageq
-          image: {{ .Values.global.deployment.images.messageq }}:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.cdpmessageq }}:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
           ports:
             - name: amqp

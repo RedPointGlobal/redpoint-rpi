@@ -48,6 +48,30 @@ spec:
 
 ---
 {{- if .Values.realtimeapi.enabled }}
+{{- if eq .Values.realtimeapi.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-realtimeapi-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-realtimeapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.realtimeapi.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: rpi-realtimeapi
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.realtimeapi.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -68,8 +92,14 @@ spec:
     app.kubernetes.io/name: rpi-realtimeapi
 
 ---
+{{- if eq .Values.realtimeapi.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.realtimeapi.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: rpi-realtimeapi
   namespace: {{ .Release.Namespace }}
@@ -88,6 +118,14 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: rpi-realtimeapi
+  {{- if eq .Values.realtimeapi.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: rpi-realtimeapi
+      previewService: rpi-realtimeapi-preview
+      autoPromotionEnabled: {{ .Values.realtimeapi.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.realtimeapi.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
@@ -119,6 +157,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.realtimeapi.terminationGracePeriodSeconds }}
       serviceAccountName: rpi-realtimeapi
       {{- if .Values.securityContext.enabled }}
       securityContext:
@@ -131,7 +170,6 @@ spec:
           {{- toYaml . | nindent 10 }}
           {{- end }}
       {{- end }}
-      terminationGracePeriodSeconds: 120
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -177,6 +215,7 @@ spec:
             timeoutSeconds: {{ .Values.realtimeapi.startupProbe.timeoutSeconds }}
           image: {{ .Values.global.deployment.images.realtimeapi }}:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
+          {{- if .Values.databases.datawarehouse.autoCreateSecrets }}
           lifecycle:
             postStart:
               exec:
@@ -184,6 +223,7 @@ spec:
                   - /bin/sh
                   - -c 
                   - cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini
+          {{- end }}
           ports:
           - containerPort: 8080
             name: web-port
@@ -331,20 +371,30 @@ spec:
             value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
           {{- end }}
           {{- end }}
-          {{- if .Values.cloudIdentity.enabled }}
-          {{- if eq .Values.cloudIdentity.provider "Amazon" }}
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-          - name: CloudIdentity__Amazon__AccessKeyId
-            value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
-          - name: CloudIdentity__Amazon__SecretAccessKey
-            value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+          {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+          {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                key: AWS_SM_Access_Key_ID
+                name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                key: AWS_SM_Secret_Access_Key
+                name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+          - name: AWS_REGION
+            value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
           {{- end }}
           {{- end }}
           {{- end }}
           {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-          {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
           - name: KeyVault__Provider
             value: "Amazon"
+          - name: KeyVault__AmazonSettings__AppSettingsTag
+            value: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.secretTagKey | quote }}
           - name: KeyVault__UseForAppSettings
             value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
           - name: KeyVault__UseForConfigPasswords
@@ -459,8 +509,10 @@ spec:
             value: "PostgreSQL"
           {{- end }}
           {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }} 
           - name: RealtimeAPIConfiguration__AppSettings__PluginAssemblyPath
             value: {{ .Values.storage.persistentVolumeClaims.Plugins.mountPath | quote }}
+          {{- end }}
           - name: RealtimeAPIConfiguration__AppSettings__IsWebFormProcessorOnly
             value: "false"
           - name: RealtimeAPIConfiguration__AppSettings__MessageDaysExpiry
@@ -570,11 +622,11 @@ spec:
             value: "RedPoint.Amazon.Server"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Type
             value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
-          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key
-            value: "AccessKey"
           {{- if eq .Values.realtimeapi.queueProvider.amazonsqs.credentialsType "accessKey" }}
           {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
           {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key
+            value: "AccessKey"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value
             valueFrom:
               secretKeyRef:
@@ -583,11 +635,11 @@ spec:
           {{- end }}
           {{- end }}
           {{- end }}
-          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key
-            value: "SecretKey"
           {{- if eq .Values.realtimeapi.queueProvider.amazonsqs.credentialsType "accessKey" }}
           {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
           {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+          - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key
+            value: "SecretKey"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value
             valueFrom:
               secretKeyRef:
@@ -604,11 +656,11 @@ spec:
             value: "RedPoint.Amazon.Server"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Type
             value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
-          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key
-            value: "AccessKey"
           {{- if eq .Values.realtimeapi.queueProvider.amazonsqs.credentialsType "accessKey" }}
           {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
           {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key
+            value: "AccessKey"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value
             valueFrom:
               secretKeyRef:
@@ -617,11 +669,11 @@ spec:
           {{- end }}
           {{- end }}
           {{- end }}
-          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key
-            value: "SecretKey"
           {{- if eq .Values.realtimeapi.queueProvider.amazonsqs.credentialsType "accessKey" }}
           {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
           {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+          - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key
+            value: "SecretKey"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value
             valueFrom:
               secretKeyRef:
@@ -1153,9 +1205,11 @@ spec:
           {{- end }}
           {{- end }}
           volumeMounts:
+            {{- if .Values.databases.datawarehouse.autoCreateSecrets }}
             - name: odbc-config
               mountPath: /app/odbc-config/odbc2.ini
               subPath: odbc2.ini
+            {{- end }}
             - name: odbcini
               mountPath: /odbc-config
             - name: tempstore
@@ -1190,10 +1244,12 @@ spec:
               mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
             {{- end }}
       volumes:
+        {{- if .Values.databases.datawarehouse.autoCreateSecrets }}
         - name: odbc-config
           configMap:
             name: odbc-config
             defaultMode: 0777
+        {{- end }}
         - name: odbcini
           emptyDir: {}
         - name: tempstore

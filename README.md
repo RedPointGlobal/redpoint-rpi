@@ -20,7 +20,7 @@ This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
 - [Configure Content Generation Tools](#configure-content-generation-tools)
 - [Configure Custom Metrics](#configure-custom-metrics)
 - [Configure Autoscaling](#configure-autoscaling)
-- [Enable Data Activation](#enable-data-activation)
+- [Enable Smart Activation](assets/docs/smartActivation.md)
 - [Customizing This Helm Chart](#customizing-this-helm-chart)
 - [RPI Documentation](#rpi-documentation)
 - [Getting Support](#getting-support)
@@ -303,9 +303,9 @@ If you originally deployed the chart using the ```Default``` mode and now want t
        - ```kubectl apply -f redpoint-rpi-secrets.yaml```
        - ```kubectl apply -f odbc-config.yaml```
 
-**3) Key Vault:** Secrets are sourced directly from a cloud key vault service. Currently supported providers are ```Azure Key Vault``` and ```Google Secrets Manager```. If deploying in AWS, you can only use the ```Default``` or ```External``` modes.
+**3) Key Vault:** Secrets are sourced directly from a cloud key vault service. Currently supported providers are ```Azure Key Vault```, ```AWS Secrets Manager``` and ```Google Secrets Manager```.
 
-- **Azure Key Vault Setup**
+**Azure Key Vault Setup**
 
   - Create a managed identity with a federated credential.
   - Enable Workload Identity Federation on your AKS cluster.
@@ -326,7 +326,83 @@ cloudIdentity:
     managedIdentityClientId: your_managed_identity_client_id
 ```
 
-- **Google Secret Manager Setup**
+**AWS Secrets Manager Setup**
+
+Before enabling AWS Secrets Manager, determine which authentication method your pods will use to read from and write to the secrets vault. At this time, the Helm chart supports only two credential providers:
+
+- ```podIdentity``` (EKS Pod Identity)
+- ```accessKey```   ( AWS Access Keys)
+
+If you choose **EKS Pod Identity**, complete the setup by following the official AWS documentation: [Set up EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
+
+If you choose **AWS Access Keys**, you must create an Kubernetes secret that contains the AWS Access Key ID and Secret Access Key. 
+
+```
+kubectl create secret generic aws-sm-access-keys \
+  --from-literal=AWS_ACCESS_KEY_ID=<your-access-key-id> \
+  --from-literal=AWS_SECRET_ACCESS_KEY=<your-secret-access-key> \
+  --namespace <your-namespace>
+```
+
+These credentials must belong to an IAM user or role that has **read/write permissions** for AWS Secrets Manager. AWS provides a managed policy for this purpose: [SecretsManagerReadWrite IAM Policy](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SecretsManagerReadWrite.html)
+
+For a standard RPI deployment, add the following key/value pairs to your AWS Secrets Manager secret. These represent the minimum required secrets for connecting an RPI deployment to the Operational Databases, Realtime Cache, and Queue providers. If you do not require RPI Realtime or queue functionality, you can omit the Realtime and Queue-related secrets.
+
+By default, RPI loads only Secrets Manager entries that include the tag key ```rpi-app``` value: ```true```. You can customize this tag key to represent a namespace or environment, such as ```rpi-dev``` or ```rpi-prod```. If you change the tag key, be sure to update the value of ```cloudIdentity.amazonSettings.secretsManagerSecretsTag``` in the ```values.yaml``` file accordingly
+
+```
+# Create the Secret
+
+aws secretsmanager create-secret \
+  --name <my-rpi-namespace-name> \
+  --description "My RPI Application Secrets" \
+  --secret-string '{
+    "ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username": "<my_sql_server_username>"
+    "ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password": "<my_sql_server_password>",
+    "ConnectionStrings__LoggingDatabase": "<my_Pulse_Logging_Database_Connection_String>",
+    "ConnectionStrings__OperationalDatabase": "<my_Pulse_Database_Connection_String>",
+    "RealtimeAPIConfiguration__AppSettings__RPIAuthToken": "<my_realtime_auth_token>",
+    RealtimeAPIConfiguration__AppSettings__RealtimeAPIKey: "<my_realtime_auth_token>"
+    "RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Key": "ConnectionString",
+    "RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Value": "<my_mongodb_connection_string>",
+    "RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key": "AccessKey",
+    "RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value": "<my_IAM_AccessKey>",
+    "RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key": "SecretKey",
+    "RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value": "<my_IAM_Secret_AccessKey>",
+    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key": "AccessKey",
+    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value": "<my_IAM_AccessKey>",
+    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key: "SecretKey",
+    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value: "<my_IAM_Secret_AccessKey>"
+    "RPI__SMTP__Password": "<my_smtp_server_password>"
+  }'
+
+# Add the Required Tag
+
+aws secretsmanager tag-resource \
+  --secret-id my-rpi-namespace-name \
+  --tags Key=my-rpi-namespace-name,Value=true
+```
+
+After selecting your credential provider and creating the secret in AWS Secrets Manager, configure your ```values.yaml``` file as shown below:
+
+```
+cloudIdentity:
+  enabled: true
+  provider: Amazon
+  secretsManagement:
+    enabled: true
+    secretsProvider: awssecretsmanager
+    autoCreateSecrets: false
+  amazonSettings:
+    region: us-east-1
+    credentialsType: podIdentity
+    secretsManagerSettings:
+      secretTagKey: my-dev-namespace 
+```
+
+With the secrets in place, you’re now ready to deploy RPI. Follow the deployment instructions to continue.
+
+**Google Secret Manager Setup**
 
   - Create a Google Cloud Service Account
   - Grant the service account secret access permissions
@@ -995,52 +1071,6 @@ executionservice:
 NAME                   SCALETARGETKIND          SCALETARGETNAME        MIN   MAX   READY
 rpi-executionservice   apps/v1.Deployment       rpi-executionservice   2     10    True  
 ```
-### Enable Data Activation
-
-**ADVISORY:** Do not enable Data Activation at this time. Please leave ```DataActivation.enabled=false``` in your values.yaml file until further notice.
-
-The RPI Data Activation feature enables additional RPI Web UI components required for integration with RPI services. This functionality requires a separate license. Before enabling it, please contact your Redpoint representative for more information
-
-When ```dataActivation.enabled``` is set to ```true``` in the ```values.yaml```, the following nine services are deployed:
- 
-- ```cdp-authservices```
-- ```cdp-cache```
-- ```cdp-initservice```
-- ```keycloak```
-- ```cdp-maintenanceservice```
-- ```cdp-messageq```
-- ```cdp-servicesapi```
-- ```cdp-socketio```
-- ```cdp-ui```
- 
-By default, these services are disabled and are only deployed when the ```dataActivation.enabled``` flag is explicitly set to ```true```.
-
-**Prerequisites**
-
-Before enabling Data Activation, an administrator must ensure that a service account has been created within RPI. This account is used by the CDP Web UI components to authenticate and communicate with the RPI Integration API.
-
-The service account must be a member of the following RPI groups:
-
-- ```Everyone```
-- ```IntegrationAPI```
-- ```Cluster Administrators```
-
-**Example Configuration**
-
-To enable RPI Data Activation, set the following configuration in the ```values.yaml```
-
-```
-dataActivation:
-  enabled: true
-
-```
-
-After enabling, restart all RPI and Web UI pods in the namespace to ensure that all related services are properly deployed and initialized. The Web UI will be automatically exposed via Ingress. To customize the Web UI endpoint, specify the desired configuration in the same ```values.yaml``` file:
-
-```
-ingress:
-  dataactivation: rpi-webui
-```
 
 ### Customizing This Helm Chart
 
@@ -1074,7 +1104,7 @@ patchesJson6902:
       group: apps
       version: v1
       kind: Deployment
-      name: rpi
+      name: rpi-executionservice
     patch: |
       - op: add
         path: /spec/template/metadata/annotations/example

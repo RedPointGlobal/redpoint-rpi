@@ -58,7 +58,9 @@ data:
     # Networking / timeouts
     bind 0.0.0.0
     port 6379
+    {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
     protected-mode yes
+    {{- end }}
     timeout 300
     tcp-keepalive 60
     tcp-backlog 511
@@ -174,13 +176,23 @@ spec:
           ports:
             - containerPort: 6379
               name: redis
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
           command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
+          {{- end }}
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+          command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+          {{- end }}
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+          command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+          {{- end }}
           env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-                  key: QueueService_RedisCache_Password
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                key: QueueService_RedisCache_Password
+          {{- end }}
           volumeMounts:
             {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
             - name: rpi-queuereader-cache-data
@@ -215,14 +227,30 @@ spec:
           {{- end }}
           readinessProbe:
             exec:
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 6
           livenessProbe:
             exec:
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 3
@@ -296,6 +324,7 @@ spec:
 
 ---
 {{- if .Values.executionservice.enabled }}
+{{- if .Values.executionservice.internalCache.enabled }}
 {{- if eq .Values.executionservice.internalCache.type "internal" }}
 apiVersion: v1
 kind: ConfigMap
@@ -328,7 +357,9 @@ data:
     # Networking / timeouts
     bind 0.0.0.0
     port 6379
+    {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
     protected-mode yes
+    {{- end }}
     timeout 300
     tcp-keepalive 60
     tcp-backlog 511
@@ -443,13 +474,23 @@ spec:
           ports:
             - containerPort: 6379
               name: redis
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
           command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
+          {{- end }}
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+          command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+          {{- end }}
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+          command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+          {{- end }}
           env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-                  key: ExecutionService_RedisCache_Password
+          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                key: ExecutionService_RedisCache_Password
+          {{- end }}
           volumeMounts:
             {{- if .Values.executionservice.internalCache.redisSettings.volumeClaimTemplates.enabled }}
             - name: rpi-executionservice-cache-data
@@ -484,14 +525,30 @@ spec:
           {{- end }}
           readinessProbe:
             exec:
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 6
           livenessProbe:
             exec:
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
+              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              command: ["sh", "-c", "redis-cli ping | grep PONG"]
+              {{- end }}
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 3
@@ -538,4 +595,4 @@ spec:
   {{- end }}
 {{- end }}
 {{- end }}
-
+{{- end }}

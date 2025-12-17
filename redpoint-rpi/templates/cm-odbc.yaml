@@ -1,5 +1,4 @@
-{{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-{{- if .Values.cloudIdentity.secretsManagement.autoCreateSecrets }}
+{{- if .Values.databases.datawarehouse.autoCreateSecrets }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -77,5 +76,4 @@ data:
     HTTPPath={{ .httpPath }}
     {{- end }}
     {{- end }}
-{{- end }}
 {{- end }}

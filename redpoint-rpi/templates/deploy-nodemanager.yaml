@@ -47,6 +47,31 @@ spec:
       app.kubernetes.io/name: rpi-nodemanager
 {{- end }}
 
+
+---
+{{- if .Values.nodemanager.enabled }}
+{{- if eq .Values.nodemanager.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-nodemanager-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-nodemanager
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.nodemanager.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: rpi-nodemanager
+{{- end }}
+{{- end }}
+
 ---
 {{- if .Values.nodemanager.enabled }}
 apiVersion: v1
@@ -69,8 +94,14 @@ spec:
     app.kubernetes.io/name: rpi-nodemanager
 
 ---
+{{- if eq .Values.nodemanager.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.nodemanager.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: rpi-nodemanager
   namespace: {{ .Release.Namespace }}
@@ -89,6 +120,14 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: rpi-nodemanager
+  {{- if eq .Values.nodemanager.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: rpi-nodemanager
+      previewService: rpi-nodemanager-preview
+      autoPromotionEnabled: {{ .Values.nodemanager.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.nodemanager.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
@@ -118,6 +157,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.nodemanager.terminationGracePeriodSeconds }}
       serviceAccountName: rpi-nodemanager
       {{- if .Values.securityContext.enabled }}
       securityContext:
@@ -130,7 +170,6 @@ spec:
           {{- toYaml . | nindent 10 }}
           {{- end }}
       {{- end }}
-      terminationGracePeriodSeconds: 120
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -253,20 +292,30 @@ spec:
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
         {{- end }}
-        {{- if .Values.cloudIdentity.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-        - name: CloudIdentity__Amazon__AccessKeyId
-          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
-        - name: CloudIdentity__Amazon__SecretAccessKey
-          value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Access_Key_ID
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Secret_Access_Key
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_REGION
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
         {{- end }}
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
         - name: KeyVault__Provider
           value: "Amazon"
+        - name: KeyVault__AmazonSettings__AppSettingsTag
+          value: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.secretTagKey | quote }}
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
@@ -280,7 +329,7 @@ spec:
         - name: DisableHttpRedirect
           value: "true"
         - name: RealtimeAPIAddressOverride
-          value: "http://{{ .Values.realtimeapi.name }}:{{ .Values.realtimeapi.service.port }}"
+          value: "http://rpi-realtimeapi:{{ .Values.realtimeapi.service.port }}"
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
@@ -396,6 +445,7 @@ spec:
           periodSeconds: {{ .Values.nodemanager.startupProbe.periodSeconds }}
           initialDelaySeconds: {{ .Values.nodemanager.startupProbe.initialDelaySeconds }}
           timeoutSeconds: {{ .Values.nodemanager.startupProbe.timeoutSeconds }}
+        {{- if .Values.databases.datawarehouse.autoCreateSecrets }}
         lifecycle:
           postStart:
             exec:
@@ -403,6 +453,7 @@ spec:
                 - /bin/sh
                 - -c 
                 - cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini
+        {{- end }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -440,9 +491,11 @@ spec:
         {{- end }}
         {{- end }}
         volumeMounts:
+          {{- if .Values.databases.datawarehouse.autoCreateSecrets }}
           - name: odbc-config
             mountPath: /app/odbc-config/odbc2.ini
             subPath: odbc2.ini
+          {{- end }}
           - name: odbcini
             mountPath: /odbc-config
           - name: tempstore
@@ -477,10 +530,12 @@ spec:
             mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
       volumes:
+        {{- if .Values.databases.datawarehouse.autoCreateSecrets }}
         - name: odbc-config
           configMap:
             name: odbc-config
             defaultMode: 0777
+        {{- end }}
         - name: odbcini
           emptyDir: {}
         - name: tempstore

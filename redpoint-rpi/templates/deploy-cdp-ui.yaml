@@ -1,4 +1,4 @@
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -7,7 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-ui
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
@@ -28,7 +28,7 @@ metadata:
 {{- end }}
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 {{- if .Values.uiservice.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -38,7 +38,7 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-ui
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   minAvailable: {{ .Values.uiservice.podDisruptionBudget.minAvailable }}
@@ -49,7 +49,31 @@ spec:
 {{- end }}
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
+{{- if eq .Values.uiservice.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-ui-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-ui
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: smartactivation
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.uiservice.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: cdp-ui
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -58,39 +82,53 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-ui
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
-    port: {{ .Values.uiservice.port }}
+    port: {{ .Values.uiservice.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
     app.kubernetes.io/name: cdp-ui
 
 ---
+{{- if eq .Values.uiservice.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.uiservice.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: cdp-ui
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: cdp-ui
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   replicas: {{ .Values.uiservice.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: cdp-ui
+  {{- if eq .Values.uiservice.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: cdp-ui
+      previewService: cdp-ui-preview
+      autoPromotionEnabled: {{ .Values.uiservice.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.uiservice.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: cdp-ui
         app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/part-of: smartactivation
         app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.uiservice.customLabels }}
         {{- toYaml . | nindent 8 }} 
@@ -126,7 +164,7 @@ spec:
               app.kubernetes.io/name: cdp-ui
       containers:
       - name: cdp-ui
-        image: {{ .Values.global.deployment.images.uiservice }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ .Values.global.deployment.images.cdpuiservice }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy }}
         {{- if .Values.uiservice.resources.enabled }}
         resources:

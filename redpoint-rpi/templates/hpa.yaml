@@ -10,9 +10,16 @@ metadata:
     app: rpi-executionservice
 spec:
   scaleTargetRef:
+    {{- if eq .Values.callbackapi.type "deployment" }}
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-executionservice
+    {{- end }}
+    {{- if eq .Values.callbackapi.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-executionservice
+    {{- end }}
   minReplicas: {{ $.Values.executionservice.autoscaling.minReplicas }}
   maxReplicas: {{ $.Values.executionservice.autoscaling.maxReplicas }}
   metrics:
@@ -49,9 +56,16 @@ metadata:
     app: rpi-interactionapi
 spec:
   scaleTargetRef:
+    {{- if eq .Values.interactionapi.type "deployment" }}
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-interactionapi
+    {{- end }}
+    {{- if eq .Values.interactionapi.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-interactionapi
+    {{- end }}
   minReplicas: {{ .Values.interactionapi.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.interactionapi.autoscaling.maxReplicas }}
   metrics:
@@ -88,9 +102,16 @@ metadata:
     app: rpi-integrationapi
 spec:
   scaleTargetRef:
+    {{- if eq .Values.integrationapi.type "deployment" }}
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-integrationapi
+    {{- end }}
+    {{- if eq .Values.integrationapi.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-integrationapi
+    {{- end }}
   minReplicas: {{ .Values.integrationapi.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.integrationapi.autoscaling.maxReplicas }}
   metrics:
@@ -127,9 +148,16 @@ metadata:
     app: rpi-realtimeapi
 spec:
   scaleTargetRef:
+    {{- if eq .Values.realtimeapi.type "deployment" }}
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-realtimeapi
+    {{- end }}
+    {{- if eq .Values.realtimeapi.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-realtimeapi
+    {{- end }}
   minReplicas: {{ .Values.realtimeapi.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.realtimeapi.autoscaling.maxReplicas }}
   metrics:
@@ -166,9 +194,16 @@ metadata:
     app: rpi-callbackapi
 spec:
   scaleTargetRef:
+    {{- if eq .Values.callbackapi.type "deployment" }}
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-callbackapi
+    {{- end }}
+    {{- if eq .Values.callbackapi.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-callbackapi
+    {{- end }}
   minReplicas: {{ .Values.callbackapi.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.callbackapi.autoscaling.maxReplicas }}
   metrics:
@@ -205,9 +240,16 @@ metadata:
     app: rpi-queuereader
 spec:
   scaleTargetRef:
+    {{- if eq .Values.queuereader.type "deployment" }}
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-queuereader
+    {{- end }}
+    {{- if eq .Values.queuereader.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-queuereader
+    {{- end }}
   minReplicas: {{ .Values.queuereader.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.queuereader.autoscaling.maxReplicas }}
   metrics:
@@ -244,9 +286,16 @@ metadata:
     app: rpi-nodemanager
 spec:
   scaleTargetRef:
+    {{- if eq .Values.nodemanager.type "deployment" }}
     apiVersion: apps/v1
     kind: Deployment
     name: rpi-nodemanager
+    {{- end }}
+    {{- if eq .Values.nodemanager.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-nodemanager
+    {{- end }}
   minReplicas: {{ .Values.nodemanager.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.nodemanager.autoscaling.maxReplicas }}
   metrics:
@@ -267,5 +316,181 @@ spec:
           averageUtilization: {{ .Values.nodemanager.autoscaling.targetMemoryUtilizationPercentage }}
     {{- end }}
 {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if .Values.socketio.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-socketio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: cdp-socketio
+spec:
+  scaleTargetRef:
+    {{- if eq .Values.socketio.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-socketio
+    {{- end }}
+    {{- if eq .Values.socketio.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-socketio
+    {{- end }}
+  minReplicas: {{ .Values.socketio.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.socketio.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.socketio.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.socketio.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.socketio.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.socketio.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if .Values.authservice.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-authservice
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: cdp-authservice
+spec:
+  scaleTargetRef:
+    {{- if eq .Values.authservice.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-authservice
+    {{- end }}
+    {{- if eq .Values.authservice.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-authservice
+    {{- end }}
+  minReplicas: {{ .Values.authservice.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.authservice.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.authservice.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.authservice.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.authservice.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.authservice.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if .Values.servicesapi.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-servicesapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: cdp-servicesapi
+spec:
+  scaleTargetRef:
+    {{- if eq .Values.servicesapi.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-servicesapi
+    {{- end }}
+    {{- if eq .Values.servicesapi.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-servicesapi
+    {{- end }}
+  minReplicas: {{ .Values.servicesapi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.servicesapi.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.servicesapi.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.servicesapi.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.servicesapi.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.servicesapi.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if .Values.uiservice.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: cdp-ui
+spec:
+  scaleTargetRef:
+    {{- if eq .Values.uiservice.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-ui
+    {{- end }}
+    {{- if eq .Values.uiservice.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-ui
+    {{- end }}
+  minReplicas: {{ .Values.uiservice.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.uiservice.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.uiservice.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.uiservice.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.uiservice.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.uiservice.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
 {{- end }}
 {{- end }}

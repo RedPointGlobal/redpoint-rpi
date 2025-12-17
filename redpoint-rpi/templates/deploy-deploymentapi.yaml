@@ -29,6 +29,29 @@ metadata:
 {{- end }}
 {{- end }}
 
+---
+{{- if .Values.deploymentapi.enabled }}
+{{- if eq .Values.deploymentapi.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-deploymentapi-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-deploymentapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.deploymentapi.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: rpi-deploymentapi
+{{- end }}
+{{- end }}
 
 ---
 {{- if .Values.deploymentapi.enabled }}
@@ -52,8 +75,14 @@ spec:
     app.kubernetes.io/name: rpi-deploymentapi
 
 ---
+{{- if eq .Values.deploymentapi.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.deploymentapi.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: rpi-deploymentapi
   namespace: {{ .Release.Namespace }}
@@ -70,6 +99,14 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: rpi-deploymentapi
+  {{- if eq .Values.deploymentapi.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: rpi-deploymentapi
+      previewService: rpi-deploymentapi-preview
+      autoPromotionEnabled: {{ .Values.deploymentapi.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.deploymentapi.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
@@ -94,6 +131,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.deploymentapi.terminationGracePeriodSeconds }}
       serviceAccountName: rpi-deploymentapi
       {{- if .Values.securityContext.enabled }}
       securityContext:
@@ -101,8 +139,11 @@ spec:
         runAsGroup: {{ .Values.securityContext.runAsGroup }}
         fsGroup: {{ .Values.securityContext.fsGroup }}
         runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        supplementalGroups:
+          {{- with .Values.securityContext.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
       {{- end }}
-      terminationGracePeriodSeconds: 120
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -137,6 +178,14 @@ spec:
         env:
         - name: Logging__LogLevel__Default
           value: {{ .Values.deploymentapi.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ .Values.deploymentapi.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ .Values.deploymentapi.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ .Values.deploymentapi.logging.rpiError | quote }}
+        - name: Logging__Console__LogLevel__Default
+          value: {{ .Values.deploymentapi.logging.Console | quote }}
         - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
           value: {{ .Values.databases.operational.pulse_database_name | quote }}
         - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
@@ -195,20 +244,30 @@ spec:
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
         {{- end }}
-        {{- if .Values.cloudIdentity.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-        - name: CloudIdentity__Amazon__AccessKeyId
-          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
-        - name: CloudIdentity__Amazon__SecretAccessKey
-          value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Access_Key_ID
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Secret_Access_Key
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_REGION
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
         {{- end }}
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
         - name: KeyVault__Provider
           value: "Amazon"
+        - name: KeyVault__AmazonSettings__AppSettingsTag
+          value: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.secretTagKey | quote }}
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
@@ -243,9 +302,9 @@ spec:
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "SQLServer"
         {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
           value: {{ .Values.databases.operational.server_username | quote }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
           valueFrom:
             secretKeyRef:

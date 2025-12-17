@@ -26,17 +26,18 @@ global:
       # Optional: If using external (BYO) ingress controller, this is not needed
       ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
       # Optional: Only required for network-related troubleshooting/debugging.
-      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest 
-      # Optional: Only required for if Data Activation is enabled.     
+      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
+      # Optional: If not using RPI Smart Activation these are not needed
       cdpauthservices: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-authservice
       cdpinitservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-init
       cdpservicesapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-servicesapi
       cdpuiservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-ui
       cdpsocketio: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-socketio
+      cdpmessageq: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-messageq
       cdpmaintenanceservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-maintenance
       keycloak: rg1acrpub.azurecr.io/docker/redpointglobal/releases/keycloak
-      # Specific version to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20251107.936
+      # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
+      tag: 7.6.20251213.955
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -168,9 +169,10 @@ databases:
   #        port: 443
   #        httpPath: /sql/1.0/warehouses/c546e1e69e8d2ac9
 
-# ==========================
-# Certain RPI functionality (e.g., secret managers, Azure and GCP plugins) is able to make use of 
-# cloud provider identity to authenticate with cloud services.
+# ========================================================
+# Some RPI functionality—such as secret managers and Azure/GCP plugins—
+# can leverage the cloud provider's identity to authenticate securely
+# with cloud services without requiring static credentials.
 cloudIdentity:
   enabled: false
   # Authentication method for accessing cloud services.
@@ -178,13 +180,14 @@ cloudIdentity:
   provider: Amazon
   secretsManagement:
     enabled: false
-    # Specify how to reference required secrets, such as database passwords and connection strings.
-    # Supported options: 'kubernetes' or 'keyvault'
+    # Specify how RPI should reference required secrets, such as database passwords and connection strings.
+    # Supported options: 'kubernetes', 'keyvault', or 'awssecretsmanager'
     #
-    # - Use 'kubernetes' to have the Helm chart automatically create the secrets within your Kubernetes cluster.
-    # - Use 'keyvault' to disable Kubernetes secret creation and pull secrets from an external key vault.
+    # - 'kubernetes': The Helm chart will automatically create the secrets inside your Kubernetes cluster.
+    # - 'keyvault': Disables Kubernetes secret creation and retrieves secrets from Azure Key Vault.
+    # - 'awssecretsmanager': Disables Kubernetes secret creation and retrieves secrets from AWS Secrets Manager.
     #
-    # For more information, refer to the ```Configure Secrets Management``` in the README.md
+    # For more details, see the "Configure Secrets Management" section in the README.md.
     secretsProvider: kubernetes
     # If secretsProvider is kubernetes - Let the Helm chart automatically create the secret
     autoCreateSecrets: true
@@ -214,10 +217,28 @@ cloudIdentity:
     # Name of google project
     projectId: your_google_project_id
   amazonSettings:
+    # Define how the application authenticates with AWS Secrets Manager
+    # Supported values for credentialsType:
+    #   - podIdentity
+    #       Requires Amazon EKS Pod Identity to be configured beforehand.
+    #       Ensure all prerequisites are completed:
+    #       https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html
+    #
+    #   - accessKey
+    #       Uses static AWS credentials stored in a Kubernetes Secret.
+    #
     credentialsType: accessKey
     accessKeyId: <my-aws-iam-access-key>
     secretAccessKey: <my-aws-iam-secret-access-key>
-    region: us-east-1  
+    region: us-east-1
+    secretsManagerSettings:
+      # By default, RPI loads only the Secrets Manager entries that include the
+      # tag key "rpi-app". You can change the required tag key below if needed.
+      secretTagKey: rpi-app
+      # Name of the Kubernetes Secret containing AWS access keys (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY).
+      # Required only if using AWS Secrets Manager with access-key authentication.
+      # This secret must be created outside of the Helm chart.
+      credentialSecretName: aws-sm-access-keys
 
 # ==========================      
 storage:
@@ -244,9 +265,19 @@ storage:
 realtimeapi:
   # If disabled, the realtime pod will not be deployed
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
-  name: rpi-realtimeapi
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true
   # Ensure this matches your target RPI client ID.
@@ -273,7 +304,7 @@ realtimeapi:
       databaseName: RPIRealtimeCore
       accessTokenLifetimeSeconds: 360
       refreshTokenLifetimeSeconds: 360
-  # Expose the Realtime API Swagger page for API exploration and testing.
+  # Enable Swagger UI and API Documentation 
   enableHelpPages: true 
   enableEventListening: true
   realtimeProcessingEnabled: true
@@ -327,12 +358,11 @@ realtimeapi:
       resources:
         enabled: true
         requests:
-          cpu: 256m
+          cpu: 500m
           memory: 1Gi
         limits:
 #          cpu: 2
           memory: 1Gi
-
     # In-memory SQL cache configuration
     inMemorySql:
       # Hostname or IP address of the cache database server
@@ -342,11 +372,9 @@ realtimeapi:
       # Credentials for database access
       username: <my-cache-database-username>
       password: <my-cache-database-password>
-    
     googlebigtable:
       projectId: <my-bigtable-project-id>
       instanceId: <my-bigtable-instance-id>
-      
   queueProvider:
     # This section defines the settings for the real-time message queue provider.
     # Set to true to enable real-time queue configuration
@@ -373,17 +401,14 @@ realtimeapi:
       #   - accessKey: Use static AWS access key and secret key (configure these under the cloudIdentity.amazonSettings section above).
       credentialsType: accessKey
       visibilityTimeout: "301"
-
     # If using Azure Service Bus as the queue provider
     azureservicebus:
       # Provide the Azure Service Bus connection string
       connectionstring: Endpoint=sb://<my-service-bus-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy-name>;SharedAccessKey=<my-policy-key>
-
     # If using Google Pub/Sub as the queue provider
     googlepubsub:
       # Provide the Google Cloud project ID
       projectId: <my-google-project-id>
-
     # If using Azure Event Hubs as the queue provider
     azureeventhubs:
       # Provide the Azure Event Hub connection string
@@ -416,19 +441,20 @@ realtimeapi:
           enabled: true
           requests:
             cpu: 500m
-            memory: 750Mi
+            memory: 1Gi
           limits:
-            cpu: "1"
-            memory: 3Gi
+            cpu: 1
+            memory: 1Gi
+        # Persistent volume claim template for the Statefulset.
+        # Defines the size of storage to request for each pod instance.
         volumeClaimTemplates:
           enabled: true
-          storage: "50Gi"
-      autoscaling:
-        type: hpa
-        minReplicas: 2
-        maxReplicas: 5
-        targetCPUUtilizationPercentage: 80
-        targetMemoryUtilizationPercentage: 80
+          storage: 100Gi
+        # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
+        podDisruptionBudget:
+          enabled: false
+          # Minimum number of pods that must remain up when disruptions occur.
+          minAvailable: 1
     # If using Amazon Managed Kafka (MSK) as the queue provider
     amazonmsk:
       region: <my-aws-region>
@@ -494,7 +520,7 @@ realtimeapi:
 
   # Custom plugin configuration
   customPlugins:
-    # Enable of disabled the configuration
+    # Enable Custom Plugin configuration
     enabled: false
     # List of plugin definitions to inject into the application via environment variables.
     # To define multiple plugins, simply add each as a new entry in the list below.
@@ -677,16 +703,14 @@ realtimeapi:
           #  values:
           #    - val1
           #    - val2
-          #    - val3
-          
-  # Default resource requests and limits per deployment.
-  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+          #    - val3          
+  # Default resource requests and limits per pod.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
       cpu: 500m
-      memory: 750Mi
+      memory: 3Gi
     limits:
 #      cpu: 2
       memory: 3Gi
@@ -695,19 +719,31 @@ realtimeapi:
     # This can be customized to align with the customer's internal port conventions.
     port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
+  # Enable or disable custom Prometheus metrics scraping for this service.
+  # You need to have Prometheus running in the cluster before enabling this
   customMetrics:
-    # Enable or disable custom Prometheus metrics scraping for this service
     enabled: false
     # When enabled, the following annotation will be added to the pod metadata
     # to allow Prometheus scrape the /metrics endpoint
-    prometheus_scrape: false
+    prometheus_scrape: true
+  # Time (in seconds) Kubernetes will wait before forcefully terminating the pod
+  terminationGracePeriodSeconds: 120
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
@@ -745,16 +781,26 @@ realtimeapi:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
-    
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
-    maxUnavailable: 0
+    # Minimum number of pods that must remain up when disruptions occur.
+    minAvailable: 1
 
 # ==========================
 callbackapi:
   # If disabled, the callbackapi pod will not be deployed
-  name: rpi-callbackapi
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
   channelLabel: SendGrid
@@ -769,16 +815,16 @@ callbackapi:
       replicas: 1
 #    - name: "client2"
 #      replicas: 1
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
-  # Default resource requests and limits per deployment.
-  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Default resource requests and limits per pod.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
       cpu: 500m
-      memory: 750Mi
+      memory: 3Gi
     limits:
 #      cpu: 2
       memory: 3Gi
@@ -787,19 +833,30 @@ callbackapi:
     # This can be customized to align with the customer's internal port conventions.
     port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
+  # Enable or disable custom Prometheus metrics scraping for this service.
+  # You need to have Prometheus running in the cluster before enabling this
   customMetrics:
-    # Enable or disable custom Prometheus metrics scraping for this service
     enabled: false
-    # When enabled, the following annotation will be added to the pod metadata
-    # to allow Prometheus scrape the /metrics endpoint
-    prometheus_scrape: false
+    # When enabled, adds Prometheus annotations to the Pod metadata
+    # to allow scraping of the /metrics endpoint.
+    prometheus_scrape: true
+  # Time (in seconds) Kubernetes will wait before forcefully terminating the pod
+  terminationGracePeriodSeconds: 120
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
@@ -837,24 +894,40 @@ callbackapi:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
-
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
-    maxUnavailable: 0
+    # Minimum number of pods that must remain up when disruptions occur.
+    minAvailable: 1
 
 # ==========================      
 executionservice:
   # If disabled, the executionservice pod will not be deployed
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
+  # Enable or disable native RPI authentication.
+  # When enabled, RPI stores user details and encrypted credentials
+  # in the Pulse operational database
   enableRPIAuthentication: true
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
+  # Execution Job Execution Settings
   jobExecution:
     internalAddress: ""
     auditTaskEvents: true
-    maxThreadsPerExecutionService: 50
+    maxThreadsPerExecutionService: 100
     executionShutdownWaitForActivity: "00:08:00"
     overrideCustomSQLReservedWords: false
     maxSmartAssetInstancesForOfferCodes: "100000"
@@ -867,6 +940,7 @@ executionservice:
       enabled: true
       maxConcurrentWorkflowActivities: 100
       maximumQueueTime: "24:00:00"
+  # Enable Internal (Redis) Cache for the Execution Service
   internalCache:
     enabled: true
     # Type of Redis cache to use:
@@ -893,31 +967,31 @@ executionservice:
       resources:
         enabled: true
         requests:
-          cpu: 256m
+          cpu: 500m
           memory: 3Gi
         limits:
 #          cpu: 2
           memory: 3Gi
+      # Persistent volume claim template for the Statefulset.
+      # Defines the size of storage to request for each pod instance.
       volumeClaimTemplates:
         enabled: true
-        storage: "50Gi"
+        storage: 100Gi
+      # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
       podDisruptionBudget:
-        enabled: true
-        maxUnavailable: 0
-  luxsci:
-    sandbox_mode:
-      enabled: false
+        enabled: false
+        # Minimum number of pods that must remain up when disruptions occur.
+        minAvailable: 1
   seedService:
     memoryCacheSize: "10"
     maxNumberRetries: "100"
     maxRetryDelay: "00:01:00"
-  # Default resource requests and limits per deployment.
-  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Default resource requests and limits per pod.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
-      cpu: "2"
+      cpu: 500m
       memory: 3Gi
     limits:
 #      cpu: "2"
@@ -927,13 +1001,24 @@ executionservice:
     # This can be customized to align with the customer's internal port conventions.
     port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
+  # Enable or disable custom Prometheus metrics scraping for this service.
+  # You need to have Prometheus running in the cluster before enabling this
   customMetrics:
     # Enable or disable custom Prometheus metrics scraping for this service
     enabled: false
@@ -948,10 +1033,9 @@ executionservice:
     rpiTrace: Error
     rpiError: Error
     Console: Error
-
   # Enable Horizontal autoscaling
   autoscaling:
-    enabled: true
+    enabled: false
     # Available options:
     # - "keda": Enables scaling based on custom RPI metrics from Prometheus using KEDA. 
     #    Requires KEDA to be installed in your cluster.
@@ -964,13 +1048,11 @@ executionservice:
     #   based on CPU and/or memory usage. Does not require any additional components.
     # Note: **KEDA is the recommended scaling solution for the Execution Service**
     type: hpa
-
     # HPA Settings
     minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 80
-    
     # KEDA Settings
     kedaScaledObject:
        # The Prometheus server URL that KEDA will query for metrics.
@@ -1043,11 +1125,24 @@ executionservice:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
-    maxUnavailable: 0
+    # Minimum number of pods that must remain up when disruptions occur.
+    minAvailable: 1
+  # Time (in seconds) Kubernetes will wait before forcefully terminating the pod
+  terminationGracePeriodSeconds: 120
+  # Extra environment variables intended for internal DEV/QA use only.
+  # These should remain disabled in normal deployments and should only be
+  # enabled after consulting your Redpoint Client Services contact.
   extraEnvs:
     - name: Plugins__LuxSci__IsSandboxMode
+      enabled: false
+      value: "true"
+    - name: Plugins__SendGrid__EnableSandBoxMode
+      enabled: false
+      value: "true"
+    - name: Plugins__Twilio__DisableSendSMSCampaign
       enabled: false
       value: "true"
     - name: RPI_MPULSE_UPSERT_CONTACT_DEBUG
@@ -1082,23 +1177,43 @@ executionservice:
 interactionapi: 
   # If disabled, the interactionapi pod will not be deployed
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
+  # Enable or disable native RPI authentication.
+  # When enabled, RPI stores user details and encrypted credentials
+  # in the Pulse operational database
   enableRPIAuthentication: true
+  # When authMetaHttpEnabled = true: The service performs its OpenID discovery calls through the internal 
+  # Kubernetes DNS service over plain HTTP. This is appropriate for the Interaction API,
+  # which only needs to resolve authentication metadata internally.
+  # Do not modify this value unless instructed.
   authMetaHttpEnabled: true
+  # Enable or disable the Swagger UI and API documentation endpoint.
   enableSwagger: true
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
-    enabled: true 
+    enabled: true
+  # On successful sign in, your encrypted credentials are written to your local user configuration on your client machine.
   allowSavingLoginDetails: true
+  # Show the Choose Tenant overlay even if only one tenant is available,
   alwaysShowClientsAtLogin: true
-  # Default resource requests and limits per deployment.
-  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
-  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   useExternalUserManagement: false
+  # Default resource requests and limits per pod.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
-      cpu: 256m
+      cpu: 500m
       memory: 3Gi
     limits:
 #      cpu: 2
@@ -1108,19 +1223,31 @@ interactionapi:
     # This can be customized to align with the customer's internal port conventions.
     port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
+  # Enable or disable custom Prometheus metrics scraping for this service.
+  # You need to have Prometheus running in the cluster before enabling this
   customMetrics:
-    # Enable or disable custom Prometheus metrics scraping for this service
     enabled: false
     # When enabled, the following annotation will be added to the pod metadata
     # to allow Prometheus scrape the /metrics endpoint
     prometheus_scrape: false
+  # Time (in seconds) Kubernetes will wait before forcefully terminating the pod
+  terminationGracePeriodSeconds: 120
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
@@ -1129,21 +1256,9 @@ interactionapi:
     rpiTrace: Error
     rpiError: Error
     Console: Error
-
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
-    # Options: "keda" or "hpa".
-    # 
-    # - "keda": Enables KEDA (Kubernetes-based Event Driven Autoscaling), allowing scaling based on RPI custom metrics from
-    #   Prometheus. This option assumes that KEDA is already installed in your cluster.
-    #   If not, you can install it with Documentation: https://keda.sh/docs/latest/deploy/
-    #
-    # - "hpa": Enables the standard Kubernetes Horizontal Pod Autoscaler, which scales pods based on CPU and/or memory 
-    #   usage metrics. This is natively supported by Kubernetes and does not require additional installation.
-    #
-    # Choose the appropriate option based on your scaling requirements. If you need scaling based on RPI custom metrics, use "keda".
-    # For resource-based scaling, use "hpa".
     type: hpa
     minReplicas: 2
     maxReplicas: 5
@@ -1170,44 +1285,75 @@ interactionapi:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
-
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
-    maxUnavailable: 0
+    # Minimum number of pods that must remain up when disruptions occur.
+    minAvailable: 1
 
 # ========================== 
 integrationapi:
-  # If disabled, the integrationapi pod will not be deployed
+  # If disabled, the interactionapi pod will not be deployed
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
+  # Enable or disable the Swagger UI and API documentation endpoint.
   enableSwagger: true
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
+  # Enable or disable native RPI authentication.
+  # When enabled, RPI stores user details and encrypted credentials
+  # in the Pulse operational database
   enableRPIAuthentication: true
+  # When authMetaHttpEnabled = false: The service uses the external HTTPS ingress endpoint for OpenID discovery. 
+  # This is required for the Integration API, because Swagger UI (accessed via the public ingress) 
+  # needs to resolve the correct external OpenID metadata endpoints so that the available authorization flows display correctly.
+  # Do not modify this value unless instructed.
   authMetaHttpEnabled: false
-  # Default resource requests and limits per deployment.
-  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Default resource requests and limits per pod.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
-      cpu: 256m
+      cpu: 500m
       memory: 3Gi
     limits:
 #      cpu: 2
       memory: 3Gi
-  # Username and Password are only required if Data Activation is enabled
-  username: integrationapi
-  password: <my-integrationapi-password>
+  # Username and Password are only required if Smart Activation is enabled
+  username: admin@noemail.com
+  password: my_Super_Strong_Pwd
   read_timeout: "300000"
-  port: 80
+  service:
+    # The port on which the Kubernetes services will be exposed.
+    # This can be customized to align with the customer's internal port conventions.
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
   customMetrics:
@@ -1215,7 +1361,9 @@ integrationapi:
     enabled: false
     # When enabled, the following annotation will be added to the pod metadata
     # to allow Prometheus scrape the /metrics endpoint
-    prometheus_scrape: false
+    prometheus_scrape: true
+  # Time (in seconds) Kubernetes will wait before forcefully terminating the pod
+  terminationGracePeriodSeconds: 120
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
     default: Error
@@ -1263,41 +1411,61 @@ integrationapi:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
-    maxUnavailable: 0
+    # Minimum number of pods that must remain up when disruptions occur.
+    minAvailable: 1
 
 # ========================== 
 nodemanager:
   # If disabled, the nodemanager pod will not be deployed
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
+  # Enable or disable the Swagger UI and API documentation endpoint.
   serviceAccount: 
     enabled: true 
-  enableRPIAuthentication: true
-  enableSwagger: true
-  # Default resource requests and limits per deployment.
-  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Default resource requests and limits per pod.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
+  enableRPIAuthentication: true
   resources:
     enabled: true
     requests:
-      cpu: 256m
+      cpu: 500m
       memory: 3Gi
     limits:
 #      cpu: 2
       memory: 3Gi
   service:
     # The port on which the Kubernetes services will be exposed.
-    # This can be customized to align with the customer's internal port conventions.
+    # This can be customized to align with your internal port conventions.
     port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
   customMetrics:
@@ -1306,6 +1474,8 @@ nodemanager:
     # When enabled, the following annotation will be added to the pod metadata
     # to allow Prometheus scrape the /metrics endpoint
     prometheus_scrape: false
+  # Time (in seconds) Kubernetes will wait before forcefully terminating the pod
+  terminationGracePeriodSeconds: 120
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
@@ -1314,7 +1484,6 @@ nodemanager:
     rpiTrace: Error
     rpiError: Error
     Console: Error
-
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1344,30 +1513,46 @@ nodemanager:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
-
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
-    maxUnavailable: 0
+    # Minimum number of pods that must remain up when disruptions occur.
+    minAvailable: 1
 
 # ========================== 
 deploymentapi:
   # If disabled, the deploymentapi pod will not be deployed
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
+  # Use Template Files
+  # The new tenant will be based on files exported from an existing tenant.
   templateTenant:
     useTemplateFiles: false
+    # Path inside the container where the volume containing the template files
+    # is mounted (e.g., an Azure File Share or other mounted storage).
     templateTenantFilesPath: "/tmp/templatetenantfiles"
+    # Name of the PersistentVolumeClaim that provides the template files.
     volumeClaimName: templatetenantfiles
-  # Default resource requests and limits per deployment.
-  # These values are designed to fit 8 deployments on a single node with 8 vCPUs and 16 GB RAM.
+  # Default resource requests and limits per pod.
   # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
-      cpu: 256m
+      cpu: 500m
       memory: 1Gi
     limits:
 #      cpu: 2
@@ -1377,21 +1562,32 @@ deploymentapi:
     # This can be customized to align with the customer's internal port conventions.
     port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
+  # Enable or disable custom Prometheus metrics scraping for this service.
+  # You need to have Prometheus running in the cluster before enabling this
   customMetrics:
-    # Enable or disable custom Prometheus metrics scraping for this service
     enabled: false
     # When enabled, the following annotation will be added to the pod metadata
     # to allow Prometheus scrape the /metrics endpoint
     prometheus_scrape: false
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
+  terminationGracePeriodSeconds: 120
   logging:
     default: Error
     database: Error
@@ -1400,13 +1596,23 @@ deploymentapi:
     Console: Error
 
 # ==========================
+# This component handles the draining of Queue Listener and RPI Realtime queues.
 queuereader: 
   # If disabled, the queuereader pod will not be deployed
   enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
-  # Configuration for the Queue Reader container introduced in RPI v7.4
-  # This component handles the draining of Queue Listener and RPI Realtime queues.
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
   # Enable or disable processing for specific queues
@@ -1416,12 +1622,10 @@ queuereader:
   queueListenerEnabled: true
   isCallbackServiceProcessingEnabled: true
   # Queue for storing messages received by inactive triggers.
-  # You can customize the queue name as needed.
   listenerQueueNonActiveQueuePath: listenerQueueNonActive
   # Time-to-live (TTL) in days for messages in the inactive trigger queue.
   listenerQueueNonActiveTTLDays: 14
   # Queue for storing messages that encountered errors during processing.
-  # You can customize the queue name as needed.
   listenerQueueErrorQueuePath: listenerQueueError
   # Time-to-live (TTL) in days for messages in the error queue.
   listenerQueueErrorTTLDays: 14
@@ -1438,22 +1642,26 @@ queuereader:
       redisSettings:
       # Connection string for your Redis instance.
         password: my_Super_Strong_Pwd
-        connectionString: rpi-queuereader-cache-0.rpi-queuereader-cache:6379,password=my_Super_Strong_Pwd,abortConnect=False
+        connectionString: rpi-queuereader-cache-0.rpi-queuereader-cache.{{ .Release.Namespace }}.svc.cluster.local,password=my_Super_Strong_Pwd,abortConnect=False
         replicas: 1
         resources:
           enabled: true
           requests:
-            cpu: "1"
+            cpu: 500m
             memory: 3Gi
           limits:
-            cpu: "2"
+#            cpu: 2
             memory: 3Gi
+        # Persistent volume claim template for the Statefulset.
+        # Defines the size of storage to request for each pod instance.
         volumeClaimTemplates:
           enabled: true
-          storage: "50Gi"
+          storage: 100Gi
+        # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
         podDisruptionBudget:
           enabled: false
-          maxUnavailable: 0
+          # Minimum number of pods that must remain up when disruptions occur.
+          minAvailable: 1
     distributedQueue:
       # Currently, only RabbitMQ is supported.
       provider: rabbitmq
@@ -1475,13 +1683,15 @@ queuereader:
           enabled: true
           requests:
             cpu: 500m
-            memory: 750Mi
-          limits:
-            cpu: "1"
             memory: 3Gi
+          limits:
+#            cpu: 1
+            memory: 3Gi
+        # Persistent volume claim template for the Statefulset.
+        # Defines the size of storage to request for each pod instance.
         volumeClaimTemplates:
           enabled: true
-          storage: "50Gi"
+          storage: 100Gi
     # Comma separated List of RPI client IDs associated with your RPI cluster 
     tenantIds: 
     - 00000000-0000-0000-0000-000000000000
@@ -1496,7 +1706,7 @@ queuereader:
     enabled: true
     requests:
       cpu: 500m
-      memory: 750Mi
+      memory: 3Gi
     limits:
 #      cpu: 2
       memory: 3Gi
@@ -1505,19 +1715,32 @@ queuereader:
     # This can be customized to align with the customer's internal port conventions.
     port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
+  # Enable or disable custom Prometheus metrics scraping for this service.
+  # You need to have Prometheus running in the cluster before enabling this
   customMetrics:
     # Enable or disable custom Prometheus metrics scraping for this service
     enabled: false
     # When enabled, the following annotation will be added to the pod metadata
     # to allow Prometheus scrape the /metrics endpoint
-    prometheus_scrape: false
+    prometheus_scrape: true
+  # Time (in seconds) Kubernetes will wait before forcefully terminating the pod
+  terminationGracePeriodSeconds: 120
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
@@ -1526,7 +1749,6 @@ queuereader:
     rpiTrace: Error
     rpiError: Error
     Console: Error
-
   # Enable Horizontal autoscaling
   autoscaling:
     enabled: true
@@ -1556,11 +1778,13 @@ queuereader:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
-
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
-    maxUnavailable: 0
+    # Minimum number of pods that must remain up when disruptions occur.
+    minAvailable: 1
 
+# ==========================
 diagnosticsMode:
   # Enable or disable copying diagnostic logs to Azure Blob Storage
   copytoAzureBlob: 
@@ -1586,7 +1810,6 @@ diagnosticsMode:
     path: /app/dotnet-tools # Path to .NET tools directory
     extractionBaseDir: /tmp # Temporary extraction directory
 
-
   # Optional: Only required for network-related troubleshooting/debugging.
   netutils:
     enabled: false
@@ -1606,6 +1829,9 @@ diagnosticsMode:
         # e.g., ["NET_RAW"] or ["NET_ADMIN","NET_RAW"]
         add: ["NET_ADMIN","NET_RAW"]             
 
+# ==========================
+# Enables Microsoft Entra ID authentication.
+# Ensure prerequisite setup (see README) is completed before enabling.
 MicrosoftEntraID:
   enabled: false
   # Interaction Client Client ID
@@ -1615,6 +1841,7 @@ MicrosoftEntraID:
   # Azure Tenant ID
   tenant_id: 00000000-0000-0000-0000-000000000000
 
+# ==========================
 OpenIdProviders:
   # Set to true to enable OpenID Connect settings.
   enabled: false
@@ -1652,29 +1879,48 @@ OpenIdProviders:
   # Enable or disable management of RPI users directly within OIDC provider (as well as native user management
   supportsUserManagement: false
 
+# ==========================
+# SMTP settings used by RPI to send system-generated emails
+# (e.g., notifications, password resets, and service alerts).
 SMTPSettings:
+  # Email address that appears as the sender.
   SMTP_SenderAddress: noreply-rpi@example.com
+  # Display name shown for outgoing emails.
   SMTP_SenderName: "Redpoint Global"
+  # Hostname or IP address of your SMTP server.
   SMTP_Address: your_smtp_host
+  # Port used by the SMTP server (commonly 587 for TLS).
   SMTP_Port: 587
+  # Enable SSL/TLS for secure email transmission.
   EnableSSL: true
+  # Whether authentication is required by the SMTP server.
   UseCredentials: true
+  # Username for SMTP authentication (if enabled).
   SMTP_Username: your_smtp_server_username
+  # Password for SMTP authentication (store in a Kubernetes Secret in production).
   SMTP_Password: your_smtp_server_password
 
 # ========================== 
 ingress:
   controller:
-    # Set enabled to false if you want to disable the creation of the ingress controller
+    # Enable or disable creation of the ingress controller managed by this chart.
+    # Set to false if you prefer to supply your own ingress controller.
     enabled: true 
-  # Set mode to internal for private ingress and public for public ingress
+  # Ingress exposure mode:
+  #   - private: private/internal-only ingress
+  #   - public: publicly accessible ingress
   mode: public 
-  # Set certificateSource to acm if your certificate is managed in AWS Certificate Manager 
+   # Enable Azure Private Link integration for private ingress scenarios.
   privateLink:
     azure:
       enabled: false
+  # Source of the TLS certificate:
+  #   - kubernetes: use a TLS secret stored in the cluster
+  #   - acm: use a certificate provisioned via AWS Certificate Manager
   certificateSource: kubernetes # acm
+  # Name of the Kubernetes TLS secret containing the certificate (used when certificateSource = kubernetes)
   tlsSecretName: ingress-tls
+  # Ingress class to associate with this ingress resource.
   className: nginx-redpoint-rpi
   # Subnet name is only required if you set the ingress mode to private
   subnetName: <my-ingress-vpc-subnet-name> 
@@ -1682,6 +1928,9 @@ ingress:
   certificateArn: your_acm_certificate_arn
   # Specify the domain name for the ingress resources.
   domain: example.com
+  # The port on which the Kubernetes services will be exposed.
+  service:
+    port: 80
   # Add any specific annotations required for your ingress setup here.
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: 4096m
@@ -1690,15 +1939,24 @@ ingress:
     nginx.ingress.kubernetes.io/enable-access-log: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
+    environment: "prod"
+    team: "marketing"
 
-  customLabels: 
-    environment: prod
-    team: marketing
-  service:
-    port: 80
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
-    prometheus.io/scrape: "false"
-  # Define hostnames for different services in your application.
+    my-custom-annotation: "my-value"
+  # Define the desired Ingress hostnames
   hosts:
     # Deployment API
     config: rpi-deploymentapi
@@ -1714,9 +1972,10 @@ ingress:
     queuereader: rpi-queuereader
     # RabbitMQ console
     rabbitmqconsole: rpi-rabbitmq-console
-    # Data Activation Web UI
-    dataactivation: rpi-dataactivation
+    # Smart Activation Web UI
+    smartactivation: rpi-smartActivation
 
+# ==========================
 securityContext:
   # Enable this to enforce running the container as a non-root user.
   enabled: true
@@ -1733,6 +1992,7 @@ securityContext:
     - 4000
     - 5000
 
+# ==========================
 # NodeSelector is used to control scheduling by specifying node labels.
 # When enabled, the deployment will only be scheduled on nodes that match the provided key-value pair.
 nodeSelector:
@@ -1787,53 +2047,72 @@ redpointAI:
 
 # ==========================
 #**ADVISORY:** 
-# Do not enable Data Activation at this time. 
-# Please leave ```DataActivation.enabled=false``` until further notice.
-# - Functionality requires separate licensing. Contact your Redpoint representative for details.
-dataActivation:
+# Do not enable Smart Activation at this time. 
+# Please leave ```smartActivation.enabled=false``` until further notice.
+smartActivation:
   # Enables RPI - Smart Activation (Web UI)
+  # - Functionality requires separate licensing. Contact your Redpoint representative for details.
   enabled: false
+
+# ==========================
 authservice:
-  # If disabled, the authentication service will not be deployed
-  enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
   # Number of pod replicas to deploy
   replicas: 1
-  default_username: admin@redpointcdp.com
-  default_password: <my-default-admin-password>
+  # Default credentials for logging into the Web UI.
+  # Change these before deploying to any environment.
+  default_username: admin@noemail.com
+  default_password: my_Super_Strong_Pwd
+  # Create and use a dedicated ServiceAccount.
   serviceAccount: 
     enabled: true
   resources:
     enabled: true
     requests:
       cpu: 500m
-      memory: 1Gi
+      memory: 2Gi
     limits:
 #      cpu: 2
-      memory: 1Gi
-    java_options: -Xmx750m
-  port: 80
+      memory: 2Gi
+    # JVM options for tuning memory usage. Adjust based on allocated resources.
+    java_options: "-Xmx1536m"
+  # The port on which the Kubernetes services will be exposed.
+  # This can be customized to align with the customer's internal port conventions.
+  service:
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
-  customMetrics:
-    # Enable or disable custom Prometheus metrics scraping for this service
-    enabled: false
-    # When enabled, the following annotation will be added to the pod metadata
-    # to allow Prometheus scrape the /metrics endpoint
-    prometheus_scrape: false
   # Set the minimum log level for application logging.
   # Supported options: Critical, Error, Warning, Information, Trace, Debug
   logging:
     verbosity: DEBUG
   # Enable Horizontal autoscaling
   autoscaling:
-    enabled: true
-    type: hpa
+    enabled: false
+    # HPA Settings
     minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 80
@@ -1879,33 +2158,46 @@ authservice:
     maxUnavailable: "25%"
     maxSurge: "25%"
     progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
-  nodeSelector:
-    enabled: true
-    key: app
-    value: rpclients
-  tolerations:
-    enabled: true
-    effect: NoSchedule
-    key: app
-    operator: Equal
-    value: rpclients
 
 # ==========================
 keycloak:
-  enabled: true
-  type: internal
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
+  #  Number of pod replicas to deploy.
   replicas: 1
+  # Create and use a dedicated ServiceAccount.
   serviceAccount: 
     enabled: true 
+  # Hostname internal services will use to access Keycloak
   hostname: keycloak
-  username: sso-admin@redpointcdp.com
-  password: <my-keycloak-admin-password>
-  database_name: CDP_AUTH_{{ .Release.Namespace }}
+  # Initial Keycloak admin credentials.
+  # IMPORTANT: Override these for production or shared environments.
+  username: admin@noemail.com
+  password: my_Super_Strong_Pwd
+  # Database configuration.
+  # NOTE: The Keycloak database must be created *before* deployment,
+  #       and it must reside in the same SQL Server instance used by
+  #       the RPI operational databases.
+  # Update this to match the name of the Keycloak database you created in SQL Server.
+  database_name: keycloak
+  # Keycloak Realm configuration.
   realm_name: redpoint-mercury
   realm_client_id: rpi-service
+  # Client secret for the configured realm client.
+  # IMPORTANT: Replace this with a secure value before deploying.
   realm_client_secret: <my-realm-client-secret>
   securityContext:
     enabled: true
@@ -1926,22 +2218,34 @@ keycloak:
     maxUnavailable: "25%"
     maxSurge: "25%"
     progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
-  port: 80
+  # The port on which the Kubernetes services will be exposed.
+  # This can be customized to align with the customer's internal port conventions.
+  service:
+    port: 80
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
   # Enable Horizontal autoscaling
   autoscaling:
-    enabled: true
-    type: hpa
+    enabled: false
     # HPA Settings
     minReplicas: 2
     maxReplicas: 5
@@ -1971,30 +2275,47 @@ keycloak:
   resources:
     enabled: true
     requests:
-      cpu: 256m
-      memory: 1Gi
+      cpu: 500m
+      memory: 3Gi
     limits:
 #      cpu: "2"
-      memory: 1Gi
+      memory: 3Gi
 
 # ==========================
 reportingservice:
   sigma:
-    enabled: true
+    enabled: false
     api_url: https://api.us.azure.sigmacomputing.com
     client_id: 48dd1982ab835ff53177e9cbd7fb5608b1db8c56491a040f2f0843a3bfc6b440
     client_secret: my_sigma_client_secret
 
 # ==========================
 initservice:
-  enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
+  # Number of pod replicas to deploy.
+  # IMPORTANT: Only 1 replica is supported at this time
   replicas: 1
+  # Create and use a dedicated ServiceAccount.
   serviceAccount: 
     enabled: true 
-  # MongoDB is the only supported option for the operational database
+  # Operational database configuration.
+  # MongoDB is the only supported option for this service.
   database:
     operational:
-      name: CDP_WEB_{{ .Release.Namespace }}
+      # Name of the operational MongoDB database.
+      # The default includes the release namespace, but you may override it if needed.
+      name: smart_activation_db
+      # MongoDB connection string.
+      # IMPORTANT: Replace with your actual connection string.
       connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
   securityContext:
     enabled: true
@@ -2015,38 +2336,44 @@ initservice:
     maxUnavailable: "25%"
     maxSurge: "25%"
     progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
-  port: 80
+  # The port on which the Kubernetes services will be exposed.
+  # This can be customized to align with the customer's internal port conventions.
+  service:
+    port: 80
+  # Enable resource requests/limits for better scheduling and stability.
   resources:
     enabled: true
     requests:
-      cpu: 256m
-      memory: 2Gi
+      cpu: 500m
+      memory: 3Gi
     limits:
 #      cpu: "2"
-      memory: 2Gi
-    java_opts: "-Xmx1536m"
+      memory: 3Gi
+    # JVM options for tuning memory usage. Adjust based on allocated resources.
+    java_opts: "-Xmx2150m"
   logging:
     verbosity: DEBUG
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
-  # Enable Horizontal autoscaling
-  autoscaling:
-    enabled: true
-    type: hpa
-    # HPA Settings
-    minReplicas: 2
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -2071,27 +2398,44 @@ initservice:
 
 # ==========================
 messageq:
+  # Type of workload to deploy.
+  #   Only statefulset is supported
+  type: StatefulSet
+  # Number of messageq instances to run.
   replicas: 1
+  # Create and use a dedicated ServiceAccount.
   serviceAccount: 
     enabled: true
   port: 5672
-  type: statefulset
+  username: guest
+  password: guest
+  # Default resource requests and limits per pod.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
-      cpu: "256m"
-      memory: "750Mi"
+      cpu: 500m
+      memory: 3Gi
     limits:
-      memory: "2Gi"
-  username: "redpointrpi"
-  password: "my_Super_Strong_Pwd"
-  virtualhost: "/"
-  erang_cookie: "1234"
-  customLabels: 
+      memory: 3Gi
+  # Optional custom labels to apply to the Deployment and Pod metadata.
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
+  # Liveness probe checks if the app is still running. 
+  # If it fails, the pod will be restarted.
   securityContext:
     enabled: true
     runAsUser: 7777
@@ -2107,38 +2451,32 @@ messageq:
 #    supplementalGroups:
 #      - 4000
 #      - 5000
-  autoscaling:
-    enabled: true
-    type: hpa
-    # HPA Settings
-    minReplicas: 2
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
-  rollingUpdate:
-    maxUnavailable: "25%"
-    maxSurge: "25%"
-    progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
+  # Persistent volume claim template for the Statefulset.
+  # Defines the size of storage to request for each pod instance.
   volumeClaimTemplates:
-    storage: 50Gi
-  nodeSelector:
-    enabled: true
-    key: pool
-    value: rg1shared
-  tolerations:
-    enabled: true
-    effect: NoSchedule
-    key: pool
-    operator: Equal
-    value: rg1shared
+    storage: 100Gi
 
 # ==========================
 maintenanceservice:
-  enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
+  # Number of pod replicas to deploy.
+  # IMPORTANT: Only 1 replica is supported at this time
   replicas: 1
+  # Create and use a dedicated ServiceAccount.
   serviceAccount: 
     enabled: true 
   securityContext:
@@ -2160,40 +2498,42 @@ maintenanceservice:
     maxUnavailable: "25%"
     maxSurge: "25%"
     progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
+  # Container port exposed by the service.
   port: 80
   resources:
     enabled: true
     resources:
       enabled: true
       requests:
-        cpu: 256m
-        memory: 1Gi
+        cpu: 500m
+        memory: 2Gi
       limits:
   #      cpu: "2"
-        memory: 1Gi
-      java_opts: "-Xmx750m"
+        memory: 2Gi
+      java_opts: "-Xmx1536m"
   logging:
     verbosity: DEBUG
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
-  # Enable Horizontal autoscaling
-  autoscaling:
-    enabled: true
-    type: hpa
-    # HPA Settings
-    minReplicas: 2
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -2218,8 +2558,19 @@ maintenanceservice:
 
 # ==========================
 servicesapi:
-  enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
+  # Number of pod replicas to deploy
   replicas: 1
+  # Create and use a dedicated ServiceAccount.
   serviceAccount: 
     enabled: true 
   sso_enabled: true
@@ -2238,39 +2589,47 @@ servicesapi:
 #    supplementalGroups:
 #      - 4000
 #      - 5000
-  rollingUpdate:
-    maxUnavailable: "25%"
-    maxSurge: "25%"
-    progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
-  port: 80
+  # The port on which the Kubernetes services will be exposed.
+  # This can be customized to align with the customer's internal port conventions.
+  service:
+    port: 80
+  # Default resource requests and limits per pod.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
-    resources:
-      enabled: true
-      requests:
-        cpu: 256m
-        memory: 2Gi
-      limits:
-  #      cpu: "2"
-        memory: 2Gi
-      java_opts: -Xmx1536m
+    requests:
+      cpu: 500m
+      memory: 3Gi
+    limits:
+#      cpu: "2"
+      memory: 3Gi
+    java_opts: "-Xmx2150m"
   logging:
     verbosity: DEBUG
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
   # Enable Horizontal autoscaling
   autoscaling:
-    enabled: true
-    type: hpa
+    enabled: false
     # HPA Settings
     minReplicas: 2
     maxReplicas: 5
@@ -2300,8 +2659,19 @@ servicesapi:
 
 # ==========================
 socketio:
-  enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
+  # Number of pod replicas to deploy
   replicas: 1
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
   keycloak_realm: "redpoint-mercury"
@@ -2320,37 +2690,45 @@ socketio:
 #    supplementalGroups:
 #      - 4000
 #      - 5000
-  rollingUpdate:
-    maxUnavailable: "25%"
-    maxSurge: "25%"
-    progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
-  port: 80
+  service:
+    port: 80
+  # Default resource requests and limits per pod.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
-      cpu: 256m
-      memory: 1Gi
+      cpu: 500m
+      memory: 2Gi
     limits:
 #      cpu: "2"
-      memory: 1Gi
-    java_opts: -Xmx750m
+      memory: 2Gi
+    java_opts: "-Xmx1536m"
   logging:
     verbosity: DEBUG
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
   # Enable Horizontal autoscaling
   autoscaling:
-    enabled: true
-    type: hpa
+    enabled: false
     # HPA Settings
     minReplicas: 2
     maxReplicas: 5
@@ -2380,8 +2758,19 @@ socketio:
 
 # ==========================
 uiservice:
-  enabled: true
+  # Type of workload to deploy.
+  #   - deployment: standard Kubernetes Deployment (default)
+  #   - rollout: Argo Rollouts workload (used when GitOps with Argo CD + Argo Rollouts is desired)
+  type: deployment
+  rollout:
+    # When using Argo Rollouts, enable or disable automatic promotion
+    # of new versions once analysis or checks succeed.
+    autoPromotionEnabled: true
+    # Number of previous ReplicaSets (rollout revisions) to retain.
+    revisionHistoryLimit: 3
+  # Number of pod replicas to deploy
   replicas: 1
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
   securityContext:
@@ -2399,37 +2788,43 @@ uiservice:
 #    supplementalGroups:
 #      - 4000
 #      - 5000
-  rollingUpdate:
-    maxUnavailable: "25%"
-    maxSurge: "25%"
-    progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
-  port: 80
+  service:
+    port: 80
   resources:
     enabled: true
     requests:
-      cpu: 256m
-      memory: 2Gi
+      cpu: 500m
+      memory: 3Gi
     limits:
 #      cpu: "2"
-      memory: 2Gi
-    java_opts: -Xmx1536m
+      memory: 3Gi
+    java_opts: "-Xmx2150m"
   logging:
     verbosity: DEBUG
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
   # Enable Horizontal autoscaling
   autoscaling:
-    enabled: true
-    type: hpa
+    enabled: false
     # HPA Settings
     minReplicas: 2
     maxReplicas: 5
@@ -2459,8 +2854,12 @@ uiservice:
     
 # ==========================
 cdpcache:
+  # Type of workload to deploy.
+  #   Only statefulset is supported
+  type: StatefulSet
   enabled: true
   replicas: 1
+  # Create and use a dedicated ServiceAccount
   serviceAccount: 
     enabled: true 
   securityContext:
@@ -2478,39 +2877,41 @@ cdpcache:
 #    supplementalGroups:
 #      - 4000
 #      - 5000
-  rollingUpdate:
-    maxUnavailable: "25%"
-    maxSurge: "25%"
-    progressDeadlineSeconds: 600
+  # Enable to ensure a minimum number of pods remain available during voluntary disruptions.
   podDisruptionBudget:
     enabled: false
+    # Minimum number of pods that must remain up when disruptions occur.
     minAvailable: 1
-  port: 80
+  # The port on which the Kubernetes services will be exposed.
+  # This can be customized to align with the customer's internal port conventions.
+  service:
+    port: 6379
+  # Default resource requests and limits per pod.
+  # Treat these as starting points and adjust accordingly to meet your utilization and performance requirements.
   resources:
     enabled: true
     requests:
-      cpu: 256m
-      memory: 1Gi
+      cpu: 500m
+      memory: 2Gi
     limits:
 #      cpu: 2
-      memory: 1Gi
+      memory: 2Gi
   # Optional custom labels to apply to the Deployment and Pod metadata.
-  # These will be added in addition to the default labels.
-  # Example: environment: prod, team: marketing
-  customLabels: 
+  # These are added in addition to the default labels provided by the chart.
+  # Example:
+  #   customLabels:
+  #     environment: "prod"
+  #     team: "marketing"
+  customLabels:
     environment: "prod"
     team: "marketing"
+  # Optional custom annotations for the Deployment and Pod metadata.
+  # Use this to attach metadata for tooling, monitoring, automation, etc.
+  # Example:
+  #   customAnnotations:
+  #     my-custom-annotation: "my-value"
   customAnnotations:
     my-custom-annotation: "my-value"
-  # Enable Horizontal autoscaling
-  autoscaling:
-    enabled: true
-    type: hpa
-    # HPA Settings
-    minReplicas: 2
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
   # Liveness probe checks if the app is still running. 
   # If it fails, the pod will be restarted.
   livenessProbe:
@@ -2532,5 +2933,7 @@ cdpcache:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
+  # Persistent volume claim template for the Statefulset.
+  # Defines the size of storage to request for each pod instance.
   volumeClaimTemplates:
-    storage: "50Gi"
+    storage: 100Gi

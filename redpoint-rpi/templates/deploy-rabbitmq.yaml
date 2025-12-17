@@ -142,13 +142,27 @@ spec:
             - name: management
               containerPort: 15672
               protocol: TCP
+          {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.enabled }}
           resources:
+            {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits }}
             limits:
-              cpu: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.cpu }}
+              {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.cpu }}
+              cpu: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.cpu | quote }}
+              {{- end }}
+              {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.memory }}
               memory: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.memory }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests }}
             requests:
+              {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.cpu | quote }}
               cpu: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.cpu }}
+              {{- end }}
+              {{- if .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.memory }}
               memory: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.memory }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
           env:
             - name: RABBITMQ_DEFAULT_USER
               value: {{ .Values.queuereader.realtimeConfiguration.distributedQueue.rabbitmqSettings.username | quote }}
@@ -221,6 +235,30 @@ spec:
 {{- end }}
 {{- end }}
 
+
+---
+{{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
+{{- if eq .Values.realtimeapi.queueProvider.rabbitmq.type "internal" }}
+{{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rpi-realtimeapi-rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  maxUnavailable: {{ .Values.realtimeapi.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
+{{- end }}
+{{- end }}
+{{- end }}
+
 ---
 {{- if eq .Values.realtimeapi.queueProvider.provider "rabbitmq" }}
 {{- if eq .Values.realtimeapi.queueProvider.rabbitmq.type "internal" }}
@@ -263,23 +301,6 @@ spec:
       targetPort: 15672
   selector:
     app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
-
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: rpi-realtimeapi-rabbitmq
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: rpi
-    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
-spec:
-  maxUnavailable: {{ .Values.realtimeapi.podDisruptionBudget.maxUnavailable }}
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: rpi-realtimeapi-rabbitmq
 
 ---
 apiVersion: apps/v1
@@ -363,13 +384,27 @@ spec:
             - name: management
               containerPort: 15672
               protocol: TCP
+          {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.enabled }}
           resources:
+            {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits }}
             limits:
-              cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.cpu }}
+              {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.cpu }}
+              cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.cpu | quote }}
+              {{- end }}
+              {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.memory }}
               memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.memory }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.requests }}
             requests:
+              {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.cpu | quote }}
               cpu: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.cpu }}
+              {{- end }}
+              {{- if .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.memory }}
               memory: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.memory }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
           env:
             - name: RABBITMQ_DEFAULT_USER
               value: {{ .Values.realtimeapi.queueProvider.rabbitmq.rabbitmqSettings.username | quote }}

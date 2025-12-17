@@ -54,7 +54,7 @@ spec:
             service:
               name: rpi-queuereader
               port:
-                number: 80
+                number: {{ .Values.queuereader.service.port }}
     {{- end }}
     {{- if .Values.integrationapi.enabled }}
     - host: {{ .Values.ingress.hosts.integration }}.{{ .Values.ingress.domain }}
@@ -66,7 +66,7 @@ spec:
             service:
               name: rpi-integrationapi
               port:
-                number: {{ .Values.integrationapi.port }}
+                number: {{ .Values.integrationapi.service.port }}
     {{- end }}
     {{- if .Values.realtimeapi.enabled }}
     - host: {{ .Values.ingress.hosts.realtime }}.{{ .Values.ingress.domain }}
@@ -138,7 +138,7 @@ spec:
     {{- end }}
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -167,7 +167,7 @@ spec:
   - secretName: ingress-tls
   {{- end }}
   rules:
-  - host: {{ .Values.ingress.hosts.dataactivation }}.{{ .Values.ingress.domain }}
+  - host: {{ .Values.ingress.hosts.smartactivation }}.{{ .Values.ingress.domain }}
     http:
       paths:
       - backend:
@@ -260,14 +260,14 @@ spec:
   - secretName: ingress-tls
   {{- end }}
   rules:
-  - host: {{ .Values.ingress.hosts.webui }}.{{ .Values.ingress.domain }}
+  - host: {{ .Values.ingress.hosts.smartactivation }}.{{ .Values.ingress.domain }}
     http:
       paths:
       - backend:
           service:
             name: cdp-socketio
             port:
-              number: 8930
+              number: {{ .Values.socketio.service.port }}
         path: /(socket.io/.*) 
         pathType: ImplementationSpecific
 {{- end }}

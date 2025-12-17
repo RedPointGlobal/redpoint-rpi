@@ -1,4 +1,4 @@
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -7,7 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-init
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
@@ -28,7 +28,7 @@ metadata:
 {{- end }}
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 {{- if .Values.initservice.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -38,7 +38,7 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-init
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   minAvailable: {{ .Values.initservice.podDisruptionBudget.minAvailable }}
@@ -49,7 +49,31 @@ spec:
 {{- end }}
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.initservice.enabled }}
+{{- if eq .Values.initservice.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdp-init-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: cdp-init
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: smartactivation
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.initservice.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: cdp-init
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -58,25 +82,31 @@ metadata:
   labels:
     app.kubernetes.io/name: cdp-init
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
-    port: {{ .Values.initservice.port }}
+    port: {{ .Values.initservice.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
     app.kubernetes.io/name: cdp-init
 
 ---
+{{- if eq .Values.initservice.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.initservice.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   labels:
     app.kubernetes.io/name: cdp-init
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: cdp-init
   namespace: {{ .Release.Namespace }}
@@ -85,12 +115,20 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: cdp-init
+  {{- if eq .Values.initservice.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: cdp-init
+      previewService: cdp-init-preview
+      autoPromotionEnabled: {{ .Values.initservice.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.initservice.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: cdp-init
         app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/part-of: smartactivation
         app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.initservice.customLabels }}
         {{- toYaml . | nindent 8 }} 
@@ -182,7 +220,7 @@ spec:
         - name: SOCKETIO_HOST
           value: "cdp-socketio"
         - name: SOCKETIO_PORT
-          value: {{ .Values.socketio.port | quote }}
+          value: {{ .Values.socketio.service.port | quote }}
         {{- if .Values.reportingservice.sigma.enabled }}
         - name: SIGMA_API_URL
           value: {{ .Values.reportingservice.sigma.api_url | quote }}
@@ -212,7 +250,7 @@ spec:
         - name: CACHE_HOST
           value: "cdp-cache-0.cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
         - name: CACHE_PORT
-          value: "6379"
+          value: {{ .Values.cdpcache.service.port | quote }}
         - name: _JAVA_OPTIONS
           value: {{ .Values.initservice.resources.java_opts | quote }} 
         - name: SMTP_HOST
@@ -233,7 +271,7 @@ spec:
         - name: KEYCLOAK_HOST
           value: {{ .Values.keycloak.hostname | quote }}
         - name: KEYCLOAK_PORT
-          value: {{ .Values.keycloak.port | quote }}
+          value: {{ .Values.keycloak.service.port | quote }}
         - name: KEYCLOAK_ADMIN_USER
           value: {{ .Values.keycloak.username | quote }}
         - name: KEYCLOAK_ADMIN_PASSWORD

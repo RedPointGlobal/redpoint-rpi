@@ -1,4 +1,4 @@
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -7,7 +7,7 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   {{- if eq .Values.global.deployment.platform "azure" }}
   {{- if .Values.cloudIdentity.enabled }}
@@ -29,7 +29,7 @@ metadata:
 
 
 ---
-{{- if .Values.dataActivation.enabled }}
+{{- if .Values.smartActivation.enabled }}
 {{- if .Values.keycloak.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -50,8 +50,31 @@ spec:
 {{- end }}  
 
 ---
-{{- if .Values.dataActivation.enabled }}
-{{- if eq .Values.keycloak.type "internal" }}
+{{- if .Values.smartActivation.enabled }}
+{{- if eq .Values.keycloak.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: smartactivation
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.keycloak.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: keycloak
+{{- end }}     
+{{- end }}  
+
+---
+{{- if .Values.smartActivation.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -60,25 +83,31 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
 spec:
   ports:
   - name: http
-    port: {{ .Values.keycloak.port }}
+    port: {{ .Values.keycloak.service.port }}
     protocol: TCP
     targetPort: 8080
   selector:
     app.kubernetes.io/name: keycloak
 
 ---
+{{- if eq .Values.keycloak.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.keycloak.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   labels:
     app.kubernetes.io/name: keycloak
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/part-of: webui
+    app.kubernetes.io/part-of: smartactivation
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
   name: keycloak
   namespace: {{ .Release.Namespace }}
@@ -87,18 +116,28 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: keycloak
+  {{- if eq .Values.keycloak.type "deployment" }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: {{ .Values.keycloak.rollingUpdate.maxUnavailable | default "25%" }}
       maxSurge: {{ .Values.keycloak.rollingUpdate.maxSurge | default "25%" }}
   progressDeadlineSeconds: {{ .Values.keycloak.progressDeadlineSeconds | default 600 }}
+  {{- end }}
+  {{- if eq .Values.keycloak.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: keycloak
+      previewService: keycloak-preview
+      autoPromotionEnabled: {{ .Values.keycloak.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.keycloak.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: keycloak
         app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/part-of: webui
+        app.kubernetes.io/part-of: smartactivation
         app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.keycloak.customLabels }}
         {{- toYaml . | nindent 8 }}
@@ -218,7 +257,7 @@ spec:
               name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
               key: CDP_Keycloak_Admin_Password
         - name: KEYCLOAK_EXTRA_ARGS
-          value: "-Dkeycloak.frontendUrl=https://{{ .Values.ingress.hosts.webui }}.{{ .Values.ingress.domain }}"
+          value: "-Dkeycloak.frontendUrl=https://{{ .Values.ingress.hosts.smartactivation }}.{{ .Values.ingress.domain }}"
         - name: KEYCLOAK_DATABASE_NAME
           value: {{ .Values.keycloak.database_name | quote }}
         - name: KEYCLOAK_PROXY_HEADERS
@@ -236,5 +275,4 @@ spec:
           operator: Equal
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
-{{- end }}
 {{- end }}

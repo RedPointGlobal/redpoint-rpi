@@ -50,6 +50,30 @@ spec:
 
 ---
 {{- if .Values.callbackapi.enabled }}
+{{- if eq .Values.callbackapi.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-callbackapi-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: rpi-callbackapi
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/part-of: rpi
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  ports:
+  - name: http
+    port: {{ .Values.callbackapi.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: rpi-callbackapi
+{{- end }}
+{{- end }}
+   
+---
+{{- if .Values.callbackapi.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -70,8 +94,14 @@ spec:
     app.kubernetes.io/name: rpi-callbackapi
 
 ---
+{{- if eq .Values.callbackapi.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq .Values.callbackapi.type "deployment" }}
 apiVersion: apps/v1
 kind: Deployment
+{{- end }}
 metadata:
   name: rpi-callbackapi
   namespace: {{ .Release.Namespace }}
@@ -91,6 +121,14 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: rpi-callbackapi
+  {{- if eq .Values.callbackapi.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: rpi-callbackapi
+      previewService: rpi-callbackapi-preview
+      autoPromotionEnabled: {{ .Values.callbackapi.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ .Values.callbackapi.rollout.revisionHistoryLimit }}
+  {{- end }}
   template:
     metadata:
       labels:
@@ -120,6 +158,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.callbackapi.terminationGracePeriodSeconds }}
       serviceAccountName: rpi-callbackapi
       {{- if .Values.securityContext.enabled }}
       securityContext:
@@ -128,7 +167,6 @@ spec:
         fsGroup: {{ .Values.securityContext.fsGroup }}
         runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
       {{- end }}
-      terminationGracePeriodSeconds: 120
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -271,20 +309,30 @@ spec:
           value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
         {{- end }}
-        {{- if .Values.cloudIdentity.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-        - name: CloudIdentity__Amazon__AccessKeyId
-          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
-        - name: CloudIdentity__Amazon__SecretAccessKey
-          value: {{ .Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Access_Key_ID
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Secret_Access_Key
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_REGION
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
         {{- end }}
         {{- end }}
         {{- end }}
         {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Amazon" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
         - name: KeyVault__Provider
           value: "Amazon"
+        - name: KeyVault__AmazonSettings__AppSettingsTag
+          value: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.secretTagKey | quote }}
         - name: KeyVault__UseForAppSettings
           value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
         - name: KeyVault__UseForConfigPasswords
@@ -340,11 +388,11 @@ spec:
           value: "RedPoint.Amazon.Server"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
           value: "RedPoint.Amazon.Server.AWSQueue.SQSQueueFactory"
-        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
-          value: "AccessKey"
         {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
         {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
+          value: "AccessKey"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
           valueFrom:
             secretKeyRef:
@@ -353,11 +401,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
           value: "SecretKey"
-        {{- end }}
-        {{- if eq .Values.realtimeapi.queueProvider.provider "amazonsqs" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
           valueFrom:
             secretKeyRef:
@@ -703,6 +749,10 @@ spec:
         runAsGroup: {{ $.Values.securityContext.runAsGroup }}
         fsGroup: {{ $.Values.securityContext.fsGroup }}
         runAsNonRoot: {{ $.Values.securityContext.runAsNonRoot }}
+        supplementalGroups:
+          {{- with .Values.securityContext.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
       {{- end }}
       terminationGracePeriodSeconds: 120
       containers:
@@ -829,14 +879,17 @@ spec:
           value: {{ $.Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
         {{- end }}
         {{- end }}
-        {{- if $.Values.cloudIdentity.enabled }}
         {{- if eq $.Values.cloudIdentity.provider "Amazon" }}
-        {{- if eq $.Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-        - name: CloudIdentity__Amazon__AccessKeyId
-          value: {{ $.Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
-        - name: CloudIdentity__Amazon__SecretAccessKey
-          value: {{ $.Values.cloudIdentity.amazonSettings.secretAccessKey | quote }}
-        {{- end }}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+        - name: AWS_ACCESS_KEY_ID
+          value: {{ .Values.cloudIdentity.amazonSettings.accessKeyId | quote }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: AWS_SM_Secret_Access_Key
+        - name: AWS_REGION
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
         {{- end }}
         {{- end }}
         {{- if $.Values.cloudIdentity.secretsManagement.enabled }}
