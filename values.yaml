@@ -37,7 +37,7 @@ global:
       cdpmaintenanceservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-maintenance
       keycloak: rg1acrpub.azurecr.io/docker/redpointglobal/releases/keycloak
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20251213.955
+      tag: 7.6.20260114.1043
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
