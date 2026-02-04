@@ -67,10 +67,13 @@ data:
     SparkServerType=3
     Host={{ .host }}
     Port={{ .port }}
+    Schema={{ .schema }}
     SSL=1
     Min_TLS=1.2 
     ThriftTransport=2
-    AuthMech=3
+    AuthMech={{ .authMechanism }}
+    UID={{ .username }}
+    PWD={{ .password }}
     TrustedCerts=/app/odbc-lib/simba/spark/lib/cacerts.pem
     UseSystemTrustStore=0
     HTTPPath={{ .httpPath }}

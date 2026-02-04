@@ -1,7 +1,7 @@
 ![redpoint_logo](assets/images/logo.png)
 ## Read Before Upgrading
 
-This release introduces several enhancements, including AWS Secrets Manager support, Argo Rollouts integration for GitOps workflows, and the renaming of Data Activation to Smart Activation. The update also includes configuration refinements, resource optimization improvements, and enhanced documentation.
+This release includes enhancements, such as support for NetworkPolicy, seccomp profiles using RuntimeDefault, and an improved NOTES.txt with dynamic templating that surfaces release-specific information, connection details, and post-installation next steps.
 
 <div style="background-color:#ffe5e5; padding:16px; border-left:6px solid #cc0000;">
   <strong style="color:#cc0000; font-size: 1.1em;">NOTE</strong>

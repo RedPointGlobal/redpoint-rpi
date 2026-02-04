@@ -171,8 +171,8 @@ curl -k -X 'PUT' \
           "enabled": true
       },
       "machine_learning": {
-          "enabled": true,
-          "finiteStateMachineEnabled": true
+          "enabled": false,
+          "finiteStateMachineEnabled": false
       },
       "in_situ": {
           "enabled": false,

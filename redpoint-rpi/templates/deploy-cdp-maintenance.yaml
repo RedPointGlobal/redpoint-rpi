@@ -215,6 +215,10 @@ spec:
             {{- end }}
         {{- end }}
         env: 
+        - name: CACHE_HOST
+          value: "cdp-cache-0.cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
+        - name: CACHE_PORT
+          value: {{ .Values.cdpcache.service.port | quote }}
         - name: SOCKETIO_HOST
           value: "cdp-socketio"
         - name: SOCKETIO_PORT

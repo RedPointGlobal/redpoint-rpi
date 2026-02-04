@@ -177,13 +177,15 @@ spec:
                   matchLabels:
                     app.kubernetes.io/name: rpi-queuereader
                 topologyKey: kubernetes.io/hostname
+      {{- if .Values.topologySpreadConstraints.enabled }}
       topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+        - maxSkew: {{ .Values.topologySpreadConstraints.maxSkew }}
+          topologyKey: {{ .Values.topologySpreadConstraints.topologyKey }}
+          whenUnsatisfiable: {{ .Values.topologySpreadConstraints.whenUnsatisfiable }}
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: rpi-queuereader
+      {{- end }}
       containers:
       - env:
         {{- if .Values.executionservice.internalCache.enabled }}

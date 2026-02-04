@@ -153,13 +153,15 @@ spec:
                   matchLabels:
                     app.kubernetes.io/name: rpi-deploymentapi
                 topologyKey: kubernetes.io/hostname
+      {{- if .Values.topologySpreadConstraints.enabled }}
       topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+        - maxSkew: {{ .Values.topologySpreadConstraints.maxSkew }}
+          topologyKey: {{ .Values.topologySpreadConstraints.topologyKey }}
+          whenUnsatisfiable: {{ .Values.topologySpreadConstraints.whenUnsatisfiable }}
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: rpi-deploymentapi
+      {{- end }}
       containers:
       - name: rpi-deploymentapi
         image: {{ .Values.global.deployment.images.deploymentapi }}:{{ .Values.global.deployment.images.tag }}

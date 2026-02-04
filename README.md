@@ -183,16 +183,26 @@ pwd # print working directory
 helm install redpoint-rpi redpoint-rpi/ --values values.yaml
 ```
 
-If everything goes well, You should see the output below.
+After successful installation, the command outputs release-specific information, connection details, and recommended next steps, as shown in the following example:
 ```
-NAME: redpoint-rpi
-LAST DEPLOYED: Mon Apr  28 02:31:46 2025
-NAMESPACE: redpoint-rpi
-STATUS: deployed
-REVISION: 1
-TEST SUITE: None
-NOTES:
-********************************* SUCCESS! *********************************
+╔══════════════════════════════════════════════════════════════════════╗
+║                        DEPLOYMENT SUCCESSFUL!                        ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ RPI 7.6.20260114.1043 has been successfully deployed                 ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+────────────────────────────────────────────────────────────────────────
+                             DEPLOYMENT DETAILS
+────────────────────────────────────────────────────────────────────────
+• Release:    dev
+• Namespace:  redpoint-rpi
+• Platform:   azure
+• Version:    7.6.20260114.1043
+• Timestamp:  2026-02-04 00:27:46 UTC
+
+────────────────────────────────────────────────────────────────────────
+                     NEXT STEPS & USEFUL COMMANDS
+────────────────────────────────────────────────────────────────────────
 ```
 It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. 
 

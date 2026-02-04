@@ -37,7 +37,7 @@ global:
       cdpmaintenanceservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-maintenance
       keycloak: rg1acrpub.azurecr.io/docker/redpointglobal/releases/keycloak
       # Specific version of RPI to be deployed, where <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: 7.6.20260114.1043
+      tag: "7.6.20260202.941"
       # Pull the image only if it's not already present on the node
       imagePullPolicy: IfNotPresent
       # Use an image pull secret for private registry authentication
@@ -164,10 +164,18 @@ databases:
           host: my-host.2.azuredatabricks.net
           port: 443
           httpPath: /sql/1.0/warehouses/c546e1e69e8d2ac9
+          username: token
+          password: my_databricks_token
+          schema: my_schema_name
+          authMechanism: 3
   #      - name: dbx-tenant2
   #        host: my-host.2.azuredatabricks.net
   #        port: 443
   #        httpPath: /sql/1.0/warehouses/c546e1e69e8d2ac9
+  #        username: token
+  #        password: my_databricks_token
+  #        schema: my_schema_name
+  #        authMechanism: 3
 
 # ========================================================
 # Some RPI functionality—such as secret managers and Azure/GCP plugins—
@@ -1993,6 +2001,28 @@ securityContext:
     - 5000
 
 # ==========================
+# Network Policies restrict traffic between pods for production isolation.
+# When enabled, only explicitly allowed traffic is permitted between services.
+networkPolicy:
+  enabled: false
+  # Allow DNS resolution for all RPI pods (required for service discovery)
+  allowDNS: true
+
+# ==========================
+# Topology spread constraints distribute pods across failure domains (zones/nodes).
+# This improves resilience against zone or node failures.
+topologySpreadConstraints:
+  enabled: true
+  # Maximum allowed difference in pod count between topology domains
+  maxSkew: 1
+  # Topology domain key to spread across
+  topologyKey: kubernetes.io/hostname
+  # What to do when constraints can't be satisfied:
+  #   - DoNotSchedule: don't schedule the pod
+  #   - ScheduleAnyway: schedule anyway, but prefer balanced placement
+  whenUnsatisfiable: ScheduleAnyway
+
+# ==========================
 # NodeSelector is used to control scheduling by specifying node labels.
 # When enabled, the deployment will only be scheduled on nodes that match the provided key-value pair.
 nodeSelector:
@@ -2151,6 +2181,8 @@ authservice:
     allowPrivilegeEscalation: false
     capabilities:
       drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
 #    supplementalGroups:
 #      - 4000
 #      - 5000

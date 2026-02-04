@@ -179,13 +179,15 @@ spec:
                   matchLabels:
                     app.kubernetes.io/name: rpi-nodemanager
                 topologyKey: kubernetes.io/hostname
+      {{- if .Values.topologySpreadConstraints.enabled }}
       topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+        - maxSkew: {{ .Values.topologySpreadConstraints.maxSkew }}
+          topologyKey: {{ .Values.topologySpreadConstraints.topologyKey }}
+          whenUnsatisfiable: {{ .Values.topologySpreadConstraints.whenUnsatisfiable }}
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: rpi-nodemanager
+      {{- end }}
       containers:
       - env:
         - name: Logging__LogLevel__Default

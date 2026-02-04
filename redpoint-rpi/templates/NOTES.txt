@@ -1,12 +1,68 @@
-********************************* SUCCESS! ************************************************************
+{{- $appName := .Values.global.application.name -}}
+{{- $appVersion := .Values.global.deployment.images.tag -}}
+{{- $releaseName := .Release.Name -}}
+{{- $namespace := .Release.Namespace -}}
+{{- $platform := .Values.global.deployment.platform -}}
 
-1. RPI has successfully been installed in your cluster.
-  - It may take a few minutes for the all the RPI services to start. Please wait about 10 minutes.
+╔══════════════════════════════════════════════════════════════════════╗
+║                        DEPLOYMENT SUCCESSFUL!                        ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ RPI {{ $appVersion }} has been successfully deployed                 ║
+╚══════════════════════════════════════════════════════════════════════╝
 
-2. To retrieve the RPI client and Configuration Editor endpoints, execute the command below. 
+────────────────────────────────────────────────────────────────────────
+                             DEPLOYMENT DETAILS
+────────────────────────────────────────────────────────────────────────
+• Release:    {{ $releaseName }}
+• Namespace:  {{ $namespace }}
+• Platform:   {{ $platform }}
+• Version:    {{ $appVersion }}
+• Timestamp:  {{ now | date "2006-01-02 15:04:05 UTC" }}
 
-kubectl get ingress --namespace redpoint-rpi
+────────────────────────────────────────────────────────────────────────
+                     NEXT STEPS & USEFUL COMMANDS
+────────────────────────────────────────────────────────────────────────
 
-4. For application support, please contact support@redpointglobal.com
+1. MONITOR DEPLOYMENT PROGRESS
+   It may take several minutes for all RPI services to start completely.
+   
+   Watch pod status:
+   $ kubectl get pods -n {{ $namespace }} --watch
+   
+   Check pod details:
+   $ kubectl get pods -n {{ $namespace }} -o wide
+   $ kubectl describe pods -n {{ $namespace }} -l app.kubernetes.io/part-of=rpi
 
-********************************* SUCCESS! ************************************************************
+2. ACCESS APPLICATION ENDPOINTS
+   Retrieve RPI client and Configuration Editor URLs:
+   
+   $ kubectl get ingress -n {{ $namespace }}
+   
+3. VERIFY SERVICE HEALTH
+   Check deployment status:
+   $ kubectl get deployments -n {{ $namespace }}
+   
+   Verify all pods are ready:
+   $ kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=rpi -n {{ $namespace }} --timeout=300s
+   
+   Check service endpoints:
+   $ kubectl get endpoints -n {{ $namespace }}
+
+4. TROUBLESHOOTING & LOGS
+   View application logs:
+   $ kubectl logs -n {{ $namespace }} -l app.kubernetes.io/part-of=rpi --tail=50
+   
+   Check for errors:
+   $ kubectl get events -n {{ $namespace }} --sort-by='.lastTimestamp'
+   
+   Verify resource usage:
+   $ kubectl top pods -n {{ $namespace }}
+
+────────────────────────────────────────────────────────────────────────
+                          SUPPORT INFORMATION
+────────────────────────────────────────────────────────────────────────
+• For technical support, please contact: support@redpointglobal.com
+• Documentation: [https://docs.redpointglobal.com/rpi/]
+
+Note: Ensure proper network access and DNS configuration to reach the
+      deployed services from your intended access points.
