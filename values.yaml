@@ -940,6 +940,7 @@ executionservice:
     overrideCustomSQLReservedWords: false
     maxSmartAssetInstancesForOfferCodes: "100000"
     rpdmOApiPrefixUri: /v1/
+    rpdmOApiRequestTimeout: "200"
     taskTimeout: 60
     triggerCheckCriteriaInterval: 60
     triggersMaxDaysInactive: 180

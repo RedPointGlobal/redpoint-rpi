@@ -298,6 +298,8 @@ spec:
           value: {{ .Values.executionservice.jobExecution.overrideCustomSQLReservedWords | quote }}
         - name: RPIExecution__RPDMOApiPrefixUri
           value: {{ .Values.executionservice.jobExecution.rpdmOApiPrefixUri | quote }}
+        - name: RPIExecution__RPDMOApiRequestTimeout
+          value: {{ .Values.executionservice.jobExecution.rpdmOApiRequestTimeout | quote }}
         - name: RPIExecution__TaskTimeout
           value: {{ .Values.executionservice.jobExecution.taskTimeout | quote }}
         - name: RPIExecution__TriggerCheckCriteriaInterval
