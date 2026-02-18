@@ -282,7 +282,7 @@ spec:
           configMap:
             name: rpi-queuereader-cache-config
         {{- if not .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
-        - name: rpi-executionservice-cache-data
+        - name: rpi-queuereader-cache-data
           emptyDir: {}
         {{- end }}
   {{- if .Values.queuereader.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
