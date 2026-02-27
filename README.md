@@ -39,7 +39,7 @@ This chart deploys RPI on Kubernetes using Helm.
 ## System Requirements
 
 | Component | Requirement |
-|-----------|-------------|
+|:----------|:------------|
 | **Operational Databases** | Microsoft SQL Server 2019+, PostgreSQL — on `SQLServer on VM`, `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, or `PostgreSQL`. 8 GB RAM, 200 GB disk minimum. |
 | **Data Warehouses** | `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, `SQLServer on VM`, `Snowflake`, `PostgreSQL`, `Amazon Redshift`, `Google BigQuery` |
 | **Kubernetes** | Latest stable version from a [certified provider](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). Minimum two nodes (8 vCPU, 32 GB RAM each). |
