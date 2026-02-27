@@ -14,6 +14,20 @@ This chart deploys RPI on Kubernetes using Helm.
   <a href="https://docs.redpointglobal.com/rpi/"><strong>Docs</strong></a>
 </p>
 
+<table align="center">
+  <tr>
+    <td align="center"><a href="docs/greenfield.md"><strong>New Installation</strong></a></td>
+    <td align="center">|</td>
+    <td align="center"><a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a></td>
+    <td align="center">|</td>
+    <td align="center"><a href="readme-values.md"><strong>Values Guide</strong></a></td>
+    <td align="center">|</td>
+    <td align="center"><a href="readme-argocd.md"><strong>ArgoCD Guide</strong></a></td>
+    <td align="center">|</td>
+    <td align="center"><a href="https://docs.redpointglobal.com/rpi/"><strong>Docs</strong></a></td>
+  </tr>
+</table>
+
 ---
 ![architecture](assets/images/diagram.png)
 
