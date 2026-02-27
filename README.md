@@ -30,9 +30,9 @@ This chart deploys RPI on Kubernetes using Helm.
 | **Databases** | Created from scratch | Existing operational and logging databases are reused |
 | **Overrides file** | Start from a `deployments/` example | Convert your existing `values.yaml` to the new format |
 
-> **Quick Start (Demo Mode):** For evaluation or development, set `global.deployment.mode: demo` to deploy embedded MSSQL and MongoDB containers — no external database setup required. See [Demo Database Mode](#demo-database-mode).
-
 ![upgrade_diagram](assets/images/upgrade.png)
+
+> **Quick Start (Demo Mode):** For evaluation or development, set `global.deployment.mode: demo` to deploy embedded MSSQL and MongoDB containers — no external database setup required. See [Demo Database Mode](#demo-database-mode).
 
 ---
 
