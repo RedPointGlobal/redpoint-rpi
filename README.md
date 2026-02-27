@@ -1,9 +1,11 @@
-<p align="center">
-  <img src="assets/images/logo.png" alt="Redpoint Global" width="280">
-</p>
+![redpoint_logo](assets/images/logo.png)
+## Redpoint Interaction (RPI) | Deployment on Kubernetes
 
-<h2 align="center">Redpoint Interaction (RPI)<br>Deployment on Kubernetes</h2>
+With Redpoint® Interaction you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
 
+This chart deploys RPI on Kubernetes using Helm.
+
+---
 <p align="center">
   <a href="docs/greenfield.md"><strong>New Installation</strong></a> ·
   <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a> ·
@@ -13,9 +15,6 @@
 </p>
 
 ---
-
-With Redpoint Interaction you can define your audience and execute highly personalized, cross-channel campaigns — all from a single visual interface. This chart deploys RPI on Kubernetes using Helm.
-
 ![architecture](assets/images/diagram.png)
 
 > **v7.7 Breaking Change** — The values file has been redesigned. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
