@@ -13,6 +13,7 @@ This chart deploys RPI on Kubernetes using Helm.
   <a href="readme-argocd.md"><strong>ArgoCD Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="https://docs.redpointglobal.com/rpi/"><strong>Docs</strong></a>
 </p>
+
 ---
 ![architecture](assets/images/diagram.png)
 
