@@ -24,7 +24,7 @@ This chart deploys RPI on Kubernetes using Helm.
 ## Choose Your Path
 
 | | New Installation | Upgrading from v7.6 |
-|---|---|---|
+|---|:---|:---|
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
 | **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
 | **Databases** | Created from scratch | Existing operational and logging databases are reused |
