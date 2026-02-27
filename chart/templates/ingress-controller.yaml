@@ -1,0 +1,448 @@
+{{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- $name := printf "nginx-%s" .Release.Namespace -}}
+
+
+{{- if $ingCfg.controller.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: {{ $name }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - nodes
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+  - get
+  
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses/status
+  verbs:
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resourceNames:
+  - {{ $name }}
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - {{ $name }}
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+  - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: nginx-config
+  namespace: {{ .Release.Namespace }}
+data:
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: tcp-services
+  namespace: {{ .Release.Namespace }}
+data:
+
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: {{ $ingCfg.className }}
+spec:
+  controller: k8s.io/ingress-nginx
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    {{- with .Values.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+  annotations:
+    {{- with .Values.customAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  name: ingress-nginx-controller
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  revisionHistoryLimit: 10
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+      annotations:
+        {{- with .Values.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      containers:
+        - name: controller
+          {{- $defaultImage := printf "%s:%s" .Values.global.deployment.images.ingress_controller .Values.global.deployment.images.tag }}
+          {{- $image := ternary $ingCfg.internalImageOverride.image $defaultImage $ingCfg.internalImageOverride.enabled }}
+          image: {{ $image }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /wait-shutdown
+          args:
+            - /nginx-ingress-controller
+            - --publish-service={{ .Release.Namespace }}/{{ $name }}
+            - --election-id={{ $name }}
+            - --controller-class=k8s.io/ingress-nginx
+            - --configmap={{ .Release.Namespace }}/nginx-config
+            - --tcp-services-configmap={{ .Release.Namespace }}/tcp-services
+            - --default-ssl-certificate={{ .Release.Namespace }}/ingress-tls
+            - --ingress-class={{ $ingCfg.className }}
+            - --watch-namespace={{ .Release.Namespace }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LD_PRELOAD
+              value: /usr/local/lib/libmimalloc.so
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+      serviceAccountName: {{ $name }}
+      terminationGracePeriodSeconds: 300
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  annotations:
+    {{- if eq $ingCfg.mode "private" }}
+    {{- if eq .Values.global.deployment.platform "azure" }}
+    service.beta.kubernetes.io/azure-load-balancer-internal: {{$ingCfg.controller.enabled | quote }}
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{$ingCfg.subnetName | quote }}
+    {{- end }}
+    {{- end }}
+    {{- if eq $ingCfg.mode "private" }}
+    {{- if eq .Values.global.deployment.platform "google" }}
+    networking.gke.io/load-balancer-type: "Internal"
+    {{- end }}
+    {{- end }}
+    {{- if $ingCfg.privateLink.azure.enabled }}
+    {{- if eq .Values.global.deployment.platform "azure" }}
+    service.beta.kubernetes.io/azure-pls-create: "true"
+    service.beta.kubernetes.io/azure-pls-name: {{ .Release.Namespace }}
+    service.beta.kubernetes.io/azure-pls-ip-configuration-subnet: {{$ingCfg.subnetName | quote }}
+    service.beta.kubernetes.io/azure-pls-ip-configuration-ip-address-count: "1"
+    service.beta.kubernetes.io/azure-pls-proxy-protocol: "false"
+    service.beta.kubernetes.io/azure-pls-visibility: "*"
+    {{- end }}
+    {{- end }}
+    {{- if eq .Values.global.deployment.platform "amazon" }}
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    {{- end }}
+    {{- if eq $ingCfg.mode "public" }}
+    {{- if eq .Values.global.deployment.platform "amazon" }}
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    {{- end }}
+    {{- end }}
+    {{- if eq .Values.global.deployment.platform "amazon" }}
+    {{- if eq $ingCfg.mode "private" }}
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    {{- end }}
+    {{- end }}
+    {{- if eq .Values.global.deployment.platform "amazon" }}
+    {{- if eq $ingCfg.certificateSource "acm" }}
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ $ingCfg.certificateArn | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    {{- end }}
+    {{- end }}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ipFamilyPolicy: SingleStack
+  ipFamilies:
+    - IPv4
+  ports:
+    - name: http
+      port: {{ $ingCfg.service.port }}
+      protocol: TCP
+      targetPort: 80
+      appProtocol: http
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: https
+      appProtocol: https
+  selector:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+automountServiceAccountToken: true
+{{- end }}

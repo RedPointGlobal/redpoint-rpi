@@ -1,0 +1,18 @@
+apiVersion: v2
+name: redpoint-rpi
+description: A Helm chart for Redpoint Interaction (RPI)
+type: application
+version: 7.7.0
+appVersion: "7.7"
+home: https://github.com/RedPointGlobal/redpoint-rpi
+icon: https://github.com/RedPointGlobal/redpoint-rpi/blob/main/assets/images/logo.png
+keywords:
+  - rpi
+  - cdp
+  - marketing
+  - realtime
+  - interaction
+  - redpoint
+maintainers:
+  - name: Redpoint Global
+    email: support@redpointglobal.com

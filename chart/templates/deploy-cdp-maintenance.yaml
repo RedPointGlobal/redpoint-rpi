@@ -1,0 +1,275 @@
+{{- $cfg := fromYaml (include "rpi.merged.maintenanceservice" .) -}}
+{{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
+{{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
+{{- $cacheCfg := fromYaml (include "rpi.merged.cdpcache" .) -}}
+{{- $sioCfg := fromYaml (include "rpi.merged.socketio" .) -}}
+{{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- $name := "cdp-maintenance" -}}
+
+{{- if .Values.smartActivation.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "amazon" }}
+  {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if $cfg.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+spec:
+  minAvailable: {{ $cfg.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if eq $cfg.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+{{- if eq $cfg.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq $cfg.type "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  annotations:
+    {{- with .Values.customAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  {{- if eq $cfg.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: {{ $name }}
+      previewService: {{ $name }}-preview
+      autoPromotionEnabled: {{ $cfg.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ $cfg.rollout.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+      annotations:
+        {{- with .Values.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ $name }}
+      {{- if $cfg.securityContext.enabled }}
+      securityContext:
+        runAsUser: {{ $cfg.securityContext.runAsUser }}
+        runAsGroup: {{ $cfg.securityContext.runAsGroup }}
+        fsGroup: {{ $cfg.securityContext.fsGroup }}
+        runAsNonRoot: {{ $cfg.securityContext.runAsNonRoot }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: {{ $name }}
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      containers:
+      - name: {{ $name }}
+        image: {{ .Values.global.deployment.images.cdpmaintenanceservice }}:{{ .Values.global.deployment.images.tag }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        livenessProbe:
+          httpGet:
+            path: /api-rg1-maintenance/v1/healthcheck
+            port: 8080
+          periodSeconds: {{ $liveness.periodSeconds }}
+          timeoutSeconds: {{ $liveness.timeoutSeconds }}
+          failureThreshold: {{ $liveness.failureThreshold }}
+        startupProbe:
+          httpGet:
+            path: /api-rg1-maintenance/v1/healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: {{ $startup.periodSeconds }}
+          failureThreshold: {{ $startup.failureThreshold }}
+        {{- if $cfg.resources.enabled }}
+        resources:
+          {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
+          limits:
+            {{- with $cfg.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and $cfg.resources.requests (ne $cfg.resources.requests.enabled false) }}
+          requests:
+            {{- with $cfg.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        ports: 
+        - containerPort: 8080 
+        {{- if $cfg.securityContext.enabled }}
+        securityContext:
+          privileged: {{ $cfg.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ $cfg.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ $cfg.securityContext.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range $cfg.securityContext.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        env: 
+        - name: CACHE_HOST
+          value: "cdp-cache-0.cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
+        - name: CACHE_PORT
+          value: {{ $cacheCfg.service.port | quote }}
+        - name: SOCKETIO_HOST
+          value: "cdp-socketio"
+        - name: SOCKETIO_PORT
+          value: {{ $sioCfg.service.port | quote }}
+        - name: MONGODB_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: CDP_Mongo_ConnectionString
+        - name: MONGODB_MERCURY_DB
+          value: {{ .Values.initservice.database.operational.name | quote }}
+        - name: API_BASE_URL
+          value: "https://{{ $ingCfg.hosts.smartactivation }}.{{ $ingCfg.domain }}"
+        - name: AUTH_BASE_URL
+          value: "http://cdp-authservice/"
+        {{- if eq .Values.global.deployment.platform "amazon" }}
+        {{- if .Values.cloudIdentity.enabled}}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
+        - name: AWS_ROLE_ARN
+          value: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
+        - name: AWS_WEB_IDENTITY_TOKEN_FILE
+          value: {{ .Values.cloudIdentity.amazonSettings.webIdentityTokenFile | quote }}
+        - name: AWS_STS_REGIONAL_ENDPOINTS
+          value: {{ .Values.cloudIdentity.amazonSettings.stsRegionalEndpoints | quote }}
+        - name: AWS_DEFAULT_REGION
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+

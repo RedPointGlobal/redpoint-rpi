@@ -1,0 +1,427 @@
+{{- $cfg := fromYaml (include "rpi.merged.deploymentapi" .) -}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
+{{- $readiness := fromYaml (include "rpi.merged.readinessProbe" .) -}}
+{{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
+{{- $topo := fromYaml (include "rpi.merged.topologySpreadConstraints" .) -}}
+{{- $diag := fromYaml (include "rpi.merged.diagnosticsMode" .) -}}
+{{- $name := "rpi-deploymentapi" -}}
+
+{{- if $cfg.serviceAccount.enabled }}
+{{- if $cfg.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- if eq .Values.global.deployment.platform "azure" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "google" }}
+  {{- if .Values.cloudIdentity.enabled }}
+  {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "workloadIdentity" }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.global.deployment.platform "amazon" }}
+  {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $cfg.enabled }}
+{{- if eq $cfg.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $cfg.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+{{- if eq $cfg.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq $cfg.type "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    {{- with .Values.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+  annotations:
+    {{- with .Values.customAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  {{- if eq $cfg.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: {{ $name }}
+      previewService: {{ $name }}-preview
+      autoPromotionEnabled: {{ $cfg.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ $cfg.rollout.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+        {{- end }}
+      annotations:
+        {{- with .Values.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ $name }}
+      {{- if $secCtx.enabled }}
+      securityContext:
+        runAsUser: {{ $secCtx.runAsUser }}
+        runAsGroup: {{ $secCtx.runAsGroup }}
+        fsGroup: {{ $secCtx.fsGroup }}
+        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
+        supplementalGroups:
+          {{- with $secCtx.supplementalGroups }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: {{ $name }}
+                topologyKey: kubernetes.io/hostname
+      {{- if $topo.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ $topo.maxSkew }}
+          topologyKey: {{ $topo.topologyKey }}
+          whenUnsatisfiable: {{ $topo.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      {{- end }}
+      containers:
+      - name: {{ $name }}
+        image: {{ .Values.global.deployment.images.deploymentapi }}:{{ .Values.global.deployment.images.tag }}
+        {{- if $secCtx.enabled }}
+        securityContext:
+          privileged: {{ $secCtx.privileged }}
+          allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range $secCtx.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- if $liveness.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ $liveness.httpGet.path }}
+            port: {{ $liveness.httpGet.port }}
+            scheme: {{ $liveness.httpGet.scheme }}
+          initialDelaySeconds: {{ $liveness.initialDelaySeconds }}
+          periodSeconds: {{ $liveness.periodSeconds }}
+          timeoutSeconds: {{ $liveness.timeoutSeconds }}
+          failureThreshold: {{ $liveness.failureThreshold }}
+        {{- end }}
+        {{- if $readiness.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ $liveness.httpGet.path }}
+            port: {{ $liveness.httpGet.port }}
+            scheme: {{ $liveness.httpGet.scheme }}
+          initialDelaySeconds: {{ $readiness.initialDelaySeconds }}
+          periodSeconds: {{ $readiness.periodSeconds }}
+          failureThreshold: {{ $readiness.failureThreshold }}
+          timeoutSeconds: {{ $readiness.timeoutSeconds }}
+        {{- end }}
+        {{- if $startup.enabled }}
+        startupProbe:
+          httpGet:
+            path: {{ $liveness.httpGet.path }}
+            port: {{ $liveness.httpGet.port }}
+            scheme: {{ $liveness.httpGet.scheme }}
+          failureThreshold: {{ $startup.failureThreshold }}
+          periodSeconds: {{ $startup.periodSeconds }}
+          initialDelaySeconds: {{ $startup.initialDelaySeconds }}
+          timeoutSeconds: {{ $startup.timeoutSeconds }}
+        {{- end }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        env:
+        - name: Logging__LogLevel__Default
+          value: {{ $cfg.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ $cfg.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ $cfg.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ $cfg.logging.rpiError | quote }}
+        - name: Logging__Console__LogLevel__Default
+          value: {{ $cfg.logging.Console | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          value: {{ .Values.databases.operational.pulse_database_name | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          value: {{ .Values.databases.operational.pulse_logging_database_name | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          value: {{ .Values.databases.operational.server_host | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: {{ .Values.databases.operational.databaseSchema | default "dbo" | quote }}
+        {{- if .Values.databases.operational.encrypt | default false }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        {{- end }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        {{- if .Values.cloudIdentity.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
+        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+        - name: CloudIdentity__Azure__CredentialType
+          value: "AzureIdentity"
+        - name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
+          value: {{ .Values.cloudIdentity.azureSettings.UseADTokenForDatabaseConnection | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Azure" }}
+        - name: KeyVault__Provider
+          value: "Azure"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        - name: KeyVault__AzureSettings__VaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.vaultUri | quote }}
+        - name: KeyVault__AzureSettings__AppSettingsVaultURI
+          value: {{ .Values.cloudIdentity.azureSettings.appSettingsVaultUri | quote }}
+        - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
+          value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "google" }}
+        {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS 
+          value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.provider "Google" }}
+        - name: KeyVault__Provider
+          value: "Google"
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Access_Key_ID
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SM_Secret_Access_Key
+              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
+        - name: AWS_REGION
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.global.deployment.platform "amazon" }}
+        {{- if .Values.cloudIdentity.enabled}}
+        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
+        - name: AWS_ROLE_ARN
+          value: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
+        - name: AWS_WEB_IDENTITY_TOKEN_FILE
+          value: {{ .Values.cloudIdentity.amazonSettings.webIdentityTokenFile | quote }}
+        - name: AWS_STS_REGIONAL_ENDPOINTS
+          value: {{ .Values.cloudIdentity.amazonSettings.stsRegionalEndpoints | quote }}
+        - name: AWS_DEFAULT_REGION
+          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+        - name: KeyVault__Provider
+          value: "Amazon"
+        - name: KeyVault__AmazonSettings__AppSettingsTag
+          value: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.secretTagKey | quote }}
+        - name: KeyVault__UseForAppSettings
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
+        - name: KeyVault__UseForConfigPasswords
+          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "amazon" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "google" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: "5432"
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          value: {{ .Values.databases.operational.server_username | quote }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              key: Operations_Database_Server_Password
+        {{- end }}
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        {{- if $cfg.resources.enabled }}
+        resources:
+          {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
+          limits:
+            {{- with $cfg.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and $cfg.resources.requests (ne $cfg.resources.requests.enabled false) }}
+          requests:
+            {{- with $cfg.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- end }}
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+          {{- if $cfg.templateTenant.useTemplateFiles }}
+          - name: templatetenantfiles
+            mountPath: {{ $cfg.templateTenant.templateTenantFilesPath | quote }}
+          {{- end }}
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+        {{- if $cfg.templateTenant.useTemplateFiles }}
+        - name: templatetenantfiles
+          persistentVolumeClaim:
+            claimName: {{ $cfg.templateTenant.volumeClaimName | quote }}
+        {{- end }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+
+
+
+
+
+
+

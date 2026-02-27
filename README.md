@@ -1,296 +1,165 @@
-![redpoint_logo](assets/images/logo.png)
-## Redpoint Interaction (RPI) | Deployment on Kubernetes
-With Redpoint® Interaction you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
+<p align="center">
+  <img src="assets/images/logo.png" alt="Redpoint Global" width="280">
+</p>
 
-This chart installs Redpoint Interaction (RPI) on Kubernetes using HELM.
-![cover](assets/images/diagram.png)
-### Table of Contents
-- [System Requirements ](#system-requirements)
-- [Considerations Before you begin ](#considerations-before-you-begin)
-- [Begin Deployment ](#begin-deployment)
-- [Post Greenfield Deployment Configuration](#post-greenfield-deployment-configuration)
-- [Post Upgrade Deployment Configuration](#post-upgrade-deployment-configuration)
-- [Retrieve Client Endpoints ](#retrieve-client-endpoints)
-- [Download Client Executable ](#download-client-executable)
-- [Configure Storage ](#configure-storage)
-- [Configure Realtime](#configure-realtime)
-- [Configure Secrets Management](#configure-secrets-management)
-- [Configure Open ID Connect](#configure-open-id-connect)
-- [Configure Microsoft Entra ID](#configure-microsoft-entra-id)
-- [Configure Content Generation Tools](#configure-content-generation-tools)
-- [Configure Custom Metrics](#configure-custom-metrics)
-- [Configure Autoscaling](#configure-autoscaling)
-- [Enable Smart Activation](assets/docs/smartActivation.md)
-- [Customizing This Helm Chart](#customizing-this-helm-chart)
-- [RPI Documentation](#rpi-documentation)
-- [Getting Support](#getting-support)
+<h2 align="center">Redpoint Interaction (RPI)<br>Deployment on Kubernetes</h2>
 
-### System Requirements
+<p align="center">
+  <a href="docs/greenfield.md"><strong>New Installation</strong></a> ·
+  <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a> ·
+  <a href="readme-values.md"><strong>Values Guide</strong></a> ·
+  <a href="readme-argocd.md"><strong>ArgoCD Guide</strong></a> ·
+  <a href="https://docs.redpointglobal.com/rpi/"><strong>Docs</strong></a>
+</p>
 
-- **Operational Databases**
-    - Microsoft SQL Server 2019 or later on any of the following plaforms: ```SQLServer on VM```, ```AzureSQLDatabase```, ```AmazonRDSSQL```, ```GoogleCloudSQL```, ```PostgreSQL```
-    - 8 GB Memory or more
-    - 200 GB or more free disk space.
+---
 
-- **Data Warehouses**
-    - Databases on any of the following platforms: ```AzureSQLDatabase```, ```AmazonRDSSQL```, ```GoogleCloudSQL```, ```SQLServer on VM```, ```Snowflake```, ```PostgreSQL```, ```Amazon Redshift```, ```Google BigQuery```
+With Redpoint Interaction you can define your audience and execute highly personalized, cross-channel campaigns — all from a single visual interface. This chart deploys RPI on Kubernetes using Helm.
 
-- **Kubernetes Cluster:**
+![architecture](assets/images/diagram.png)
 
-   - Latest stable version of Kubernetes. Select from this list of [Kubernetes certified solution providers](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). From each provider page, you can learn how to install and setup production ready clusters.
+> **v7.7 Breaking Change** — The values file has been redesigned. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
 
-   -  A Node Pool with a minimum of two nodes (8vCPU and 32GB RAM) each. Example SKUs per cloud service provider follow
-        - D8s_v5 (Azure)
-        - m5.2xlarge (AWS)
-        - n2-standard-8 (GCP)
+---
 
-The system specs outlined above are for running RPI in a modest environment. Ajust based on your production environment and specific use case.
+## Choose Your Path
 
-### Prerequisites
-| Ensure that the following requirements are met!                                                                                                                                                                                                                                   |
-|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| - **Redpoint Container Registry:** Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.<br><br> - **RPI License:** Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 License activation key.<br><br> - **Kubectl:** Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/), a command-line tool for interacting with your Kubernetes cluster.<br><br> - **Helm:** Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions for your target kubernetes cluster. |
+| | New Installation | Upgrading from v7.6 |
+|---|---|---|
+| **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
+| **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
+| **Databases** | Created from scratch | Existing operational and logging databases are reused |
+| **Overrides file** | Start from a `deployments/` example | Convert your existing `values.yaml` to the new format |
 
-### Considerations Before you begin
-Before deploying RPI, determine whether you're planning a Greenfield deployment or an Upgrade deployment.
+![upgrade_diagram](assets/images/upgrade.png)
 
-- **Upgrade Deployment:** RPI is deployed in an existing version 6.x environment. This means using the existing cluster, tenant, operations and logging databases, cache, and queue providers, with the RPI v7 containers being added to the existing setup. The upgrade from RPI v6.x to RPI v7.x is more involved. Before attempting to upgrade, be sure to read the [Redpoint Interaction upgrade path](https://docs.redpointglobal.com/bpd/upgrade-to-rpi-v7-x)
+---
 
-![cover](assets/images/upgrade.png)
-- **Greenfield Deployment:** RPI is deployed in a completely new environment. This means the creation of a new cluster, tenant, operations and logging databases, cache and queue providers. All these components are deployed from scratch, independent of any existing deployments.
+## System Requirements
 
-Both deployment methods require you deploy the RPI v7 containers following the same steps. However, the post-deployment configuration steps will differ. Details for each method are outlined in the [Post Greenfield Deployment Configuration](#post-greenfield-deployment-configuration) and [Post Upgrade Deployment Configuration](#post-upgrade-deployment-configuration) sections below.
+| Component | Requirement |
+|-----------|-------------|
+| **Operational Databases** | Microsoft SQL Server 2019+, PostgreSQL — on `SQLServer on VM`, `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, or `PostgreSQL`. 8 GB RAM, 200 GB disk minimum. |
+| **Data Warehouses** | `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, `SQLServer on VM`, `Snowflake`, `PostgreSQL`, `Amazon Redshift`, `Google BigQuery` |
+| **Kubernetes** | Latest stable version from a [certified provider](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). Minimum two nodes (8 vCPU, 32 GB RAM each). |
 
-### Begin Deployment
+**Example node SKUs:**
 
-At a highlevel, the deployment process flows as follows:
+| Azure | AWS | GCP |
+|-------|-----|-----|
+| D8s_v5 | m5.2xlarge | n2-standard-8 |
 
-- Clone this repository to your local environment.
-- Create a Kubernetes namespace dedicated for RPI 
-- Create the Kubernetes secrets for ```imagePull``` and TLS certificates for ```Ingress```.
-- Provide the connection details for:
-   - Operational database server
-   - Data warehouse server (If using Redshift or BigQuery)
-   - Cache and Queue providers (If using RPI Realtime)
-- Deploy the application using Helm.
+These specs are for a modest environment. Adjust based on your production workloads.
 
-To begin, follow the detailed instructions in the sections below.
+## Prerequisites
 
-**1. Clone this repository**
+Before starting, ensure you have:
 
-Cloning the repository locally ensures you have an independent copy of the project, which is not directly affected by upstream changes and gives you control over versioning.
+- **Redpoint Container Registry** — Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.
+- **RPI License** — Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 license activation key.
+- **kubectl** — Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) for interacting with your Kubernetes cluster.
+- **Helm** — Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions for your target cluster.
+
+## Repository Structure
 
 ```
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+redpoint-rpi/
+├── chart/                        # Helm chart (don't edit)
+│   ├── Chart.yaml
+│   ├── values.yaml               # Chart defaults
+│   └── templates/
+│       ├── _defaults.tpl         # Internal defaults
+│       ├── _helpers.tpl          # Merge helpers
+│       └── deploy-*.yaml         # Resource templates
+├── deployments/                  # Your environment overrides
+│   ├── values-reference.yaml     # Complete reference of all keys
+│   ├── dev.yaml
+│   ├── staging.yaml
+│   └── production.yaml
+├── docs/                         # Deployment guides
+│   ├── greenfield.md             # New installation guide
+│   └── migration.md              # v7.6 → v7.7 upgrade guide
+├── readme-values.md              # Values & overrides guide
+├── readme-argocd.md              # ArgoCD deployment guide
+└── README.md
 ```
 
-**2. Create Kubernetes Namespace:**
+---
 
-A Kubernetes namespace provides a logical separation within the cluster ensuring the resources and configurations for this project do not interfere with others in your cluster
+## Configuration
 
-```
-kubectl create namespace redpoint-rpi 
-```
-
-**3. Create Container Registry Secret:**
-
-Create a Kubernetes secret for ```imagePull```. This secret will store the credentials required to pull RPI images from the Redpoint container registry. Obtain these credentials from Redpoint Support and replace ```<your_username>``` and ```<your_password>``` with your actual credentials:
-
-```
-NAMESPACE=redpoint-rpi
-DOCKER_SERVER=rg1acrpub.azurecr.io
-DOCKER_USERNAME=<your_username>
-DOCKER_PASSWORD=<your_password>
-
-kubectl create secret docker-registry redpoint-rpi \
---namespace $NAMESPACE \
---docker-server=$DOCKER_SERVER \
---docker-username=$DOCKER_USERNAME \
---docker-password=$DOCKER_PASSWORD
-```
-
-**4. Create TLS Certificate Secret:**
-
-The Helm chart deploys an ingress controller to expose the URL endpoints required for accessing RPI services using HTTPS. The only requirement on your part is to provide a TLS certificate key pair. To add the certificate, create a Kubernetes secret as shown below:
-
-```
-NAMESPACE=redpoint-rpi
-CERT_PATH=./your_cert.crt
-KEY_PATH=./your_cert.key
-
-kubectl create secret tls ingress-tls \
---namespace $NAMESPACE \
---cert=$CERT_PATH \
---key=$KEY_PATH
-```
-
-With the secret created, configure the domain for your ingress. Open the ```values.yaml``` file, locate the ```ingress``` section, and replace ```example.com``` with your actual domain name. If you prefer to use your own ingress controller instead of the one provided by the Helm chart, set the value of ```controller.enabled``` to ```false```.
-
-```
-ingress:
-  domain: example.com
-  controller:
-    enabled: false
-```
-
-**5. Configure Operational Database Provider**
-
-The [operational databases](https://docs.redpointglobal.com/rpi/admin-key-concepts) store information necessary for RPI to function. There are two core operational databases: ```Pulse``` and ```Pulse_Logging```. Update the ```databases.operational``` section in the ```values.yaml``` with your SQL Server details.
-
-```
-databases:
-  operational: 
-    provider: sqlserver
-    server_host: <my-server-host>
-    server_username: <my-server-username>
-    server_password: <my-server-password>
-    pulse_database_name: <my-pulse-database-name>
-    pulse_logging_database_name: <my-pulse-logging-database-name>
-```
-
-**6. Configure Datawarehouse Provider**
-
-**Note:** This section only applies if your [datawarehouse](https://docs.redpointglobal.com/rpi/supported-connectors#Supportedconnectors-Databaseplatforms) is ```Redshift``` or ```BigQuery```. Both providers use ODBC drivers, which require a configuration file to be included in the containers. The details you provide are used to configure the Data Source Name (DSN). After deployment, the connection string for your Redshift or BigQuery data warehouse would look like this: ```dsn=redshift``` or ```dsn=bigquery```. This references the DSN that was automatically created using the details you provided.
-
-```
-datawarehouse:
-  provider: redshift
-  redshift:
-    server: your_redshift_server_endpoint
-    port: 5439
-    database: my_redshift_db
-    username: my_redshift_user
-    password: my_redshift_password
-```
-
-For the selected provider, make sure to complete the appropriate section either ```googleSettings``` or ```amazonSettings``` under ```cloudIdentity``` to supply the credentials required.
-
-**Note:** For both existing RPI v6.x deployments (during an upgrade) and new (greenfield) installations that require [RPI Realtime](https://docs.redpointglobal.com/rpi/rpi-realtime), ensure you complete the steps outlined in the [Configure Realtime](#configure-realtime) section before proceeding to Step 7.
-
-**7. Install RPI**
-
-Make sure you are in the cloned repository's directory and run the Helm install command
-```
-pwd # print working directory
-
-.
-├── README.md
-├── utilities
-├── redpoint-rpi
-└── chart-release-notes.md
-└── values.yaml
-
-helm install redpoint-rpi redpoint-rpi/ --values values.yaml
-```
-
-After successful installation, the command outputs release-specific information, connection details, and recommended next steps, as shown in the following example:
-```
-╔══════════════════════════════════════════════════════════════════════╗
-║                        DEPLOYMENT SUCCESSFUL!                        ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ RPI 7.6.20260114.1043 has been successfully deployed                 ║
-╚══════════════════════════════════════════════════════════════════════╝
-
-────────────────────────────────────────────────────────────────────────
-                             DEPLOYMENT DETAILS
-────────────────────────────────────────────────────────────────────────
-• Release:    dev
-• Namespace:  redpoint-rpi
-• Platform:   azure
-• Version:    7.6.20260114.1043
-• Timestamp:  2026-02-04 00:27:46 UTC
-
-────────────────────────────────────────────────────────────────────────
-                     NEXT STEPS & USEFUL COMMANDS
-────────────────────────────────────────────────────────────────────────
-```
-It may take some time for all the RPI services to fully initialize. We recommend waiting approximately 5-10 minutes to ensure that the services are completely up and running. 
-
-### Retrieve Client Endpoints
-
-To interact with RPI services, such as client login, you need to obtain the URL endpoints exposed by the ingress. Use the following command to list the ingresses in the redpoint-rpi namespace
-```
-kubectl get ingress --namespace redpoint-rpi
-```
-If no IP address is displayed, wait a few minutes and then re-run the command. Once the load balancer is ready, you should see output similar to the following, where ```<Load Balancer IP>``` will be replaced with the actual IP address:
-```
-NAME           HOSTS                                  ADDRESS              PORTS     AGE
-redpoint-rpi   rpi-deploymentapi.example.com          <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-interactionapi.example.com         <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-integrationapi.example.com         <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-realtimeapi.example.com            <Load Balancer IP>   80, 443   32d
-```
-
-Create DNS records in your DNS zone to map each hostname to the load balancer's IP address. This ensures proper routing of traffic to your services. You can then access RPI Services with the following endpoints:
-
-```
-https://rpi-deploymentapi.example.com                              # Deployment Service
-https://pi-interactionapi.example.com                              # Client hostname
-https://rpi-integrationapi.example.com                             # Integration API
-https://rpi-realtimeapi.example.com                                # Realtime API
-https://rpi-callbackapi.example.com                                # Callback API
-https://rpi-interactionapi.example.com/api/deployment/download     # Client Download
-```
-
-### Download Client Executable
-
-You can download the RPI Client from the Post-release Product Updates section of the RPI v7.6 Release Notes. Be sure to download the version that matches the deployed RPI version in your environment.
-
-- [Client Download](https://docs.redpointglobal.com/rpi/rpi-v7-6-release-notes#RPIv7.6releasenotes-Post-releaseproductupdates)
+After completing either the [Greenfield](docs/greenfield.md) or [Migration](docs/migration.md) guide, configure the optional features below that apply to your environment.
 
 ### Configure Cloud Identity
 
-**Note: This step is optional.** You can skip it if you're not using cloud services.
+> **Optional.** Skip this section if you're not using cloud services.
 
-Certain RPI functionality (e.g., secret managers, Azure and GCP plugins) is able to make use of cloud provider identity to authenticate with cloud services. This can be configured in the ```cloudIdentity``` section within the ```values.yaml``` file. Currently, the supported authentication methods are ```Azure AKS Workload Identity```, ```Google Service Account``` and ```Amazon AWS Access Keys```.
+Cloud provider identity enables RPI to authenticate with cloud services (secret managers, Azure/GCP plugins). Supported methods: `Azure AKS Workload Identity`, `Google Service Account`, `Amazon AWS Access Keys`.
 
-Open the ```values.yaml``` file and navigate to the ```cloudIdentity``` section. Set the provider field to your desired cloud provider. Supported values are ```Azure```, ```Amazon```, and ```Google```.
-
-```
+```yaml
 cloudIdentity:
   enabled: true
-  provider: Azure
+  provider: Azure    # Azure | Amazon | Google
 ```
 
-For Azure, perform steps to enable [Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-migrate-from-pod-identity) and grant the associated Managed Identity with permission to access the applicable Azure services. The Helm Chart only requires you provide the Managed Identity's client ID in the ```values.yaml```
+<details>
+<summary><strong>Azure — Workload Identity</strong></summary>
 
-```
+Enable [Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-migrate-from-pod-identity) and grant the Managed Identity access to the required Azure services:
+
+```yaml
 azureSettings:
-  managedIdentityClientId: <your-managed-identity-client_id>
+  managedIdentityClientId: <your-managed-identity-client-id>
 ```
 
-For Google Cloud, perform steps to create a Service Account in the target project and grant it permissions to access the applicable Google services. Create a Kubernetes ConfigMap containing the JSON file associated with the service account. The Helm Chart only requires you provide the Google project ID and the name of this ConfigMap in the ```values.yaml```
+</details>
 
-```
+<details>
+<summary><strong>Google Cloud — Service Account</strong></summary>
+
+Create a Service Account, grant permissions, and create a Kubernetes ConfigMap containing the JSON key file:
+
+```yaml
 googleSettings:
   configMapName: my-google-svs-account
   projectId: <my-google-project-id>
 ```
 
-For Amazon, perform steps to create an IAM user in the target account, grant the user permissions to access the necessary AWS services. The Helm Chart only requires you provide the ```Acccess Key ID```, ```Secret Access Key``` and ```region``` in the ```values.yaml```
+</details>
 
-```
+<details>
+<summary><strong>Amazon — IAM Access Keys</strong></summary>
+
+Create an IAM user with the required permissions:
+
+```yaml
 amazonSettings:
-    accessKeyId: <my-iam-access-key>
-    secretAccessKey: <my-iam-secret-access-key>
-    region: us-east-1  
+  accessKeyId: <my-iam-access-key>
+  secretAccessKey: <my-iam-secret-access-key>
+  region: us-east-1
 ```
+
+</details>
 
 ### Configure Secrets Management
 
-This Helm chart supports three modes for managing sensitive configuration values, including both Kubernetes Secrets and ConfigMaps that may store passwords or other confidential data.
+Three modes are supported for managing sensitive configuration:
 
-**1) Default:** Kubernetes Secrets and Configmaps are automatically created based on the values provided in ```values.yaml```. This is the simplest option and requires no additional setup beyond configuring the chart’s values.
+#### 1. Default (Helm-managed)
 
-**2) External:** Kubernetes Secrets are created and managed outside the Helm chart. This involves the following steps
-  - Disable Helm-managed secret creation 
-  - Create a Kubernetes secret named ```redpoint-rpi-secrets```. 
-  - Create a Kubernetes ConfigMap named ```odbc-config```. 
-  - Ensure both resources follow the format defined in ```redpoint-rpi/templates/deploy-secrets.yaml``` and ```redpoint-rpi/templates/cm-odbc.yaml```
-  - Do not include any sensitive values in the ```values.yaml``` file.
-  - Update your ```values``` configuration as below
+Kubernetes Secrets and ConfigMaps are automatically created from your overrides file. No additional setup required.
 
-```
+#### 2. External (self-managed)
+
+Manage secrets outside the Helm chart:
+
+1. Create a Kubernetes secret named `redpoint-rpi-secrets`
+2. Create a ConfigMap named `odbc-config`
+3. Follow the format in `chart/templates/deploy-secrets.yaml` and `chart/templates/cm-odbc.yaml`
+4. Remove all sensitive values from your overrides file
+5. Configure:
+
+```yaml
 cloudIdentity:
   enabled: false
   secretsManagement:
@@ -300,29 +169,33 @@ cloudIdentity:
     secretName: redpoint-rpi-secrets
 ```
 
-**Migrating from Default to External Mode**
+<details>
+<summary>Migrating from Default to External</summary>
 
-If you originally deployed the chart using the ```Default``` mode and now want to switch to ```External``` mode, follow the steps below for a smooth transition:
+```bash
+# Export existing resources
+kubectl get secret redpoint-rpi-secrets -o yaml > redpoint-rpi-secrets.yaml
+kubectl get configmap odbc-config -o yaml > odbc-config.yaml
 
-  - Export the existing secret and configmap to a file: 
-       - ```kubectl get secret redpoint-rpi-secrets -o yaml > redpoint-rpi-secrets.yaml```
-       - ```kubectl get configmap odbc-config -o yaml > odbc-config.yaml```
-  - Remove all sensitive values from your ```values.yaml```
-  - Update your ```values``` configuration as described in the ```External``` mode
-  - Recreate the secret and configmap: 
-       - ```kubectl apply -f redpoint-rpi-secrets.yaml```
-       - ```kubectl apply -f odbc-config.yaml```
-
-**3) Key Vault:** Secrets are sourced directly from a cloud key vault service. Currently supported providers are ```Azure Key Vault```, ```AWS Secrets Manager``` and ```Google Secrets Manager```.
-
-**Azure Key Vault Setup**
-
-  - Create a managed identity with a federated credential.
-  - Enable Workload Identity Federation on your AKS cluster.
-  - Grant the managed identity access to the Azure Key Vault.
-  - Update your ```values``` configuration as below
-
+# Remove sensitive values from your overrides file, update config as above, then:
+kubectl apply -f redpoint-rpi-secrets.yaml
+kubectl apply -f odbc-config.yaml
 ```
+
+</details>
+
+#### 3. Key Vault (cloud-native)
+
+Secrets are sourced from `Azure Key Vault`, `AWS Secrets Manager`, or `Google Secret Manager`.
+
+<details>
+<summary><strong>Azure Key Vault</strong></summary>
+
+1. Create a managed identity with a federated credential
+2. Enable Workload Identity Federation on your AKS cluster
+3. Grant the managed identity access to Key Vault
+
+```yaml
 cloudIdentity:
   enabled: true
   provider: Azure
@@ -336,43 +209,54 @@ cloudIdentity:
     managedIdentityClientId: your_managed_identity_client_id
 ```
 
-**AWS Secrets Manager Setup**
+Secret names must replace underscores with hyphens. For example: `ConnectionStrings__OperationalDatabase` becomes `ConnectionStrings--OperationalDatabase`.
 
-Before enabling AWS Secrets Manager, determine which authentication method your pods will use to read from and write to the secrets vault. At this time, the Helm chart supports only two credential providers:
-
-- ```podIdentity``` (EKS Pod Identity)
-- ```accessKey```   ( AWS Access Keys)
-
-If you choose **EKS Pod Identity**, complete the setup by following the official AWS documentation: [Set up EKS Pod Identity](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html)
-
-If you choose **AWS Access Keys**, you must create an Kubernetes secret that contains the AWS Access Key ID and Secret Access Key. 
-
+Required secrets:
 ```
+ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password
+ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username
+ConnectionStrings--LoggingDatabase
+ConnectionStrings--OperationalDatabase
+RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey
+RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value
+```
+
+</details>
+
+<details>
+<summary><strong>AWS Secrets Manager</strong></summary>
+
+Choose a credential provider:
+
+| Method | Description |
+|--------|-------------|
+| `podIdentity` | EKS Pod Identity — [setup guide](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) |
+| `accessKey` | AWS Access Keys — requires a Kubernetes secret (see below) |
+
+For **Access Keys**, create the secret:
+
+```bash
 kubectl create secret generic aws-sm-access-keys \
   --from-literal=AWS_ACCESS_KEY_ID=<your-access-key-id> \
   --from-literal=AWS_SECRET_ACCESS_KEY=<your-secret-access-key> \
   --namespace <your-namespace>
 ```
 
-These credentials must belong to an IAM user or role that has **read/write permissions** for AWS Secrets Manager. AWS provides a managed policy for this purpose: [SecretsManagerReadWrite IAM Policy](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SecretsManagerReadWrite.html)
+The IAM user/role needs [SecretsManagerReadWrite](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SecretsManagerReadWrite.html) permissions.
 
-For a standard RPI deployment, add the following key/value pairs to your AWS Secrets Manager secret. These represent the minimum required secrets for connecting an RPI deployment to the Operational Databases, Realtime Cache, and Queue providers. If you do not require RPI Realtime or queue functionality, you can omit the Realtime and Queue-related secrets.
+Create the secret with minimum required key/value pairs:
 
-By default, RPI loads only Secrets Manager entries that include the tag key ```rpi-app``` value: ```true```. You can customize this tag key to represent a namespace or environment, such as ```rpi-dev``` or ```rpi-prod```. If you change the tag key, be sure to update the value of ```cloudIdentity.amazonSettings.secretsManagerSecretsTag``` in the ```values.yaml``` file accordingly
-
-```
-# Create the Secret
-
+```bash
 aws secretsmanager create-secret \
   --name <my-rpi-namespace-name> \
   --description "My RPI Application Secrets" \
   --secret-string '{
-    "ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username": "<my_sql_server_username>"
+    "ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username": "<my_sql_server_username>",
     "ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password": "<my_sql_server_password>",
     "ConnectionStrings__LoggingDatabase": "<my_Pulse_Logging_Database_Connection_String>",
     "ConnectionStrings__OperationalDatabase": "<my_Pulse_Database_Connection_String>",
     "RealtimeAPIConfiguration__AppSettings__RPIAuthToken": "<my_realtime_auth_token>",
-    RealtimeAPIConfiguration__AppSettings__RealtimeAPIKey: "<my_realtime_auth_token>"
+    "RealtimeAPIConfiguration__AppSettings__RealtimeAPIKey": "<my_realtime_auth_token>",
     "RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Key": "ConnectionString",
     "RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Value": "<my_mongodb_connection_string>",
     "RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key": "AccessKey",
@@ -381,21 +265,20 @@ aws secretsmanager create-secret \
     "RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value": "<my_IAM_Secret_AccessKey>",
     "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key": "AccessKey",
     "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value": "<my_IAM_AccessKey>",
-    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key: "SecretKey",
-    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value: "<my_IAM_Secret_AccessKey>"
+    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key": "SecretKey",
+    "RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value": "<my_IAM_Secret_AccessKey>",
     "RPI__SMTP__Password": "<my_smtp_server_password>"
   }'
 
-# Add the Required Tag
-
+# Tag the secret (RPI filters by this tag)
 aws secretsmanager tag-resource \
-  --secret-id my-rpi-namespace-name \
-  --tags Key=my-rpi-namespace-name,Value=true
+  --secret-id <my-rpi-namespace-name> \
+  --tags Key=<my-rpi-namespace-name>,Value=true
 ```
 
-After selecting your credential provider and creating the secret in AWS Secrets Manager, configure your ```values.yaml``` file as shown below:
+By default, RPI loads entries with tag key `rpi-app` value `true`. Customize via `cloudIdentity.amazonSettings.secretsManagerSecretsTag`.
 
-```
+```yaml
 cloudIdentity:
   enabled: true
   provider: Amazon
@@ -407,19 +290,19 @@ cloudIdentity:
     region: us-east-1
     credentialsType: podIdentity
     secretsManagerSettings:
-      secretTagKey: my-dev-namespace 
+      secretTagKey: my-dev-namespace
 ```
 
-With the secrets in place, you’re now ready to deploy RPI. Follow the deployment instructions to continue.
+</details>
 
-**Google Secret Manager Setup**
+<details>
+<summary><strong>Google Secret Manager</strong></summary>
 
-  - Create a Google Cloud Service Account
-  - Grant the service account secret access permissions
-  - Enable Workload Identity Federation on GKE
-  - Update Helm Chart Configuration
+1. Create a Google Cloud Service Account
+2. Grant secret access permissions
+3. Enable Workload Identity Federation on GKE
 
-```
+```yaml
 cloudIdentity:
   enabled: true
   provider: Google
@@ -436,30 +319,13 @@ cloudIdentity:
     projectId: your_google_project_id
 ```
 
-The name of each Key Vault secret must match the corresponding environment variable name, with underscores (_) replaced by hyphens (-). For example, an environment variable like ConnectionStrings__OperationalDatabase should be stored in Key Vault as: ```ConnectionStrings--OperationalDatabase```. 
-
-Below are examples of correctly named secrets as stored in Azure Key Vault
-
-```
-# Operational database secrets
-ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password
-ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username
-ConnectionStrings--LoggingDatabase
-ConnectionStrings--OperationalDatabase
-
-# Realtime cache secrets
-RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey
-RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value
-RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value
-```
+</details>
 
 ### Configure Storage
 
-RPI uses File Share storage for storing files such as those exported via interactions or selection rules to a [File Output directory ](https://docs.redpointglobal.com/rpi/file-output-directory), custom plugins or files shared with Redpoint Data Management (RPDM). In Azure, AWS, or Google Cloud, this storage is backed by their respective managed file share services such as ```Azure Files```, ```Amazon EFS``` and ```Google Filestore```
+RPI uses file share storage for [File Output directories](https://docs.redpointglobal.com/rpi/file-output-directory), custom plugins, and Redpoint Data Management (RPDM) uploads. Provision storage using your platform's managed service (`Azure Files`, `Amazon EFS`, `Google Filestore`), create PVCs, and reference them:
 
-You are responsible for provisioning the storage based on your hosting platform's offering. Once the storage has been provisioned, create a PersistentVolumeClaim (PVC) and reference its name in the ```values.yaml``` file.
-
-```
+```yaml
 storage:
   persistentVolumeClaims:
     FileOutputDirectory:
@@ -478,84 +344,74 @@ storage:
 
 ### Configure Realtime
 
-[RPI Realtime](https://docs.redpointglobal.com/rpi/configuring-realtime-queue-providers) consists of a suite of functionality that allows you to make decisions about the most appropriate content to be displayed to a person of interest in real time.
+[RPI Realtime](https://docs.redpointglobal.com/rpi/configuring-realtime-queue-providers) enables real-time decisioning for personalized content delivery.
 
-- **Queue Providers**
+#### Queue Providers
 
-[Queue Providers](https://docs.redpointglobal.com/rpi/configuring-realtime-queue-providers) are used to provide RPI with message queuing capabilities. To configure a Queue Provider, Open the ```values.yaml``` file and locate the ```realtimeapi.queueProvider``` section. Update this section with Queue provider you intend to use. Supported options are: ```amazonsqs ```, ```googlepubsub```,```azureeventhubs ```, ```azureservicebus```,```rabbitmq```
+Supported: `amazonsqs`, `googlepubsub`, `azureeventhubs`, `azureservicebus`, `rabbitmq`
 
-```
+```yaml
 queueProvider:
   provider: amazonsqs
 ```
 
-- **Personalized Content Queues**
+#### Personalized Content Queues
 
-RabbitMQ is currently the only supported queue provider for personalized content delivery, though support for additional providers is coming soon. For now, you have two options:
+RabbitMQ is currently the only supported provider for personalized content delivery. Options:
 
-  - Use your own external RabbitMQ broker (BYO), or
-  - Use the default free and open source RabbitMQ instance provisioned by the Helm chart.
+| Mode | Configuration |
+|------|--------------|
+| **Internal** (chart-provisioned) | `type: internal` — free, open-source RabbitMQ deployed by the chart |
+| **External** (BYO) | `type: external` — provide your own RabbitMQ connection details |
 
-If you are already using another queue provider (e.g. Amazon SQS for Realtime), RabbitMQ will run in parallel specifically for personalized content.
-
-To use the default RabbitMQ, Open your values.yaml file and locate the ```realtimeapi.queueProvider.rabbitmq``` section. Set ```queueProvider.rabbitmq.internal: true``` and specify your preferred username and password. To use an external broker (BYO), simply set ```queueProvider.rabbitmq.internal: false``` and provide the rest of the connection details.
-
-```
+```yaml
 queueProvider:
   rabbitmq:
-    internal: true
+    type: internal
     hostname: rpi-rabbitmq
     virtualHost: "/"
     username: redpointdev
     password: <my-secure-password>
 ```
 
-Once RabbitMQ is running, login to the RPI Client and configure the personalized content setup. The hostname for the built-in RabbitMQ instance is always ```rpi-rabbitmq``` while web console access is available at ```https://rpi-rabbitmq-console.example.com```. You can retrieve the actual console URL by inspecting your configured ingress endpoints.
+The internal RabbitMQ console is available at `https://rpi-rabbitmq-console.example.com`.
 
-![image](https://cdn.redpointglobal.com/devops/rabbit_mq_personalized_content_queue.png)
+![rabbitmq_config](https://cdn.redpointglobal.com/devops/rabbit_mq_personalized_content_queue.png)
 
-- **Cache Providers**
+#### Cache Providers
 
-[Cache Providers](https://docs.redpointglobal.com/rpi/cache-configuration) allow RPI to store and access various data quickly, such as Visitor Profiles, Realtime Decisions rules, and content.Open the ```values.yaml``` file and locate the ```realtimeapi.cacheProviders``` section. Here, specify the Cache provider you intend to use. Supported options are: ```mongodb```, ```redis``` ,```googlebigtable``` ```inMemorySql```
+Supported: `mongodb`, `redis`, `googlebigtable`, `inMemorySql`
 
-```
-cacheProviders:
+```yaml
+cacheProvider:
   provider: mongodb
 ```
 
-**Note:** When using the RPI SQL Server native cache provider, you can download the necessary setup scripts for SQL Server in-memory cache tables from the deployment service's downloads page: ```https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\In Memory Cache Setup.sql.``` 
+> **Note:** For SQL Server in-memory cache, download setup scripts from `https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts` and run `UsefulSQLScripts\SQLServer\Realtime\In Memory Cache Setup.sql`.
 
-- **API authentication (Basic)**
+#### API Authentication
 
-The default authentication method for the Realtime API is an authentication token in the header of the call to the API endpoint. The token is configured with the following setting in the ```values.yaml```
+**Basic** (default) — authentication token in the request header:
 
-```
+```yaml
 realtimeapi:
   authentication:
     type: basic
 ```
 
-- **API authentication (OAuth)**
+**OAuth** — requires a `RealtimeCore` database. Download the creation script from `https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts` (`UsefulSQLScripts\SQLServer\Realtime\RealtimeCore.sql`). Create it on the same SQL server as your operational databases, then:
 
-The Realtime API can also be configured to use [OAuth](https://docs.redpointglobal.com/rpi/rpi-realtime-authentication) instead of the header token authentication. To configure RPI Realtime to use OAuth, first create the SQL Server or PostgreSQL database required by the OAuth implementation. The scripts to create the database can be downloaded from the Configuration Service ```https://$DEPLOYMENT_SERVICE_URL/download/UsefulSQLScripts``` After downloading, extract the UsefulSQLScripts archive, and locate the script in the following path ```UsefulSQLScripts\SQLServer\Realtime\RealtimeCore.sql.```. It's recommended to create this database on the same SQL server hosting the RPI operational databases.
-
-Once the RealtimeCore database has been created, enable the OAuth configuration in the ```values.yaml```
-
-```
+```yaml
 realtimeapi:
   authentication:
     type: oauth
 ```
 
-- **Token endpoint**
+<details>
+<summary>OAuth token request example</summary>
 
-To authenticate with RPI Realtime using OAuth, you must request a bearer token from the token endpoint ```https://rpi-realtimeapi.example.com/connect/token```. This endpoint accepts a ```username``` and ```password``` to authenticate the user and returns a ```bearer token```. The bearer token is a time limited credential that authorizes the user to make subsequent calls to the Realtime API.
-
-Example: Requesting a Token and Calling the API
-
-```
-# Requesting a Token
-
+```bash
+# Request a bearer token
 TOKEN=$(curl -L -X POST \
   "http://$REALTIME_API_ADDRESS/connect/token/" \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -565,453 +421,237 @@ TOKEN=$(curl -L -X POST \
   --data-urlencode "password=$PASSWORD" \
   --data-urlencode "client_secret=$CLIENT_SECRET" | jq -r '.access_token')
 
-# Get version information for Realtime API and Realtime Agent
+# Call the API
 curl -X GET "https://$REALTIME_API_ADDRESS/api/v2/system/version" \
- -H "accept: application/json" \
- -H "Authorization: Bearer $TOKEN" | jq 
-
+  -H "accept: application/json" \
+  -H "Authorization: Bearer $TOKEN" | jq
 ```
 
-- **Multi-tenancy**
+</details>
 
-RPI Realtime currently supports a single-tenant architecture. This means that a separate instance of Realtime must be deployed for each RPI tenant, with dedicated queues and cache resources isolated per tenant. For instance, if your RPI cluster includes two tenants such as ```rpi-tenant1``` and ```rpi-tenant2```, you'll need to deploy Realtime separately for each. This is achieved by customizing individual ```values.yaml``` files.
+#### Multi-Tenancy
 
-Follow the steps below to set up a multi-tenant deployment.
+RPI Realtime uses a single-tenant architecture. Deploy a separate Realtime instance per tenant with dedicated queues and cache:
 
-**Tenant 1**
-   -  Define a values file for the tenant e.g ```values-realtime-tenant1.yaml```
-   -  Configure the values file with tenant specific queue and cache settings
-   -  Disable all other services, ensuring only realtimeapi remains enabled
+```yaml
+# values-realtime-tenant1.yaml
+realtimeapi:
+  enabled: true
+interactionapi:
+  enabled: false
+executionservice:
+  enabled: false
+```
 
-   ```
-   realtimeapi:
-     enabled: true
-   interactionapi:
-     enabled: false
-   executionservice:
-     enabled: false
-   ```
+```bash
+helm install realtime-tenant1 ./chart \
+  --values values-realtime-tenant1.yaml --namespace redpoint-rpi
+```
 
-   -  Deploy the tenant
-
-      ```
-      helm install realtime-tenant1 redpoint-rpi \
-      --values values-realtime-tenant1.yaml --namespace redpoint-rpi
-      ```
-**Tenant 2**
-
-Repeat the same steps above for Tenant 2, using a separate ```values-realtime-tenant2.yaml``` file configured with tenant-specific queue and cache resources.
+Repeat for each tenant with its own overrides file.
 
 ### RPI Queue Reader
 
-The [RPI Queue Reader ](https://docs.redpointglobal.com/rpi/admin-queue-reader-setup) service is used to drain Queue Listener and RPI Realtime queues. This container now handles all work previously undertaken by the Web cache data importer, Web events importer and Web form processor system tasks which have been deprecated.
+The [Queue Reader](https://docs.redpointglobal.com/rpi/admin-queue-reader-setup) drains Queue Listener and Realtime queues, replacing the deprecated Web cache data importer, Web events importer, and Web form processor system tasks.
 
-To enabled and configure the Queue Reader, open the ```values.yaml``` file and update the ```queueReader``` section
-
-```
-queueReader: 
+```yaml
+queuereader:
   enabled: true
-  isFormProcessingEnabled: true
-  isEventProcessingEnabled: true
-  isCacheProcessingEnabled: true
-  tenantIds:
-    - "<my-rpi-client-id>"
+  realtimeConfiguration:
+    isDistributed: false
+    tenantIds:
+      - "<my-rpi-client-id>"
 ```
 
-The queue reader exposes the following operational endpoints which are available via Ingress:
+**Operational endpoints** (available via Ingress):
 
-```
-/api/operations/start     – Initiates an operation
-/api/operations/status    – Retrieves the current status of an operation
-/api/operations/stop      – Stops an ongoing operation
-/api/operations/stats     – Returns execution statistics
-```
-
-### Post Greenfield Deployment Configuration
-
- - **Activate RPI License**
-
-After deployment is successful, apply a license activation key. This is done by calling the ```/api/licensing/activatelicense``` endpoint in the deployment service as shown below
-
-```
-ACTIVATION_KEY=<my-license-activation-key>
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
-SYSTEM_NAME=<my-dev-rpi-system>
-
-curl -X POST "$API_URL" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ActivationKey": "'"$ACTIVATION_KEY"'",
-    "SystemName": "'"$SYSTEM_NAME"'"
-  }'
-```
-
-A successful activation returns a ```200 OK ``` response. Once RPI is deployed and the license activated, you're ready to proceed with installing your first cluster and adding tenants
-
- - **Install the cluster operational databases**
-
-```
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
-INITIAL_ADMIN_USERNAME=coreuser
-INITIAL_ADMIN_PASSWORD=.Admin123
-INITIAL_ADMIN_EMAIL=coreuser@example.com
-
-curl -X 'POST' \
-  "https://$DEPLOYMENT_SERVICE_URL/api/deployment/installcluster?waitTimeoutSeconds=360" \
-  -H 'accept: text/plain' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "UseExistingDatabases": false,
-  "CoreUserInitialPassword": "'"$INITIAL_ADMIN_PASSWORD"'",
-  "SystemAdministrator": {
-    "Username": "'"$INITIAL_ADMIN_USERNAME"'",
-    "EmailAddress": "'"$INITIAL_ADMIN_EMAIL"'"
-  }
-}'
-
-```
-Get the install cluster deployment status:
-```
-curl -X 'GET' \
-  "https://$DEPLOYMENT_SERVICE_URL/api/deployment/status" \
-  -H 'accept: text/plain'
-```
-You should receive the ```"Status": "LastRunComplete"``` response to confirm that the cluster deployment has completed successfully.
-```
-{
-  "DeploymentInstanceID": "default",
-  "Status": "LastRunComplete",
-  "PulseDatabaseName": "Pulse",
-  "Messages": [
-    "[2024-08-06 03:13:50] Install starting",
-    "[2024-08-06 03:13:50] Deployment files already unpacked",
-    "[2024-08-06 03:13:50] Operational Database Type: AmazonRDSSQL",
-    "[2024-08-06 03:13:50] Pulse Database Name: Pulse",
-    "[2024-08-06 03:13:50] Logging Database Name: Pulse_Logging",
-    "[2024-08-06 03:13:50] Database Host: rpiopsmssqlserver",
-    "[2024-08-06 03:13:50] Core user password has been provided",
-    "[2024-08-06 03:13:50] Creating the databases",
-    "[2024-08-06 03:13:50] Updating cluster details",
-    "[2024-08-06 03:13:50] Updating cluster details",
-    "[2024-08-06 03:13:50] Loading Plugins",
-    "[2024-08-06 03:13:55] Adding 'what is new'",
-    "[2024-08-06 03:13:55] Setting sys admin details"
-  ]
-}
-```
-  - **Install the tenant operational databases** 
-  
-With the cluster deployed, add your first client. To assist in this process, a JSON building tool is available at ```https://$DEPLOYMENT_SERVICE_URL/clienteditor.html```. Use it to construct a JSON payload that aligns with your client's requirements and Datawarehouse options then execute the call below.
-
-```
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
-TENANT_NAME=<my-rpi-client-name>
-CLIENT_ID=00000000-0000-0000-0000-000000000000
-DATAWAREHOUSE_PROVIDER=SQLServer
-DATAWAREHOUSE_SERVER=<my-datawarehouse-server>
-DATAWAREHOUSE_NAME=<my-datawarehouse-name>
-DATAWAREHOUSE_USERNAME=<my-datawarehouse-username>
-DATAWAREHOUSE_PASSWORD=<my-datawarehouse-password>
-
-curl -X 'POST' \
-  "https://$DEPLOYMENT_SERVICE_URL/api/deployment/addclient?waitTimeoutSeconds=360" \
-  -H 'accept: text/plain' \
-  -H 'Content-Type: application/json' \
-  -d "{
-  \"Name\": \"$TENANT_NAME\",
-  \"Description\": \"My RPI Client X\",
-  \"ClientID\": \"$CLIENT_ID\",
-  \"UseExistingDatabases\": false,
-  \"DatabaseSuffix\": \"$TENANT_NAME\",
-  \"DataWarehouse\": {
-    \"ConnectionParameters\": {
-      \"Provider\": \"$DATAWAREHOUSE_PROVIDER\",
-      \"UseDatabaseAgent\": false,
-      \"Server\": \"$DATAWAREHOUSE_SERVER\",
-      \"DatabaseName\": \"$DATAWAREHOUSE_NAME\",
-      \"IsUsingCredentials\": true,
-      \"Username\": \"$DATAWAREHOUSE_USERNAME\",
-      \"Password\": \"$DATAWAREHOUSE_PASSWORD\",
-      \"SQLServerSettings\": {
-        \"Encrypt\": true,
-        \"TrustServerCertificate\": true
-      }
-    },
-    \"DeploymentSettings\": {
-      \"DatabaseMode\": \"SQL\",
-      \"DatabaseSchema\": \"dbo\"
-    }
-  },
-  \"TemplateTenant\": \"NoTemplateTenant\",
-  \"StartupConfiguration\": {
-    \"Users\": [
-      \"coreuser\"
-    ],
-    \"FileOutput\": {
-      \"UseGlobalSettings\": true
-    }
-  }
-}"
-```
-
-Get the tenant deployment status
-
-```
-curl -X 'GET' \
-  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/status' \
-  -H 'accept: text/plain'
-```
-
-You should receive the ```"Status": "LastRunComplete"``` response to confirm that the client deployment has completed successfully.
-
-### Post Upgrade Deployment Configuration
-
-Once the RPI v7 containers have been successfully deployed as described above, you can trigger the upgrade process as shown below
-
-```
-curl -X 'GET' \
-  'https://$DEPLOYMENT_SERVICE_URL/api/deployment/upgrade?waitTimeoutSeconds=360' \
-  -H 'accept: text/plain'
-```
-
-You should receive ```"Status": "LastRunComplete"```, and ```Upgrade Complete``` in the response to confirm that the cluster deployment has been completed successfully.
-
-```
-{
-  "DeploymentInstanceID": "default",
-  "Status": "LastRunComplete",
-  "PulseDatabaseName": "Pulse",
-  "Messages": [
-    "[2024-10-09 17:22:49] Upgrade starting",
-    "[2024-10-09 17:22:49] Operational Database Type: AmazonRDSSQL",
-    "[2024-10-09 17:22:49] Pulse Database Name: Pulse",
-    "[2024-10-09 17:22:49] Logging Database Name: Pulse_Logging",
-    "[2024-10-09 17:22:49] Database Host: rpiopsmssqlserver",
-    "[2024-10-09 17:22:49] Version before upgrade 6.7.24250",
-    "[2024-10-09 17:22:49] Upgrading to version 7.4.24278.1712",
-    "[2024-10-09 17:22:49] Upgrading the database",
-    "[2024-10-09 17:23:35] Updating database version",
-    "[2024-10-09 17:23:35] Adding 'what is new'",
-    "[2024-10-09 17:23:35] Loading Plugins",
-    "[2024-10-09 17:24:19] Upgrade Complete"
-  ]
-}
-```
-
-If any errors occur during the upgrade, the deployment API will provide relevant details in the response. Please analyze these details and resolve any issues before attempting to re-run the upgrade.
-
- - **Activate RPI License**
-
-After the upgrade operation is successful, apply a license activation key. This is done by calling the ```/api/licensing/activatelicense``` endpoint in the deployment service as shown below.
-
-```
-export ACTIVATION_KEY="your_license_activation_key"
-export DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
-export SYSTEM_NAME="my_dev_rpi_system"
-
-curl -X 'POST' \
-  'https://$DEPLOYMENT_SERVICE_URL/api/licensing/activatelicense' \
-  -H 'accept: */*' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "ActivationKey": "'"${ACTIVATION_KEY}"'",
-  "SystemName": "'"${SYSTEM_NAME}"'"
-}'
-```
-
-A successful activation returns a ```200 OK ``` response. Once RPI is upgraded and the license activated, you're ready to proceed with downloading the Client executable for login and post upgrade validation
-
- - **Update System Configuration**
-
-RPI stores certain tenant level settings in the operational databases. When cloning the v6 operational databases, these settings are carried over and must be updated to align with the v7 environment. For example, the ```FileOutputDirectory``` used in your v6 cluster might differ from the one intended for your v7 cluster. After the upgrade completes successfully, the RPI administrator should review and update the following settings via the Configuration tab in the RPI client:
-
-```Environment > FileExportLocation```: Sets the Export destinations where: 0 = File Output Directory, 1 = Default FTP Location, 2 = External Content Provider
-
-```Environment > FileOutputDirectory```: Specifies the path within the RPI v7 containers where the FileOutputDirectory volume is mounted. The default path is /fileoutputdir, but consult your Kubernetes administrator if the volume was mounted to a different location.
-
-```Environment > DataManagementUploadDirectory```: Specifies the path within the RPI v7 containers where the DataManagementUploadDirectory volume is mounted. The default path is /rpdmuploaddirectory, but consult your Kubernetes administrator if the volume was mounted to a different location.
-
-```Channels >  Channel name```:  Update relevant configuration to match your v7 requirements
+| Endpoint | Description |
+|----------|-------------|
+| `/api/operations/start` | Initiate an operation |
+| `/api/operations/status` | Get current status |
+| `/api/operations/stop` | Stop an operation |
+| `/api/operations/stats` | Execution statistics |
 
 ### Configure Microsoft Entra ID
-RPI supports Microsoft Entra ID (formerly Azure AD) authentication for secure access and single sign-on. Before enabling Microsoft Entra ID authentication in RPI, you must complete the following setup in the Azure Portal:
 
-**1. Register the Interaction Client**
+RPI supports Microsoft Entra ID (formerly Azure AD) for SSO.
 
-In the Azure Portal, navigate to Microsoft Entra ID → App registrations
+**1. Register the Interaction Client** in Azure Portal > Microsoft Entra ID > App registrations:
+- Name: `interaction-client`. Note the `Client ID` and `Tenant ID`.
+- Authentication > Redirect URIs: add `ms-appx-web://Microsoft.AAD.BrokerPlugin/{Client ID}` (type: Mobile & Desktop).
 
-- Create New registration.
-- Name the app ```interaction-client``` and make note of the ```Client ID``` and ```Tenant ID```.
-- Go to the Authentication section.
-- Under Redirect URIs, add a new entry of type (Mobile & Desktop) with the following value ```ms-appx-web://Microsoft.AAD.BrokerPlugin/{Client ID}```. 
-- Replace ```{Client ID}``` with the application ID from the ```interaction-client``` app registration.
+**2. Register the Interaction API:**
+- Name: `interaction-api`. Note the `Client ID` and `Tenant ID`.
+- Expose an API > add scope `Interaction.Clients` (name: `Access RPI`, consent: `Admins and users`).
+- Authorized client applications > add the Interaction Client's `Client ID`.
 
-**2. Register the Interaction API**
+**3. Enable in your overrides file:**
 
-- Create another New App registration 
-- Name the app ```interaction-api``` and make note of the ```Client ID``` and ```Tenant ID```.
-- Select Add Application ID URI, then create a custom scope named ```Interaction.Clients```.
-- Set the Name/Description value to ```Access RPI```
-- Set Who can consent value to  ```Admins and users```
-- Under Authorized client applications, add the Interaction Client’s ```Client ID```.
-
-**3. Enable Microsoft Entra ID in the Helm Chart**
-
-Once the above prerequisites are complete, enable Microsoft Entra ID authentication in your RPI deployment by updating your ```values.yaml```.
-
-```
+```yaml
 MicrosoftEntraID:
   enabled: true
   name: Microsoft
-  interaction_client_id: < interaction-client Client ID >
-  interaction_api_id: < interaction-api Client ID >
-  tenant_id: < azure tenant id >
+  interaction_client_id: <interaction-client Client ID>
+  interaction_api_id: <interaction-api Client ID>
+  tenant_id: <azure tenant id>
 ```
 
-**NOTE:** To sign in with Microsoft Entra ID, make sure your RPI account uses the same email address as your Entra ID username for example, ```first.last@example.com```
+> **Note:** Your RPI account email must match your Entra ID username (e.g., `first.last@example.com`).
 
 ### Configure Open ID Connect
-RPI supports the use of [OpenID connection (OIDC) providers](https://docs.redpointglobal.com/rpi/admin-appendix-b-open-id-connect-oidc-configuratio) to authenticate users accessing RPI. To integrate an OIDC provider with your environment, update the settings in the ```OpenIdProviders``` section of the ```values.yaml``` file as shown in the example below. Adjust these values to match your environment's configuration
 
-```
+RPI supports [OIDC providers](https://docs.redpointglobal.com/rpi/admin-appendix-b-open-id-connect-oidc-configuratio) for user authentication:
+
+```yaml
 OpenIdProviders:
   enabled: true
   name: Keycloak
 ```
 
 ### Configure Security Context
-RPI containers run under a preconfigured non-root user and group ```(uid: 7777, gid: 777)``` in alignment with container security best practices. While Kubernetes does allow overriding this securityContext, doing so introduces a challenge: the application directory (/app) and its contents are owned by the default user ```(7777:777)```, and changing the runtime user requires reconciling file ownership and permissions within the container.
 
-If your organization enforces a specific runAsUser and runAsGroup policy, we recommend creating a custom container image that builds on top of our published base image. This allows you to:
+RPI containers run as non-root user `uid: 7777, gid: 777` by default.
 
- - Define the required user and group IDs during the image build process
- - Adjust ownership and permissions of key directories—such as /app—to match the expected runtime security context
+**Option 1: Override via `advanced:` (recommended)**
 
-Below is an example of how to adapt the container image for use in the interactionapi service deployment:
+For simple UID/GID changes:
+
+```yaml
+advanced:
+  securityContext:
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
 ```
+
+Per-component override:
+
+```yaml
+advanced:
+  interactionapi:
+    securityContext:
+      runAsUser: 10001
+      fsGroup: 10001
+```
+
+**Option 2: Custom container image**
+
+If you need to reconcile file ownership, build a custom image:
+
+<details>
+<summary>Example Dockerfile</summary>
+
+```dockerfile
 FROM rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi
 
-# Switch to root to change ownerships
 USER root
 
-# Define the new runtime user and group
 ENV RUNTIME_USER=redpointrpi
 ENV RUNTIME_UID=10001
 ENV RUNTIME_GROUP=redpointrpi
 ENV RUNTIME_GID=10001
 
-# Create group and user using the compatible syntax
-RUN addgroup \
-    --gid "$RUNTIME_GID" \
-    "$RUNTIME_GROUP" \
- && adduser \
-    --disabled-password \
-    --gecos "" \
-    --home /app \
-    --ingroup "$RUNTIME_GROUP" \
-    --no-create-home \
-    --uid "$RUNTIME_UID" \
-    "$RUNTIME_USER"
+RUN addgroup --gid "$RUNTIME_GID" "$RUNTIME_GROUP" \
+ && adduser --disabled-password --gecos "" --home /app \
+    --ingroup "$RUNTIME_GROUP" --no-create-home --uid "$RUNTIME_UID" "$RUNTIME_USER"
 
-# Fix permissions for volume-mountable dirs
 RUN chown -R "$RUNTIME_UID":"$RUNTIME_GID" /app /app/logs /app/.dotnet-tools /app/.dotnet-counters
 
 USER "$RUNTIME_UID":"$RUNTIME_GID"
 ```
+
+</details>
+
 ### Configure Content Generation Tools
 
-RPI integrates with OpenAI services and Azure Cognitive Search for [external content generation](https://docs.redpointglobal.com/rpi/configuring-content-generation-tools). To enable this integration, provide credentials for your OpenAI APIs and Cognitive Search components. The Model subsection includes storage settings for embedding vectors, such as ModelDimensions, the Azure Storage ConnectionString, and the target ContainerName and BlobFolder where model data is stored.
+RPI integrates with OpenAI and Azure Cognitive Search for [content generation](https://docs.redpointglobal.com/rpi/configuring-content-generation-tools):
 
-Open the ```values.yaml``` file and navigate to the ```redpointAI``` section. Update this section with your configuration details. Inline comments are included within the values.yaml file to explain each key-value pair
-
-```
+```yaml
 redpointAI:
-  enabled: true 
+  enabled: true
 ```
+
+See `chart/values.yaml` for all `redpointAI` configuration keys.
+
 ### Configure Custom Metrics
 
-RPI services expose a ```/metrics``` endpoint for scrapping using Prometheus. For the web services, this endpoint provides a collection of default .NET metrics. Other services expose custom metrics specific to their core functionalities. Before enabling custom metrics, ensure that you already have Prometheus running in your cluster and configured to target the rpi namespace for scraping.
+RPI services expose a `/metrics` endpoint for Prometheus scraping. Ensure Prometheus is running in your cluster and targeting the RPI namespace.
 
-- The **Execution Service:** displays the number of activities currently running, the total executed since startup, and the maximum number of activities it is configured to handle. You can create dashboards in Grafana for visualization with the following metrics:
-
-  - ```execution_max_thread_count:``` This is the value configured for `RPIExecution__MaxThreadsPerExecutionService`. It defines the limit on how many work items an execution service can take on.
-
-  - ```execution_total_executing_count:``` This is the actual number of work items an execution service is running. It can be used, in relation to ```execution_max_thread_count```, to set a threshold at which to scale up or down the number of execution services running.
-
-```
-- execution_client_jobs_executing_count:  Number of client jobs currently executing.
-- execution_tasks_executing_count:        Number of system tasks currently executing.
-- execution_workflows_executing_count:    Number of workflow activities currently executing.
-- execution_client_jobs_completed_count:  Number of client jobs that have completed execution.
-- execution_tasks_completed_count:        Number of system tasks that have completed execution.
-- execution_workflows_completed_count:    Number of workflow activities that have completed.
-- execution_workflows_suspended_count:    Number of workflow activities that have been suspended.
-```
-
-- The **Node Manager:** tracks the number of activities allocated to execution services and the number of triggers it fires. You can create dashboards in Grafana for visualization with the following metrics:
-
-```
-- node_manager_activities_allocated_count: Number of workflow activities allocated.
-- node_manager_tasks_allocated_count:      Number of system tasks allocated by the Node Manager.
-- node_manager_triggers_fired_count:       Number of triggers fired by the Node Manager.
-```
-
-- The **Queue Reader:** counts the number of items processed in its various queues, giving visibility into queue consumption and throughput. You can create dashboards in Grafana for visualization with the following metrics:
-
-```
-- queue_listener_valid_queue_listener_messages
-- queue_listener_invalid_queue_listener_messages
-```
-
-To enable custom metrics, set the following value in your ```values.yaml```
-
-```
+```yaml
 customMetrics:
   enabled: true
 ```
+
+Per-component metrics can be enabled via the `advanced:` block — see [readme-values.md](readme-values.md).
+
+<details>
+<summary><strong>Available Metrics</strong></summary>
+
+**Execution Service**
+
+| Metric | Description |
+|--------|-------------|
+| `execution_max_thread_count` | Configured max work items per execution service |
+| `execution_total_executing_count` | Currently executing work items |
+| `execution_client_jobs_executing_count` | Client jobs currently executing |
+| `execution_tasks_executing_count` | System tasks currently executing |
+| `execution_workflows_executing_count` | Workflow activities currently executing |
+| `execution_client_jobs_completed_count` | Client jobs completed |
+| `execution_tasks_completed_count` | System tasks completed |
+| `execution_workflows_completed_count` | Workflow activities completed |
+| `execution_workflows_suspended_count` | Workflow activities suspended |
+
+**Node Manager**
+
+| Metric | Description |
+|--------|-------------|
+| `node_manager_activities_allocated_count` | Workflow activities allocated |
+| `node_manager_tasks_allocated_count` | System tasks allocated |
+| `node_manager_triggers_fired_count` | Triggers fired |
+
+**Queue Reader**
+
+| Metric | Description |
+|--------|-------------|
+| `queue_listener_valid_queue_listener_messages` | Valid messages processed |
+| `queue_listener_invalid_queue_listener_messages` | Invalid messages processed |
+
+</details>
 
 ### Configure Autoscaling
 
-RPI services support two modes of autoscaling:
+#### Resource-Based (HPA)
 
-**1) Resource-Based Autoscaling with Kubernetes HPA**
+Native Kubernetes HPA scaling on CPU and memory:
 
-This is the default autoscaling mode using Kubernetes' native Horizontal Pod Autoscaler (HPA) to scale pods based on CPU and memory utilization. To adjust the default HPA, update the ```values.yaml``` file as follows:
-
+```yaml
+realtimeapi:
+  autoscaling:
+    enabled: true
+    type: hpa
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
 ```
-autoscaling:
-  enabled: true
-  type: hpa
-  minReplicas: 1
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: 80
-```
 
-**2) Custom Metrics-Based Autoscaling with KEDA and Prometheus**
+#### Custom Metrics (KEDA + Prometheus)
 
-This mode is recommended for the **Execution Service** which handles both short and long-running tasks and requires graceful shutdown during scale-in. KEDA scales the service based on the custom RPI metric ```execution_max_thread_count``` which represents the limit on how many work items an execution service can take on in relation to  ```execution_total_executing_count``` which represents the number of currently executing work items.
+Recommended for the **Execution Service**, which requires graceful shutdown during scale-in.
 
-**Overview of the Setup:**
-- Prometheus scrapes the ```execution_total_executing_count``` and ```execution_max_thread_count``` metrics from the Execution Service's ```/metrics``` endpoint.
-- KEDA uses the ```execution_max_thread_count``` count to Scale out when the count exceeds a defined threshold and Scale in when the count falls below the threshold.
-- A Kubernetes preStop lifecycle hook allows a graceful scale-in by calling ```/api/operations/sleep``` to stop accepting new tasks and polling ```/metrics``` until ```execution_total_executing_count``` drops to 0.
-- ```terminationGracePeriodSeconds``` (recommended: 24h) ensures long-running tasks complete before termination. If tasks routinely exceed this, optimization is advised.
+**How it works:**
+1. Prometheus scrapes `execution_total_executing_count` and `execution_max_thread_count`
+2. KEDA scales out/in based on the thread count threshold
+3. A `preStop` hook calls `/api/operations/sleep` and waits for in-flight work to drain
+4. `terminationGracePeriodSeconds` (recommended: 24h) ensures long-running tasks complete
 
-**Prerequisites**
-- Install [Prometheus](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/prometheus/prometheus-operator/) Prometheus in your cluster.
-- Install [KEDA](https://keda.sh/docs/2.17/deploy/) .
-- Enable metrics scraping for the Execution Service
+**Prerequisites:** [Prometheus](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/kubernetes-monitoring/configuration/config-other-methods/prometheus/prometheus-operator/) and [KEDA](https://keda.sh/docs/2.17/deploy/) installed in your cluster.
 
-```
+```yaml
 customMetrics:
   enabled: true
   prometheus_scrape: true
-```
-- Enable KEDA in the Execution Service section
 
-```
 executionservice:
   autoscaling:
     enabled: true
@@ -1022,9 +662,10 @@ executionservice:
       authenticationRef: rpi-executionservice
 ```
 
-Once the above configurations are in place, the Helm chart will automatically generate a KEDA ```ScaledObject``` using the Prometheus server details specified in the ```values.yaml``` file. The resulting resource will resemble the following example
+<details>
+<summary>Generated ScaledObject example</summary>
 
-```
+```yaml
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -1036,7 +677,7 @@ spec:
     kind: Deployment
     name: rpi-executionservice
   fallback:
-    failureThreshold: 3 
+    failureThreshold: 3
     replicas: 2
   advanced:
     horizontalPodAutoscalerConfig:
@@ -1044,13 +685,13 @@ spec:
         scaleUp:
           stabilizationWindowSeconds: 300
           policies:
-            - type: Percent 
+            - type: Percent
               value: 100
               periodSeconds: 60
         scaleDown:
           stabilizationWindowSeconds: 300
           policies:
-            - type: Percent 
+            - type: Percent
               value: 50
               periodSeconds: 60
   triggers:
@@ -1067,96 +708,77 @@ spec:
   maxReplicaCount: 10
 ```
 
-**NOTE:** ```The authenticationRef``` field in the ScaledObject references a KEDA ```TriggerAuthentication``` resource, which is only required if your Prometheus server enforces authentication (e.g., bearer token, basic auth, or Azure Workload Identity). If no authentication is needed, update the ```values.yaml``` and set ```useTriggerAuthentication``` to ```false```
+</details>
 
-```
-executionservice:
-    kedaScaledObject:
-      useTriggerAuthentication: false
-```
+> **Note:** `authenticationRef` references a KEDA `TriggerAuthentication` resource, only required if Prometheus enforces authentication. Set `useTriggerAuthentication: false` if not needed.
 
-- Verify that KEDA is running and the ScaledObject is recognized by running ```kubectl get ScaledObject``` and you should see the expected output as below;
+Verify the ScaledObject:
 
-```
-NAME                   SCALETARGETKIND          SCALETARGETNAME        MIN   MAX   READY
-rpi-executionservice   apps/v1.Deployment       rpi-executionservice   2     10    True  
+```bash
+kubectl get ScaledObject
 ```
 
-### Customizing This Helm Chart
-
-Common settings like image overrides, annotations, security contexts, and required fields are already supported and documented directly in ```values.yaml```. However, the chart is also designed to be extensible so that you can safely apply your own specific customizations without modifying the chart’s ```templates/``` directory.
-
-Below are the recommended and most common approaches for customizing a Helm chart in a safe upgrade friendly way.
-
-**1. Customize Using values.yaml (Preferred & Most Stable)**
-
-Helm is designed for values based customization. Redpoint will attempt to keep values stable across versions so your overrides continue to work. Whenever possible, use standard Helm mechanisms. 
-
-- Create your own ```values.yaml``` file (e.g., ```dev-values.yaml```, ```prod-values.yaml``` etc )
-- Update the default entries in the ```values.yaml``` with the appropriate settings for your deployment.
-
-**2. Use Kustomize to Patch the Rendered Manifests**
-
-If you need changes that Helm does not expose through values, you can use **Kustomize** to apply modifications to the chart’s rendered output. More information about Kustomize is available [Here](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) and [Here](https://kustomize.io/) 
-
-When to use Kustomize:
-
-- Adding annotations/labels
-- Injecting environment variables
-- Adding sidecars
-- Tweaking resource fields not exposed through values.yaml
-
-Kustomize also supports JSON 6902 patches when strategic merge is not precise enough. This is demonstrated in the example below.
-
 ```
-patchesJson6902:
-  - target:
-      group: apps
-      version: v1
-      kind: Deployment
-      name: rpi-executionservice
-    patch: |
-      - op: add
-        path: /spec/template/metadata/annotations/example
-        value: "true"
+NAME                   SCALETARGETKIND      SCALETARGETNAME        MIN   MAX   READY
+rpi-executionservice   apps/v1.Deployment   rpi-executionservice   2     10    True
 ```
-To ensure smooth upgrades, Do not edit anything under:
 
+---
+
+## Customizing This Helm Chart
+
+The chart uses a **two-tier values system**: you maintain a small overrides file with only your customizations, and the chart manages all internal defaults. See [readme-values.md](readme-values.md) for a full explanation.
+
+### 1. Environment overrides (preferred)
+
+Common settings — image references, credentials, replicas, resources, providers — are documented in `chart/values.yaml` and the examples in `deployments/`:
+
+```bash
+helm upgrade --install rpi ./chart -f my-overrides.yaml -n redpoint-rpi
 ```
-templates/
-charts/
-Chart.yaml
-values.yaml  (except for local copies)
 
+### 2. The `advanced:` block
+
+Every internal default (health probes, security contexts, logging levels, service ports, rollout strategies, thread pools, retry policies) can be overridden without forking the chart:
+
+```yaml
+advanced:
+  # Global probe tuning
+  livenessProbe:
+    periodSeconds: 30
+    failureThreshold: 5
+  # Per-service logging
+  realtimeapi:
+    logging:
+      realtimeapi:
+        default: Debug
 ```
-Instead, keep all customizations in your own directory, e.g.
 
+See `deployments/values-reference.yaml` for every available key.
+
+### 3. Kustomize (escape hatch)
+
+For changes outside the chart's scope entirely (sidecars, org-wide policies, fields not exposed via values or `advanced:`):
+
+```bash
+helm template rpi ./chart -f my-overrides.yaml | kustomize build . | kubectl apply -f -
 ```
-customizations/
-  my-values.yaml
-  kustomization.yaml
-  patches/
-    add-sidecar.yaml
-    add-annotations.json
 
-```
-**Best Practices to Prevent Breakage During Upgrades**
-- Prefer ```values.yaml``` overrides first as these are designed to be stable.
-- Target patches narrowly by patching specific resources/fields, not entire objects.
-- Avoid relying on exact line/field ordering and rely on patch paths instead.
-- Test upgrades in a staging environment with ```helm template ... | kustomize build ... | kubectl diff -f -```
-- Review the chart’s CHANGELOG before applying a new version.
-- Avoid patching highly volatile areas such as auto generated names.
+### Best Practices
 
-**3. When You Need Something Not Currently Supported**
+- Prefer overrides > `advanced:` > Kustomize, in that order
+- Target Kustomize patches narrowly — specific resources and fields
+- Test upgrades in staging: `helm template ... | kubectl diff -f -`
+- If you're patching something that should be a Helm value, [let us know](mailto:support@redpointglobal.com)
 
-If you find you are patching a field that could reasonably be exposed as a Helm value, please open an issue at ```support@redpointglobal.com``` so that Redpoint can make the customization easier via the standard Helm ```values.yam``` pattern.
+---
 
-### RPI Documentation
-To explore in-depth documentation and stay updated with the latest release notes for RPI, be sure to visit the [RPI Documentation Site ](https://docs.redpointglobal.com/rpi/)
+## RPI Documentation
 
-### Getting Support 
-If you encounter any challenges specific to the RPI application, our dedicated support team is here to assist you. Please reach out to us with details of the issue for prompt and expert help using [support@redpointglobal.com](support@redpointglobal.com)
+Visit the [RPI Documentation Site](https://docs.redpointglobal.com/rpi/) for in-depth guides and release notes.
 
-```Note on Scope of Support```
-While we are fully equipped to address issues directly related to the RPI application, please be aware that challenges pertaining to Kubernetes configurations, network connectivity, or other external system issues fall outside our support scope. For these, we recommend consulting with your IT infrastructure team or seeking assistance from relevant technical forums.
+## Getting Support
+
+For RPI application issues, contact [support@redpointglobal.com](mailto:support@redpointglobal.com).
+
+> **Scope of Support:** Redpoint supports RPI application issues. Kubernetes infrastructure, networking, and external system configuration fall outside our support scope — consult your IT infrastructure team or relevant technical forums for those.

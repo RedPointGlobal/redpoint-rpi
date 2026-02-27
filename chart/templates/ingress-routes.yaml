@@ -1,0 +1,277 @@
+{{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- $iaCfg := fromYaml (include "rpi.merged.interactionapi" .) -}}
+{{- $daCfg := fromYaml (include "rpi.merged.deploymentapi" .) -}}
+{{- $qrCfg := fromYaml (include "rpi.merged.queuereader" .) -}}
+{{- $intCfg := fromYaml (include "rpi.merged.integrationapi" .) -}}
+{{- $rtCfg := fromYaml (include "rpi.merged.realtimeapi" .) -}}
+{{- $cbCfg := fromYaml (include "rpi.merged.callbackapi" .) -}}
+{{- $sioCfg := fromYaml (include "rpi.merged.socketio" .) -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redpoint-rpi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "redpoint-rpi" "component" "ingress") | nindent 4 }}
+  annotations:
+  {{- if $ingCfg.controller.enabled }}
+    {{- with $ingCfg.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  ingressClassName: {{ $ingCfg.className }}
+  {{- if eq $ingCfg.certificateSource "kubernetes" }}
+  tls:
+  - secretName: ingress-tls
+  {{- end }}
+  rules:
+    {{- if $iaCfg.enabled }}
+    - host: {{ $ingCfg.hosts.client }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-interactionapi
+              port:
+                number: {{ $iaCfg.service.port }}
+    {{- end }}
+    {{- if $daCfg.enabled }}
+    - host: {{ $ingCfg.hosts.config }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-deploymentapi
+              port:
+                number: {{ $daCfg.service.port }}
+    {{- end }}
+    {{- if $qrCfg.enabled }}
+    - host: {{ $ingCfg.hosts.queuereader }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-queuereader
+              port:
+                number: {{ $qrCfg.service.port }}
+    {{- end }}
+    {{- if $intCfg.enabled }}
+    - host: {{ $ingCfg.hosts.integration }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-integrationapi
+              port:
+                number: {{ $intCfg.service.port }}
+    {{- end }}
+    {{- if $rtCfg.enabled }}
+    - host: {{ $ingCfg.hosts.realtime }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-realtimeapi
+              port:
+                number: {{ $rtCfg.service.port }}
+    {{- end }}
+    {{- if $cbCfg.enabled }}
+    - host: {{ $ingCfg.hosts.callbackapi }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callbackapi
+              port:
+                number: {{ $cbCfg.service.port }}
+    {{- end }}
+    {{- if eq $rtCfg.queueProvider.provider "rabbitmq" }}
+    {{- if eq $rtCfg.queueProvider.rabbitmq.type "internal" }}
+    - host: {{ $ingCfg.hosts.rabbitmqconsole }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - backend:
+            service:
+              name: rpi-realtimeapi-rabbitmq
+              port:
+                number: 15672
+          path: /
+          pathType: Prefix
+    {{- end }}
+    {{- end }}
+    {{- if eq $qrCfg.realtimeConfiguration.distributedCache.provider "redis" }}
+    {{- if eq $qrCfg.realtimeConfiguration.distributedCache.type "internal" }}
+    {{- if $qrCfg.realtimeConfiguration.isDistributed }}
+    - host: {{ $ingCfg.hosts.rabbitmqconsole }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - backend:
+            service:
+              name: rpi-queuereader-rabbitmq
+              port:
+                number: 15672
+          path: /
+          pathType: Prefix
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if $cbCfg.multitenancy.enabled }}
+    {{- if $cbCfg.enabled }}
+    {{- range $instance := $cbCfg.instances }}
+    - host: {{ $ingCfg.hosts.callbackapi }}-{{ $instance.name }}.{{ $ingCfg.domain }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-callbackapi-{{ $instance.name }}
+              port:
+                number: {{ $cbCfg.service.port }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-cdp
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" "ingress-cdp" "component" "ingress") | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/connection-proxy-header: keep-alive
+    nginx.ingress.kubernetes.io/enable-rewrite-log: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "1g"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/websocket-services: cdp-socketio
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/x-forwarded-prefix: "/"
+spec:
+  ingressClassName: {{ $ingCfg.className }}
+  {{- if eq $ingCfg.certificateSource "kubernetes" }}
+  tls:
+  - secretName: ingress-tls
+  {{- end }}
+  rules:
+  - host: {{ $ingCfg.hosts.smartactivation }}.{{ $ingCfg.domain }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: cdp-ui
+            port:
+              number: 80
+        path: /(.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: cdp-maintenance
+            port:
+              number: 80
+        path: /(docs-rg1-maintenance/.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: cdp-maintenance
+            port:
+              number: 80
+        path: /(api-rg1-maintenance/.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: keycloak
+            port:
+              number: 80
+        path: /(auth/.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: cdp-servicesapi
+            port:
+              number: 80
+        path: /(api/.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: cdp-servicesapi
+            port:
+              number: 80
+        path: /(docs/.*)
+        pathType: Prefix
+      - backend:
+          service:
+            name: cdp-authservice
+            port:
+              number: 80
+        path: /(api-rg1-auth/.*)
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: cdp-authservice
+            port:
+              number: 80
+        path: /(docs-rg1-auth/.*)
+        pathType: ImplementationSpecific
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-cdp-socketio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "ingress-cdp-socketio" "component" "ingress") | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 99m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/server-snippets: |
+      location / {
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_http_version 1.1;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header Connection "upgrade";
+        proxy_cache_bypass $http_upgrade;
+        }
+spec:
+  ingressClassName: {{ $ingCfg.className }}
+  {{- if eq $ingCfg.certificateSource "kubernetes" }}
+  tls:
+  - secretName: ingress-tls
+  {{- end }}
+  rules:
+  - host: {{ $ingCfg.hosts.smartactivation }}.{{ $ingCfg.domain }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: cdp-socketio
+            port:
+              number: {{ $sioCfg.service.port }}
+        path: /(socket.io/.*) 
+        pathType: ImplementationSpecific
+{{- end }}
