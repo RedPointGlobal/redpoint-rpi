@@ -142,7 +142,10 @@ spec:
         {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 8 }}
         app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
         {{- with .Values.customLabels }}
-        {{- toYaml . | nindent 8 }} 
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podLabels }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- if eq .Values.global.deployment.platform "azure" }}
         {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
@@ -151,6 +154,9 @@ spec:
         {{- end }}
       annotations:
         {{- with .Values.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- if $cfg.customMetrics.enabled }}

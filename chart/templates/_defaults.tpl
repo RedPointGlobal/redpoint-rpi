@@ -152,6 +152,8 @@ netutils:
 
 {{/* ------ Realtime API ------ */}}
 {{- define "rpi.defaults.realtimeapi" -}}
+podAnnotations: {}
+podLabels: {}
 multitenant: false
 name: rpi-realtimeapi
 type: deployment
@@ -316,6 +318,8 @@ cacheProvider:
 
 {{/* ------ Callback API ------ */}}
 {{- define "rpi.defaults.callbackapi" -}}
+podAnnotations: {}
+podLabels: {}
 type: deployment
 rollout:
   autoPromotionEnabled: true
@@ -349,6 +353,8 @@ resources:
 
 {{/* ------ Execution Service ------ */}}
 {{- define "rpi.defaults.executionservice" -}}
+podAnnotations: {}
+podLabels: {}
 type: deployment
 rollout:
   autoPromotionEnabled: true
@@ -491,6 +497,8 @@ extraEnvs:
 
 {{/* ------ Interaction API ------ */}}
 {{- define "rpi.defaults.interactionapi" -}}
+podAnnotations: {}
+podLabels: {}
 type: deployment
 rollout:
   autoPromotionEnabled: true
@@ -529,6 +537,8 @@ resources:
 
 {{/* ------ Integration API ------ */}}
 {{- define "rpi.defaults.integrationapi" -}}
+podAnnotations: {}
+podLabels: {}
 type: deployment
 rollout:
   autoPromotionEnabled: true
@@ -565,6 +575,8 @@ resources:
 
 {{/* ------ Node Manager ------ */}}
 {{- define "rpi.defaults.nodemanager" -}}
+podAnnotations: {}
+podLabels: {}
 type: deployment
 rollout:
   autoPromotionEnabled: true
@@ -598,6 +610,8 @@ resources:
 
 {{/* ------ Deployment API ------ */}}
 {{- define "rpi.defaults.deploymentapi" -}}
+podAnnotations: {}
+podLabels: {}
 type: deployment
 rollout:
   autoPromotionEnabled: true
@@ -622,6 +636,8 @@ resources:
 
 {{/* ------ Queue Reader ------ */}}
 {{- define "rpi.defaults.queuereader" -}}
+podAnnotations: {}
+podLabels: {}
 type: deployment
 rollout:
   autoPromotionEnabled: true
@@ -706,6 +722,8 @@ resources:
 
 {{/* ------ Rebrandly (URL Shortener) ------ */}}
 {{- define "rpi.defaults.rebrandly" -}}
+podAnnotations: {}
+podLabels: {}
 baseUrl: https://api.rebrandly.com
 enterpriseBaseUrl: https://enterprise-api.rebrandly.com
 type: deployment

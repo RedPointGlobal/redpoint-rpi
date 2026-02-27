@@ -17,6 +17,14 @@ The `values.yaml` has been redesigned from a **2,608-line monolithic file** to a
 | Upgrades require diffing the entire file | Upgrades apply new defaults automatically |
 | No escape hatch for hidden internals | `advanced:` block overrides any internal default |
 
+**New in v7.7:**
+
+- **Demo database mode** — Set `global.deployment.mode: demo` to deploy embedded MSSQL + MongoDB for development without external databases
+- **Service mesh support** — Generate Linkerd Server CRDs via `serviceMesh.servers[]`
+- **CSI SecretProviderClass** — Create SecretProviderClass resources for Azure Key Vault, AWS Secrets Manager, and other CSI secret providers
+- **Persistent volume creation** — Create PV + PVC pairs for CSI-backed storage (Azure Blob, Azure Files, AWS EFS, GCP Filestore)
+- **Per-service pod annotations/labels** — Apply `podAnnotations` and `podLabels` to individual services without affecting others
+
 See [readme-values.md](../readme-values.md) for full details on the new architecture.
 
 ---
@@ -97,6 +105,8 @@ Transfer your customizations into this file. Common values to carry over:
 | **Replicas/Resources** | Per-service `replicas`, `resources`, `autoscaling` |
 | **Authentication** | `MicrosoftEntraID.*`, `OpenIdProviders.*` |
 | **SMTP** | `SMTPSettings.*` |
+| **Pod Metadata** | Per-service `podAnnotations`, `podLabels` |
+| **Service Mesh** | `serviceMesh.*` |
 
 ### 4. Move Hidden Defaults to `advanced:`
 
@@ -318,5 +328,6 @@ After migration, review the optional configuration sections in the [main README]
 
 - [Cloud Identity](../README.md#configure-cloud-identity)
 - [Secrets Management](../README.md#configure-secrets-management)
+- [Service Mesh](../README.md#configure-service-mesh)
 - [Autoscaling](../README.md#configure-autoscaling)
 - [Customizing This Helm Chart](../README.md#customizing-this-helm-chart)

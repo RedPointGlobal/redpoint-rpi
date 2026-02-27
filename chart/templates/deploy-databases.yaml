@@ -1,0 +1,134 @@
+{{/*
+  Demo Database Mode
+  Deploys embedded MSSQL Server and MongoDB containers for development/POC environments.
+  Enabled via: global.deployment.mode: "demo"
+
+  When using demo mode, set your database connection details to point to these services:
+    databases.operational.server_host: rpi-demo-mssql
+    databases.operational.server_username: sa
+    databases.operational.server_password: <SA_PASSWORD below>
+    realtimeapi.cacheProvider.mongodb.connectionString: mongodb://rpi-demo-mongodb:27017/Pulse
+*/}}
+{{- if eq (.Values.global.deployment.mode | default "standard") "demo" }}
+
+{{- $saPassword := ".RedPoint2021" }}
+
+# -- Demo MSSQL Server
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-demo-mssql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mssql" "component" "database") | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: rpi-demo-mssql
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-demo-mssql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mssql" "component" "database") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-demo-mssql
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mssql" "component" "database") | nindent 8 }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      containers:
+      - name: mssql
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mssql-2022-opsdatabases:latest
+        ports:
+        - name: mssql
+          containerPort: 1433
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          value: {{ $saPassword | quote }}
+        resources:
+          requests:
+            cpu: 500m
+            memory: 2Gi
+          limits:
+            memory: 4Gi
+      {{- include "redpoint-rpi.nodeSelector" . | nindent 6 }}
+      {{- include "redpoint-rpi.tolerations" . | nindent 6 }}
+
+---
+# -- Demo MongoDB Server
+apiVersion: v1
+kind: Service
+metadata:
+  name: rpi-demo-mongodb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mongodb" "component" "database") | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: rpi-demo-mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rpi-demo-mongodb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mongodb" "component" "database") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rpi-demo-mongodb
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mongodb" "component" "database") | nindent 8 }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      containers:
+      - name: mongodb
+        image: rg1acrpub.azurecr.io/docker/redpointinteraction/prod/mongodb-6-0-seeded:latest
+        ports:
+        - name: mongo
+          containerPort: 27017
+        env:
+        - name: MONGO_INITDB_DATABASE
+          value: "rpi_cdp_nosql"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+      {{- include "redpoint-rpi.nodeSelector" . | nindent 6 }}
+      {{- include "redpoint-rpi.tolerations" . | nindent 6 }}
+{{- end }}

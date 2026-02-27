@@ -1,11 +1,10 @@
-![redpoint_logo](assets/images/logo.png)
-## Redpoint Interaction (RPI) | Deployment on Kubernetes
+<p align="center">
+  <img src="assets/images/logo.png" alt="Redpoint Global" width="280">
+</p>
 
-With RedPoint Interaction™ you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
+<h2 align="center">Redpoint Interaction (RPI)<br>Deployment on Kubernetes</h2>
 
-This chart deploys RPI on Kubernetes using Helm.
-
-<p align="left">
+<p align="center">
   <a href="docs/greenfield.md"><strong>New Installation</strong></a> ·
   <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a> ·
   <a href="readme-values.md"><strong>Values Guide</strong></a> ·
@@ -14,6 +13,9 @@ This chart deploys RPI on Kubernetes using Helm.
 </p>
 
 ---
+
+With Redpoint Interaction you can define your audience and execute highly personalized, cross-channel campaigns — all from a single visual interface. This chart deploys RPI on Kubernetes using Helm.
+
 ![architecture](assets/images/diagram.png)
 
 > **v7.7 Breaking Change** — The values file has been redesigned. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
@@ -28,6 +30,8 @@ This chart deploys RPI on Kubernetes using Helm.
 | **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
 | **Databases** | Created from scratch | Existing operational and logging databases are reused |
 | **Overrides file** | Start from a `deployments/` example | Convert your existing `values.yaml` to the new format |
+
+> **Quick Start (Demo Mode):** For evaluation or development, set `global.deployment.mode: demo` to deploy embedded MSSQL and MongoDB containers — no external database setup required. See [Demo Database Mode](#demo-database-mode).
 
 ![upgrade_diagram](assets/images/upgrade.png)
 
@@ -319,6 +323,37 @@ cloudIdentity:
 
 </details>
 
+#### 4. CSI Secrets Store (volume-mounted)
+
+For environments using the [Secrets Store CSI Driver](https://secrets-store-csi-driver.sigs.k8s.io/), the chart can create `SecretProviderClass` resources that sync secrets from external vaults into Kubernetes. This works with Azure Key Vault, AWS Secrets Manager, GCP Secret Manager, and HashiCorp Vault.
+
+```yaml
+cloudIdentity:
+  secretsManagement:
+    csiSecretProvider:
+      enabled: true
+      classes:
+        - name: rpi-secrets
+          provider: azure
+          parameters:
+            usePodIdentity: "false"
+            useVMManagedIdentity: "false"
+            clientID: "00000000-0000-0000-0000-000000000000"
+            keyvaultName: my-keyvault
+            tenantId: "00000000-0000-0000-0000-000000000000"
+          objects:
+            - objectName: V7-ConnectionString-Operations
+              objectType: secret
+          secretObjects:
+            - secretName: rpi-synced-secrets
+              type: Opaque
+              data:
+                - objectName: V7-ConnectionString-Operations
+                  key: ConnectionString_Operations_Database
+```
+
+Multiple classes can be defined to pull from different vaults or providers.
+
 ### Configure Storage
 
 RPI uses file share storage for [File Output directories](https://docs.redpointglobal.com/rpi/file-output-directory), custom plugins, and Redpoint Data Management (RPDM) uploads. Provision storage using your platform's managed service (`Azure Files`, `Amazon EFS`, `Google Filestore`), create PVCs, and reference them:
@@ -339,6 +374,33 @@ storage:
       claimName: rpdmuploaddirectory
       mountPath: /rpdmuploaddirectory
 ```
+
+#### Create PV + PVC Pairs
+
+If your storage isn't pre-provisioned, the chart can create `PersistentVolume` and `PersistentVolumeClaim` resources for CSI-backed storage (Azure Blob, Azure Files, AWS EFS, GCP Filestore):
+
+```yaml
+storage:
+  persistentVolumes:
+    - name: rpi-blob-storage
+      capacity: 100Gi
+      accessModes: [ReadWriteMany]
+      storageClassName: blob-fuse
+      reclaimPolicy: Retain
+      mountOptions:
+        - -o allow_other
+        - --file-cache-timeout-in-seconds=120
+      csi:
+        driver: blob.csi.azure.com
+        volumeHandle: unique-volume-handle
+        volumeAttributes:
+          containerName: rpi-data
+          storageAccount: mystorageaccount
+      pvc:
+        claimName: rpi-blob-pvc
+```
+
+Each entry generates a matched PV + PVC pair. The CSI driver, volume attributes, and mount options are passed through as-is — any CSI driver is supported.
 
 ### Configure Realtime
 
@@ -560,6 +622,65 @@ USER "$RUNTIME_UID":"$RUNTIME_GID"
 
 </details>
 
+### Configure Service Mesh
+
+> **Optional.** Skip if you're not using a service mesh.
+
+The chart can generate [Linkerd](https://linkerd.io/) `Server` CRDs for L7 traffic policy. Define one entry per service that should participate in the mesh:
+
+```yaml
+serviceMesh:
+  enabled: true
+  provider: linkerd
+  servers:
+    - name: realtimeapi
+      podSelector:
+        app.kubernetes.io/name: rpi-realtimeapi
+      port: 8080
+      proxyProtocol: HTTP/1
+    - name: executionservice
+      podSelector:
+        app.kubernetes.io/name: rpi-executionservice
+      port: 8080
+      proxyProtocol: HTTP/1
+```
+
+Per-service proxy annotations (e.g., Linkerd timeout overrides, skip-outbound-ports) can be applied via `podAnnotations`:
+
+```yaml
+executionservice:
+  podAnnotations:
+    config.linkerd.io/skip-outbound-ports: "443"
+    config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"
+```
+
+See [Per-Service Pod Annotations](#per-service-pod-annotations--labels) below.
+
+### Demo Database Mode
+
+> **Optional.** For development or evaluation only — not for production.
+
+Set `global.deployment.mode: demo` to deploy embedded MSSQL Server and MongoDB containers inside the cluster. This eliminates the need to provision external databases when getting started:
+
+```yaml
+global:
+  deployment:
+    mode: demo
+
+databases:
+  operational:
+    server_host: rpi-demo-mssql
+    server_username: sa
+    server_password: ".RedPoint2021"
+
+realtimeapi:
+  cacheProvider:
+    mongodb:
+      connectionString: mongodb://rpi-demo-mongodb:27017/Pulse
+```
+
+The demo databases are ephemeral — data is lost when pods restart. Use `mode: standard` (the default) for persistent, external databases in production.
+
 ### Configure Content Generation Tools
 
 RPI integrates with OpenAI and Azure Cognitive Search for [content generation](https://docs.redpointglobal.com/rpi/configuring-content-generation-tools):
@@ -753,6 +874,24 @@ advanced:
 ```
 
 See `deployments/values-reference.yaml` for every available key.
+
+### Per-Service Pod Annotations & Labels
+
+Every service supports `podAnnotations` and `podLabels` for applying metadata to individual deployments without affecting other services. These are added after the global `customAnnotations`/`customLabels`:
+
+```yaml
+executionservice:
+  podAnnotations:
+    config.linkerd.io/skip-outbound-ports: "443"
+  podLabels:
+    sidecar.istio.io/inject: "true"
+
+interactionapi:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+```
+
+Supported on: `realtimeapi`, `callbackapi`, `executionservice`, `interactionapi`, `integrationapi`, `deploymentapi`, `queuereader`, `nodemanager`, `rebrandly`.
 
 ### 3. Kustomize (escape hatch)
 

@@ -95,6 +95,7 @@ The provided example files demonstrate a typical pattern:
 | Setting | `dev.yaml` | `staging.yaml` | `production.yaml` |
 |---------|-----------|---------------|-------------------|
 | Platform | selfhosted | amazon | amazon |
+| Database mode | standard (demo available) | standard | standard |
 | Replicas | 1 | 1 | 2-3 |
 | Resources | 100m CPU / 512Mi | 500m CPU / 2Gi | 1 CPU / 4Gi |
 | Autoscaling | Disabled | Disabled | Enabled |
@@ -187,6 +188,32 @@ advanced:
     customMetrics:
       enabled: true
       prometheus_scrape: true
+```
+
+**Add per-service pod annotations (e.g., for Linkerd):**
+
+```yaml
+executionservice:
+  podAnnotations:
+    config.linkerd.io/skip-outbound-ports: "443"
+    config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"
+interactionapi:
+  podAnnotations:
+    config.linkerd.io/skip-outbound-ports: "443"
+```
+
+**Enable demo database mode for development:**
+
+```yaml
+global:
+  deployment:
+    mode: demo
+
+databases:
+  operational:
+    server_host: rpi-demo-mssql
+    server_username: sa
+    server_password: ".RedPoint2021"
 ```
 
 ### How Merging Works

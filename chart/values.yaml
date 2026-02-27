@@ -14,6 +14,9 @@
 # ==========================
 global:
   deployment:
+    # Deployment mode: standard (default) or demo
+    # Demo mode deploys embedded MSSQL + MongoDB containers
+    mode: standard
     # Cloud environment: azure, amazon, google, selfhosted
     platform: amazon
 
@@ -135,6 +138,28 @@ cloudIdentity:
     UseForConfigPasswords: true
     UseForAppSettings: true
     ConfigurationReloadIntervalSeconds: 30
+    # CSI Secrets Store integration (SecretProviderClass resources)
+    csiSecretProvider:
+      enabled: false
+      classes: []
+      # classes:
+      #   - name: rpi-secrets
+      #     provider: azure
+      #     parameters:
+      #       usePodIdentity: "false"
+      #       useVMManagedIdentity: "false"
+      #       clientID: "00000000-0000-0000-0000-000000000000"
+      #       keyvaultName: my-keyvault
+      #       tenantId: "00000000-0000-0000-0000-000000000000"
+      #     objects:
+      #       - objectName: V7-ConnectionString-Operations
+      #         objectType: secret
+      #     secretObjects:
+      #       - secretName: rpi-synced-secrets
+      #         type: Opaque
+      #         data:
+      #           - objectName: V7-ConnectionString-Operations
+      #             key: ConnectionString_Operations_Database
   azureSettings:
     # Supported: workloadIdentity
     credentialsType: workloadIdentity
@@ -179,6 +204,26 @@ storage:
       enabled: false
       claimName: rpdmuploaddirectory
       mountPath: /rpdmuploaddirectory
+
+  # Create PV + PVC pairs (for CSI-backed storage)
+  persistentVolumes: []
+  # persistentVolumes:
+  #   - name: rpi-blob-storage
+  #     capacity: 100Gi
+  #     accessModes: [ReadWriteMany]
+  #     storageClassName: blob-fuse
+  #     reclaimPolicy: Retain
+  #     mountOptions:
+  #       - -o allow_other
+  #       - --file-cache-timeout-in-seconds=120
+  #     csi:
+  #       driver: blob.csi.azure.com
+  #       volumeHandle: unique-volume-handle
+  #       volumeAttributes:
+  #         containerName: rpi-data
+  #         storageAccount: mystorageaccount
+  #     pvc:
+  #       claimName: rpi-blob-pvc
 
 # ==========================
 # Realtime API
@@ -562,6 +607,27 @@ ingress:
 # ==========================
 networkPolicy:
   enabled: false
+
+# ==========================
+# Service Mesh
+# ==========================
+serviceMesh:
+  enabled: false
+  # Supported: linkerd
+  provider: linkerd
+  # Linkerd Server CRDs for L7 traffic policy
+  servers: []
+  # servers:
+  #   - name: realtimeapi
+  #     podSelector:
+  #       app.kubernetes.io/name: rpi-realtimeapi
+  #     port: 8080
+  #     proxyProtocol: HTTP/1
+  #   - name: executionservice
+  #     podSelector:
+  #       app.kubernetes.io/name: rpi-executionservice
+  #     port: 8080
+  #     proxyProtocol: HTTP/1
 
 # ==========================
 # Node Scheduling

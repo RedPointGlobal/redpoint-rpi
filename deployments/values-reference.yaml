@@ -39,6 +39,10 @@
 
 global:
   deployment:
+    # Deployment mode: standard | demo
+    # Demo mode deploys embedded MSSQL + MongoDB containers for dev/evaluation
+    mode: standard
+
     # Cloud platform: azure | amazon | google | selfhosted
     platform: amazon
 
@@ -154,6 +158,28 @@ cloudIdentity:
     UseForConfigPasswords: true
     UseForAppSettings: true
     ConfigurationReloadIntervalSeconds: 30
+    # CSI Secrets Store integration (SecretProviderClass resources)
+    csiSecretProvider:
+      enabled: false
+      # classes:
+      #   - name: rpi-secrets
+      #     provider: azure            # azure | aws | gcp | vault
+      #     parameters:
+      #       usePodIdentity: "false"
+      #       useVMManagedIdentity: "false"
+      #       clientID: "00000000-0000-0000-0000-000000000000"
+      #       keyvaultName: my-keyvault
+      #       tenantId: "00000000-0000-0000-0000-000000000000"
+      #     objects:
+      #       - objectName: V7-ConnectionString-Operations
+      #         objectType: secret
+      #     secretObjects:
+      #       - secretName: rpi-synced-secrets
+      #         type: Opaque
+      #         data:
+      #           - objectName: V7-ConnectionString-Operations
+      #             key: ConnectionString_Operations_Database
+      classes: []
   azureSettings:
     credentialsType: workloadIdentity
     managedIdentityClientId: your_managed_identity_client_id
@@ -199,6 +225,31 @@ storage:
       claimName: rpdmuploaddirectory
       mountPath: /rpdmuploaddirectory
 
+  # Create PV + PVC pairs for CSI-backed storage
+  # persistentVolumes:
+  #   - name: rpi-blob-storage
+  #     capacity: 100Gi
+  #     accessModes: [ReadWriteMany]
+  #     storageClassName: blob-fuse
+  #     reclaimPolicy: Retain           # Retain | Delete
+  #     mountOptions:
+  #       - -o allow_other
+  #       - --file-cache-timeout-in-seconds=120
+  #     csi:
+  #       driver: blob.csi.azure.com    # Any CSI driver
+  #       volumeHandle: unique-volume-handle
+  #       volumeAttributes:
+  #         containerName: rpi-data
+  #         storageAccount: mystorageaccount
+  #       nodeStageSecretRef:           # Optional
+  #         name: storage-secret
+  #         namespace: default
+  #     pvc:
+  #       claimName: rpi-blob-pvc
+  #       capacity: 100Gi               # Optional, defaults to PV capacity
+  #       accessModes: [ReadWriteMany]   # Optional, defaults to PV accessModes
+  persistentVolumes: []
+
 
 # ============================================================
 #  REALTIME API
@@ -207,6 +258,10 @@ storage:
 realtimeapi:
   enabled: true
   replicas: 1
+
+  # Per-service pod metadata (merged after customAnnotations/customLabels)
+  podAnnotations: {}
+  podLabels: {}
 
   # RPI client identifier
   rpiClientID: 00000000-0000-0000-0000-000000000000
@@ -306,6 +361,8 @@ realtimeapi:
 callbackapi:
   enabled: true
   replicas: 1
+  podAnnotations: {}
+  podLabels: {}
   channelLabel: SendGrid
 
   # Multi-tenant instances
@@ -332,6 +389,8 @@ callbackapi:
 executionservice:
   enabled: true
   replicas: 1
+  podAnnotations: {}
+  podLabels: {}
   enableRPIAuthentication: true
 
   # Internal cache for execution state
@@ -365,6 +424,8 @@ executionservice:
 interactionapi:
   enabled: true
   replicas: 1
+  podAnnotations: {}
+  podLabels: {}
   enableRPIAuthentication: true
 
   resources:
@@ -384,6 +445,8 @@ interactionapi:
 integrationapi:
   enabled: true
   replicas: 1
+  podAnnotations: {}
+  podLabels: {}
   enableRPIAuthentication: true
 
   # Credentials (required for Smart Activation)
@@ -407,6 +470,8 @@ integrationapi:
 nodemanager:
   enabled: true
   replicas: 1
+  podAnnotations: {}
+  podLabels: {}
   enableRPIAuthentication: true
 
   resources:
@@ -426,6 +491,8 @@ nodemanager:
 deploymentapi:
   enabled: true
   replicas: 1
+  podAnnotations: {}
+  podLabels: {}
 
   templateTenant:
     useTemplateFiles: false
@@ -447,6 +514,8 @@ deploymentapi:
 queuereader:
   enabled: true
   replicas: 1
+  podAnnotations: {}
+  podLabels: {}
 
   realtimeConfiguration:
     isDistributed: false
@@ -481,6 +550,8 @@ queuereader:
 
 rebrandly:
   enabled: false
+  podAnnotations: {}
+  podLabels: {}
   apiKey: my_rebrandly_api_key
   autoCreateSecrets: true
   secretName: rpi-rebrandly
@@ -590,6 +661,28 @@ ingress:
 
 networkPolicy:
   enabled: false
+
+
+# ============================================================
+#  SERVICE MESH
+# ============================================================
+
+serviceMesh:
+  enabled: false
+  provider: linkerd                      # Supported: linkerd
+  # Linkerd Server CRDs for L7 traffic policy
+  # servers:
+  #   - name: realtimeapi
+  #     podSelector:
+  #       app.kubernetes.io/name: rpi-realtimeapi
+  #     port: 8080                       # Default: 8080
+  #     proxyProtocol: HTTP/1            # Default: HTTP/1
+  #   - name: executionservice
+  #     podSelector:
+  #       app.kubernetes.io/name: rpi-executionservice
+  #     port: 8080
+  #     proxyProtocol: HTTP/1
+  servers: []
 
 
 # ============================================================

@@ -253,6 +253,109 @@ tolerations:
   value: redpoint-rpi
 
 # ----------------------------------------------------------
+#  Service Mesh (uncomment to enable)
+# ----------------------------------------------------------
+# serviceMesh:
+#   enabled: true
+#   provider: linkerd
+#   servers:
+#     - name: realtimeapi
+#       podSelector:
+#         app.kubernetes.io/name: rpi-realtimeapi
+#       port: 8080
+#       proxyProtocol: HTTP/1
+#     - name: executionservice
+#       podSelector:
+#         app.kubernetes.io/name: rpi-executionservice
+#       port: 8080
+#       proxyProtocol: HTTP/1
+#     - name: interactionapi
+#       podSelector:
+#         app.kubernetes.io/name: rpi-interactionapi
+#       port: 8080
+#       proxyProtocol: HTTP/1
+#     - name: integrationapi
+#       podSelector:
+#         app.kubernetes.io/name: rpi-integrationapi
+#       port: 8080
+#       proxyProtocol: HTTP/1
+#     - name: callbackapi
+#       podSelector:
+#         app.kubernetes.io/name: rpi-callbackapi
+#       port: 8080
+#       proxyProtocol: HTTP/1
+#     - name: deploymentapi
+#       podSelector:
+#         app.kubernetes.io/name: rpi-deploymentapi
+#       port: 8080
+#       proxyProtocol: HTTP/1
+#     - name: queuereader
+#       podSelector:
+#         app.kubernetes.io/name: rpi-queuereader
+#       port: 8080
+#       proxyProtocol: HTTP/1
+
+# ----------------------------------------------------------
+#  Per-service pod annotations (e.g., for Linkerd proxy config)
+# ----------------------------------------------------------
+# executionservice:
+#   podAnnotations:
+#     config.linkerd.io/skip-outbound-ports: "443"
+#     config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"
+# interactionapi:
+#   podAnnotations:
+#     config.linkerd.io/skip-outbound-ports: "443"
+#     config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"
+
+# ----------------------------------------------------------
+#  CSI SecretProviderClass (uncomment to enable)
+# ----------------------------------------------------------
+# cloudIdentity:
+#   secretsManagement:
+#     csiSecretProvider:
+#       enabled: true
+#       classes:
+#         - name: rpi-secrets
+#           provider: azure
+#           parameters:
+#             usePodIdentity: "false"
+#             useVMManagedIdentity: "false"
+#             clientID: "00000000-0000-0000-0000-000000000000"
+#             keyvaultName: my-keyvault
+#             tenantId: "00000000-0000-0000-0000-000000000000"
+#           objects:
+#             - objectName: V7-ConnectionString-Operations
+#               objectType: secret
+#           secretObjects:
+#             - secretName: rpi-synced-secrets
+#               type: Opaque
+#               data:
+#                 - objectName: V7-ConnectionString-Operations
+#                   key: ConnectionString_Operations_Database
+
+# ----------------------------------------------------------
+#  Persistent Volumes (uncomment to enable)
+# ----------------------------------------------------------
+# storage:
+#   persistentVolumes:
+#     - name: rpi-blob-storage
+#       capacity: 100Gi
+#       accessModes: [ReadWriteMany]
+#       storageClassName: blob-fuse
+#       reclaimPolicy: Retain
+#       mountOptions:
+#         - -o allow_other
+#         - --file-cache-timeout-in-seconds=120
+#       csi:
+#         driver: blob.csi.azure.com
+#         volumeHandle: unique-volume-handle
+#         volumeAttributes:
+#           containerName: rpi-data
+#           storageAccount: mystorageaccount
+#       pvc:
+#         claimName: rpi-blob-pvc
+
+# ----------------------------------------------------------
 #  Advanced Overrides (only if needed)
 # ----------------------------------------------------------
 # advanced:

@@ -98,6 +98,8 @@ ingress:
 
 ## 5. Configure Operational Database
 
+> **Quick Start:** To skip external database setup entirely, use **demo mode** instead. Set `global.deployment.mode: demo` and point to the in-cluster databases — see [Demo Database Mode](../README.md#demo-database-mode). Demo mode is for development and evaluation only.
+
 The [operational databases](https://docs.redpointglobal.com/rpi/admin-key-concepts) (`Pulse` and `Pulse_Logging`) store information necessary for RPI to function. Add the following to your overrides file:
 
 ```yaml
@@ -349,6 +351,7 @@ After deployment, configure the optional features that apply to your environment
 - [Storage](../README.md#configure-storage)
 - [Realtime](../README.md#configure-realtime)
 - [Secrets Management](../README.md#configure-secrets-management)
+- [Service Mesh](../README.md#configure-service-mesh)
 - [Microsoft Entra ID](../README.md#configure-microsoft-entra-id)
 - [Custom Metrics](../README.md#configure-custom-metrics)
 - [Autoscaling](../README.md#configure-autoscaling)
