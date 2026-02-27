@@ -1,88 +1,37 @@
 {{/*
 ============================================================
-  INTERNAL DEFAULTS
+  INTERNAL DEFAULTS — _defaults.tpl
 ============================================================
-  These values are managed by the chart and should NOT be
-  exposed in values.yaml. Users can override any default via
-  the `advanced:` block in their overrides file.
+  Chart-managed defaults that users should NOT edit directly.
+  Override any value via the `advanced:` block in your
+  overrides file.
 
-  Each component has a named template that returns YAML.
-  Use with fromYaml + mustMergeOverwrite in templates:
+  Architecture:
+    _defaults.tpl   — this file, defines default YAML per component
+    _helpers.tpl    — merge helpers that combine:
+                      defaults + advanced overrides + user values
 
-    {{- $defaults := fromYaml (include "rpi.defaults.realtimeapi" .) -}}
-    {{- $advanced := .Values.advanced.realtimeapi | default dict -}}
-    {{- $user := .Values.realtimeapi | default dict -}}
-    {{- $cfg := mustMergeOverwrite $defaults $advanced $user -}}
+  Each component has a named template that returns YAML:
+
+    {{- $d := fromYaml (include "rpi.defaults.realtimeapi" .) -}}
+    {{- $a := ((.Values.advanced).realtimeapi) | default dict -}}
+    {{- $u := .Values.realtimeapi | default dict -}}
+    {{- $cfg := mustMergeOverwrite $d $a $u -}}
+
+  Sections:
+    1. Cross-cutting defaults (probes, security, topology, ingress)
+    2. RPI core services (.NET)
+    3. Supporting services (Rebrandly, diagnostics)
+    4. Smart Activation services (Java)
 ============================================================
 */}}
 
-{{/* ======================================================
-     GLOBAL DEFAULTS
-     ====================================================== */}}
-{{- define "rpi.defaults.global" -}}
-application:
-  name: redpoint-interaction
-  version: 7
-deployment:
-  images:
-    imagePullPolicy: IfNotPresent
-{{- end -}}
 
-{{/* ======================================================
-     SHARED COMPONENT DEFAULTS
-     ======================================================
-     Common boilerplate applied to all service components.
-     Individual component defaults merge on top of this.
-     ====================================================== */}}
-{{- define "rpi.defaults.component.common" -}}
-type: deployment
-rollout:
-  autoPromotionEnabled: true
-  revisionHistoryLimit: 3
-serviceAccount:
-  enabled: true
-service:
-  port: 80
-customMetrics:
-  enabled: false
-  prometheus_scrape: false
-terminationGracePeriodSeconds: 120
-logging:
-  default: Error
-  database: Error
-  rpiTrace: Error
-  rpiError: Error
-  Console: Error
-autoscaling:
-  type: hpa
-  minReplicas: 2
-  maxReplicas: 5
-  targetCPUUtilizationPercentage: 80
-  targetMemoryUtilizationPercentage: 80
-podDisruptionBudget:
-  enabled: false
-  minAvailable: 1
-resources:
-  enabled: true
-{{- end -}}
+{{/* ============================================================
+     1. CROSS-CUTTING DEFAULTS
+     ============================================================ */}}
 
-{{/* ======================================================
-     SHARED ROLLING UPDATE DEFAULTS
-     ======================================================
-     Used by Smart Activation Java components.
-     ====================================================== */}}
-{{- define "rpi.defaults.rollingUpdate" -}}
-rollingUpdate:
-  maxUnavailable: "25%"
-  maxSurge: "25%"
-  progressDeadlineSeconds: 600
-{{- end -}}
-
-{{/* ======================================================
-     SECURITY CONTEXT DEFAULTS
-     ====================================================== */}}
-
-{{/* Global security context (.NET services) */}}
+{{/* ------ Security Context (.NET services) ------ */}}
 {{- define "rpi.defaults.securityContext" -}}
 enabled: true
 runAsUser: 7777
@@ -99,39 +48,7 @@ supplementalGroups:
   - 5000
 {{- end -}}
 
-{{/* Smart Activation security context (Java services, uid 7777) */}}
-{{- define "rpi.defaults.securityContext.smartactivation" -}}
-enabled: true
-runAsUser: 7777
-runAsGroup: 7777
-fsGroup: 7777
-runAsNonRoot: true
-readOnlyRootFilesystem: false
-privileged: false
-appArmorProfile: runtime/default
-allowPrivilegeEscalation: false
-capabilities:
-  drop: ["ALL"]
-{{- end -}}
-
-{{/* Keycloak security context (uid 1001) */}}
-{{- define "rpi.defaults.securityContext.keycloak" -}}
-enabled: true
-runAsUser: 1001
-runAsGroup: 1001
-fsGroup: 1001
-runAsNonRoot: true
-readOnlyRootFilesystem: false
-privileged: false
-appArmorProfile: runtime/default
-allowPrivilegeEscalation: false
-capabilities:
-  drop: ["ALL"]
-{{- end -}}
-
-{{/* ======================================================
-     HEALTH PROBE DEFAULTS
-     ====================================================== */}}
+{{/* ------ Liveness Probe ------ */}}
 {{- define "rpi.defaults.livenessProbe" -}}
 enabled: true
 httpGet:
@@ -145,6 +62,7 @@ failureThreshold: 3
 successThreshold: 1
 {{- end -}}
 
+{{/* ------ Readiness Probe ------ */}}
 {{- define "rpi.defaults.readinessProbe" -}}
 enabled: true
 httpGet:
@@ -158,6 +76,7 @@ failureThreshold: 3
 successThreshold: 1
 {{- end -}}
 
+{{/* ------ Startup Probe ------ */}}
 {{- define "rpi.defaults.startupProbe" -}}
 enabled: true
 httpGet:
@@ -171,9 +90,7 @@ failureThreshold: 30
 successThreshold: 1
 {{- end -}}
 
-{{/* ======================================================
-     TOPOLOGY SPREAD CONSTRAINTS DEFAULTS
-     ====================================================== */}}
+{{/* ------ Topology Spread Constraints ------ */}}
 {{- define "rpi.defaults.topologySpreadConstraints" -}}
 enabled: true
 maxSkew: 1
@@ -181,16 +98,12 @@ topologyKey: kubernetes.io/hostname
 whenUnsatisfiable: ScheduleAnyway
 {{- end -}}
 
-{{/* ======================================================
-     NETWORK POLICY DEFAULTS
-     ====================================================== */}}
+{{/* ------ Network Policy ------ */}}
 {{- define "rpi.defaults.networkPolicy" -}}
 allowDNS: true
 {{- end -}}
 
-{{/* ======================================================
-     INGRESS DEFAULTS
-     ====================================================== */}}
+{{/* ------ Ingress ------ */}}
 {{- define "rpi.defaults.ingress" -}}
 className: nginx-redpoint-rpi
 internalImageOverride:
@@ -207,18 +120,37 @@ annotations:
   nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 {{- end -}}
 
-{{/* ======================================================
-     DATABASE DEFAULTS
-     ====================================================== */}}
-{{- define "rpi.defaults.databases.operational" -}}
-databaseSchema: dbo
-encrypt: true
-dateTimeSource: OperatingSystem
+{{/* ------ Diagnostics Mode ------ */}}
+{{- define "rpi.defaults.diagnosticsMode" -}}
+dotNetTools:
+  enabled: false
+  useGcDump: false
+  useCounters: false
+  path: /app/dotnet-tools
+  extractionBaseDir: /tmp
+netutils:
+  enabled: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 7777
+    runAsGroup: 7777
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    appArmorProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - ALL
+      add: ["NET_ADMIN", "NET_RAW"]
 {{- end -}}
 
-{{/* ======================================================
-     REALTIME API DEFAULTS
-     ====================================================== */}}
+
+{{/* ============================================================
+     2. RPI CORE SERVICES (.NET)
+     ============================================================ */}}
+
+{{/* ------ Realtime API ------ */}}
 {{- define "rpi.defaults.realtimeapi" -}}
 multitenant: false
 name: rpi-realtimeapi
@@ -382,9 +314,7 @@ cacheProvider:
         minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     CALLBACK API DEFAULTS
-     ====================================================== */}}
+{{/* ------ Callback API ------ */}}
 {{- define "rpi.defaults.callbackapi" -}}
 type: deployment
 rollout:
@@ -417,9 +347,7 @@ resources:
   enabled: true
 {{- end -}}
 
-{{/* ======================================================
-     EXECUTION SERVICE DEFAULTS
-     ====================================================== */}}
+{{/* ------ Execution Service ------ */}}
 {{- define "rpi.defaults.executionservice" -}}
 type: deployment
 rollout:
@@ -561,9 +489,7 @@ extraEnvs:
     value: "/rpifileoutputdir/mpulse-debug-path"
 {{- end -}}
 
-{{/* ======================================================
-     INTERACTION API DEFAULTS
-     ====================================================== */}}
+{{/* ------ Interaction API ------ */}}
 {{- define "rpi.defaults.interactionapi" -}}
 type: deployment
 rollout:
@@ -601,9 +527,7 @@ resources:
   enabled: true
 {{- end -}}
 
-{{/* ======================================================
-     INTEGRATION API DEFAULTS
-     ====================================================== */}}
+{{/* ------ Integration API ------ */}}
 {{- define "rpi.defaults.integrationapi" -}}
 type: deployment
 rollout:
@@ -639,9 +563,7 @@ resources:
   enabled: true
 {{- end -}}
 
-{{/* ======================================================
-     NODE MANAGER DEFAULTS
-     ====================================================== */}}
+{{/* ------ Node Manager ------ */}}
 {{- define "rpi.defaults.nodemanager" -}}
 type: deployment
 rollout:
@@ -674,9 +596,7 @@ resources:
   enabled: true
 {{- end -}}
 
-{{/* ======================================================
-     DEPLOYMENT API DEFAULTS
-     ====================================================== */}}
+{{/* ------ Deployment API ------ */}}
 {{- define "rpi.defaults.deploymentapi" -}}
 type: deployment
 rollout:
@@ -700,9 +620,7 @@ resources:
   enabled: true
 {{- end -}}
 
-{{/* ======================================================
-     QUEUE READER DEFAULTS
-     ====================================================== */}}
+{{/* ------ Queue Reader ------ */}}
 {{- define "rpi.defaults.queuereader" -}}
 type: deployment
 rollout:
@@ -781,9 +699,12 @@ resources:
   enabled: true
 {{- end -}}
 
-{{/* ======================================================
-     REBRANDLY DEFAULTS
-     ====================================================== */}}
+
+{{/* ============================================================
+     3. SUPPORTING SERVICES
+     ============================================================ */}}
+
+{{/* ------ Rebrandly (URL Shortener) ------ */}}
 {{- define "rpi.defaults.rebrandly" -}}
 baseUrl: https://api.rebrandly.com
 enterpriseBaseUrl: https://enterprise-api.rebrandly.com
@@ -821,36 +742,12 @@ resources:
   enabled: true
 {{- end -}}
 
-{{/* ======================================================
-     DIAGNOSTICS MODE DEFAULTS
-     ====================================================== */}}
-{{- define "rpi.defaults.diagnosticsMode" -}}
-dotNetTools:
-  enabled: false
-  useGcDump: false
-  useCounters: false
-  path: /app/dotnet-tools
-  extractionBaseDir: /tmp
-netutils:
-  enabled: false
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 7777
-    runAsGroup: 7777
-    readOnlyRootFilesystem: true
-    allowPrivilegeEscalation: false
-    privileged: false
-    appArmorProfile:
-      type: RuntimeDefault
-    capabilities:
-      drop:
-        - ALL
-      add: ["NET_ADMIN", "NET_RAW"]
-{{- end -}}
 
-{{/* ======================================================
-     AUTH SERVICE DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ============================================================
+     4. SMART ACTIVATION SERVICES (Java)
+     ============================================================ */}}
+
+{{/* ------ Auth Service ------ */}}
 {{- define "rpi.defaults.authservice" -}}
 type: deployment
 rollout:
@@ -895,9 +792,7 @@ podDisruptionBudget:
   minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     KEYCLOAK DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ Keycloak ------ */}}
 {{- define "rpi.defaults.keycloak" -}}
 type: deployment
 rollout:
@@ -936,9 +831,7 @@ podDisruptionBudget:
   minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     INIT SERVICE DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ Init Service ------ */}}
 {{- define "rpi.defaults.initservice" -}}
 type: deployment
 rollout:
@@ -974,9 +867,7 @@ podDisruptionBudget:
   minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     MESSAGE QUEUE DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ Message Queue ------ */}}
 {{- define "rpi.defaults.messageq" -}}
 type: StatefulSet
 port: 5672
@@ -1003,9 +894,7 @@ volumeClaimTemplates:
   storage: 100Gi
 {{- end -}}
 
-{{/* ======================================================
-     MAINTENANCE SERVICE DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ Maintenance Service ------ */}}
 {{- define "rpi.defaults.maintenanceservice" -}}
 type: deployment
 rollout:
@@ -1040,9 +929,7 @@ podDisruptionBudget:
   minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     SERVICES API DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ Services API ------ */}}
 {{- define "rpi.defaults.servicesapi" -}}
 type: deployment
 rollout:
@@ -1080,9 +967,7 @@ podDisruptionBudget:
   minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     SOCKET.IO DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ Socket.IO ------ */}}
 {{- define "rpi.defaults.socketio" -}}
 type: deployment
 rollout:
@@ -1121,9 +1006,7 @@ podDisruptionBudget:
   minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     UI SERVICE DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ UI Service ------ */}}
 {{- define "rpi.defaults.uiservice" -}}
 type: deployment
 rollout:
@@ -1161,9 +1044,7 @@ podDisruptionBudget:
   minAvailable: 1
 {{- end -}}
 
-{{/* ======================================================
-     CDP CACHE DEFAULTS (Smart Activation)
-     ====================================================== */}}
+{{/* ------ CDP Cache ------ */}}
 {{- define "rpi.defaults.cdpcache" -}}
 type: StatefulSet
 serviceAccount:

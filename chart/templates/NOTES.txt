@@ -1,4 +1,3 @@
-{{- $appName := .Values.global.application.name -}}
 {{- $appVersion := .Values.global.deployment.images.tag -}}
 {{- $releaseName := .Release.Name -}}
 {{- $namespace := .Release.Namespace -}}
@@ -53,7 +52,7 @@
    kubectl get secret rpi-rebrandly -n {{ .Release.Namespace }} \
    -o jsonpath="{.data.Rebrandly_RedisPassword}" | base64 -d
 
-4. TROUBLESHOOTING & LOGS
+5. TROUBLESHOOTING & LOGS
    View application logs:
    $ kubectl logs -n {{ $namespace }} -l app.kubernetes.io/part-of=rpi --tail=50
    

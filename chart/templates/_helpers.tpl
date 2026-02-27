@@ -106,11 +106,12 @@ Topology spread constraints
 Usage: {{ include "redpoint-rpi.topologySpreadConstraints" (dict "name" "rpi-realtimeapi" "root" .) }}
 */}}
 {{- define "redpoint-rpi.topologySpreadConstraints" -}}
-{{- if .root(fromYaml (include "rpi.merged.topologySpreadConstraints" .)).enabled }}
+{{- $tsc := fromYaml (include "rpi.merged.topologySpreadConstraints" .) -}}
+{{- if $tsc.enabled }}
 topologySpreadConstraints:
-  - maxSkew: {{ .root(fromYaml (include "rpi.merged.topologySpreadConstraints" .)).maxSkew | default 1 }}
-    topologyKey: {{ .root(fromYaml (include "rpi.merged.topologySpreadConstraints" .)).topologyKey | default "topology.kubernetes.io/zone" }}
-    whenUnsatisfiable: {{ .root(fromYaml (include "rpi.merged.topologySpreadConstraints" .)).whenUnsatisfiable | default "ScheduleAnyway" }}
+  - maxSkew: {{ $tsc.maxSkew | default 1 }}
+    topologyKey: {{ $tsc.topologyKey | default "topology.kubernetes.io/zone" }}
+    whenUnsatisfiable: {{ $tsc.whenUnsatisfiable | default "ScheduleAnyway" }}
     labelSelector:
       matchLabels:
         app.kubernetes.io/name: {{ .name }}
