@@ -1,8 +1,5 @@
-<p align="center">
-  <img src="assets/images/logo.png" alt="Redpoint Global" width="280">
-</p>
-
-<h2 align="center">Redpoint Interaction (RPI)<br>Deployment on Kubernetes</h2>
+![redpoint_logo](assets/images/logo.png)
+## Redpoint Interaction (RPI) | Deployment on Kubernetes
 
 <p align="center">
   <a href="docs/greenfield.md"><strong>New Installation</strong></a> ·
