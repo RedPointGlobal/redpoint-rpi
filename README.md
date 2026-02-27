@@ -1,7 +1,7 @@
 ![redpoint_logo](assets/images/logo.png)
 ## Redpoint Interaction (RPI) | Deployment on Kubernetes
 
-<p align="center">
+<p align="left">
   <a href="docs/greenfield.md"><strong>New Installation</strong></a> ·
   <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a> ·
   <a href="readme-values.md"><strong>Values Guide</strong></a> ·
