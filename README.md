@@ -11,7 +11,7 @@ This chart deploys RPI on Kubernetes using Helm.
   <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="readme-argocd.md"><strong>ArgoCD Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://docs.redpointglobal.com/rpi/"><strong>Docs</strong></a>
+  <a href="docs/smart-activation"><strong>Smart Activation</strong></a>
 </p>
 
 ---

@@ -1,5 +1,7 @@
 # Configuring Redpoint RPI
 
+[< Back to main README](../README.md)
+
 ## How It Works
 
 The RPI Helm chart uses a **two-tier values system** that separates what you need to set from what the chart manages internally.
