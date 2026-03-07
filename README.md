@@ -18,8 +18,6 @@ This chart deploys RPI on Kubernetes using Helm.
 ---
 ![architecture](chart/images/diagram.png)
 
-> **v7.7 Breaking Change** — The values file has been redesigned. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](docs/readme-values.md) for details.
-
 ---
 
 ## Choose Your Path

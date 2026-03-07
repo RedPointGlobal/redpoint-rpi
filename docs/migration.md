@@ -9,7 +9,9 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 
 ## What Changed in v7.7
 
-The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a **879-line user-facing configuration** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file.
+> **v7.7 Breaking Change** 
+
+The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a **879-line user-facing configuration** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file.  You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](docs/readme-values.md) for details
 
 | Before (v7.6) | After (v7.7) |
 |---------------|-------------|
