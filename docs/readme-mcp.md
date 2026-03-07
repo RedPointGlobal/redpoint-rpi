@@ -1,3 +1,4 @@
+![redpoint_logo](chart/images/logo.png)
 # AI-Assisted Operations with MCP
 
 [< Back to main README](../README.md)

@@ -1,3 +1,4 @@
+![redpoint_logo](chart/images/logo.png)
 # Deploying Redpoint RPI with ArgoCD
 
 [< Back to main README](../README.md)

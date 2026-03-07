@@ -1,3 +1,4 @@
+![redpoint_logo](chart/images/logo.png)
 # Upgrading from v7.6 to v7.7
 
 [< Back to main README](../README.md)
