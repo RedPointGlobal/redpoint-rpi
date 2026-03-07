@@ -25,11 +25,11 @@ This chart deploys RPI on Kubernetes using Helm.
 ## Choose Your Path
 
 | | New Installation | Upgrading from v7.6 |
-|---|---|---|
+|:---|:---|:---|
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
 | **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
 | **Databases** | Created from scratch | Existing operational and logging databases are reused |
-| **Overrides file** | Start from a `deploy/values/` example | Convert your existing `values.yaml` to the new format |
+| **Overrides** | Generate with the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) | Convert your existing `values.yaml` to the new format |
 
 > **Quick Start (Demo Mode):** For evaluation or development, set `global.deployment.mode: demo` to deploy embedded MSSQL and MongoDB containers — no external database setup required. See [Demo Mode](docs/readme-configuration.md#demo-mode).
 
@@ -41,8 +41,8 @@ This chart deploys RPI on Kubernetes using Helm.
 
 | Component | Requirement |
 |-----------|-------------|
-| **Operational Databases** | Microsoft SQL Server 2019+, PostgreSQL — on `SQLServer on VM`, `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, or `PostgreSQL`. 8 GB RAM, 200 GB disk minimum. |
-| **Data Warehouses** | `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, `SQLServer on VM`, `Snowflake`, `PostgreSQL`, `Amazon Redshift`, `Google BigQuery` |
+| **Operational** | Microsoft SQL Server 2019+, PostgreSQL — on `SQLServer on VM`, `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, or `PostgreSQL`. 8 GB RAM, 200 GB disk minimum. |
+| **Warehouses** | `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, `SQLServer on VM`, `Snowflake`, `PostgreSQL`, `Amazon Redshift`, `Google BigQuery` |
 | **Kubernetes** | Latest stable version from a [certified provider](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). Minimum two nodes (8 vCPU, 32 GB RAM each). |
 
 **Example node SKUs:**
