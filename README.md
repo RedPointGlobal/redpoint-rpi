@@ -10,8 +10,8 @@ This chart deploys RPI on Kubernetes using Helm.
   <a href="docs/greenfield.md"><strong>New Installation</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-argocd.md"><strong>ArgoCD Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-mcp.md"><strong>MCP Server</strong></a>
+  <a href="docs/readme-argocd.md"><strong>GitOps Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="docs/readme-mcp.md"><strong>MCP Guide</strong></a>
 </p>
 
 ---
