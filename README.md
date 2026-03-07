@@ -48,8 +48,8 @@ Before starting, ensure you have:
 
 - **Redpoint Container Registry**: Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.
 - **RPI License**: Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 license activation key.
-- **kubectl**: Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) for interacting with your Kubernetes cluster.
-- **Helm**: Install [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions for your target cluster.
+- **Install** [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) for interacting with your Kubernetes cluster.
+- **Install** [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions for your target cluster.
 
 ## Repository Structure
 
