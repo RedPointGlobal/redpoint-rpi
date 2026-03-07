@@ -5,6 +5,7 @@
 {{- $name := "keycloak" -}}
 
 {{- if .Values.smartActivation.enabled }}
+{{- if not .Values.cloudIdentity.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -12,30 +13,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
-  {{- if eq .Values.global.deployment.platform "azure" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- if $annotations }}
   annotations:
-    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "google" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "workloadIdentity" }}
-  annotations:
-    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "amazon" }}
-  {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-  annotations:
-    eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-  {{- end }}
+    {{- $annotations | nindent 4 }}
   {{- end }}
 {{- end }}
-
+{{- end }}
 
 ---
 {{- if .Values.smartActivation.enabled }}
@@ -152,7 +136,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ $name }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
       {{- if $cfg.securityContext.enabled }}
       securityContext:
         runAsUser: {{ $cfg.securityContext.runAsUser }}
@@ -179,7 +163,7 @@ spec:
               app.kubernetes.io/name: {{ $name }}
       containers:
       - name: {{ $name }}
-        image: {{ .Values.global.deployment.images.keycloak }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         livenessProbe:
           httpGet:
@@ -230,6 +214,10 @@ spec:
 #            {{- end }}
         {{- end }}
         env:
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         - name: KEYCLOAK_DATABASE_VENDOR
           value: mssql
@@ -239,11 +227,11 @@ spec:
           value: "jdbc:sqlserver://{{ .Values.databases.operational.server_host }};databaseName={{ $cfg.database_name }};"
         - name: KC_DB_USERNAME
           value: {{ .Values.databases.operational.server_username | quote }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: KC_DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: Operations_Database_Server_Password
         {{- end }}
         {{- end }}
@@ -254,30 +242,17 @@ spec:
         - name: KC_BOOTSTRAP_ADMIN_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CDP_Keycloak_Admin_Password
         - name: KEYCLOAK_EXTRA_ARGS
-          value: "-Dkeycloak.frontendUrl=https://{{ $ingCfg.hosts.smartactivation }}.{{ $ingCfg.domain }}"
+          value: "-Dkeycloak.frontendUrl=https://{{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.smartactivation "domain" $ingCfg.domain) }}"
         - name: KEYCLOAK_DATABASE_NAME
           value: {{ $cfg.database_name | quote }}
         - name: KEYCLOAK_PROXY_HEADERS
           value: "xforwarded"
         - name: KEYCLOAK_HOSTNAME_STRICT
           value: 'false'
-        {{- if eq .Values.global.deployment.platform "amazon" }}
-        {{- if .Values.cloudIdentity.enabled}}
-        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-        - name: AWS_ROLE_ARN
-          value: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-        - name: AWS_WEB_IDENTITY_TOKEN_FILE
-          value: {{ .Values.cloudIdentity.amazonSettings.webIdentityTokenFile | quote }}
-        - name: AWS_STS_REGIONAL_ENDPOINTS
-          value: {{ .Values.cloudIdentity.amazonSettings.stsRegionalEndpoints | quote }}
-        - name: AWS_DEFAULT_REGION
-          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
+        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

@@ -1,3 +1,4 @@
+{{- include "rpi.validateConfig" . -}}
 {{- $appVersion := .Values.global.deployment.images.tag -}}
 {{- $releaseName := .Release.Name -}}
 {{- $namespace := .Release.Namespace -}}
@@ -66,7 +67,7 @@
                           SUPPORT INFORMATION
 ────────────────────────────────────────────────────────────────────────
 • For technical support, please contact: support@redpointglobal.com
-• Documentation: [https://docs.redpointglobal.com/rpi/]
+• Documentation: ["https://docs.redpointglobal.com/rpi/"]
 
 Note: Ensure proper network access and DNS configuration to reach the
       deployed services from your intended access points.

@@ -1,0 +1,463 @@
+# ============================================================
+# PRODUCTION ENVIRONMENT — AWS (EKS)
+# ============================================================
+# Only set values that differ from chart defaults.
+# See values-reference.yaml for all available keys.
+# ============================================================
+
+global:
+  deployment:
+    # azure | amazon | google | selfhosted
+    platform: amazon
+    images:
+      repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/redpointglobal/releases
+      tag: "7.6.20260212.1413"
+      imagePullPolicy: Always
+      imagePullSecret:
+        enabled: false
+        name: redpoint-rpi
+    # Optional: set the pod's timezone (e.g., "America/New_York"); leave empty to use default UTC
+    podTimezone: ""
+
+# ----------------------------------------------------------
+#  Database
+# ----------------------------------------------------------
+databases:
+  operational:
+    # sqlserver | postgresql
+    provider: sqlserver
+    server_host: your-rds-instance.abcdefg12345.us-east-1.rds.amazonaws.com
+    server_username: redpointops
+    server_password: your-db-password
+    pulse_database_name: Pulse
+    pulse_logging_database_name: Pulse_Logging
+
+  # ==========================
+  # Data Warehouse Providers
+  # ==========================
+  # redshift | snowflake | bigquery | databricks
+  datawarehouse:
+
+    # Redshift
+    redshift:
+      enabled: true
+
+    # Snowflake
+    snowflake:
+      enabled: false
+
+# ----------------------------------------------------------
+#  Cloud Identity & Secrets
+# ----------------------------------------------------------
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  amazon:
+    roleArn: arn:aws:iam::123456789012:role/redpoint-rpi-irsa-role
+    region: us-east-1
+    useAccessKeys: false
+    accessKeyId: ""
+    secretAccessKey: ""
+
+# ----------------------------------------------------------
+#  Secrets Management
+# ----------------------------------------------------------
+secretsManagement:
+  # kubernetes | sdk | csi
+  provider: kubernetes
+  kubernetes:
+    autoCreateSecrets: true
+    secretName: redpoint-rpi-secrets
+  sdk:
+    amazon:
+      secretTagKey: "redpoint-rpi"
+#  csi:
+#    secretName: redpoint-rpi-secrets
+#    secretProviderClasses:
+#      - name: redpoint-rpi-secrets
+#        provider: aws
+#        secretObjects:
+#          - secretName: rpi-synced-secrets
+#            type: Opaque
+#            data:
+#              - key: ConnectionString_Operations_Database
+#                objectName: rpi/ConnectionString-Operations-Database
+#        parameters:
+#          region: us-east-1
+#        objects:
+#          - objectName: "rpi/ConnectionString-Operations-Database"
+#            objectType: secretsmanager
+
+# ============================================================
+#  INGRESS
+# ============================================================
+ingress:
+  controller:
+    # false if supplying your own controller
+    enabled: true
+  mode: public
+  # kubernetes | acm
+  certificateSource: acm
+  tls:
+    - secretName: ingress-tls
+  domain: your-domain.com
+  # required if certificateSource=acm
+  certificateArn: arn:aws:acm:us-east-1:123456789012:certificate/your-cert-id
+  # Service hostname subdomains that are prepended to domain
+  hosts:
+    config: deploymentapi
+    client: interactionapi
+    integration: integrationapi
+    realtime: realtimeapi
+    callbackapi: callbackapi
+    queuereader: queuereader
+    rabbitmqconsole: rabbitmq-console
+    smartactivation: web
+
+# ----------------------------------------------------------
+#  REALTIME API
+# ----------------------------------------------------------
+realtimeapi:
+  enabled: true
+  multitenant: false
+  replicas: 1
+  rpiClientID: your-rpi-client-id
+  # mongodb | azureredis | redis | inMemorySql | googlebigtable
+  cacheProvider:
+    enabled: true
+    provider: mongodb
+    mongodb:
+      connectionString: mongodb+srv://admin:password@your-docdb-cluster.us-east-1.docdb.amazonaws.com/?retryWrites=false&tls=true
+      databaseName: RealtimeCacheDB
+      collectionName: RealtimeCache
+  # azureservicebus | amazonsqs | googlepubsub | azureeventhubs | rabbitmq | azurestorage
+  queueProvider:
+    enabled: true
+    provider: amazonsqs
+    queueNames:
+      formQueuePath: RPIWebFormSubmission
+      eventsQueuePath: RPIWebEvents
+      cacheOutputQueuePath: RPIWebCacheData
+      recommendationsQueuePath: RPIWebRecommendations
+      listenerQueuePath: RPIQueueListener
+      callbackServiceQueuePath: RPICallbackApiQueue
+    rabbitmq:
+      rabbitmqSettings:
+        username: guest
+        existingClaim: pvc-rabbitmq-data
+        volumeClaimTemplates:
+          enabled: true
+          storage: 100Gi
+          storageClassName: gp3
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+  logging:
+    realtimeapi:
+      console: None
+    realtimeagent:
+      console: true
+
+# ----------------------------------------------------------
+#  Callback API
+# ----------------------------------------------------------
+callbackapi:
+  enabled: true
+  channelLabel: mpulse
+  replicas: 1
+  multitenancy:
+    enabled: false
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+  logging:
+    Console: None
+
+# ----------------------------------------------------------
+#  Execution Services
+# ----------------------------------------------------------
+executionservice:
+  enabled: true
+  replicas: 1
+  internalCache:
+    enabled: true
+    # filesystem | azureblob
+    provider: filesystem
+    backupToOpsDBInterval: "00:00:20"
+    maxNumberRetries: "100"
+    maxRetryDelay: "00:02:00"
+    failOnPrimaryDataLoss: true
+    failOnCacheConnectionError: true
+    redisSettings:
+      existingClaim: pvc-efs
+      volumeClaimTemplates:
+        enabled: true
+        storage: 100Gi
+        storageClassName: efs-sc
+  jobExecution:
+    workflowPrioritization:
+      enabled: true
+      maxConcurrentWorkflowActivities: 24
+    maxThreadsPerExecutionService: 50
+    luxScisendRequestCount: 5
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  logging:
+    Console: Trace
+
+# ----------------------------------------------------------
+#  Interaction API
+# ----------------------------------------------------------
+interactionapi:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+  logging:
+    Console: None
+
+# ----------------------------------------------------------
+#  Integration API
+# ----------------------------------------------------------
+integrationapi:
+  enabled: true
+  replicas: 1
+  username: admin@noemail.com
+  password: your-integration-password
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+  logging:
+    Console: None
+
+# ----------------------------------------------------------
+#  Node Manager
+# ----------------------------------------------------------
+nodemanager:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+  logging:
+    Console: None
+
+# ----------------------------------------------------------
+#  Deployment API
+# ----------------------------------------------------------
+deploymentapi:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+
+# ----------------------------------------------------------
+#  Queue Reader
+# ----------------------------------------------------------
+queuereader:
+  enabled: true
+  replicas: 1
+  isFormProcessingEnabled: false
+  isEventProcessingEnabled: true
+  isCacheProcessingEnabled: true
+  queueListenerEnabled: true
+  isCallbackServiceProcessingEnabled: true
+  realtimeConfiguration:
+    isDistributed: true
+  internalQueues:
+    rabbitmqSettings:
+      hostname: rpi-queuereader-rabbitmq
+      username: guest
+      virtualhost: /
+      existingClaim: pvc-rabbitmq-data
+      volumeClaimTemplates:
+        enabled: true
+        storage: 100Gi
+        storageClassName: gp3
+  internalCache:
+    existingClaim: pvc-efs
+    volumeClaimTemplates:
+      enabled: true
+      storage: 100Gi
+      storageClassName: efs-sc
+  tenantIds:
+    - your-rpi-client-id
+  errorQueuePath: listenerQueueError
+  nonActiveQueuePath: listenerQueueNonActive
+  resources:
+    requests:
+      cpu: "100m"
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+  logging:
+    Console: None
+
+# ----------------------------------------------------------
+#  Rebrandly API
+# ----------------------------------------------------------
+rebrandly:
+  enabled: false
+  redisSettings:
+    existingClaim: pvc-efs
+    volumeClaimTemplates:
+      enabled: true
+      storage: 50Gi
+      storageClassName: efs-sc
+      accessModes: ReadWriteOnce
+
+# ----------------------------------------------------------
+#  Authentication
+# ----------------------------------------------------------
+MicrosoftEntraID:
+  enabled: false
+
+# OpenIdProviders:
+#   enabled: false
+
+SMTPSettings:
+  SMTP_SenderAddress: noreply@your-domain.com
+  SMTP_SenderName: "Redpoint RPI"
+  SMTP_Address: email-smtp.us-east-1.amazonaws.com
+  SMTP_Port: 587
+  EnableSSL: true
+  UseCredentials: true
+  SMTP_Username: your-ses-access-key
+  SMTP_Password: your-ses-secret-key
+
+# ----------------------------------------------------------
+#  Diagnostics Mode Internals
+# ----------------------------------------------------------
+diagnosticsMode:
+  dotNetTools:
+    enabled: false
+    useGcDump: false
+    useCounters: false
+
+# ----------------------------------------------------------
+#  Smart Activation (uncomment to enable)
+# ----------------------------------------------------------
+smartActivation:
+  enabled: false
+
+cdpcache:
+  existingClaim: pvc-efs
+  volumeClaimTemplates:
+    enabled: true
+    storage: 100Gi
+    storageClassName: efs-sc
+
+cdpmessageq:
+  existingClaim: pvc-efs
+  volumeClaimTemplates:
+    enabled: true
+    storage: 100Gi
+    storageClassName: efs-sc
+
+# ----------------------------------------------------------
+#  Node Scheduling
+# ----------------------------------------------------------
+nodeSelector:
+  enabled: false
+  key: workload
+  value: redpoint-rpi
+
+tolerations:
+  enabled: false
+  effect: NoSchedule
+  key: workload
+  operator: Equal
+  value: redpoint-rpi
+
+# ==========================
+# Custom Labels and Annotations
+# ==========================
+customLabels: {}
+
+customAnnotations: {}
+
+# ----------------------------------------------------------
+#  Automatic Database Upgrade (uncomment to enable)
+# ----------------------------------------------------------
+databaseUpgrade:
+  enabled: false
+
+# ----------------------------------------------------------
+#  Storage Configuration
+# ----------------------------------------------------------
+storage:
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: true
+      claimName: pvc-efs
+      mountPath: /mnt/rpifileoutputdir
+    Plugins:
+      enabled: false
+      claimName: realtimeplugins
+      mountPath: /app/plugins
+    DataManagementUploadDirectory:
+      enabled: false
+      claimName: rpdmuploaddirectory
+      mountPath: /rpdmuploaddirectory
+# ----------------------------------------------------------
+#  Persistent Volumes (EFS)
+# ----------------------------------------------------------
+  persistentVolumes:
+    - name: rpifileoutputdir
+      capacity: 10Gi
+      accessModes:
+        - ReadWriteMany
+      storageClassName: efs-sc
+      reclaimPolicy: Retain
+      csi:
+        driver: efs.csi.aws.com
+        volumeHandle: fs-0123456789abcdef0
+      pvc:
+        claimName: pvc-efs
+
+# ----------------------------------------------------------
+#  Advanced Overrides (only if needed)
+# ----------------------------------------------------------
+# advanced:
+#   realtimeapi:
+#     autoscaling:
+#       minReplicas: 3
+#       maxReplicas: 10

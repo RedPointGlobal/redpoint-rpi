@@ -8,7 +8,7 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 
 ## What Changed in v7.7
 
-The `values.yaml` has been redesigned from a **2,608-line monolithic file** to a **764-line user-facing configuration** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file.
+The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a **879-line user-facing configuration** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file.
 
 | Before (v7.6) | After (v7.7) |
 |---------------|-------------|
@@ -25,7 +25,7 @@ The `values.yaml` has been redesigned from a **2,608-line monolithic file** to a
 - **Persistent volume creation** — Create PV + PVC pairs for CSI-backed storage (Azure Blob, Azure Files, AWS EFS, GCP Filestore)
 - **Per-service pod annotations/labels** — Apply `podAnnotations` and `podLabels` to individual services without affecting others
 
-See [readme-values.md](../readme-values.md) for full details on the new architecture.
+See [readme-values.md](readme-values.md) for full details on the new architecture.
 
 ---
 
@@ -72,7 +72,7 @@ Diff your current `values.yaml` against the v7.6 chart's original to find what y
 
 ```bash
 # If you still have the original v7.6 values.yaml
-diff deployments/my-current-values.yaml chart/values.yaml.orig
+diff my-current-values.yaml chart/values.yaml.orig
 ```
 
 Or compare against the v7.6 branch:
@@ -89,7 +89,9 @@ Start from one of the provided examples:
 
 ```bash
 # Pick the closest match to your environment
-cp deployments/production.yaml my-overrides.yaml
+cp deploy/values/azure/azure.yaml my-overrides.yaml   # Azure
+cp deploy/values/aws/amazon.yaml my-overrides.yaml     # AWS
+cp deploy/values/demo/demo.yaml my-overrides.yaml      # Demo/local
 ```
 
 Transfer your customizations into this file. Common values to carry over:
@@ -99,14 +101,161 @@ Transfer your customizations into this file. Common values to carry over:
 | **Platform** | `global.deployment.platform`, `global.deployment.images.tag` |
 | **Database** | `databases.operational.*` |
 | **Data Warehouse** | `databases.datawarehouse.*` |
-| **Cloud Identity** | `cloudIdentity.*` |
-| **Ingress** | `ingress.domain`, `ingress.hosts.*` |
+| **Cloud Identity** | `cloudIdentity.*` (see [step 3a](#3a-map-cloud-identity-changes) below) |
+| **Secrets Management** | `secretsManagement.*` (see [step 3b](#3b-map-secrets-management-changes) below) |
+| **Ingress** | `ingress.domain`, `ingress.hosts.*`, `ingress.tls` |
 | **Realtime** | `realtimeapi.cacheProvider.*`, `realtimeapi.queueProvider.*` |
 | **Replicas/Resources** | Per-service `replicas`, `resources`, `autoscaling` |
 | **Authentication** | `MicrosoftEntraID.*`, `OpenIdProviders.*` |
 | **SMTP** | `SMTPSettings.*` |
 | **Pod Metadata** | Per-service `podAnnotations`, `podLabels` |
 | **Service Mesh** | `serviceMesh.*` |
+
+#### 3a. Map Cloud Identity Changes
+
+The cloud identity structure has been simplified. The `provider` field is removed — it is now derived from `global.deployment.platform`. ServiceAccount configuration has moved under `cloudIdentity`.
+
+**Azure:**
+
+```yaml
+# Before (v7.6):
+cloudIdentity:
+  enabled: true
+  provider: Azure
+  azureSettings:
+    credentialsType: workloadIdentity
+    managedIdentityClientId: my-client-id
+global:
+  deployment:
+    serviceAccount:
+      create: true
+      name: redpoint-rpi
+
+# After (v7.7):
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  azure:
+    managedIdentityClientId: my-client-id
+    tenantId: my-tenant-id
+```
+
+**Amazon:**
+
+```yaml
+# Before (v7.6):
+cloudIdentity:
+  enabled: true
+  provider: Amazon
+  amazonSettings:
+    credentialsType: podIdentity
+    region: us-east-1
+
+# After (v7.7):
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  amazon:
+    roleArn: arn:aws:iam::123456789012:role/my-irsa-role
+    region: us-east-1
+```
+
+For static access keys (v7.6 `credentialsType: accessKey`):
+
+```yaml
+  amazon:
+    useAccessKeys: true
+    accessKeyId: my-access-key
+    secretAccessKey: my-secret-key
+    region: us-east-1
+```
+
+**Google:**
+
+```yaml
+# Before (v7.6):
+cloudIdentity:
+  enabled: true
+  provider: Google
+  googleSettings:
+    credentialsType: serviceAccount
+    configMapName: my-google-svs-account
+    keyName: my-google-svs-account.json
+    serviceAccountEmail: my-sa@project.iam.gserviceaccount.com
+    projectId: my-project
+
+# After (v7.7):
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  google:
+    serviceAccountEmail: my-sa@project.iam.gserviceaccount.com
+    projectId: my-project
+    configMapName: my-google-svs-account
+    keyName: my-google-svs-account.json
+    configMapFilePath: /app/google-creds
+```
+
+| v7.6 Key | v7.7 Key | Notes |
+|----------|----------|-------|
+| `cloudIdentity.provider` | *(removed)* | Derived from `global.deployment.platform` |
+| `cloudIdentity.azureSettings.*` | `cloudIdentity.azure.*` | Flattened |
+| `cloudIdentity.amazonSettings.*` | `cloudIdentity.amazon.*` | Flattened; `credentialsType` replaced by `useAccessKeys` boolean |
+| `cloudIdentity.googleSettings.*` | `cloudIdentity.google.*` | Flattened |
+| `global.deployment.serviceAccount.*` | `cloudIdentity.serviceAccount.*` | Moved |
+
+#### 3b. Map Secrets Management Changes
+
+Secrets management is now a top-level section (no longer nested under `cloudIdentity`). Provider names have changed and CSI is a first-class mode.
+
+```yaml
+# Before (v7.6):
+cloudIdentity:
+  secretsManagement:
+    enabled: true
+    secretsProvider: keyvault     # or kubernetes, awssecretsmanager
+    autoCreateSecrets: false
+    secretName: redpoint-rpi-secrets
+
+# After (v7.7):
+secretsManagement:
+  provider: sdk                    # or kubernetes, csi
+  kubernetes:
+    autoCreateSecrets: false
+    secretName: redpoint-rpi-secrets
+```
+
+| v7.6 Provider | v7.7 Provider | Notes |
+|--------------|--------------|-------|
+| `kubernetes` | `kubernetes` | Unchanged |
+| `keyvault` | `sdk` | Azure Key Vault settings move to `secretsManagement.sdk.azure.*` |
+| `awssecretsmanager` | `sdk` | AWS SM settings move to `secretsManagement.sdk.amazon.*` |
+| `googlesm` | `sdk` | Google SM settings move to `secretsManagement.sdk.google.*` |
+| *(new)* | `csi` | CSI driver syncs vault secrets into K8s secrets |
+
+**SDK vault URIs:**
+
+```yaml
+# Before (v7.6):
+cloudIdentity:
+  azureSettings:
+    vaultUri: https://myvault.vault.azure.net/
+
+# After (v7.7):
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+      configurationReloadIntervalSeconds: 30
+      useADTokenForDatabaseConnection: true
+```
 
 ### 4. Move Hidden Defaults to `advanced:`
 
@@ -149,7 +298,7 @@ advanced:
         default: Debug
 ```
 
-Open `deployments/values-reference.yaml` to see every available key under `advanced:`.
+Open `docs/values-reference.yaml` to see every available key under `advanced:`.
 
 ### 5. Validate with Helm Template
 
@@ -177,7 +326,93 @@ Unexpected differences to investigate:
 - Changed service ports or endpoints
 - Missing volume mounts
 
-### 6. Apply the Upgrade
+### 5a. Update Image Configuration
+
+v7.6 listed full image paths per service. v7.7 uses a shared `repository` prefix:
+
+```yaml
+# Before (v7.6):
+global:
+  deployment:
+    images:
+      interactionapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi
+      integrationapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-integrationapi
+      # ... one per service
+      tag: "7.6.20260212.1413"
+      imagePullPolicy: IfNotPresent
+
+# After (v7.7):
+global:
+  deployment:
+    images:
+      repository: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      tag: "7.7.20260220.1524"
+      imagePullPolicy: Always
+      imagePullSecret:
+        enabled: true
+        name: redpoint-rpi
+```
+
+### 5b. Update ServiceAccount Configuration
+
+Per-service `serviceAccount.enabled` fields are removed. ServiceAccount is now managed centrally:
+
+```yaml
+# Before (v7.6 — repeated in every service):
+realtimeapi:
+  serviceAccount:
+    enabled: true
+
+# After (v7.7 — set once):
+cloudIdentity:
+  serviceAccount:
+    create: true       # true = shared SA, false = per-service SAs
+    name: redpoint-rpi
+```
+
+### 6. Ingress TLS and FQDN Hosts
+
+The `ingress.tlsSecretName` key has been replaced by an `ingress.tls` array, and host values now support FQDNs.
+
+**TLS:** If your v7.6 overrides set `tlsSecretName`, convert it to the `tls` array:
+
+```yaml
+# Before (v7.6):
+ingress:
+  tlsSecretName: ingress-tls
+
+# After (v7.7):
+ingress:
+  tls:
+    - secretName: ingress-tls
+```
+
+For multi-certificate setups, add entries with explicit hosts lists:
+
+```yaml
+ingress:
+  tls:
+    - secretName: ingress-tls
+      hosts:
+        - client.example.com
+        - config.example.com
+        - realtime.example.com
+    - secretName: certsecrets
+      hosts:
+        - mpulse.example.com
+```
+
+**FQDN hosts:** Host values containing a dot are now treated as FQDNs and used as-is (not prepended to `domain`). Values without dots continue to be treated as subdomains:
+
+```yaml
+ingress:
+  domain: example.com
+  hosts:
+    client: rpi-interactionapi        # → rpi-interactionapi.example.com
+    callbackapi: mpulse.example.com   # → mpulse.example.com (FQDN, used as-is)
+```
+
+### 7. Apply the Upgrade
 
 **Staging first** — always upgrade a non-production environment before production:
 
@@ -206,7 +441,29 @@ helm upgrade rpi ./chart \
 
 ### Trigger Database Upgrade
 
-After the v7 containers are running, trigger the database upgrade:
+After the v7 containers are running, the operational databases must be upgraded.
+
+**Option A: Automatic (recommended)**
+
+Enable the automatic database upgrade Job in your overrides file. The chart creates a Kubernetes Job that waits for `rpi-deploymentapi` to become ready, then calls the upgrade endpoint automatically:
+
+```yaml
+databaseUpgrade:
+  enabled: true
+```
+
+Monitor progress:
+
+```bash
+kubectl get jobs -n redpoint-rpi -l app.kubernetes.io/component=upgrade
+kubectl logs -n redpoint-rpi -l app.kubernetes.io/component=upgrade --tail=50
+```
+
+See [Configure Automatic Database Upgrades](../README.md#configure-automatic-database-upgrades) for advanced options.
+
+**Option B: Manual**
+
+Call the upgrade endpoint directly:
 
 ```bash
 DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com

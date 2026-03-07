@@ -18,6 +18,18 @@ This guide walks through deploying RPI from scratch in a new environment — new
 
 ---
 
+## Quick Start with CLI Scaffolder
+
+For a guided setup, use the interactive scaffolder to generate your overrides file:
+
+```bash
+bash deploy/cli/rpi-init.sh
+```
+
+This walks you through platform selection, database config, cloud identity, and generates a ready-to-use overrides file plus a prerequisites script. You can then skip directly to [Step 8: Install RPI](#8-install-rpi).
+
+---
+
 ## 1. Clone This Repository
 
 ```bash
@@ -34,20 +46,24 @@ redpoint-rpi/
 │       ├── _defaults.tpl         # Internal defaults
 │       ├── _helpers.tpl          # Merge helpers
 │       └── deploy-*.yaml         # Resource templates
-├── deployments/                  # Your environment overrides
-│   ├── values-reference.yaml     # Complete reference of all keys
-│   ├── dev.yaml
-│   ├── staging.yaml
-│   └── production.yaml
+├── deploy/
+│   ├── cli/
+│   │   └── rpi-init.sh           # Interactive overrides generator
+│   ├── terraform/                # IaC modules (Azure, AWS, GCP)
+│   └── values/                   # Your environment overrides
+│       ├── azure/azure.yaml      # Azure example
+│       ├── aws/amazon.yaml       # AWS example
+│       └── demo/demo.yaml        # Demo/dev example
 ├── docs/                         # Deployment guides
 │   ├── greenfield.md             # This file
-│   └── migration.md              # v7.6 → v7.7 upgrade guide
-├── readme-values.md              # Values & overrides guide
-├── readme-argocd.md              # ArgoCD deployment guide
+│   ├── migration.md              # v7.6 → v7.7 upgrade guide
+│   ├── readme-values.md          # Values & overrides guide
+│   ├── readme-argocd.md          # ArgoCD deployment guide
+│   └── values-reference.yaml    # Complete reference of all keys
 └── README.md
 ```
 
-You deploy by passing a small overrides file containing only your customizations. Everything else uses chart defaults automatically. See [readme-values.md](../readme-values.md) for details.
+You deploy by passing a small overrides file containing only your customizations. Everything else uses chart defaults automatically. See [readme-values.md](readme-values.md) for details.
 
 ## 2. Create Kubernetes Namespace
 
@@ -100,7 +116,7 @@ ingress:
 
 > **Quick Start:** To skip external database setup entirely, use **demo mode** instead. Set `global.deployment.mode: demo` and point to the in-cluster databases — see [Demo Database Mode](../README.md#demo-database-mode). Demo mode is for development and evaluation only.
 
-The [operational databases](https://docs.redpointglobal.com/rpi/admin-key-concepts) (`Pulse` and `Pulse_Logging`) store information necessary for RPI to function. Add the following to your overrides file:
+The [operational databases]("https://docs.redpointglobal.com/rpi/"admin-key-concepts) (`Pulse` and `Pulse_Logging`) store information necessary for RPI to function. Add the following to your overrides file:
 
 ```yaml
 databases:
@@ -115,7 +131,7 @@ databases:
 
 ## 6. Configure Data Warehouse
 
-> **Note:** Only required if your [data warehouse](https://docs.redpointglobal.com/rpi/supported-connectors#Supportedconnectors-Databaseplatforms) is Redshift or BigQuery. Both use ODBC drivers requiring a DSN configuration. After deployment, use `dsn=redshift` or `dsn=bigquery` as the connection string.
+> **Note:** Only required if your [data warehouse]("https://docs.redpointglobal.com/rpi/"supported-connectors#Supportedconnectors-Databaseplatforms) is Redshift or BigQuery. Both use ODBC drivers requiring a DSN configuration. After deployment, use `dsn=redshift` or `dsn=bigquery` as the connection string.
 
 ```yaml
 datawarehouse:
@@ -128,19 +144,22 @@ datawarehouse:
     password: my_redshift_password
 ```
 
-For the selected provider, complete the appropriate `googleSettings` or `amazonSettings` section under `cloudIdentity`.
+For the selected provider, complete the appropriate `google` or `amazon` section under `cloudIdentity`.
 
-> **Note:** If you require [RPI Realtime](https://docs.redpointglobal.com/rpi/rpi-realtime), complete [Configure Realtime](../README.md#configure-realtime) before proceeding.
+> **Note:** If you require [RPI Realtime]("https://docs.redpointglobal.com/rpi/"rpi-realtime), complete [Configure Realtime](../README.md#configure-realtime) before proceeding.
 
 ## 7. Create Your Overrides File
 
-Start from one of the provided examples in `deployments/`:
+Start from one of the provided examples in `deploy/values/`:
 
 ```bash
-cp deployments/production.yaml my-overrides.yaml
+# Pick the closest match to your environment
+cp deploy/values/azure/azure.yaml my-overrides.yaml   # Azure
+cp deploy/values/aws/amazon.yaml my-overrides.yaml     # AWS
+cp deploy/values/demo/demo.yaml my-overrides.yaml      # Demo/local
 ```
 
-Replace all `CHANGE_ME` placeholders with your actual values and remove any sections you don't need. See [readme-values.md](../readme-values.md) for details on what each key does.
+Replace all placeholder values with your actual values and remove any sections you don't need. See [readme-values.md](readme-values.md) for details on what each key does.
 
 ## 8. Install RPI
 
@@ -201,7 +220,7 @@ Create DNS records mapping each hostname to the load balancer IP, then access:
 
 ## Download Client Executable
 
-Download the RPI Client from the Post-release Product Updates section of the [RPI Release Notes](https://docs.redpointglobal.com/rpi/rpi-v7-6-release-notes#RPIv7.6releasenotes-Post-releaseproductupdates). Ensure the version matches your deployed RPI version.
+Download the RPI Client from the Post-release Product Updates section of the [RPI Release Notes]("https://docs.redpointglobal.com/rpi/"rpi-v7-6-release-notes#RPIv7.6releasenotes-Post-releaseproductupdates). Ensure the version matches your deployed RPI version.
 
 ---
 
@@ -343,10 +362,64 @@ Check status with `curl -X 'GET' "https://$DEPLOYMENT_SERVICE_URL/api/deployment
 
 ---
 
+## Automated Post-Install (Alternative)
+
+Instead of running the manual `curl` commands above, you can automate the entire post-install process by enabling the `postInstall` job in your overrides file:
+
+```yaml
+postInstall:
+  enabled: true
+  activationKey: "<my-license-activation-key>"
+  systemName: "<my-rpi-system>"
+  adminUsername: coreuser
+  adminPassword: "<my-admin-password>"
+  adminEmail: admin@example.com
+  tenant:
+    enabled: true
+    name: "<my-tenant-name>"
+    dataWarehouse:
+      provider: SQLServer
+      server: "<my-dw-server>"
+      database: "<my-dw-database>"
+      username: "<my-dw-username>"
+      password: "<my-dw-password>"
+```
+
+The job runs automatically after `helm install` (and as an ArgoCD PostSync hook). It is idempotent — if the license is already activated or databases are already installed, those steps are skipped.
+
+For production, use `existingSecret` to reference a pre-created Kubernetes Secret instead of inline values:
+
+```yaml
+postInstall:
+  enabled: true
+  existingSecret: rpi-postinstall-secrets   # keys: activation-key, admin-password, admin-username, admin-email
+  systemName: "<my-rpi-system>"
+```
+
+### Pre-flight Validation
+
+Enable the pre-flight job to validate your configuration (DNS resolution, database connectivity, cloud identity):
+
+```yaml
+preflight:
+  enabled: true
+  mode: test        # runs with `helm test rpi`
+  # mode: preInstall  # blocks install on failure
+```
+
+After deploying, run:
+
+```bash
+helm test rpi -n redpoint-rpi
+```
+
+---
+
 ## Next Steps
 
 After deployment, configure the optional features that apply to your environment:
 
+- [Automatic Database Upgrades](../README.md#configure-automatic-database-upgrades)
 - [Cloud Identity](../README.md#configure-cloud-identity)
 - [Storage](../README.md#configure-storage)
 - [Realtime](../README.md#configure-realtime)

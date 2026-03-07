@@ -7,9 +7,9 @@
 {{- $ExecutioncacheName := "rpi-executionservice-cache" -}}
 
 {{- if $qrCfg.realtimeConfiguration.isDistributed }}
-{{- if eq $qrCfg.realtimeConfiguration.distributedCache.provider "redis" }}
-{{- if eq $qrCfg.realtimeConfiguration.distributedCache.type "internal" }}
-{{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.podDisruptionBudget.enabled }}
+{{- if eq $qrCfg.internalCache.provider "redis" }}
+{{- if eq $qrCfg.internalCache.type "internal" }}
+{{- if $qrCfg.internalCache.redisSettings.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -18,7 +18,7 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $QueueReadercacheName "component" "cache") | nindent 4 }}
 spec:
-  maxUnavailable: {{ $qrCfg.realtimeConfiguration.distributedCache.redisSettings.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ $qrCfg.internalCache.redisSettings.podDisruptionBudget.maxUnavailable }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ $QueueReadercacheName }}
@@ -29,8 +29,8 @@ spec:
 
 ---
 {{- if $qrCfg.realtimeConfiguration.isDistributed }}
-{{- if eq $qrCfg.realtimeConfiguration.distributedCache.provider "redis" }}
-{{- if eq $qrCfg.realtimeConfiguration.distributedCache.type "internal" }}
+{{- if eq $qrCfg.internalCache.provider "redis" }}
+{{- if eq $qrCfg.internalCache.type "internal" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -59,7 +59,7 @@ data:
     # Networking / timeouts
     bind 0.0.0.0
     port 6379
-    {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+    {{- if not (eq .Values.secretsManagement.provider "sdk") }}
     protected-mode yes
     {{- end }}
     timeout 300
@@ -78,13 +78,13 @@ metadata:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $QueueReadercacheName "component" "cache") | nindent 4 }}
 spec:
   clusterIP: None
-  selector:
-    app.kubernetes.io/name: {{ $QueueReadercacheName }}
   ports:
     - name: redis
       port: 6379
       targetPort: 6379
-
+  selector:
+    app.kubernetes.io/name: {{ $QueueReadercacheName }}
+    
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -161,69 +161,57 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: {{ $QueueReadercacheName }}
-          image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.repository }}/rediscache:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: 6379
               name: redis
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+          {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
           {{- end }}
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-          command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
-          {{- end }}
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+          {{- if eq .Values.secretsManagement.provider "sdk" }}
           command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
           {{- end }}
           env:
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+          {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                name: {{ include "rpi.secrets.secretName" . | quote }}
                 key: QueueService_RedisCache_Password
           {{- end }}
           volumeMounts:
-            {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
             - name: {{ $QueueReadercacheName }}-data
               mountPath: /data
-            {{- end }}
-            {{- if not $qrCfg.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
-            - name: {{ $QueueReadercacheName }}-data
-              mountPath: /data
-            {{- end }}
             - name: {{ $QueueReadercacheName }}-config
               mountPath: /usr/local/etc/redis
-          {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.enabled }}
+          {{- if $qrCfg.internalCache.redisSettings.resources.enabled }}
           resources:
-            {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.limits }}
+            {{- if $qrCfg.internalCache.redisSettings.resources.limits }}
             limits:
-              {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.limits.cpu }}
-              cpu: {{ $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.limits.cpu | quote }}
+              {{- if $qrCfg.internalCache.redisSettings.resources.limits.cpu }}
+              cpu: {{ $qrCfg.internalCache.redisSettings.resources.limits.cpu | quote }}
               {{- end }}
-              {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.limits.memory }}
-              memory: {{ $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.limits.memory }}
+              {{- if $qrCfg.internalCache.redisSettings.resources.limits.memory }}
+              memory: {{ $qrCfg.internalCache.redisSettings.resources.limits.memory }}
               {{- end }}
             {{- end }}
-            {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.requests }}
+            {{- if $qrCfg.internalCache.redisSettings.resources.requests }}
             requests:
-              {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.requests.cpu | quote }}
-              cpu: {{ $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.requests.cpu }}
+              {{- if $qrCfg.internalCache.redisSettings.resources.requests.cpu | quote }}
+              cpu: {{ $qrCfg.internalCache.redisSettings.resources.requests.cpu }}
               {{- end }}
-              {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.requests.memory }}
-              memory: {{ $qrCfg.realtimeConfiguration.distributedCache.redisSettings.resources.requests.memory }}
+              {{- if $qrCfg.internalCache.redisSettings.resources.requests.memory }}
+              memory: {{ $qrCfg.internalCache.redisSettings.resources.requests.memory }}
               {{- end }}
             {{- end }}
           {{- end }}
           readinessProbe:
             exec:
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+              {{- if not (eq .Values.secretsManagement.provider "sdk") }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
               {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-              command: ["sh", "-c", "redis-cli ping | grep PONG"]
-              {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              {{- if eq .Values.secretsManagement.provider "sdk" }}
               command: ["sh", "-c", "redis-cli ping | grep PONG"]
               {{- end }}
             initialDelaySeconds: 5
@@ -232,13 +220,10 @@ spec:
             failureThreshold: 6
           livenessProbe:
             exec:
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+              {{- if not (eq .Values.secretsManagement.provider "sdk") }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
               {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-              command: ["sh", "-c", "redis-cli ping | grep PONG"]
-              {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              {{- if eq .Values.secretsManagement.provider "sdk" }}
               command: ["sh", "-c", "redis-cli ping | grep PONG"]
               {{- end }}
             initialDelaySeconds: 15
@@ -271,19 +256,27 @@ spec:
         - name: {{ $QueueReadercacheName }}-config
           configMap:
             name: {{ $QueueReadercacheName }}-config
-        {{- if not $qrCfg.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
-        - name: rpi-executionservice-cache-data
+        {{- if $qrCfg.internalCache.redisSettings.existingClaim }}
+        - name: {{ $QueueReadercacheName }}-data
+          persistentVolumeClaim:
+            claimName: {{ $qrCfg.internalCache.redisSettings.existingClaim }}
+        {{- else if not $qrCfg.internalCache.redisSettings.volumeClaimTemplates.enabled }}
+        - name: {{ $QueueReadercacheName }}-data
           emptyDir: {}
         {{- end }}
-  {{- if $qrCfg.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.enabled }}
+  {{- if and $qrCfg.internalCache.redisSettings.volumeClaimTemplates.enabled (not $qrCfg.internalCache.redisSettings.existingClaim) }}
   volumeClaimTemplates:
     - metadata:
         name: {{ $QueueReadercacheName }}-data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes:
+          - {{ $qrCfg.internalCache.redisSettings.volumeClaimTemplates.accessModes | default "ReadWriteOnce" }}
+        {{- if $qrCfg.internalCache.redisSettings.volumeClaimTemplates.storageClassName }}
+        storageClassName: {{ $qrCfg.internalCache.redisSettings.volumeClaimTemplates.storageClassName | quote }}
+        {{- end }}
         resources:
           requests:
-            storage: {{ $qrCfg.realtimeConfiguration.distributedCache.redisSettings.volumeClaimTemplates.storage | quote }}
+            storage: {{ $qrCfg.internalCache.redisSettings.volumeClaimTemplates.storage | quote }}
   {{- end }}
 {{- end }}
 {{- end }}
@@ -341,7 +334,7 @@ data:
     # Networking / timeouts
     bind 0.0.0.0
     port 6379
-    {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+    {{- if not (eq .Values.secretsManagement.provider "sdk") }}
     protected-mode yes
     {{- end }}
     timeout 300
@@ -443,37 +436,28 @@ spec:
       {{- end }}
       containers:
         - name: {{ $ExecutioncacheName }}
-          image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.repository }}/rediscache:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: 6379
               name: redis
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+          {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
           {{- end }}
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-          command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
-          {{- end }}
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+          {{- if eq .Values.secretsManagement.provider "csi" }}
           command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
           {{- end }}
           env:
-          {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+          {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                name: {{ include "rpi.secrets.secretName" . | quote }}
                 key: ExecutionService_RedisCache_Password
           {{- end }}
           volumeMounts:
-            {{- if $execCfg.internalCache.redisSettings.volumeClaimTemplates.enabled }}
             - name: {{ $ExecutioncacheName }}-data
               mountPath: /data
-            {{- end }}
-            {{- if not $execCfg.internalCache.redisSettings.volumeClaimTemplates.enabled }}
-            - name: {{ $ExecutioncacheName }}-data
-              mountPath: /data
-            {{- end }}
             - name: {{ $ExecutioncacheName }}-config
               mountPath: /usr/local/etc/redis
           {{- if $execCfg.internalCache.redisSettings.resources.enabled }}
@@ -499,13 +483,10 @@ spec:
           {{- end }}
           readinessProbe:
             exec:
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+              {{- if not (eq .Values.secretsManagement.provider "sdk") }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
               {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-              command: ["sh", "-c", "redis-cli ping | grep PONG"]
-              {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              {{- if eq .Values.secretsManagement.provider "sdk" }}
               command: ["sh", "-c", "redis-cli ping | grep PONG"]
               {{- end }}
             initialDelaySeconds: 5
@@ -514,13 +495,10 @@ spec:
             failureThreshold: 6
           livenessProbe:
             exec:
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+              {{- if not (eq .Values.secretsManagement.provider "sdk") }}
               command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
               {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "keyvault" }}
-              command: ["sh", "-c", "redis-cli ping | grep PONG"]
-              {{- end }}
-              {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
+              {{- if eq .Values.secretsManagement.provider "sdk" }}
               command: ["sh", "-c", "redis-cli ping | grep PONG"]
               {{- end }}
             initialDelaySeconds: 15
@@ -553,16 +531,24 @@ spec:
         - name: {{ $ExecutioncacheName }}-config
           configMap:
             name: {{ $ExecutioncacheName }}-config
-        {{- if not $execCfg.internalCache.redisSettings.volumeClaimTemplates.enabled }}
+        {{- if $execCfg.internalCache.redisSettings.existingClaim }}
+        - name: {{ $ExecutioncacheName }}-data
+          persistentVolumeClaim:
+            claimName: {{ $execCfg.internalCache.redisSettings.existingClaim }}
+        {{- else if not $execCfg.internalCache.redisSettings.volumeClaimTemplates.enabled }}
         - name: {{ $ExecutioncacheName }}-data
           emptyDir: {}
         {{- end }}
-  {{- if $execCfg.internalCache.redisSettings.volumeClaimTemplates.enabled }}
+  {{- if and $execCfg.internalCache.redisSettings.volumeClaimTemplates.enabled (not $execCfg.internalCache.redisSettings.existingClaim) }}
   volumeClaimTemplates:
     - metadata:
         name: {{ $ExecutioncacheName }}-data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes:
+          - {{ $execCfg.internalCache.redisSettings.volumeClaimTemplates.accessModes | default "ReadWriteOnce" }}
+        {{- if $execCfg.internalCache.redisSettings.volumeClaimTemplates.storageClassName }}
+        storageClassName: {{ $execCfg.internalCache.redisSettings.volumeClaimTemplates.storageClassName | quote }}
+        {{- end }}
         resources:
           requests:
             storage: {{ $execCfg.internalCache.redisSettings.volumeClaimTemplates.storage | quote }}

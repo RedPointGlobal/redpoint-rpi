@@ -1,0 +1,133 @@
+{{/*
+  Smoke Test Deployments
+  Lightweight validation pods that verify storage mounts and CSI secret mounts
+  are working correctly. Each entry needs only a name, type, and mount target.
+  Security context, imagePullSecrets, and workload identity labels are inherited
+  from chart globals. All other fields are optional per-entry overrides.
+
+  Two types:
+    pvc       — Mounts a PersistentVolumeClaim and writes a test file in a loop
+    csiSecret — Mounts a CSI SecretProviderClass volume and sleeps
+
+  Enabled via: smokeTests.enabled: true
+*/}}
+{{- if ((.Values.smokeTests).enabled) }}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- range .Values.smokeTests.deployments }}
+{{- $name := .name }}
+{{- $containerName := .containerName | default $name }}
+{{- $volumeName := .volumeName | default (printf "%s-volume" $name) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        container.apparmor.security.beta.kubernetes.io/secrets: runtime/default
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+        {{- include "rpi.cloudidentity.podLabels" $ | nindent 8 }}
+    spec:
+      {{- if $.Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ $.Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      {{- with .serviceAccountName }}
+      serviceAccountName: {{ . | quote }}
+      {{- end }}
+      {{- if $secCtx.enabled }}
+      securityContext:
+        runAsUser: {{ $secCtx.runAsUser }}
+        runAsGroup: {{ $secCtx.runAsGroup }}
+        fsGroup: {{ $secCtx.fsGroup }}
+        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
+        {{- with $secCtx.supplementalGroups }}
+        supplementalGroups:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- end }}
+      {{- if .nodeSelector }}
+      nodeSelector:
+        {{- toYaml .nodeSelector | nindent 8 }}
+      {{- else if $.Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ $.Values.nodeSelector.key }}: {{ $.Values.nodeSelector.value }}
+      {{- end }}
+      {{- if $.Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ $.Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ $.Values.nodeSelector.value }}
+      {{- end }}
+      containers:
+        - name: {{ $containerName }}
+          image: {{ .image | default $.Values.global.deployment.images.net_utils }}
+          imagePullPolicy: "Always"
+          {{- if $secCtx.enabled }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          {{- end }}
+          {{- if .command }}
+          command:
+            {{- toYaml .command | nindent 12 }}
+          {{- else if eq (.type | default "pvc") "pvc" }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do echo $(date) >> {{ .mountPath }}/smoketest.log; sleep 30; done
+          {{- else }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do sleep 30; done
+          {{- end }}
+          {{- with .args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: {{ $volumeName }}
+              mountPath: {{ .mountPath }}
+              {{- if eq (.type | default "pvc") "csiSecret" }}
+              readOnly: true
+              {{- end }}
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 500m
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+      volumes:
+        {{- if eq (.type | default "pvc") "pvc" }}
+        - name: {{ $volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .claimName }}
+        {{- else }}
+        - name: {{ $volumeName }}
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .secretProviderClass | quote }}
+        {{- end }}
+{{- end }}
+{{- end }}

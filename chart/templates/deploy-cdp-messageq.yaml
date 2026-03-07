@@ -122,7 +122,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $name }}
-          image: {{ .Values.global.deployment.images.cdpmessageq }}:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - name: amqp
@@ -138,10 +138,14 @@ spec:
               cpu: {{ $cfg.resources.requests.cpu }}
               memory: {{ $cfg.resources.requests.memory }}
           env:
+            {{- if .Values.global.deployment.podTimezone }}
+            - name: TZ
+              value: {{ .Values.global.deployment.podTimezone | quote }}
+            {{- end }}
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  name: {{ include "rpi.secrets.secretName" . | quote }}
                   key: CDP_RabbitMQ_Password
             - name: RABBITMQ_DEFAULT_USER
               value: {{ $cfg.username }}
@@ -150,22 +154,9 @@ spec:
             - name: RABBITMQ_ERLANG_COOKIE
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  name: {{ include "rpi.secrets.secretName" . | quote }}
                   key: CDP_RabbitMQ_ErlangCookie
-            {{- if eq .Values.global.deployment.platform "amazon" }}
-            {{- if .Values.cloudIdentity.enabled}}
-            {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-            - name: AWS_ROLE_ARN
-              value: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-            - name: AWS_WEB_IDENTITY_TOKEN_FILE
-              value: {{ .Values.cloudIdentity.amazonSettings.webIdentityTokenFile | quote }}
-            - name: AWS_STS_REGIONAL_ENDPOINTS
-              value: {{ .Values.cloudIdentity.amazonSettings.stsRegionalEndpoints | quote }}
-            - name: AWS_DEFAULT_REGION
-              value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
+            {{- include "rpi.cloudidentity.envvars" . | nindent 12 }}
           volumeMounts:
             - name: {{ $name }}-data
               mountPath: /data

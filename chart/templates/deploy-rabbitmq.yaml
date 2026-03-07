@@ -22,8 +22,8 @@ spec:
 ---
 {{- if $qrCfg.enabled }}
 {{- if $qrCfg.realtimeConfiguration.isDistributed }}
-{{- if eq $qrCfg.realtimeConfiguration.distributedQueue.provider "rabbitmq" }}
-{{- if eq $qrCfg.realtimeConfiguration.distributedQueue.type "internal" }}
+{{- if eq $qrCfg.internalQueues.provider "rabbitmq" }}
+{{- if eq $qrCfg.internalQueues.type "internal" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -126,7 +126,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $QueueReaderMQ }}
-          image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.repository }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - name: amqp
@@ -135,52 +135,42 @@ spec:
             - name: management
               containerPort: 15672
               protocol: TCP
-          {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.enabled }}
+          {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.enabled }}
           resources:
-            {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits }}
+            {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.limits }}
             limits:
-              {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.cpu }}
-              cpu: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.cpu | quote }}
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.limits.cpu }}
+              cpu: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.limits.cpu | quote }}
               {{- end }}
-              {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.memory }}
-              memory: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.limits.memory }}
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.limits.memory }}
+              memory: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.limits.memory }}
               {{- end }}
             {{- end }}
-            {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests }}
+            {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.requests }}
             requests:
-              {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.cpu | quote }}
-              cpu: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.cpu }}
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.requests.cpu | quote }}
+              cpu: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.requests.cpu }}
               {{- end }}
-              {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.memory }}
-              memory: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.resources.requests.memory }}
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.requests.memory }}
+              memory: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.requests.memory }}
               {{- end }}
             {{- end }}
           {{- end }}
           env:
             - name: RABBITMQ_DEFAULT_USER
-              value: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.username | quote }}
+              value: {{ $qrCfg.internalQueues.rabbitmqSettings.username | quote }}
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  name: {{ include "rpi.secrets.secretName" . | quote }}
                   key: QueueService_RabbitMQ_Password
             - name: RABBITMQ_DEFAULT_VHOST
-              value: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.virtualhost | quote }}
+              value: "/"
             - name: RABBITMQ_CONFIG_FILE
               value: "/config/rabbitmq.conf"
           volumeMounts:
-            {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
             - name: {{ $QueueReaderMQ }}-data
               mountPath: /data
-            {{- end }}
-            {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumes.enabled }}
-            - name: {{ $QueueReaderMQ }}-data
-              mountPath: /data
-            {{- end }}
-            {{- if not $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
-            - name: {{ $QueueReaderMQ }}-data
-              mountPath: /data
-            {{- end }}
             - name: {{ $QueueReaderMQ }}-config
               mountPath: /config
           livenessProbe:
@@ -214,24 +204,27 @@ spec:
         - name: {{ $QueueReaderMQ }}-config
           configMap:
             name: {{ $QueueReaderMQ }}-config
-        {{- if not $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
+        {{- if $qrCfg.InternalQueues.rabbitmqSettings.existingClaim }}
+        - name: {{ $QueueReaderMQ }}-data
+          persistentVolumeClaim:
+            claimName: {{ $qrCfg.internalQueues.rabbitmqSettings.existingClaim }}
+        {{- else if not $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.enabled }}
         - name: {{ $QueueReaderMQ }}-data
           emptyDir: {}
         {{- end }}
-        {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumes.enabled }}
-        - name: {{ $QueueReaderMQ }}-data
-          persistentVolumeClaim:
-            claimName: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumes.claimName }}
-        {{- end }}
-  {{- if $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.enabled }}
+  {{- if and $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.enabled (not $qrCfg.internalQueues.rabbitmqSettings.existingClaim) }}
   volumeClaimTemplates:
     - metadata:
         name: {{ $QueueReaderMQ }}-data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes:
+          - {{ $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.accessModes | default "ReadWriteOnce" }}
+        {{- if $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.storageClassName }}
+        storageClassName: {{ $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.storageClassName | quote }}
+        {{- end }}
         resources:
           requests:
-            storage: {{ $qrCfg.realtimeConfiguration.distributedQueue.rabbitmqSettings.volumeClaimTemplates.storage | quote }}
+            storage: {{ $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.storage | quote }}
   {{- end }}
 {{- end }}
 {{- end }}
@@ -364,7 +357,7 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: {{ $RealtimeapiMQ }}
-          image: {{ .Values.global.deployment.images.rabbitmq }}:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.repository }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - name: amqp
@@ -400,21 +393,15 @@ spec:
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+                  name: {{ include "rpi.secrets.secretName" . | quote }}
                   key: RealtimeAPI_RabbitMQ_Password
             - name: RABBITMQ_DEFAULT_VHOST
-              value: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.virtualhost | quote }}
+              value: "/"
             - name: RABBITMQ_CONFIG_FILE
               value: "/config/rabbitmq.conf"
           volumeMounts:
-            {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
             - name: {{ $RealtimeapiMQ }}-data
               mountPath: /data
-            {{- end }}
-            {{- if not $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
-            - name: {{ $RealtimeapiMQ }}-data
-              mountPath: /data
-            {{- end }}
             - name: {{ $RealtimeapiMQ }}-config
               mountPath: /config
           livenessProbe:
@@ -448,21 +435,24 @@ spec:
         - name: {{ $RealtimeapiMQ }}-config
           configMap:
             name: {{ $RealtimeapiMQ }}-config
-        {{- if not $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
+        {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.existingClaim }}
+        - name: {{ $RealtimeapiMQ }}-data
+          persistentVolumeClaim:
+            claimName: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.existingClaim }}
+        {{- else if not $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
         - name: {{ $RealtimeapiMQ }}-data
           emptyDir: {}
         {{- end }}
-        {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumes.enabled }}
-        - name: {{ $RealtimeapiMQ }}-data
-          persistentVolumeClaim:
-            claimName: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumes.claimName }}
-        {{- end }}
-  {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
+  {{- if and $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled (not $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.existingClaim) }}
   volumeClaimTemplates:
     - metadata:
         name: {{ $RealtimeapiMQ }}-data
       spec:
-        accessModes: ["ReadWriteOnce"]
+        accessModes:
+          - {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.accessModes | default "ReadWriteOnce" }}
+        {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.storageClassName }}
+        storageClassName: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.storageClassName | quote }}
+        {{- end }}
         resources:
           requests:
             storage: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.storage | quote }}

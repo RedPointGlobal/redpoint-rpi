@@ -1,0 +1,366 @@
+# ============================================================
+# DEMO ENVIRONMENT
+# ============================================================
+# Self-contained deployment for demos, POCs, and local clusters.
+# Deploys embedded MSSQL and MongoDB containers so no external
+# databases are needed. Designed for Docker Desktop, minikube,
+# kind, or any small cluster.
+#
+# See values-reference.yaml for all available keys.
+# ============================================================
+
+global:
+  deployment:
+    # Demo mode deploys embedded MSSQL + MongoDB containers
+    mode: demo
+    # azure | amazon | google | selfhosted
+    platform: selfhosted
+    images:
+      repository: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      tag: "7.7.20260220.1524"
+      imagePullPolicy: Always
+      imagePullSecret:
+        enabled: true
+        name: redpoint-rpi
+    # Optional: set the pod's timezone; leave empty to use default UTC
+    podTimezone: ""
+
+# ----------------------------------------------------------
+#  Database
+# ----------------------------------------------------------
+# In demo mode, MSSQL and MongoDB are deployed in-cluster.
+# The SA password is auto-generated and stored in secret "rpi-demo-mode".
+# Retrieve it with:
+#   kubectl get secret rpi-demo-mode -n <namespace> \
+#     -o jsonpath="{.data.DEMOMode_SQL_Password}" | base64 -d
+databases:
+  operational:
+    provider: sqlserver
+    server_host: rpi-demo-mssql
+    server_username: sa
+    # Set after first deploy — retrieve from rpi-demo-mode secret
+    server_password: RETRIEVE_FROM_SECRET
+    pulse_database_name: Pulse
+    pulse_logging_database_name: Pulse_Logging
+
+# ----------------------------------------------------------
+#  Cloud Identity & Secrets
+# ----------------------------------------------------------
+# No cloud identity needed for demo/selfhosted
+cloudIdentity:
+  enabled: false
+
+# ----------------------------------------------------------
+#  Secrets Management
+# ----------------------------------------------------------
+secretsManagement:
+  provider: kubernetes
+  kubernetes:
+    autoCreateSecrets: true
+    secretName: redpoint-rpi-secrets
+
+# ============================================================
+#  INGRESS
+# ============================================================
+ingress:
+  controller:
+    enabled: true
+  mode: public
+  certificateSource: kubernetes
+  tls:
+    - secretName: ingress-tls
+  domain: demo.local
+  hosts:
+    config: deploymentapi
+    client: interactionapi
+    integration: integrationapi
+    realtime: realtimeapi
+    callbackapi: callbackapi
+    queuereader: queuereader
+    rabbitmqconsole: rabbitmq-console
+    smartactivation: smartactivation
+
+# ----------------------------------------------------------
+#  REALTIME API
+# ----------------------------------------------------------
+realtimeapi:
+  enabled: true
+  replicas: 1
+  rpiClientID: 00000000-0000-0000-0000-000000000000
+  cacheProvider:
+    enabled: true
+    provider: mongodb
+    mongodb:
+      # Auto-generated — retrieve from rpi-demo-mode secret key DEMOMode_Mongo_ConnectionString
+      connectionString: RETRIEVE_FROM_SECRET
+      databaseName: rpirealtime
+      collectionName: RealtimeCache
+  queueProvider:
+    enabled: true
+    provider: rabbitmq
+    queueNames:
+      formQueuePath: RPIWebFormSubmission
+      eventsQueuePath: RPIWebEvents
+      cacheOutputQueuePath: RPIWebCacheData
+      recommendationsQueuePath: RPIWebRecommendations
+      listenerQueuePath: RPIQueueListener
+      callbackServiceQueuePath: RPICallbackApiQueue
+    rabbitmq:
+      type: internal
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+
+# ----------------------------------------------------------
+#  Callback API
+# ----------------------------------------------------------
+callbackapi:
+  enabled: true
+  replicas: 1
+  multitenancy:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+
+# ----------------------------------------------------------
+#  Execution Services
+# ----------------------------------------------------------
+executionservice:
+  enabled: true
+  replicas: 1
+  internalCache:
+    enabled: true
+    provider: filesystem
+    redisSettings:
+      type: internal
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+# ----------------------------------------------------------
+#  Interaction API
+# ----------------------------------------------------------
+interactionapi:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+
+# ----------------------------------------------------------
+#  Integration API
+# ----------------------------------------------------------
+integrationapi:
+  enabled: true
+  replicas: 1
+  username: admin@noemail.com
+  password: Demo_Password_123
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+
+# ----------------------------------------------------------
+#  Node Manager
+# ----------------------------------------------------------
+nodemanager:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+
+# ----------------------------------------------------------
+#  Deployment API
+# ----------------------------------------------------------
+deploymentapi:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# ----------------------------------------------------------
+#  Queue Reader
+# ----------------------------------------------------------
+queuereader:
+  enabled: true
+  replicas: 1
+  realtimeConfiguration:
+    isDistributed: false
+  tenantIds:
+    - 00000000-0000-0000-0000-000000000000
+  errorQueuePath: listenerQueueError
+  nonActiveQueuePath: listenerQueueNonActive
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+
+# ----------------------------------------------------------
+#  Optional Services (disabled to save resources)
+# ----------------------------------------------------------
+rebrandly:
+  enabled: false
+
+# ----------------------------------------------------------
+#  Authentication (disabled for demo)
+# ----------------------------------------------------------
+MicrosoftEntraID:
+  enabled: false
+
+SMTPSettings:
+  SMTP_SenderAddress: demo@demo.local
+  SMTP_SenderName: "RPI Demo"
+  SMTP_Address: localhost
+  SMTP_Port: 1025
+  EnableSSL: false
+  UseCredentials: false
+  SMTP_Username: ""
+  SMTP_Password: ""
+
+# ----------------------------------------------------------
+#  Diagnostics
+# ----------------------------------------------------------
+diagnosticsMode:
+  dotNetTools:
+    enabled: false
+
+# ----------------------------------------------------------
+#  Smart Activation (disabled for demo)
+# ----------------------------------------------------------
+smartActivation:
+  enabled: false
+
+# ----------------------------------------------------------
+#  Node Scheduling (none for demo)
+# ----------------------------------------------------------
+nodeSelector:
+  enabled: false
+
+tolerations:
+  enabled: false
+
+# ----------------------------------------------------------
+#  Storage (not needed for demo — services use internal volumes)
+# ----------------------------------------------------------
+storage:
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: false
+    Plugins:
+      enabled: false
+    DataManagementUploadDirectory:
+      enabled: false
+
+# ----------------------------------------------------------
+#  Database Upgrade
+# ----------------------------------------------------------
+databaseUpgrade:
+  enabled: false
+
+# ----------------------------------------------------------
+#  Advanced Overrides
+# ----------------------------------------------------------
+# Relaxed probes and debug logging for demo environments
+advanced:
+  livenessProbe:
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    failureThreshold: 10
+  startupProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    failureThreshold: 60
+  realtimeapi:
+    logging:
+      realtimeapi:
+        default: Debug
+      realtimeagent:
+        default: Debug
+    queueProvider:
+      rabbitmq:
+        rabbitmqSettings:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+    cacheProvider:
+      redis:
+        redisSettings:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+  executionservice:
+    logging:
+      default: Debug
+    internalCache:
+      redisSettings:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+  interactionapi:
+    logging:
+      default: Debug
+    enableSwagger: true
+  integrationapi:
+    logging:
+      default: Debug
+    enableSwagger: true
+  queuereader:
+    logging:
+      default: Debug
+    threadPoolSize: 2
+    maxBatchSize: 10
+  callbackapi:
+    logging:
+      default: Debug
+  nodemanager:
+    logging:
+      default: Debug
+  deploymentapi:
+    logging:
+      default: Debug

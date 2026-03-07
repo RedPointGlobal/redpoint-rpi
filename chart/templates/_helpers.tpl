@@ -53,10 +53,8 @@ Usage:
 {{ include "redpoint-rpi.componentLabels" (dict "root" . "component" "api") }}
 */}}
 {{- define "redpoint-rpi.componentLabels" -}}
-helm.sh/chart: {{ include "redpoint-rpi.chart" .root }}
 app.kubernetes.io/name: {{ .name | default (include "redpoint-rpi.fullname" .root) }}
 app.kubernetes.io/instance: {{ .root.Release.Name }}
-app.kubernetes.io/managed-by: {{ .root.Release.Service }}
 app.kubernetes.io/part-of: rpi
 app.kubernetes.io/component: {{ .component }}
 {{- end }}
@@ -67,16 +65,13 @@ Usage:
 {{ include "smartactivation.componentLabels" (dict "root" . "component" "api") }}
 */}}
 {{- define "smartactivation.componentLabels" -}}
-helm.sh/chart: {{ include "redpoint-rpi.chart" .root }}
 app.kubernetes.io/name: {{ .name | default (include "redpoint-rpi.fullname" .root) }}
 app.kubernetes.io/instance: {{ .root.Release.Name }}
-app.kubernetes.io/managed-by: {{ .root.Release.Service }}
 app.kubernetes.io/part-of: smartactivation
-app.kubernetes.io/component: {{ .component }}
 {{- end }}
 
 {{/*
-Default security context for RPI services (.NET-based)
+Default security context for RPI services
 */}}
 {{- define "redpoint-rpi.securityContext" -}}
 securityContext:
@@ -396,6 +391,25 @@ false
 {{- toYaml (mustMergeOverwrite $d $a $u) -}}
 {{- end -}}
 
+{{/*
+Resolve ingress annotations. If the user sets ingress.annotations, those
+are used as-is (full replacement). Otherwise returns sensible defaults.
+*/}}
+{{- define "rpi.ingress.annotations" -}}
+{{- if $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- if $ingCfg.annotations -}}
+{{- toYaml $ingCfg.annotations -}}
+{{- else -}}
+nginx.ingress.kubernetes.io/proxy-body-size: 4096m
+nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+nginx.ingress.kubernetes.io/enable-access-log: "true"
+nginx.ingress.kubernetes.io/ssl-redirect: "true"
+nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "rpi.merged.diagnosticsMode" -}}
 {{- $d := fromYaml (include "rpi.defaults.diagnosticsMode" .) -}}
 {{- $a := ((.Values.advanced).diagnosticsMode) | default dict -}}
@@ -408,4 +422,256 @@ false
 {{- $a := ((.Values.advanced).networkPolicy) | default dict -}}
 {{- $u := .Values.networkPolicy | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- end -}}
+
+{{- define "rpi.merged.postInstall" -}}
+{{- $d := fromYaml (include "rpi.defaults.postInstall" .) -}}
+{{- $a := ((.Values.advanced).postInstall) | default dict -}}
+{{- $u := .Values.postInstall | default dict -}}
+{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- end -}}
+
+{{- define "rpi.merged.databaseUpgrade" -}}
+{{- $d := fromYaml (include "rpi.defaults.databaseUpgrade" .) -}}
+{{- $a := ((.Values.advanced).databaseUpgrade) | default dict -}}
+{{- $u := .Values.databaseUpgrade | default dict -}}
+{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- end -}}
+
+{{/*
+Resolve a host entry to an FQDN.
+If the host value contains a dot, it is treated as a FQDN and returned as-is.
+Otherwise it is treated as a subdomain and appended to the domain.
+Usage: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.callbackapi "domain" $ingCfg.domain) }}
+*/}}
+{{- define "rpi.ingress.fqdn" -}}
+{{- if contains "." .host -}}
+{{- .host -}}
+{{- else -}}
+{{- printf "%s.%s" .host .domain -}}
+{{- end -}}
+{{- end -}}
+
+{{/* ============================================================
+     CLOUD IDENTITY HELPERS
+     ============================================================
+     Shared helpers for pod-to-cloud authentication and secrets.
+     Eliminates duplication across all deploy-*.yaml templates.
+     ============================================================ */}}
+
+{{/*
+Validate that cloudIdentity is enabled when using sdk or csi secrets.
+Call this once from any top-level template to catch misconfiguration early.
+*/}}
+{{- define "rpi.validateConfig" -}}
+{{- if or (eq .Values.secretsManagement.provider "sdk") (eq .Values.secretsManagement.provider "csi") -}}
+{{- if not .Values.cloudIdentity.enabled -}}
+{{- fail "secretsManagement.provider 'sdk' and 'csi' require cloudIdentity.enabled=true (pods must authenticate to the cloud to access the vault)" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+ServiceAccount annotations for cloud identity.
+Renders the appropriate annotation based on global.deployment.platform.
+Usage: {{- include "rpi.cloudidentity.saAnnotations" . | nindent 4 }}
+*/}}
+{{- define "rpi.cloudidentity.saAnnotations" -}}
+{{- if .Values.cloudIdentity.enabled -}}
+{{- if eq .Values.global.deployment.platform "azure" }}
+azure.workload.identity/client-id: {{ .Values.cloudIdentity.azure.managedIdentityClientId | quote }}
+azure.workload.identity/tenant-id: {{ .Values.cloudIdentity.azure.tenantId | quote }}
+{{- else if eq .Values.global.deployment.platform "google" }}
+iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.google.serviceAccountEmail | quote }}
+{{- else if eq .Values.global.deployment.platform "amazon" }}
+{{- if not .Values.cloudIdentity.amazon.useAccessKeys }}
+eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Pod labels for cloud identity (Azure Workload Identity webhook).
+Usage: {{- include "rpi.cloudidentity.podLabels" . | nindent 8 }}
+*/}}
+{{- define "rpi.cloudidentity.podLabels" -}}
+{{- if .Values.cloudIdentity.enabled -}}
+{{- if eq .Values.global.deployment.platform "azure" }}
+azure.workload.identity/use: "true"
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Cloud identity env vars (IRSA for Amazon, Google credentials path).
+Usage: {{- include "rpi.cloudidentity.envvars" . | nindent 10 }}
+*/}}
+{{- define "rpi.cloudidentity.envvars" -}}
+{{- if .Values.cloudIdentity.enabled -}}
+{{- if eq .Values.global.deployment.platform "amazon" }}
+{{- if not .Values.cloudIdentity.amazon.useAccessKeys }}
+- name: AWS_ROLE_ARN
+  value: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
+- name: AWS_WEB_IDENTITY_TOKEN_FILE
+  value: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
+- name: AWS_STS_REGIONAL_ENDPOINTS
+  value: "regional"
+- name: AWS_DEFAULT_REGION
+  value: {{ .Values.cloudIdentity.amazon.region | quote }}
+{{- end }}
+{{- else if eq .Values.global.deployment.platform "google" }}
+{{- if .Values.cloudIdentity.google.configMapName }}
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Amazon access key env vars (when using static keys instead of IRSA).
+Usage: {{- include "rpi.cloudidentity.awsAccessKeyEnvvars" . | nindent 10 }}
+*/}}
+{{- define "rpi.cloudidentity.awsAccessKeyEnvvars" -}}
+{{- if .Values.cloudIdentity.enabled -}}
+{{- if eq .Values.global.deployment.platform "amazon" }}
+{{- if .Values.cloudIdentity.amazon.useAccessKeys }}
+- name: AWS_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      key: AWS_Access_Key_ID
+      name: {{ include "rpi.secrets.secretName" . }}
+- name: AWS_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      key: AWS_Secret_Access_Key
+      name: {{ include "rpi.secrets.secretName" . }}
+- name: AWS_REGION
+  value: {{ .Values.cloudIdentity.amazon.region | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+SDK vault env vars — only when secretsManagement.provider == "sdk".
+Configures the app to read secrets from the cloud vault at runtime.
+Usage: {{- include "rpi.secrets.sdk.envvars" . | nindent 10 }}
+*/}}
+{{- define "rpi.secrets.sdk.envvars" -}}
+{{- if eq .Values.secretsManagement.provider "sdk" -}}
+{{- if eq .Values.global.deployment.platform "azure" }}
+- name: CloudIdentity__Azure__CredentialType
+  value: "AzureIdentity"
+- name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
+  value: {{ .Values.secretsManagement.sdk.azure.useADTokenForDatabaseConnection | quote }}
+- name: KeyVault__Provider
+  value: "Azure"
+- name: KeyVault__UseForAppSettings
+  value: "true"
+- name: KeyVault__UseForConfigPasswords
+  value: "true"
+- name: KeyVault__AzureSettings__VaultURI
+  value: {{ .Values.secretsManagement.sdk.azure.vaultUri | quote }}
+- name: KeyVault__AzureSettings__AppSettingsVaultURI
+  value: {{ .Values.secretsManagement.sdk.azure.vaultUri | quote }}
+- name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
+  value: {{ .Values.secretsManagement.sdk.azure.configurationReloadIntervalSeconds | quote }}
+{{- else if eq .Values.global.deployment.platform "google" }}
+- name: KeyVault__Provider
+  value: "Google"
+- name: KeyVault__UseForAppSettings
+  value: "true"
+- name: KeyVault__UseForConfigPasswords
+  value: "true"
+{{- else if eq .Values.global.deployment.platform "amazon" }}
+- name: KeyVault__Provider
+  value: "Amazon"
+- name: KeyVault__UseForAppSettings
+  value: "true"
+- name: KeyVault__UseForConfigPasswords
+  value: "true"
+- name: KeyVault__AmazonSettings__AppSettingsTag
+  value: {{ .Values.secretsManagement.sdk.amazon.secretTagKey | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Resolve the K8s secret name — works for kubernetes and csi modes.
+Usage: {{ include "rpi.secrets.secretName" . }}
+*/}}
+{{- define "rpi.secrets.secretName" -}}
+{{- if eq .Values.secretsManagement.provider "csi" -}}
+{{ .Values.secretsManagement.csi.secretName | default "redpoint-rpi-secrets" }}
+{{- else -}}
+{{ .Values.secretsManagement.kubernetes.secretName | default "redpoint-rpi-secrets" }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolve which ServiceAccount name a pod should use.
+Usage: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
+  - root: the top-level context (.)
+  - name: the per-service SA name (e.g., "rpi-realtimeapi")
+*/}}
+{{- define "rpi.serviceAccountName" -}}
+{{- if .root.Values.cloudIdentity.serviceAccount.create -}}
+{{ .root.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" }}
+{{- else -}}
+{{ .name }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Google ConfigMap volume mount (for services that need the SA JSON file).
+Usage: {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 10 }}
+*/}}
+{{- define "rpi.cloudidentity.googleVolumeMounts" -}}
+{{- if .Values.cloudIdentity.enabled -}}
+{{- if eq .Values.global.deployment.platform "google" }}
+{{- if .Values.cloudIdentity.google.configMapName }}
+- name: {{ .Values.cloudIdentity.google.configMapName }}
+  mountPath: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
+  subPath: {{ .Values.cloudIdentity.google.keyName | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Google ConfigMap volume definition.
+Usage: {{- include "rpi.cloudidentity.googleVolumes" . | nindent 8 }}
+*/}}
+{{- define "rpi.cloudidentity.googleVolumes" -}}
+{{- if .Values.cloudIdentity.enabled -}}
+{{- if eq .Values.global.deployment.platform "google" }}
+{{- if .Values.cloudIdentity.google.configMapName }}
+- name: {{ .Values.cloudIdentity.google.configMapName | quote }}
+  configMap:
+    name: {{ .Values.cloudIdentity.google.configMapName | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Platform-specific database connection env var name.
+Usage: {{- include "rpi.platform.dbProviderEnvvar" . | nindent 10 }}
+*/}}
+{{- define "rpi.platform.dbProviderEnvvar" -}}
+{{- if eq .Values.global.deployment.platform "azure" }}
+- name: RPI__CloudEnvironment
+  value: "Azure"
+{{- else if eq .Values.global.deployment.platform "amazon" }}
+- name: RPI__CloudEnvironment
+  value: "Amazon"
+{{- else if eq .Values.global.deployment.platform "google" }}
+- name: RPI__CloudEnvironment
+  value: "Google"
+{{- else }}
+- name: RPI__CloudEnvironment
+  value: "SelfHosted"
+{{- end }}
 {{- end -}}

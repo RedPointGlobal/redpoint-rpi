@@ -31,7 +31,7 @@
      1. CROSS-CUTTING DEFAULTS
      ============================================================ */}}
 
-{{/* ------ Security Context (.NET services) ------ */}}
+{{/* ------ Security Context ------ */}}
 {{- define "rpi.defaults.securityContext" -}}
 enabled: true
 runAsUser: 7777
@@ -44,6 +44,7 @@ allowPrivilegeEscalation: false
 capabilities:
   drop: ["ALL"]
 supplementalGroups:
+  - 1000
   - 4000
   - 5000
 {{- end -}}
@@ -86,7 +87,7 @@ httpGet:
 initialDelaySeconds: 10
 periodSeconds: 10
 timeoutSeconds: 2
-failureThreshold: 30
+failureThreshold: 35
 successThreshold: 1
 {{- end -}}
 
@@ -105,19 +106,14 @@ allowDNS: true
 
 {{/* ------ Ingress ------ */}}
 {{- define "rpi.defaults.ingress" -}}
-className: nginx-redpoint-rpi
+className: {{ .Release.Namespace }}
 internalImageOverride:
   enabled: false
   image: registry.k8s.io/ingress-nginx/controller:v1.14.3@sha256:82917be97c0939f6ada1717bb39aa7e66c229d6cfb10dcfc8f1bd42f9efe0f81
 service:
   port: 80
-annotations:
-  nginx.ingress.kubernetes.io/proxy-body-size: 4096m
-  nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-  nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-  nginx.ingress.kubernetes.io/enable-access-log: "true"
-  nginx.ingress.kubernetes.io/ssl-redirect: "true"
-  nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+tls:
+  - secretName: ingress-tls
 {{- end -}}
 
 {{/* ------ Diagnostics Mode ------ */}}
@@ -162,6 +158,13 @@ rollout:
   revisionHistoryLimit: 3
 serviceAccount:
   enabled: true
+authentication:
+  type: basic
+  basic:
+    standard: false
+    forms: true
+    listenerQueue: true
+    recommendations: true
 enableHelpPages: true
 enableEventListening: true
 realtimeProcessingEnabled: true
@@ -367,6 +370,7 @@ customMetrics:
   enabled: false
   prometheus_scrape: false
 terminationGracePeriodSeconds: 120
+enableRPIAuthentication: true
 logging:
   default: Error
   database: Error
@@ -429,15 +433,15 @@ jobExecution:
     enabled: true
     maxConcurrentWorkflowActivities: 100
     maximumQueueTime: "24:00:00"
+  luxScisendRequestCount: 5
 internalCache:
-  overrideDirectoryPath: true
-  directoryPathOverride: StateCache
   backupToOpsDBInterval: "00:00:20"
   maxNumberRetries: "100"
   maxRetryDelay: "00:01:00"
   failOnPrimaryDataLoss: true
   failOnCacheConnectionError: true
   redisSettings:
+    type: internal
     replicas: 1
     resources:
       enabled: true
@@ -516,6 +520,10 @@ customMetrics:
   enabled: false
   prometheus_scrape: false
 terminationGracePeriodSeconds: 120
+enableRPIAuthentication: true
+productUpdateFeed:
+  enabled: true 
+  url: https://www.redpointglobal.com/feed/productfeed
 logging:
   default: Error
   database: Error
@@ -554,6 +562,7 @@ customMetrics:
   enabled: false
   prometheus_scrape: true
 terminationGracePeriodSeconds: 120
+enableRPIAuthentication: true
 logging:
   default: Error
   database: Error
@@ -589,6 +598,7 @@ customMetrics:
   enabled: false
   prometheus_scrape: false
 terminationGracePeriodSeconds: 120
+enableRPIAuthentication: true
 logging:
   default: Error
   database: Error
@@ -642,6 +652,8 @@ type: deployment
 rollout:
   autoPromotionEnabled: true
   revisionHistoryLimit: 3
+service:
+  port: 80
 serviceAccount:
   enabled: true
 isFormProcessingEnabled: true
@@ -649,49 +661,60 @@ isEventProcessingEnabled: true
 isCacheProcessingEnabled: true
 queueListenerEnabled: true
 isCallbackServiceProcessingEnabled: true
-listenerQueueNonActiveQueuePath: listenerQueueNonActive
+nonActiveQueuePath: listenerQueueNonActive
 listenerQueueNonActiveTTLDays: 14
-listenerQueueErrorQueuePath: listenerQueueError
+errorQueuePath: listenerQueueError
 listenerQueueErrorTTLDays: 14
+maintenanceModeBufferTime: "00:01:00"
 threadPoolSize: 10
 timeoutMinutes: 60
 maxBatchSize: 50
 useMessageLocks: true
+partitionHandler:
+  partitionLockDuration: "00:02:00"
+  offsetPositionTTL: "23:59:59"
+  deduplicationCacheTTL: "01:00:00"
+seedService:
+  memoryCacheSize: "10"
+  maxNumberRetries: "100"
+  maxRetryDelay: "00:01:00"
 realtimeConfiguration:
-  distributedCache:
-    redisSettings:
-      replicas: 1
-      resources:
-        enabled: true
-        requests:
-          cpu: 100m
-          memory: 256Mi
-        limits:
-          memory: 3Gi
-      volumeClaimTemplates:
-        enabled: true
-        storage: 100Gi
-      podDisruptionBudget:
-        enabled: false
-        minAvailable: 1
-  distributedQueue:
-    rabbitmqSettings:
-      virtualhost: /
-      resources:
-        enabled: true
-        requests:
-          cpu: 100m
-          memory: 256Mi
-        limits:
-          memory: 3Gi
-      volumeClaimTemplates:
-        enabled: true
-        storage: 100Gi
-      volumes:
-        enabled: false
-        claimName: rpi-queuereader-rabbitmq-data
-service:
-  port: 80
+  isDistributed: true
+internalCache:
+  backupToOpsDBInterval: "00:00:20"
+  redisSettings:
+    replicas: 1
+    resources:
+      enabled: true
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 3Gi
+    volumeClaimTemplates:
+      enabled: true
+      storage: 100Gi
+    podDisruptionBudget:
+      enabled: false
+      minAvailable: 1
+internalQueues:
+  rabbitmqSettings:
+    virtualhost: /
+    hostname: rpi-queuereader-rabbitmq
+    username: rabbitmq
+    resources:
+      enabled: true
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 3Gi
+    volumeClaimTemplates:
+      enabled: true
+      storage: 100Gi
+    volumes:
+      enabled: false
+      claimName: rpi-queuereader-rabbitmq-data
 customMetrics:
   enabled: false
   prometheus_scrape: true
@@ -786,7 +809,7 @@ autoscaling:
 terminationGracePeriodSeconds: 120
 resources:
   enabled: true
-  java_options: "-Xmx1536m"
+  java_opts: "-Xmx1536m"
 securityContext:
   enabled: true
   runAsUser: 7777
@@ -1088,4 +1111,67 @@ podDisruptionBudget:
   minAvailable: 1
 volumeClaimTemplates:
   storage: 100Gi
+{{- end -}}
+
+{{/* ============================================================
+     5. UTILITY JOBS
+     ============================================================ */}}
+
+{{/* ------ Post-Install Job ------ */}}
+{{- define "rpi.defaults.postInstall" -}}
+enabled: false
+existingSecret: ""
+activationKey: ""
+systemName: ""
+adminUsername: coreuser
+adminPassword: ""
+adminEmail: ""
+deploymentapiHost: rpi-deploymentapi
+deploymentapiPort: "80"
+waitTimeout: "360"
+maxReadyWaitSeconds: "600"
+pollIntervalSeconds: "15"
+backoffLimit: 3
+tenant:
+  enabled: false
+  name: ""
+  existingSecret: ""
+  dataWarehouse:
+    provider: SQLServer
+    server: ""
+    database: ""
+    username: ""
+    password: ""
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+{{- end -}}
+
+{{/* ------ Database Upgrade Job ------ */}}
+{{- define "rpi.defaults.databaseUpgrade" -}}
+enabled: false
+deploymentapiHost: rpi-deploymentapi
+deploymentapiPort: "80"
+healthPath: /health/ready
+upgradePath: /api/deployment/upgrade
+waitTimeoutSeconds: "360"
+maxReadyWaitSeconds: "600"
+pollIntervalSeconds: "15"
+backoffLimit: 3
+ttlSecondsAfterFinished: 3600
+activeDeadlineSeconds: 900
+notification:
+  enabled: false
+  recipientEmail: ""
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
 {{- end -}}

@@ -1,4 +1,4 @@
-![redpoint_logo](assets/images/logo.png)
+![redpoint_logo](chart/images/logo.png)
 ## Redpoint Interaction (RPI) | Deployment on Kubernetes
 
 With Redpoint® Interaction you can define your audience and execute highly personalized, cross-channel campaigns – all from a single visual interface. This simplified environment frees you up to create the compelling experiences that will keep your customers actively engaged with your brand.
@@ -9,37 +9,38 @@ This chart deploys RPI on Kubernetes using Helm.
 <p align="left">
   <a href="docs/greenfield.md"><strong>New Installation</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="readme-argocd.md"><strong>ArgoCD Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/smart-activation"><strong>Smart Activation</strong></a>
+  <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="docs/readme-argocd.md"><strong>ArgoCD Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="docs/smartActivation.md"><strong>Smart Activation</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="docs/readme-mcp.md"><strong>AI-Assisted Operations</strong></a>
 </p>
 
 ---
-![architecture](assets/images/diagram.png)
+![architecture](chart/images/diagram.png)
 
-> **v7.7 Breaking Change** — The values file has been redesigned. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
+> **v7.7 Breaking Change** — The values file has been redesigned. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](docs/readme-values.md) for details.
 
 ---
 
 ## Choose Your Path
 
 | | New Installation | Upgrading from v7.6 |
-|---|:---|:---|
+|---|---|---|
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
 | **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
 | **Databases** | Created from scratch | Existing operational and logging databases are reused |
-| **Overrides file** | Start from a `deployments/` example | Convert your existing `values.yaml` to the new format |
-
-![upgrade_diagram](assets/images/upgrade.png)
+| **Overrides file** | Start from a `deploy/values/` example | Convert your existing `values.yaml` to the new format |
 
 > **Quick Start (Demo Mode):** For evaluation or development, set `global.deployment.mode: demo` to deploy embedded MSSQL and MongoDB containers — no external database setup required. See [Demo Database Mode](#demo-database-mode).
+
+![upgrade_diagram](chart/images/upgrade.png)
 
 ---
 
 ## System Requirements
 
 | Component | Requirement |
-|:----------|:------------|
+|-----------|-------------|
 | **Operational Databases** | Microsoft SQL Server 2019+, PostgreSQL — on `SQLServer on VM`, `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, or `PostgreSQL`. 8 GB RAM, 200 GB disk minimum. |
 | **Data Warehouses** | `AzureSQLDatabase`, `AmazonRDSSQL`, `GoogleCloudSQL`, `SQLServer on VM`, `Snowflake`, `PostgreSQL`, `Amazon Redshift`, `Google BigQuery` |
 | **Kubernetes** | Latest stable version from a [certified provider](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). Minimum two nodes (8 vCPU, 32 GB RAM each). |
@@ -72,16 +73,22 @@ redpoint-rpi/
 │       ├── _defaults.tpl         # Internal defaults
 │       ├── _helpers.tpl          # Merge helpers
 │       └── deploy-*.yaml         # Resource templates
-├── deployments/                  # Your environment overrides
-│   ├── values-reference.yaml     # Complete reference of all keys
-│   ├── dev.yaml
-│   ├── staging.yaml
-│   └── production.yaml
+├── deploy/
+│   ├── cli/rpi-init.sh           # Interactive overrides generator
+│   ├── terraform/modules/        # IaC modules (Azure, AWS, GCP)
+│   └── values/                   # Your environment overrides
+│       ├── azure/azure.yaml      # Azure example
+│       ├── aws/amazon.yaml       # AWS example
+│       └── demo/demo.yaml        # Demo/dev example
 ├── docs/                         # Deployment guides
 │   ├── greenfield.md             # New installation guide
-│   └── migration.md              # v7.6 → v7.7 upgrade guide
-├── readme-values.md              # Values & overrides guide
-├── readme-argocd.md              # ArgoCD deployment guide
+│   ├── migration.md              # v7.6 → v7.7 upgrade guide
+│   ├── readme-values.md          # Values & overrides guide
+│   ├── readme-argocd.md          # ArgoCD deployment guide
+│   ├── readme-mcp.md             # AI-assisted operations guide
+│   ├── readme-terraform.md       # Terraform deployment guide
+│   ├── smartActivation.md        # Smart Activation guide
+│   └── values-reference.yaml     # Complete reference of all keys
 └── README.md
 ```
 
@@ -95,12 +102,14 @@ After completing either the [Greenfield](docs/greenfield.md) or [Migration](docs
 
 > **Optional.** Skip this section if you're not using cloud services.
 
-Cloud provider identity enables RPI to authenticate with cloud services (secret managers, Azure/GCP plugins). Supported methods: `Azure AKS Workload Identity`, `Google Service Account`, `Amazon AWS Access Keys`.
+Cloud provider identity enables RPI to authenticate with cloud services (secret managers, Azure/GCP plugins). The cloud provider is determined by `global.deployment.platform`. Supported methods: `Azure AKS Workload Identity`, `Google Workload Identity`, `Amazon IRSA (IAM Roles for Service Accounts)`.
 
 ```yaml
 cloudIdentity:
   enabled: true
-  provider: Azure    # Azure | Amazon | Google
+  serviceAccount:
+    create: true       # true = shared SA for all services, false = per-service SAs
+    name: redpoint-rpi
 ```
 
 <details>
@@ -109,35 +118,63 @@ cloudIdentity:
 Enable [Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-migrate-from-pod-identity) and grant the Managed Identity access to the required Azure services:
 
 ```yaml
-azureSettings:
-  managedIdentityClientId: <your-managed-identity-client-id>
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  azure:
+    managedIdentityClientId: <your-managed-identity-client-id>
+    tenantId: <your-azure-tenant-id>
 ```
 
 </details>
 
 <details>
-<summary><strong>Google Cloud — Service Account</strong></summary>
+<summary><strong>Google Cloud — Workload Identity</strong></summary>
 
-Create a Service Account, grant permissions, and create a Kubernetes ConfigMap containing the JSON key file:
+Create a Google Service Account, enable [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) on your GKE cluster, and create a Kubernetes ConfigMap containing the JSON key file:
 
 ```yaml
-googleSettings:
-  configMapName: my-google-svs-account
-  projectId: <my-google-project-id>
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  google:
+    serviceAccountEmail: my-sa@my-project.iam.gserviceaccount.com
+    projectId: <my-google-project-id>
+    configMapName: my-google-svs-account
+    keyName: my-google-svs-account.json
+    configMapFilePath: /app/google-creds
 ```
 
 </details>
 
 <details>
-<summary><strong>Amazon — IAM Access Keys</strong></summary>
+<summary><strong>Amazon — IRSA (IAM Roles for Service Accounts)</strong></summary>
 
-Create an IAM user with the required permissions:
+Create an IAM role with the required permissions and configure [IRSA](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) on your EKS cluster:
 
 ```yaml
-amazonSettings:
-  accessKeyId: <my-iam-access-key>
-  secretAccessKey: <my-iam-secret-access-key>
-  region: us-east-1
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  amazon:
+    roleArn: arn:aws:iam::123456789012:role/redpoint-rpi-irsa-role
+    region: us-east-1
+```
+
+For environments that cannot use IRSA, static access keys are supported as a fallback:
+
+```yaml
+  amazon:
+    useAccessKeys: true
+    accessKeyId: <my-iam-access-key>
+    secretAccessKey: <my-iam-secret-access-key>
+    region: us-east-1
 ```
 
 </details>
@@ -146,48 +183,38 @@ amazonSettings:
 
 Three modes are supported for managing sensitive configuration:
 
-#### 1. Default (Helm-managed)
+#### 1. Kubernetes Secrets (default)
 
 Kubernetes Secrets and ConfigMaps are automatically created from your overrides file. No additional setup required.
 
-#### 2. External (self-managed)
-
-Manage secrets outside the Helm chart:
-
-1. Create a Kubernetes secret named `redpoint-rpi-secrets`
-2. Create a ConfigMap named `odbc-config`
-3. Follow the format in `chart/templates/deploy-secrets.yaml` and `chart/templates/cm-odbc.yaml`
-4. Remove all sensitive values from your overrides file
-5. Configure:
-
 ```yaml
-cloudIdentity:
-  enabled: false
-  secretsManagement:
-    enabled: false
-    secretsProvider: kubernetes
-    autoCreateSecrets: false
+secretsManagement:
+  provider: kubernetes
+  kubernetes:
+    autoCreateSecrets: true
     secretName: redpoint-rpi-secrets
 ```
 
+To manage secrets yourself (e.g., via an external secrets operator), set `autoCreateSecrets: false` and create the Kubernetes Secret manually following the format in `chart/templates/deploy-secrets.yaml`.
+
 <details>
-<summary>Migrating from Default to External</summary>
+<summary>Migrating from auto-created to self-managed secrets</summary>
 
 ```bash
 # Export existing resources
 kubectl get secret redpoint-rpi-secrets -o yaml > redpoint-rpi-secrets.yaml
 kubectl get configmap odbc-config -o yaml > odbc-config.yaml
 
-# Remove sensitive values from your overrides file, update config as above, then:
+# Set autoCreateSecrets: false in your overrides, then:
 kubectl apply -f redpoint-rpi-secrets.yaml
 kubectl apply -f odbc-config.yaml
 ```
 
 </details>
 
-#### 3. Key Vault (cloud-native)
+#### 2. SDK (cloud-native vault)
 
-Secrets are sourced from `Azure Key Vault`, `AWS Secrets Manager`, or `Google Secret Manager`.
+The application reads secrets directly from `Azure Key Vault`, `AWS Secrets Manager`, or `Google Secret Manager` at runtime. Requires `cloudIdentity.enabled: true`.
 
 <details>
 <summary><strong>Azure Key Vault</strong></summary>
@@ -199,15 +226,20 @@ Secrets are sourced from `Azure Key Vault`, `AWS Secrets Manager`, or `Google Se
 ```yaml
 cloudIdentity:
   enabled: true
-  provider: Azure
-  secretsManagement:
-    enabled: true
-    secretsProvider: keyvault
-    autoCreateSecrets: false
-    vaultUri: https://myvault.vault.azure.net/
-  azureSettings:
-    credentialsType: workloadIdentity
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  azure:
     managedIdentityClientId: your_managed_identity_client_id
+    tenantId: your_azure_tenant_id
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+      configurationReloadIntervalSeconds: 30
+      useADTokenForDatabaseConnection: true
 ```
 
 Secret names must replace underscores with hyphens. For example: `ConnectionStrings__OperationalDatabase` becomes `ConnectionStrings--OperationalDatabase`.
@@ -227,23 +259,7 @@ RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value
 <details>
 <summary><strong>AWS Secrets Manager</strong></summary>
 
-Choose a credential provider:
-
-| Method | Description |
-|--------|-------------|
-| `podIdentity` | EKS Pod Identity — [setup guide](https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html) |
-| `accessKey` | AWS Access Keys — requires a Kubernetes secret (see below) |
-
-For **Access Keys**, create the secret:
-
-```bash
-kubectl create secret generic aws-sm-access-keys \
-  --from-literal=AWS_ACCESS_KEY_ID=<your-access-key-id> \
-  --from-literal=AWS_SECRET_ACCESS_KEY=<your-secret-access-key> \
-  --namespace <your-namespace>
-```
-
-The IAM user/role needs [SecretsManagerReadWrite](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SecretsManagerReadWrite.html) permissions.
+The IAM role used by IRSA needs [SecretsManagerReadWrite](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SecretsManagerReadWrite.html) permissions.
 
 Create the secret with minimum required key/value pairs:
 
@@ -277,20 +293,20 @@ aws secretsmanager tag-resource \
   --tags Key=<my-rpi-namespace-name>,Value=true
 ```
 
-By default, RPI loads entries with tag key `rpi-app` value `true`. Customize via `cloudIdentity.amazonSettings.secretsManagerSecretsTag`.
-
 ```yaml
 cloudIdentity:
   enabled: true
-  provider: Amazon
-  secretsManagement:
-    enabled: true
-    secretsProvider: awssecretsmanager
-    autoCreateSecrets: false
-  amazonSettings:
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  amazon:
+    roleArn: arn:aws:iam::123456789012:role/redpoint-rpi-irsa-role
     region: us-east-1
-    credentialsType: podIdentity
-    secretsManagerSettings:
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    amazon:
       secretTagKey: my-dev-namespace
 ```
 
@@ -306,52 +322,76 @@ cloudIdentity:
 ```yaml
 cloudIdentity:
   enabled: true
-  provider: Google
-  secretsManagement:
-    enabled: true
-    secretsProvider: keyvault
-    autoCreateSecrets: false
-  googleSettings:
-    credentialsType: serviceAccount
+  serviceAccount:
+    create: true
+    name: redpoint-rpi
+  google:
+    serviceAccountEmail: my-sa@my-project.iam.gserviceaccount.com
+    projectId: your_google_project_id
     configMapName: my-google-svs-account
     keyName: my-google-svs-account.json
-    ConfigMapFilePath: /app/google-creds
-    serviceAccountEmail: my-google-svs-account@my-project.iam.gserviceaccount.com
-    projectId: your_google_project_id
+    configMapFilePath: /app/google-creds
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    google:
+      projectId: your_google_project_id
 ```
 
 </details>
 
-#### 4. CSI Secrets Store (volume-mounted)
+#### 3. CSI Secrets Store (volume-mounted)
 
-For environments using the [Secrets Store CSI Driver](https://secrets-store-csi-driver.sigs.k8s.io/), the chart can create `SecretProviderClass` resources that sync secrets from external vaults into Kubernetes. This works with Azure Key Vault, AWS Secrets Manager, GCP Secret Manager, and HashiCorp Vault.
+For environments using the [Secrets Store CSI Driver](https://secrets-store-csi-driver.sigs.k8s.io/), the chart creates `SecretProviderClass` resources that sync secrets from external vaults into Kubernetes Secrets. The pods then consume those synced secrets via `secretKeyRef` — the same way they consume `kubernetes` mode secrets. This works with Azure Key Vault, AWS Secrets Manager, GCP Secret Manager, and HashiCorp Vault. Requires `cloudIdentity.enabled: true`.
 
 ```yaml
-cloudIdentity:
-  secretsManagement:
-    csiSecretProvider:
-      enabled: true
-      classes:
-        - name: rpi-secrets
-          provider: azure
-          parameters:
-            usePodIdentity: "false"
-            useVMManagedIdentity: "false"
-            clientID: "00000000-0000-0000-0000-000000000000"
-            keyvaultName: my-keyvault
-            tenantId: "00000000-0000-0000-0000-000000000000"
-          objects:
-            - objectName: V7-ConnectionString-Operations
-              objectType: secret
-          secretObjects:
-            - secretName: rpi-synced-secrets
-              type: Opaque
-              data:
-                - objectName: V7-ConnectionString-Operations
-                  key: ConnectionString_Operations_Database
+secretsManagement:
+  provider: csi
+  csi:
+    secretName: redpoint-rpi-secrets
+    secretProviderClasses:
+      - name: rpi-secrets
+        provider: azure
+        parameters:
+          usePodIdentity: "false"
+          useVMManagedIdentity: "false"
+          useWorkloadIdentity: "true"
+          clientID: "00000000-0000-0000-0000-000000000000"
+          keyvaultName: my-keyvault
+          tenantId: "00000000-0000-0000-0000-000000000000"
+        objects:
+          - objectName: V7-ConnectionString-Operations
+            objectType: secret
+        secretObjects:
+          - secretName: rpi-synced-secrets
+            type: Opaque
+            data:
+              - objectName: V7-ConnectionString-Operations
+                key: ConnectionString_Operations_Database
+      - name: cert-secretprovider
+        provider: azure
+        parameters:
+          keyvaultName: my-keyvault
+          clientID: "00000000-0000-0000-0000-000000000000"
+          tenantId: "00000000-0000-0000-0000-000000000000"
+          usePodIdentity: "false"
+          useVMManagedIdentity: "false"
+          useWorkloadIdentity: "true"
+        objects:
+          - objectName: my-tls-cert
+            objectType: secret
+        secretObjects:
+          - secretName: certsecrets
+            type: kubernetes.io/tls
+            data:
+              - objectName: my-tls-cert
+                key: tls.key
+              - objectName: my-tls-cert
+                key: tls.crt
 ```
 
-Multiple classes can be defined to pull from different vaults or providers.
+Each class is a standalone `SecretProviderClass` resource with its own `provider`, `parameters`, and `objects`.
 
 ### Configure Storage
 
@@ -655,6 +695,139 @@ executionservice:
 
 See [Per-Service Pod Annotations](#per-service-pod-annotations--labels) below.
 
+### Configure Automatic Database Upgrades
+
+> **Optional.** Recommended for all environments to simplify version upgrades.
+
+After updating the RPI container image tag, the operational databases must be upgraded by calling the deployment API endpoint. By default this is a manual step. Enable automatic database upgrades to have the chart run this call for you:
+
+```yaml
+databaseUpgrade:
+  enabled: true
+```
+
+When enabled, the chart creates a Kubernetes Job whose name includes the image tag. On each `helm upgrade` that changes the tag, a new Job is created that:
+
+1. Waits for `rpi-deploymentapi` to become healthy
+2. Calls the upgrade endpoint (`/api/deployment/upgrade`)
+3. Logs the response and exits
+
+The upgrade endpoint is idempotent — safe to run multiple times. Completed Jobs are auto-cleaned after 1 hour.
+
+**ArgoCD compatibility:** The Job includes `argocd.argoproj.io/hook: PostSync` annotations. ArgoCD runs it as a post-sync hook after all resources are healthy, then cleans it up automatically. For plain Helm deployments, these annotations are ignored and the Job behaves normally.
+
+<details>
+<summary><strong>Email notification</strong></summary>
+
+Send the upgrade result to an email address using the chart's existing SMTP settings:
+
+```yaml
+databaseUpgrade:
+  enabled: true
+  notification:
+    enabled: true
+    recipientEmail: admin@example.com
+```
+
+The email includes the full upgrade API response (status, messages, version info). Requires `SMTPSettings` to be configured. Email failures are non-fatal — the upgrade still succeeds.
+
+</details>
+
+<details>
+<summary><strong>Monitor the upgrade Job</strong></summary>
+
+```bash
+kubectl get jobs -n redpoint-rpi -l app.kubernetes.io/component=upgrade
+kubectl logs -n redpoint-rpi -l app.kubernetes.io/component=upgrade --tail=50
+```
+
+</details>
+
+<details>
+<summary><strong>Advanced overrides</strong></summary>
+
+All Job parameters can be tuned via `advanced.databaseUpgrade` or at the top level:
+
+```yaml
+databaseUpgrade:
+  enabled: true
+  waitTimeoutSeconds: "600"      # Increase upgrade timeout
+  maxReadyWaitSeconds: "900"     # Wait longer for deploymentapi
+
+advanced:
+  databaseUpgrade:
+    backoffLimit: 5              # More retry attempts
+    pollIntervalSeconds: "10"    # Poll more frequently
+```
+
+See `docs/values-reference.yaml` for all available keys.
+
+</details>
+
+### Smoke Tests
+
+> **Optional.** Enable during initial setup or after infrastructure changes to validate mounts.
+
+When a service fails to start, it can be hard to tell whether the problem is the application or the underlying infrastructure (IAM permissions, CSI drivers, storage accounts, Key Vault access policies). Smoke tests isolate infrastructure issues by deploying minimal pods that do nothing except mount a single volume and sit there. If a smoke test pod starts, the infrastructure works. If it's stuck in `ContainerCreating`, the problem is the mount — not your application.
+
+**Recommended workflow for initial setup:**
+1. Enable smoke tests and deploy — `helm upgrade --install rpi ./chart -f overrides.yaml`
+2. Check pod status — `kubectl get pods` (look for your smoke test deployment names)
+3. Verify mounts — `kubectl exec deployment-blob-<pod-id> -- ls /mnt/rpifileoutputdir`
+4. Once all smoke test pods are running, disable them and deploy the full application
+
+Each test is a single-replica Deployment that either writes to a PVC or reads from a CSI secret volume.
+
+```yaml
+smokeTests:
+  enabled: true
+  deployments:
+    # Verify blob storage PVC is writable
+    - name: blob
+      type: pvc
+      claimName: rpifileoutputdir
+      mountPath: /mnt/rpifileoutputdir
+    # Verify CSI secrets are accessible
+    - name: kv-secrets
+      type: csiSecret
+      secretProviderClass: rpi-secrets
+      mountPath: /mnt/secrets
+```
+
+| Type | Behavior |
+|------|----------|
+| `pvc` | Mounts the PVC and writes a timestamp to `smoketest.log` every 30 seconds |
+| `csiSecret` | Mounts the SecretProviderClass volume and lists the mounted files |
+
+Once verified, set `smokeTests.enabled: false` to remove the test pods.
+
+### Post-Deploy Validation
+
+After install or upgrade, run `helm test` to verify all services are healthy and reachable:
+
+```bash
+helm test rpi -n redpoint-rpi
+```
+
+This creates a short-lived pod that checks `/health/ready` on every enabled service. A healthy response confirms the service is running, its image was pulled, volumes are mounted, and DNS resolution works.
+
+```
+RPI Connectivity Test
+
+PASS  rpi-realtimeapi
+PASS  rpi-callbackapi
+PASS  rpi-executionservice
+PASS  rpi-interactionapi
+PASS  rpi-integrationapi
+PASS  rpi-nodemanager
+PASS  rpi-deploymentapi
+PASS  rpi-queuereader
+
+8 passed, 0 failed
+```
+
+The test automatically adapts to your configuration — only enabled services are checked. If any service fails, the test exits with a non-zero code.
+
 ### Demo Database Mode
 
 > **Optional.** For development or evaluation only — not for production.
@@ -665,20 +838,20 @@ Set `global.deployment.mode: demo` to deploy embedded MSSQL Server and MongoDB c
 global:
   deployment:
     mode: demo
+    platform: selfhosted
 
 databases:
   operational:
     server_host: rpi-demo-mssql
     server_username: sa
-    server_password: ".RedPoint2021"
-
-realtimeapi:
-  cacheProvider:
-    mongodb:
-      connectionString: mongodb://rpi-demo-mongodb:27017/Pulse
+    # Password is auto-generated and stored in secret "rpi-demo-mode"
+    # Retrieve with: kubectl get secret rpi-demo-mode -n <namespace> -o jsonpath="{.data.DEMOMode_SQL_Password}" | base64 -d
+    server_password: RETRIEVE_FROM_SECRET
 ```
 
-The demo databases are ephemeral — data is lost when pods restart. Use `mode: standard` (the default) for persistent, external databases in production.
+The demo databases use `StatefulSet` with persistent volume claims (20 Gi for MSSQL, 10 Gi for MongoDB), so data survives pod restarts. The MSSQL `sa` password and MongoDB connection string are auto-generated and stored in the `rpi-demo-mode` Kubernetes Secret. However, they are single-replica with no backups or HA — use `mode: standard` (the default) with managed database services in production.
+
+See `deploy/values/demo/demo.yaml` for a complete demo overrides example.
 
 ### Configure Content Generation Tools
 
@@ -700,7 +873,7 @@ customMetrics:
   enabled: true
 ```
 
-Per-component metrics can be enabled via the `advanced:` block — see [readme-values.md](readme-values.md).
+Per-component metrics can be enabled via the `advanced:` block — see [readme-values.md](docs/readme-values.md).
 
 <details>
 <summary><strong>Available Metrics</strong></summary>
@@ -843,13 +1016,24 @@ rpi-executionservice   apps/v1.Deployment   rpi-executionservice   2     10    T
 
 ---
 
+## AI-Assisted Operations
+
+RPI ships with built-in support for AI-assisted operations via [MCP (Model Context Protocol)](https://modelcontextprotocol.io) and a JSON Schema for IDE autocomplete.
+
+- **`values.schema.json`** — Bundled with the chart. Provides IDE autocomplete in VS Code/IntelliJ, and Helm-native validation that catches invalid platform names, provider values, and missing dependencies before deployment. No setup required.
+- **`@redpoint-rpi/helm-mcp`** — An MCP server published as an npm package that enables AI assistants like Claude to validate configurations, generate overrides files, render templates, explain values, and diagnose deployment issues.
+
+See [readme-mcp.md](docs/readme-mcp.md) for setup instructions and available tools.
+
+---
+
 ## Customizing This Helm Chart
 
-The chart uses a **two-tier values system**: you maintain a small overrides file with only your customizations, and the chart manages all internal defaults. See [readme-values.md](readme-values.md) for a full explanation.
+The chart uses a **two-tier values system**: you maintain a small overrides file with only your customizations, and the chart manages all internal defaults. See [readme-values.md](docs/readme-values.md) for a full explanation.
 
 ### 1. Environment overrides (preferred)
 
-Common settings — image references, credentials, replicas, resources, providers — are documented in `chart/values.yaml` and the examples in `deployments/`:
+Common settings — image references, credentials, replicas, resources, providers — are documented in `chart/values.yaml` and the examples in `deploy/values/`:
 
 ```bash
 helm upgrade --install rpi ./chart -f my-overrides.yaml -n redpoint-rpi
@@ -872,7 +1056,7 @@ advanced:
         default: Debug
 ```
 
-See `deployments/values-reference.yaml` for every available key.
+See `docs/values-reference.yaml` for every available key.
 
 ### Per-Service Pod Annotations & Labels
 
@@ -891,23 +1075,6 @@ interactionapi:
 ```
 
 Supported on: `realtimeapi`, `callbackapi`, `executionservice`, `interactionapi`, `integrationapi`, `deploymentapi`, `queuereader`, `nodemanager`, `rebrandly`.
-
-### 3. Kustomize (escape hatch)
-
-For changes outside the chart's scope entirely (sidecars, org-wide policies, fields not exposed via values or `advanced:`):
-
-```bash
-helm template rpi ./chart -f my-overrides.yaml | kustomize build . | kubectl apply -f -
-```
-
-### Best Practices
-
-- Prefer overrides > `advanced:` > Kustomize, in that order
-- Target Kustomize patches narrowly — specific resources and fields
-- Test upgrades in staging: `helm template ... | kubectl diff -f -`
-- If you're patching something that should be a Helm value, [let us know](mailto:support@redpointglobal.com)
-
----
 
 ## RPI Documentation
 

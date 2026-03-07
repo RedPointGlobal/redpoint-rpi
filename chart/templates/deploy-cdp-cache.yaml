@@ -132,13 +132,18 @@ spec:
       {{- end }}
       containers:
         - name: {{ $name }}
-          image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
+          image: "{{ .Values.global.deployment.images.repository }}/rediscache:{{ .Values.global.deployment.images.tag }}"
           imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: 6379
               name: redis
           command: ["redis-server"]
           args: ["--save", "\"\"", "--appendonly", "no"]
+          env:
+          {{- if .Values.global.deployment.podTimezone }}
+          - name: TZ
+            value: {{ .Values.global.deployment.podTimezone | quote }}
+          {{- end }}
           volumeMounts:
             - name: {{ $name }}-data
               mountPath: /data

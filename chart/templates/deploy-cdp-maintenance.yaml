@@ -7,6 +7,7 @@
 {{- $name := "cdp-maintenance" -}}
 
 {{- if .Values.smartActivation.enabled }}
+{{- if not .Values.cloudIdentity.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -14,28 +15,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- if eq .Values.global.deployment.platform "azure" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- if $annotations }}
   annotations:
-    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+    {{- $annotations | nindent 4 }}
   {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "google" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "workloadIdentity" }}
-  annotations:
-    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "amazon" }}
-  {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-  annotations:
-    eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-  {{- end }}
-  {{- end }}
+{{- end }}
 {{- end }}
 
 ---
@@ -144,7 +129,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ $name }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
       {{- if $cfg.securityContext.enabled }}
       securityContext:
         runAsUser: {{ $cfg.securityContext.runAsUser }}
@@ -170,7 +155,7 @@ spec:
               app.kubernetes.io/name: {{ $name }}
       containers:
       - name: {{ $name }}
-        image: {{ .Values.global.deployment.images.cdpmaintenanceservice }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         livenessProbe:
           httpGet:
@@ -221,8 +206,12 @@ spec:
             {{- end }}
         {{- end }}
         env: 
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
         - name: CACHE_HOST
-          value: "cdp-cache-0.cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
+          value: "cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
         - name: CACHE_PORT
           value: {{ $cacheCfg.service.port | quote }}
         - name: SOCKETIO_HOST
@@ -232,28 +221,15 @@ spec:
         - name: MONGODB_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CDP_Mongo_ConnectionString
         - name: MONGODB_MERCURY_DB
           value: {{ .Values.initservice.database.operational.name | quote }}
         - name: API_BASE_URL
-          value: "https://{{ $ingCfg.hosts.smartactivation }}.{{ $ingCfg.domain }}"
+          value: "https://{{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.smartactivation "domain" $ingCfg.domain) }}"
         - name: AUTH_BASE_URL
           value: "http://cdp-authservice/"
-        {{- if eq .Values.global.deployment.platform "amazon" }}
-        {{- if .Values.cloudIdentity.enabled}}
-        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-        - name: AWS_ROLE_ARN
-          value: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-        - name: AWS_WEB_IDENTITY_TOKEN_FILE
-          value: {{ .Values.cloudIdentity.amazonSettings.webIdentityTokenFile | quote }}
-        - name: AWS_STS_REGIONAL_ENDPOINTS
-          value: {{ .Values.cloudIdentity.amazonSettings.stsRegionalEndpoints | quote }}
-        - name: AWS_DEFAULT_REGION
-          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
+        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
         volumeMounts:
           - name: tempstore
             mountPath: /tmp

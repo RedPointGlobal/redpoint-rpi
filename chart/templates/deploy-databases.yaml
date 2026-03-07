@@ -3,16 +3,18 @@
   Deploys embedded MSSQL Server and MongoDB containers for development/POC environments.
   Enabled via: global.deployment.mode: "demo"
 
-  When using demo mode, set your database connection details to point to these services:
+  When using demo mode, configure your database connection settings as follows:
+
     databases.operational.server_host: rpi-demo-mssql
     databases.operational.server_username: sa
-    databases.operational.server_password: <SA_PASSWORD below>
-    realtimeapi.cacheProvider.mongodb.connectionString: mongodb://rpi-demo-mongodb:27017/Pulse
+    databases.operational.server_password: <value from Secret "rpi-demo-mode" key "DEMOMode_SQL_Password">
+  Notes:
+    - The MSSQL 'sa' password is automatically generated during deployment.
+    - The password is stored in the Kubernetes Secret: rpi-demo-mode
+    - Retrieve it with: kubectl get secret rpi-demo-mode -n <namespace> -o jsonpath="{.data.DEMOMode_SQL_Password}" | base64 -d
 */}}
+
 {{- if eq (.Values.global.deployment.mode | default "standard") "demo" }}
-
-{{- $saPassword := ".RedPoint2021" }}
-
 # -- Demo MSSQL Server
 apiVersion: v1
 kind: Service
@@ -32,13 +34,14 @@ spec:
 
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: rpi-demo-mssql
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mssql" "component" "database") | nindent 4 }}
 spec:
+  serviceName: rpi-demo-mssql
   replicas: 1
   selector:
     matchLabels:
@@ -64,7 +67,15 @@ spec:
         - name: ACCEPT_EULA
           value: "Y"
         - name: SA_PASSWORD
-          value: {{ $saPassword | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: rpi-demo-mode
+              key: DEMOMode_SQL_Password
+        - name: MSSQL_DATA_DIR
+          value: /var/opt/mssql/data
+        volumeMounts:
+        - name: mssql-data
+          mountPath: /var/opt/mssql
         resources:
           requests:
             cpu: 500m
@@ -73,6 +84,14 @@ spec:
             memory: 4Gi
       {{- include "redpoint-rpi.nodeSelector" . | nindent 6 }}
       {{- include "redpoint-rpi.tolerations" . | nindent 6 }}
+  volumeClaimTemplates:
+  - metadata:
+      name: mssql-data
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources:
+        requests:
+          storage: 20Gi
 
 ---
 # -- Demo MongoDB Server
@@ -94,13 +113,14 @@ spec:
 
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: rpi-demo-mongodb
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-demo-mongodb" "component" "database") | nindent 4 }}
 spec:
+  serviceName: rpi-demo-mongodb
   replicas: 1
   selector:
     matchLabels:
@@ -122,7 +142,17 @@ spec:
           containerPort: 27017
         env:
         - name: MONGO_INITDB_DATABASE
-          value: "rpi_cdp_nosql"
+          value: "rpirealtime"
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "rpirealtime"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rpi-demo-mode
+              key: DEMOMode_Mongo_Password
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
         resources:
           requests:
             cpu: 250m
@@ -131,4 +161,12 @@ spec:
             memory: 1Gi
       {{- include "redpoint-rpi.nodeSelector" . | nindent 6 }}
       {{- include "redpoint-rpi.tolerations" . | nindent 6 }}
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-data
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources:
+        requests:
+          storage: 10Gi
 {{- end }}

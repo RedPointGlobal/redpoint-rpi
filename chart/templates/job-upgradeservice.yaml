@@ -1,0 +1,177 @@
+{{- $cfg := fromYaml (include "rpi.merged.databaseUpgrade" .) -}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- $deploymentapiCfg := fromYaml (include "rpi.merged.deploymentapi" .) -}}
+{{- $tagSanitized := .Values.global.deployment.images.tag | replace "." "-" | lower | trunc 40 -}}
+{{- $name := printf "rpi-db-upgrade-%s" $tagSanitized -}}
+
+{{- if $cfg.enabled }}
+{{- if $deploymentapiCfg.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "upgrade") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    {{- with .Values.customLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded BeforeHookCreation
+    {{- with .Values.customAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  backoffLimit: {{ $cfg.backoffLimit }}
+  ttlSecondsAfterFinished: {{ $cfg.ttlSecondsAfterFinished }}
+  activeDeadlineSeconds: {{ $cfg.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "upgrade") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- with .Values.customAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      restartPolicy: Never
+      {{- if $secCtx.enabled }}
+      securityContext:
+        runAsUser: {{ $secCtx.runAsUser }}
+        runAsGroup: {{ $secCtx.runAsGroup }}
+        fsGroup: {{ $secCtx.fsGroup }}
+        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
+      {{- end }}
+      containers:
+      - name: db-upgrade
+        image: {{ .Values.global.deployment.images.net_utils }}
+        imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        {{- if $secCtx.enabled }}
+        securityContext:
+          privileged: {{ $secCtx.privileged }}
+          allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
+          capabilities:
+            drop:
+            {{- range $secCtx.capabilities.drop }}
+              - {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- if $cfg.notification.enabled }}
+        {{- if .Values.SMTPSettings.UseCredentials }}
+        env:
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: SMTP_Password
+        {{- end }}
+        {{- end }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+
+          HEALTH_URL="http://{{ $cfg.deploymentapiHost }}:{{ $cfg.deploymentapiPort }}{{ $cfg.healthPath }}"
+          UPGRADE_URL="http://{{ $cfg.deploymentapiHost }}:{{ $cfg.deploymentapiPort }}{{ $cfg.upgradePath }}?waitTimeoutSeconds={{ $cfg.waitTimeoutSeconds }}"
+
+          echo "Waiting for rpi-deploymentapi to become ready..."
+          WAITED=0
+          while true; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 10 "${HEALTH_URL}" 2>/dev/null || echo "000")
+            if [ "${CODE}" = "200" ]; then
+              echo "rpi-deploymentapi is ready"
+              break
+            fi
+            WAITED=$((WAITED + {{ $cfg.pollIntervalSeconds }}))
+            if [ "${WAITED}" -ge {{ $cfg.maxReadyWaitSeconds }} ]; then
+              echo "ERROR: rpi-deploymentapi not ready after ${WAITED}s (HTTP ${CODE})"
+              exit 1
+            fi
+            echo "Not ready yet (HTTP ${CODE}), retrying in {{ $cfg.pollIntervalSeconds }}s..."
+            sleep {{ $cfg.pollIntervalSeconds }}
+          done
+
+          echo "Calling upgrade endpoint..."
+          RESPONSE=$(curl -s -w '\n%{http_code}' --connect-timeout 10 --max-time $(( {{ $cfg.waitTimeoutSeconds }} + 60 )) \
+            -H 'accept: text/plain' "${UPGRADE_URL}" 2>/dev/null || echo "000")
+          CODE=$(echo "${RESPONSE}" | tail -1)
+          BODY=$(echo "${RESPONSE}" | sed '$d')
+
+          echo "${BODY}"
+
+          if [ "${CODE}" -lt 200 ] || [ "${CODE}" -ge 300 ]; then
+            STATUS="FAILED"
+          elif echo "${BODY}" | grep -q '"LastRunComplete"' && echo "${BODY}" | grep -q 'Upgrade Complete'; then
+            STATUS="SUCCESS"
+          else
+            STATUS="FAILED"
+          fi
+
+          {{- if $cfg.notification.enabled }}
+          cat > /tmp/email.txt << MAIL
+          From: {{ .Values.SMTPSettings.SMTP_SenderAddress }}
+          To: {{ $cfg.notification.recipientEmail }}
+          Subject: RPI Database Upgrade - ${STATUS} ({{ .Values.global.deployment.images.tag }})
+          Content-Type: text/plain; charset=UTF-8
+
+          Image Tag: {{ .Values.global.deployment.images.tag }}
+          Namespace: {{ .Release.Namespace }}
+          Status: ${STATUS}
+
+          ${BODY}
+          MAIL
+
+          SMTP_URL="{{ if .Values.SMTPSettings.EnableSSL }}smtps{{ else }}smtp{{ end }}://{{ .Values.SMTPSettings.SMTP_Address }}:{{ .Values.SMTPSettings.SMTP_Port }}"
+          curl -s --url "${SMTP_URL}" \
+            --mail-from "{{ .Values.SMTPSettings.SMTP_SenderAddress }}" \
+            --mail-rcpt "{{ $cfg.notification.recipientEmail }}" \
+            {{- if .Values.SMTPSettings.UseCredentials }}
+            --user "{{ .Values.SMTPSettings.SMTP_Username }}:${SMTP_PASSWORD}" \
+            {{- end }}
+            --upload-file /tmp/email.txt || echo "WARNING: Failed to send notification email"
+          {{- end }}
+
+          if [ "${STATUS}" = "SUCCESS" ]; then
+            echo "Database upgrade completed successfully"
+          else
+            echo "Database upgrade failed"
+            exit 1
+          fi
+        resources:
+          requests:
+            cpu: {{ $cfg.resources.requests.cpu }}
+            memory: {{ $cfg.resources.requests.memory }}
+          limits:
+            cpu: {{ $cfg.resources.limits.cpu }}
+            memory: {{ $cfg.resources.limits.memory }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+{{- end }}

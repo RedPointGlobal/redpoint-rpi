@@ -15,19 +15,25 @@ metadata:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "redpoint-rpi" "component" "ingress") | nindent 4 }}
   annotations:
   {{- if $ingCfg.controller.enabled }}
-    {{- with $ingCfg.annotations }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- include "rpi.ingress.annotations" . | nindent 4 }}
   {{- end }}
 spec:
   ingressClassName: {{ $ingCfg.className }}
   {{- if eq $ingCfg.certificateSource "kubernetes" }}
   tls:
-  - secretName: ingress-tls
+  {{- range $ingCfg.tls }}
+  - secretName: {{ .secretName }}
+    {{- if .hosts }}
+    hosts:
+    {{- range .hosts }}
+      - {{ . }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
   {{- end }}
   rules:
     {{- if $iaCfg.enabled }}
-    - host: {{ $ingCfg.hosts.client }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.client "domain" $ingCfg.domain) }}
       http:
         paths:
         - path: /
@@ -39,7 +45,7 @@ spec:
                 number: {{ $iaCfg.service.port }}
     {{- end }}
     {{- if $daCfg.enabled }}
-    - host: {{ $ingCfg.hosts.config }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.config "domain" $ingCfg.domain) }}
       http:
         paths:
         - path: /
@@ -51,7 +57,7 @@ spec:
                 number: {{ $daCfg.service.port }}
     {{- end }}
     {{- if $qrCfg.enabled }}
-    - host: {{ $ingCfg.hosts.queuereader }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.queuereader "domain" $ingCfg.domain) }}
       http:
         paths:
         - path: /
@@ -63,7 +69,7 @@ spec:
                 number: {{ $qrCfg.service.port }}
     {{- end }}
     {{- if $intCfg.enabled }}
-    - host: {{ $ingCfg.hosts.integration }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.integration "domain" $ingCfg.domain) }}
       http:
         paths:
         - path: /
@@ -75,7 +81,7 @@ spec:
                 number: {{ $intCfg.service.port }}
     {{- end }}
     {{- if $rtCfg.enabled }}
-    - host: {{ $ingCfg.hosts.realtime }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.realtime "domain" $ingCfg.domain) }}
       http:
         paths:
         - path: /
@@ -87,7 +93,7 @@ spec:
                 number: {{ $rtCfg.service.port }}
     {{- end }}
     {{- if $cbCfg.enabled }}
-    - host: {{ $ingCfg.hosts.callbackapi }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.callbackapi "domain" $ingCfg.domain) }}
       http:
         paths:
         - path: /
@@ -100,7 +106,7 @@ spec:
     {{- end }}
     {{- if eq $rtCfg.queueProvider.provider "rabbitmq" }}
     {{- if eq $rtCfg.queueProvider.rabbitmq.type "internal" }}
-    - host: {{ $ingCfg.hosts.rabbitmqconsole }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.rabbitmqconsole "domain" $ingCfg.domain) }}
       http:
         paths:
         - backend:
@@ -112,10 +118,10 @@ spec:
           pathType: Prefix
     {{- end }}
     {{- end }}
-    {{- if eq $qrCfg.realtimeConfiguration.distributedCache.provider "redis" }}
-    {{- if eq $qrCfg.realtimeConfiguration.distributedCache.type "internal" }}
+    {{- if eq $qrCfg.internalCache.provider "redis" }}
+    {{- if eq $qrCfg.internalCache.type "internal" }}
     {{- if $qrCfg.realtimeConfiguration.isDistributed }}
-    - host: {{ $ingCfg.hosts.rabbitmqconsole }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.rabbitmqconsole "domain" $ingCfg.domain) }}
       http:
         paths:
         - backend:
@@ -131,7 +137,7 @@ spec:
     {{- if $cbCfg.multitenancy.enabled }}
     {{- if $cbCfg.enabled }}
     {{- range $instance := $cbCfg.instances }}
-    - host: {{ $ingCfg.hosts.callbackapi }}-{{ $instance.name }}.{{ $ingCfg.domain }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" (printf "%s-%s" $ingCfg.hosts.callbackapi $instance.name) "domain" $ingCfg.domain) }}
       http:
         paths:
         - path: /
@@ -170,10 +176,18 @@ spec:
   ingressClassName: {{ $ingCfg.className }}
   {{- if eq $ingCfg.certificateSource "kubernetes" }}
   tls:
-  - secretName: ingress-tls
+  {{- range $ingCfg.tls }}
+  - secretName: {{ .secretName }}
+    {{- if .hosts }}
+    hosts:
+    {{- range .hosts }}
+      - {{ . }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
   {{- end }}
   rules:
-  - host: {{ $ingCfg.hosts.smartactivation }}.{{ $ingCfg.domain }}
+  - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.smartactivation "domain" $ingCfg.domain) }}
     http:
       paths:
       - backend:
@@ -261,10 +275,18 @@ spec:
   ingressClassName: {{ $ingCfg.className }}
   {{- if eq $ingCfg.certificateSource "kubernetes" }}
   tls:
-  - secretName: ingress-tls
+  {{- range $ingCfg.tls }}
+  - secretName: {{ .secretName }}
+    {{- if .hosts }}
+    hosts:
+    {{- range .hosts }}
+      - {{ . }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
   {{- end }}
   rules:
-  - host: {{ $ingCfg.hosts.smartactivation }}.{{ $ingCfg.domain }}
+  - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.smartactivation "domain" $ingCfg.domain) }}
     http:
       paths:
       - backend:

@@ -10,7 +10,7 @@ metadata:
 spec:
   podIdentity:
       provider: azure-workload
-      identityId: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+      identityId: {{ .Values.cloudIdentity.azure.managedIdentityClientId }}
 {{- end }}
 {{- end }}
 {{- end }}

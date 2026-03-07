@@ -21,32 +21,15 @@ global:
     platform: amazon
 
     images:
-      interactionapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi
-      integrationapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-integrationapi
-      executionservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-executionservice
-      nodemanager: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-nodemanager
-      callbackapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-callbackapi
-      deploymentapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-deploymentapi
-      realtimeapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-realtimeapi
-      queuereader: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-queuereader
-      rabbitmq: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rabbitmq
-      rediscache: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rediscache
-      rebrandly: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rebrandly
-      ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
-      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
-      cdpauthservices: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-authservice
-      cdpinitservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-init
-      cdpservicesapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-servicesapi
-      cdpuiservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-ui
-      cdpsocketio: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-socketio
-      cdpmessageq: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-messageq
-      cdpmaintenanceservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-maintenance
-      keycloak: rg1acrpub.azurecr.io/docker/redpointglobal/releases/keycloak
+      repository: rg1acrpub.azurecr.io/docker/redpointglobal/releases
       # RPI version: <major.minor>.<year>-<MMDD>-<HHMM>
       tag: "7.7.20260220.1524"
+      imagePullPolicy: Always
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
+    # Optional: set the pod's timezone (e.g., "America/New_York"); leave empty to use default UTC
+    podTimezone: "" # 
 
 # ==========================
 # Operational Database
@@ -60,6 +43,7 @@ databases:
     server_password: <my-database-server-password>
     pulse_database_name: <my-pulse-database-name>
     pulse_logging_database_name: <my-logging-database-name>
+    encrypt: true
 
   # ==========================
   # Data Warehouse Providers
@@ -103,8 +87,8 @@ databases:
     # Snowflake
     snowflake:
       enabled: false
-      # Supported: password, snowflake_jwt
-      credentialsType: password
+      # Supported: snowflake_jwt
+      credentialsType: snowflake_jwt
       ConfigMapName: snowflake-creds
       keyName: my-snowflake-rsakey.p8
       ConfigMapFilePath: /app/snowflake-creds
@@ -122,70 +106,131 @@ databases:
           schema: my_schema_name
           authMechanism: 3
 
-# ==========================
-# Cloud Identity & Secrets Management
-# ==========================
+# ============================================================
+# Cloud Identity
+# ============================================================
+# Pod-to-cloud authentication. Required for sdk and csi secrets modes.
+# The authentication mechanism is derived from global.deployment.platform:
+#   azure  -> Azure Workload Identity (ServiceAccount annotation + pod label)
+#   google -> GCP Workload Identity (ServiceAccount annotation)
+#   amazon -> IRSA (ServiceAccount annotation + env vars)
+# ============================================================
 cloudIdentity:
-  enabled: false
-  # Supported: Azure, Google, Amazon
-  provider: Amazon
-  secretsManagement:
-    enabled: false
-    # Supported: kubernetes, keyvault, awssecretsmanager
-    secretsProvider: kubernetes
-    autoCreateSecrets: true
-    secretName: redpoint-rpi-secrets
-    UseForConfigPasswords: true
-    UseForAppSettings: true
-    ConfigurationReloadIntervalSeconds: 30
-    # CSI Secrets Store integration (SecretProviderClass resources)
-    csiSecretProvider:
-      enabled: false
-      classes: []
-      # classes:
-      #   - name: rpi-secrets
-      #     provider: azure
-      #     parameters:
-      #       usePodIdentity: "false"
-      #       useVMManagedIdentity: "false"
-      #       clientID: "00000000-0000-0000-0000-000000000000"
-      #       keyvaultName: my-keyvault
-      #       tenantId: "00000000-0000-0000-0000-000000000000"
-      #     objects:
-      #       - objectName: V7-ConnectionString-Operations
-      #         objectType: secret
-      #     secretObjects:
-      #       - secretName: rpi-synced-secrets
-      #         type: Opaque
-      #         data:
-      #           - objectName: V7-ConnectionString-Operations
-      #             key: ConnectionString_Operations_Database
-  azureSettings:
-    # Supported: workloadIdentity
-    credentialsType: workloadIdentity
-    managedIdentityClientId: your_managed_identity_client_id
-    UseADTokenForDatabaseConnection: false
-    vaultUri: https://myvault.vault.azure.net/
-    appSettingsVaultUri: https://myvault.vault.azure.net/
-  googleSettings:
-    credentialsType: serviceAccount
-    configMapName: my-google-svs-account
-    keyName: my-google-svs-account.json
-    ConfigMapFilePath: /app/google-creds
+  enabled: true
+  # ServiceAccount mode:
+  #   create: true  -> one shared SA used by all services
+  #   create: false -> each service creates its own SA (for per-service identity federation)
+  # Both modes use the same cloud identity values below for annotations.
+  serviceAccount:
+    create: false
+    name: redpoint-rpi
+  # --- Azure Workload Identity ---
+  azure:
+    managedIdentityClientId: your-workload-identity-client-id
+    tenantId: your-azure-tenant-id
+  # --- Google Cloud Workload Identity ---
+  google:
     serviceAccountEmail: my-google-svs-account@my-project.iam.gserviceaccount.com
     projectId: your_google_project_id
-  amazonSettings:
-    # Supported: podIdentity, accessKey, iamRole
-    credentialsType: accessKey
-    accessKeyId: <my-aws-iam-access-key>
-    secretAccessKey: <my-aws-iam-secret-access-key>
+    # ConfigMap containing the service account JSON credentials file
+    configMapName: my-google-svs-account
+    keyName: my-google-svs-account.json
+    configMapFilePath: /app/google-creds
+  # --- Amazon IRSA / Access Keys ---
+  amazon:
     roleArn: arn:aws:iam::my-aws-account-id:role/my-role-name
-    webIdentityTokenFile: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
-    stsRegionalEndpoints: regional
     region: us-east-1
-    secretsManagerSettings:
-      secretTagKey: rpi-app
-      credentialSecretName: aws-sm-access-keys
+    # Set to true to use static access keys instead of IRSA
+    useAccessKeys: false
+    accessKeyId: ""
+    secretAccessKey: ""
+
+# ============================================================
+#  SECRETS MANAGEMENT
+# ============================================================
+# How secrets are provided to pods:
+#   kubernetes -> Chart creates K8s Secret from values (or user pre-creates)
+#   sdk        -> App reads directly from cloud vault at runtime (requires cloudIdentity)
+#   csi        -> CSI driver syncs cloud vault to K8s Secret (requires cloudIdentity)
+# ============================================================
+secretsManagement:
+  # kubernetes | sdk | csi
+  provider: kubernetes
+  # --------------------------------------------------------
+  # Kubernetes secrets (provider: kubernetes)
+  # --------------------------------------------------------
+  kubernetes:
+    autoCreateSecrets: true
+    secretName: redpoint-rpi-secrets
+  # --------------------------------------------------------
+  # SDK - App reads from cloud vault directly (provider: sdk)
+  # --------------------------------------------------------
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+      configurationReloadIntervalSeconds: 30
+      useADTokenForDatabaseConnection: true
+    amazon:
+      secretTagKey: ""
+    google:
+      projectId: ""
+  # --------------------------------------------------------
+  # CSI - CSI driver syncs vault to K8s Secret (provider: csi)
+  # Pods consume secrets via secretKeyRef (same as kubernetes mode)
+  # --------------------------------------------------------
+  csi:
+    # The K8s secret name created by the CSI driver
+    secretName: redpoint-rpi-secrets
+    # SecretProviderClass definitions
+    secretProviderClasses:
+    # ----------------------------------------------------
+    # Example: TLS Certificate from Azure Key Vault
+    # ----------------------------------------------------
+    - name: my_secret_class_1
+      provider: azure
+      secretObjects:
+        - secretName: secret1
+          type: kubernetes.io/tls
+          data:
+            - key: tls.key
+              objectName: cert-mpulserpi-v7-providence-org
+      parameters:
+        keyvaultName: key_vault_name
+        resourceGroup: resource_group_name
+        subscriptionId: subscription_id
+        clientID: your_managed_identity_client_id
+        tenantId: azure_tenant_id
+        usePodIdentity: "false"
+        useVMManagedIdentity: "false"
+        useWorkloadIdentity: "true"
+      objects:
+        - objectName: "cert-mpulserpi-v7-providence-org"
+          objectType: secret
+    # ----------------------------------------------------
+    # Example: Database Connection String
+    # ----------------------------------------------------
+    - name: my_secret_class_2
+      provider: azure
+      secretObjects:
+        - secretName: secret2
+          type: Opaque
+          data:
+            - key: ConnectionString_Logging_Database
+              objectName: V7-ConnectionString-LoggingDatabase
+      parameters:
+        keyvaultName: key_vault_name
+        resourceGroup: resource_group_name
+        subscriptionId: subscription_id
+        clientID: your_managed_identity_client_id
+        tenantId: azure_tenant_id
+        usePodIdentity: "false"
+        useVMManagedIdentity: "false"
+        useWorkloadIdentity: "true"
+        syncSecret: "true"
+        enable-secret-rotation: "true"
+      objects:
+        - objectName: "V7-ConnectionString-Operations"
+          objectType: secret
 
 # ==========================
 # Storage
@@ -459,7 +504,7 @@ queuereader:
   realtimeConfiguration:
     # Enable distributed processing for high-volume transactions
     isDistributed: false
-    distributedCache:
+    internalCache:
       provider: redis
       # internal: chart-managed Redis | external: BYO Redis
       type: internal
@@ -477,6 +522,8 @@ queuereader:
     # RPI client IDs for this cluster
     tenantIds:
       - 00000000-0000-0000-0000-000000000000
+  errorQueuePath: listenerQueueError 
+  nonActiveQueuePath: listenerQueueNonActive
   resources:
     requests:
       cpu: 500m
@@ -570,34 +617,36 @@ SMTPSettings:
   SMTP_Username: your_smtp_server_username
   SMTP_Password: your_smtp_server_password
 
-# ==========================
-# Ingress
-# ==========================
+# ============================================================
+#  INGRESS
+# ============================================================
+
 ingress:
   controller:
-    # Set to false if supplying your own ingress controller
-    enabled: true
-  # Exposure mode: public or private
-  mode: public
-  # TLS certificate source: kubernetes or acm
-  certificateSource: kubernetes
-  tlsSecretName: ingress-tls
+    enabled: true                         # false if supplying your own controller
+  mode: public                            # public | private
+  certificateSource: kubernetes           # kubernetes | acm
+  # TLS entries (rendered when certificateSource=kubernetes)
+  # Add entries with explicit hosts lists for multi-cert setups
+  tls:
+    - secretName: ingress-tls
+    # - secretName: certsecrets             # additional cert for FQDN hosts
+    #   hosts:
+    #     - mpulse.example.com
   domain: example.com
-  # Required if mode=private
-  subnetName: <my-ingress-vpc-subnet-name>
-  # Required if certificateSource=acm
-  certificateArn: your_acm_certificate_arn
-  # Azure Private Link (private ingress on Azure)
+  subnetName: <my-ingress-vpc-subnet-name>  # required if mode=private
+  certificateArn: your_acm_certificate_arn  # required if certificateSource=acm
   privateLink:
     azure:
       enabled: false
-  # Service hostnames (prepended to domain)
+  # Service hostnames — subdomains are prepended to domain,
+  # values containing a dot are used as FQDNs (e.g., mpulse.example.com)
   hosts:
     config: rpi-deploymentapi
     client: rpi-interactionapi
     integration: rpi-integrationapi
     realtime: rpi-realtimeapi
-    callbackapi: rpi-callbackapi
+    callbackapi: rpi-callbackapi            # or: mpulse.example.com (FQDN)
     queuereader: rpi-queuereader
     rabbitmqconsole: rpi-rabbitmq-console
     smartactivation: rpi-smartActivation
@@ -800,6 +849,45 @@ customLabels: {}
 # customAnnotations:
 #   my-custom-annotation: "my-value"
 customAnnotations: {}
+
+# ==========================
+# Post-Install Automation
+# ==========================
+# Automates license activation, cluster DB install, and optional tenant creation.
+# Runs as a Helm post-install hook (and ArgoCD PostSync).
+postInstall:
+  enabled: false
+  # Use an existing K8s secret instead of inline values
+  # Keys: activation-key, admin-password, admin-username, admin-email
+  # existingSecret: ""
+  activationKey: ""
+  systemName: ""
+  adminUsername: "coreuser"
+  adminPassword: ""
+  adminEmail: ""
+  tenant:
+    enabled: false
+    name: ""
+    # existingSecret: ""  # Keys: dw-server, dw-database, dw-username, dw-password
+    dataWarehouse:
+      provider: SQLServer
+      server: ""
+      database: ""
+      username: ""
+      password: ""
+  waitTimeout: 360
+  backoffLimit: 3
+
+# ==========================
+# Pre-flight Validation
+# ==========================
+# Validates configuration before deployment:
+#   DNS resolution, DB connectivity, cloud identity, secrets management.
+# mode: test     -> runs with `helm test rpi`
+# mode: preInstall -> blocks install on failure
+preflight:
+  enabled: false
+  mode: test
 
 # ============================================================
 # ADVANCED CONFIGURATION

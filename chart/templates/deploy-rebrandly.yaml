@@ -10,6 +10,7 @@
 
 {{- if $cfg.serviceAccount.enabled }}
 {{- if $cfg.enabled }}
+{{- if not .Values.cloudIdentity.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -17,28 +18,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- if eq .Values.global.deployment.platform "azure" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- if $annotations }}
   annotations:
-    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+    {{- $annotations | nindent 4 }}
   {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "google" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "workloadIdentity" }}
-  annotations:
-    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "amazon" }}
-  {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-  annotations:
-    eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-  {{- end }}
-  {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -127,11 +112,7 @@ spec:
         {{- with $cfg.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if eq .Values.global.deployment.platform "azure" }}
-        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
-        azure.workload.identity/use: "true"
-        {{- end }}
-        {{- end }}
+        {{- include "rpi.cloudidentity.podLabels" . | nindent 8 }}
       annotations:
         {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -145,7 +126,7 @@ spec:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
       terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
-      serviceAccountName: {{ $name }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
       {{- if $secCtx.enabled }}
       securityContext:
         runAsUser: {{ $secCtx.runAsUser }}
@@ -177,7 +158,7 @@ spec:
       {{- end }}
       containers:
       - name: {{ $name }}
-        image: {{ .Values.global.deployment.images.rebrandly }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
         {{- if $secCtx.enabled }}
         securityContext:
           privileged: {{ $secCtx.privileged }}
@@ -203,9 +184,9 @@ spec:
         {{- if $readiness.enabled }}
         readinessProbe:
           httpGet:
-            path: {{ $liveness.httpGet.path }}
-            port: {{ $liveness.httpGet.port }}
-            scheme: {{ $liveness.httpGet.scheme }}
+            path: {{ $readiness.httpGet.path }}
+            port: {{ $readiness.httpGet.port }}
+            scheme: {{ $readiness.httpGet.scheme }}
           initialDelaySeconds: {{ $readiness.initialDelaySeconds }}
           periodSeconds: {{ $readiness.periodSeconds }}
           failureThreshold: {{ $readiness.failureThreshold }}
@@ -214,9 +195,9 @@ spec:
         {{- if $startup.enabled }}
         startupProbe:
           httpGet:
-            path: {{ $liveness.httpGet.path }}
-            port: {{ $liveness.httpGet.port }}
-            scheme: {{ $liveness.httpGet.scheme }}
+            path: {{ $startup.httpGet.path }}
+            port: {{ $startup.httpGet.port }}
+            scheme: {{ $startup.httpGet.scheme }}
           failureThreshold: {{ $startup.failureThreshold }}
           periodSeconds: {{ $startup.periodSeconds }}
           initialDelaySeconds: {{ $startup.initialDelaySeconds }}
@@ -224,6 +205,10 @@ spec:
         {{- end }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         env:
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
         - name: Rebrandly__BaseUrl
           value: {{ $cfg.baseUrl | quote }}
         - name: Rebrandly__EnterpriseBaseUrl
@@ -368,8 +353,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: rpirebrandlycache
-          image: {{ .Values.global.deployment.images.rediscache }}:{{ .Values.global.deployment.images.tag }}
-          imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+          image: {{ .Values.global.deployment.images.repository }}/rediscache:{{ .Values.global.deployment.images.tag }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: 6379
               name: redis

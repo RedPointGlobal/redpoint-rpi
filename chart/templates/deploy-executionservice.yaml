@@ -9,37 +9,23 @@
 {{- $name := "rpi-executionservice" -}}
 {{- $dwEnabled := (include "redpoint.DatawarehouseProviders" .) | eq "true" -}}
 {{- $dw := .Values.databases.datawarehouse | default dict -}}
+
 {{- if $cfg.serviceAccount.enabled }}
 {{- if $cfg.enabled }}
+{{- if not .Values.cloudIdentity.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "worker") | nindent 4 }}
-  {{- if eq .Values.global.deployment.platform "azure" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- if $annotations }}
   annotations:
-    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+    {{- $annotations | nindent 4 }}
   {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "google" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "workloadIdentity" }}
-  annotations:
-    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "amazon" }}
-  {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-  annotations:
-    eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-  {{- end }}
-  {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -146,11 +132,7 @@ spec:
         {{- with $cfg.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if eq .Values.global.deployment.platform "azure" }}
-        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
-        azure.workload.identity/use: "true"
-        {{- end }}
-        {{- end }}
+        {{- include "rpi.cloudidentity.podLabels" . | nindent 8 }}
       annotations:
         {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -174,7 +156,7 @@ spec:
       {{- if eq $cfg.autoscaling.type "hpa" }}
       terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
       {{- end }}
-      serviceAccountName: {{ $name }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
       {{- if $secCtx.enabled }}
       securityContext:
         runAsUser: {{ $secCtx.runAsUser }}
@@ -206,6 +188,10 @@ spec:
       {{- end }}
       containers:
       - env:
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
         - name: Logging__LogLevel__Default
           value: {{ $cfg.logging.default | quote }}
         - name: Logging__Database__LogLevel__Default
@@ -245,7 +231,7 @@ spec:
         - name: RPI__UserManagement__Keycloak__ClientSecret
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CDP_Keycloak_Client_Secret
         {{- end }}
         {{- end }}
@@ -282,7 +268,7 @@ spec:
         - name: InternalCache__RedisSettings__IPAddress
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: ExecutionService_RedisCache_ConnectionString
         {{- end }}
         {{- end }}
@@ -320,7 +306,7 @@ spec:
         - name: RPI__Diagnostics__CopyToAzure__AccessKey
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CopyToAzureBlobAccessKey
         - name: RPI__Diagnostics__CopyToAzure__ContainerName
           value: {{ $diag.copytoAzureBlob.containerName | quote }}
@@ -339,7 +325,7 @@ spec:
         - name: RPI__Diagnostics__CopyToSFTP__SecureFTPPassword
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CopyToSFTPSecureFTPPassword
         - name: RPI__Diagnostics__CopyToSFTP__PortNumberNumber
           value: {{ $diag.copytoSftp.sftpPort | quote }}
@@ -360,6 +346,8 @@ spec:
         - name: RPI__Diagnostics__UseDotNetTools__UseGcDump
           value: {{ $diag.dotNetTools.useGcDump | quote }}
         {{- end }}
+        - name: Plugins__LuxSci__SendRequestCount
+          value: {{ $cfg.jobExecution.luxScisendRequestCount | quote }}
         - name: RPIExecution__InternalAddress
           value: {{ $cfg.jobExecution.internalAddress | quote }}
         - name: RPIExecution__AuditTaskEvents
@@ -388,101 +376,24 @@ spec:
           value: {{ $cfg.jobExecution.workflowPrioritization.maxConcurrentWorkflowActivities | quote }}
         - name: RPIExecution__WorkflowPrioritization__MaximumQueueTime
           value: {{ $cfg.jobExecution.workflowPrioritization.maximumQueueTime | quote }}
-        {{- if .Values.cloudIdentity.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Azure" }}
-        {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
-        - name: CloudIdentity__Azure__CredentialType
-          value: "AzureIdentity"
-        - name: CloudIdentity__Azure__UseADTokenForDatabaseConnection
-          value: {{ .Values.cloudIdentity.azureSettings.UseADTokenForDatabaseConnection | quote }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Azure" }}
-        - name: KeyVault__Provider
-          value: "Azure"
-        - name: KeyVault__UseForAppSettings
-          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
-        - name: KeyVault__UseForConfigPasswords
-          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
-        - name: KeyVault__AzureSettings__VaultURI
-          value: {{ .Values.cloudIdentity.azureSettings.vaultUri | quote }}
-        - name: KeyVault__AzureSettings__AppSettingsVaultURI
-          value: {{ .Values.cloudIdentity.azureSettings.appSettingsVaultUri | quote }}
-        - name: KeyVault__AzureSettings__ConfigurationReloadIntervalSeconds
-          value: {{ .Values.cloudIdentity.secretsManagement.ConfigurationReloadIntervalSeconds | quote }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if $dwEnabled }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
         {{- end }}
         {{- end }}
         {{- if eq .Values.global.deployment.platform "google" }}
-        {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "serviceAccount" }}
-        - name: GOOGLE_APPLICATION_CREDENTIALS 
-          value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
+        {{- if .Values.cloudIdentity.enabled }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
         {{- end }}
         {{- end }}
-        {{- if eq .Values.global.deployment.platform "azure" }}
-        {{- if $dwEnabled }}
-        - name: GOOGLE_APPLICATION_CREDENTIALS 
-          value: "{{ .Values.cloudIdentity.googleSettings.ConfigMapFilePath }}/{{ .Values.cloudIdentity.googleSettings.keyName }}"
-        {{- end }}
-        {{- end }}
-        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-        {{- if eq .Values.cloudIdentity.provider "Google" }}
-        - name: KeyVault__Provider
-          value: "Google"
-        - name: KeyVault__UseForAppSettings
-          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
-        - name: KeyVault__UseForConfigPasswords
-          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
-        {{- end }}
-        {{- end }}
-        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
-        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "accessKey" }}
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              key: AWS_SM_Access_Key_ID
-              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              key: AWS_SM_Secret_Access_Key
-              name: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.credentialSecretName | quote }}
-        - name: AWS_REGION
-          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if eq .Values.global.deployment.platform "amazon" }}
-        {{- if .Values.cloudIdentity.enabled}}
-        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-        - name: AWS_ROLE_ARN
-          value: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-        - name: AWS_WEB_IDENTITY_TOKEN_FILE
-          value: {{ .Values.cloudIdentity.amazonSettings.webIdentityTokenFile | quote }}
-        - name: AWS_STS_REGIONAL_ENDPOINTS
-          value: {{ .Values.cloudIdentity.amazonSettings.stsRegionalEndpoints | quote }}
-        - name: AWS_DEFAULT_REGION
-          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
-        {{- if .Values.cloudIdentity.secretsManagement.enabled }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "awssecretsmanager" }}
-        - name: KeyVault__Provider
-          value: "Amazon"
-        - name: KeyVault__AmazonSettings__AppSettingsTag
-          value: {{ .Values.cloudIdentity.amazonSettings.secretsManagerSettings.secretTagKey | quote }}
-        - name: KeyVault__UseForAppSettings
-          value: {{ .Values.cloudIdentity.secretsManagement.UseForAppSettings | quote }}
-        - name: KeyVault__UseForConfigPasswords
-          value: {{ .Values.cloudIdentity.secretsManagement.UseForConfigPasswords | quote }}
-        {{- end }}
-        {{- end }}
+        {{- include "rpi.secrets.sdk.envvars" . | nindent 8 }}
+        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
+        {{- include "rpi.cloudidentity.awsAccessKeyEnvvars" . | nindent 8 }}
         {{- if not $rtCfg.multitenant }}
         - name: RealtimeAPIAddressOverride
-          value: "http://rpi-realtimeapi:{{ $rtCfg.service.port }}"
+          value: "http://rpi-realtimeapi"
         {{- end }}
         - name: Authentication__EnableRPIAuthentication
           value: {{ $cfg.enableRPIAuthentication | quote }}
@@ -497,13 +408,13 @@ spec:
         - name: RPI__SMTP__UseCredentials
           value: {{ .Values.SMTPSettings.UseCredentials | quote }}
         {{- if .Values.SMTPSettings.UseCredentials }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: RPI__SMTP__Username
           value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
         - name: RPI__SMTP__Password
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: SMTP_Password
         {{- end }}
         {{- end }}
@@ -511,51 +422,23 @@ spec:
           value: "https://support.redpointglobal.com"
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: RPI__FileOutput__Directory
-          value: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+          value: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
         {{- end }}
-        {{- if eq .Values.databases.operational.provider "sqlserver" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Logging_Database
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
         - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
           valueFrom:
             secretKeyRef:
               key: ConnectionString_Operations_Database
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
         {{- end }} 
-        {{- end }}  
-        {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionString_Logging_Database
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionString_Operations_Database
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-        {{- end }}
-        {{- end }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
-        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionString_Logging_Database
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
-        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-          valueFrom:
-            secretKeyRef:
-              key: ConnectionString_Operations_Database
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
-        {{- end }}
         {{- end }}
         {{- if .Values.redpointAI.enabled }}
         - name: RPI__NLP__ApiBase
@@ -578,22 +461,22 @@ spec:
           value: {{ .Values.redpointAI.modelStorage.BlobFolder | quote }}
         {{- end }}
         {{- if .Values.redpointAI.enabled }}
-        {{- if eq .Values.cloudIdentity.secretsManagement.secretsProvider "kubernetes" }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: RPI__NLP__ApiKey
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_API_KEY
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
         - name: RPI__NLP__SearchKey
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_SEARCH_KEY
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
         - name: RPI__NLP__Model__ConnectionString
           valueFrom:
             secretKeyRef:
               key:  RPI_NLP_MODEL_CONNECTION_STRING
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
         {{- end }}
         {{- end }}
         - name: SeedService__MemoryCacheSize
@@ -602,7 +485,7 @@ spec:
           value: {{ $cfg.seedService.maxNumberRetries | quote }}
         - name: SeedService__MaxRetryDelay
           value: {{ $cfg.seedService.maxRetryDelay | quote }}
-        image: {{ .Values.global.deployment.images.executionservice }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         name: {{ $name }}
         {{- if $liveness.enabled }}
@@ -619,9 +502,9 @@ spec:
         {{- if $readiness.enabled }}
         readinessProbe:
           httpGet:
-            path: {{ $liveness.httpGet.path }}
-            port: {{ $liveness.httpGet.port }}
-            scheme: {{ $liveness.httpGet.scheme }}
+            path: {{ $readiness.httpGet.path }}
+            port: {{ $readiness.httpGet.port }}
+            scheme: {{ $readiness.httpGet.scheme }}
           initialDelaySeconds: {{ $readiness.initialDelaySeconds }}
           periodSeconds: {{ $readiness.periodSeconds }}
           failureThreshold: {{ $readiness.failureThreshold }}
@@ -630,9 +513,9 @@ spec:
         {{- if $startup.enabled }}
         startupProbe:
           httpGet:
-            path: {{ $liveness.httpGet.path }}
-            port: {{ $liveness.httpGet.port }}
-            scheme: {{ $liveness.httpGet.scheme }}
+            path: {{ $startup.httpGet.path }}
+            port: {{ $startup.httpGet.port }}
+            scheme: {{ $startup.httpGet.scheme }}
           failureThreshold: {{ $startup.failureThreshold }}
           periodSeconds: {{ $startup.periodSeconds }}
           initialDelaySeconds: {{ $startup.initialDelaySeconds }}
@@ -733,7 +616,7 @@ spec:
           {{- end }}
           {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
           - name: fileoutputdirectory
-            mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath }}
+            mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
           {{- end }}
           {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}  
           - name: realtimeplugins

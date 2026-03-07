@@ -3,6 +3,7 @@
 {{- $name := "cdp-socketio" -}}
 
 {{- if .Values.smartActivation.enabled }}
+{{- if not .Values.cloudIdentity.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -10,28 +11,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "websocket") | nindent 4 }}
-  {{- if eq .Values.global.deployment.platform "azure" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.azureSettings.credentialsType "workloadIdentity" }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- if $annotations }}
   annotations:
-    azure.workload.identity/client-id: {{ .Values.cloudIdentity.azureSettings.managedIdentityClientId }}
+    {{- $annotations | nindent 4 }}
   {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "google" }}
-  {{- if .Values.cloudIdentity.enabled }}
-  {{- if eq .Values.cloudIdentity.googleSettings.credentialsType "workloadIdentity" }}
-  annotations:
-    iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.googleSettings.serviceAccountEmail | quote }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if eq .Values.global.deployment.platform "amazon" }}
-  {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-  annotations:
-    eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-  {{- end }}
-  {{- end }}
+{{- end }}
 {{- end }}
 
 ---
@@ -141,7 +126,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      serviceAccountName: {{ $name }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
       {{- if $cfg.securityContext.enabled }}
       securityContext:
         runAsUser: {{ $cfg.securityContext.runAsUser }}
@@ -167,7 +152,7 @@ spec:
               app.kubernetes.io/name: {{ $name }}
       containers:
       - name: {{ $name }}
-        image: {{ .Values.global.deployment.images.cdpsocketio }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         {{- if $cfg.resources.enabled }}
         resources:
@@ -204,6 +189,10 @@ spec:
             {{- end }}
         {{- end }}
         env: 
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
         - name: SOCKETIO_HOST
           value: 0.0.0.0
         - name: SOCKETIO_PORT
@@ -217,22 +206,9 @@ spec:
         - name: MONGO_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.cloudIdentity.secretsManagement.secretName | quote }}
+              name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CDP_Mongo_ConnectionString
-        {{- if eq .Values.global.deployment.platform "amazon" }}
-        {{- if .Values.cloudIdentity.enabled}}
-        {{- if eq .Values.cloudIdentity.amazonSettings.credentialsType "iamRole" }}
-        - name: AWS_ROLE_ARN
-          value: {{ .Values.cloudIdentity.amazonSettings.roleArn | quote }}
-        - name: AWS_WEB_IDENTITY_TOKEN_FILE
-          value: {{ .Values.cloudIdentity.amazonSettings.webIdentityTokenFile | quote }}
-        - name: AWS_STS_REGIONAL_ENDPOINTS
-          value: {{ .Values.cloudIdentity.amazonSettings.stsRegionalEndpoints | quote }}
-        - name: AWS_DEFAULT_REGION
-          value: {{ .Values.cloudIdentity.amazonSettings.region | quote }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
+        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
         volumeMounts:
           - name: tempstore
             mountPath: /tmp
