@@ -11,12 +11,12 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 
 > **v7.7 Breaking Change**
 
-The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a **879-line user-facing configuration** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
+The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to a **few line user-facing override** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
 
 | Before (v7.6) | After (v7.7) |
 |:---|:---|
 | Copy the full `values.yaml` and edit it | Maintain a small overrides file with only your customizations |
-| 2,608 lines to manage | 50-100 lines typical |
+| 3,000+ lines to manage | 50-100 lines typical |
 | Upgrades require diffing the entire file | Upgrades apply new defaults automatically |
 | No escape hatch for hidden internals | `advanced:` block overrides any internal default |
 
@@ -26,7 +26,6 @@ The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a
 - **Service mesh support** — Generate Linkerd Server CRDs via `serviceMesh.servers[]`
 - **CSI SecretProviderClass** — Create SecretProviderClass resources for Azure Key Vault, AWS Secrets Manager, and other CSI secret providers
 - **Persistent volume creation** — Create PV + PVC pairs for CSI-backed storage (Azure Blob, Azure Files, AWS EFS, GCP Filestore)
-- **Per-service pod annotations/labels** — Apply `podAnnotations` and `podLabels` to individual services without affecting others
 - **Automatic database upgrade Job** — Helm-native Job that runs schema migrations on each `helm upgrade`
 - **Interaction CLI** — Interactive script that generates your overrides file, secrets, and prerequisites in one step
 
