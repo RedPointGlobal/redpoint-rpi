@@ -64,7 +64,7 @@ The `prereqs.sh` script handles namespace creation, image pull secret, TLS secre
 > **Warning:** `secrets.yaml` contains sensitive credentials. Do **not** commit it to version control. The `.gitignore` already excludes `*-secrets.yaml`.
 
 <details>
-<summary><strong>Secret Key Reference</strong> — All supported keys (click to expand)</summary>
+<summary><strong>Secret Key Reference</strong>: All supported keys (click to expand)</summary>
 
 The table below lists all keys the chart can read from the secret. The Interaction CLI generates the keys relevant to your platform automatically. Include additional keys only if your configuration requires them.
 
@@ -106,25 +106,25 @@ helm test rpi -n redpoint-rpi
 kubectl get ingress --namespace redpoint-rpi
 ```
 
-Once the load balancer is ready:
+Once the load balancer is ready (where `<prefix>` is your hostname prefix and `<domain>` is your ingress domain):
 
 ```
-NAME           HOSTS                                  ADDRESS              PORTS     AGE
-redpoint-rpi   rpi-deploymentapi.example.com          <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-interactionapi.example.com         <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-integrationapi.example.com         <Load Balancer IP>   80, 443   32d
-redpoint-rpi   rpi-realtimeapi.example.com            <Load Balancer IP>   80, 443   32d
+NAME           HOSTS                                       ADDRESS              PORTS     AGE
+redpoint-rpi   <prefix>-deploymentapi.<domain>              <Load Balancer IP>   80, 443   32d
+redpoint-rpi   <prefix>-interactionapi.<domain>             <Load Balancer IP>   80, 443   32d
+redpoint-rpi   <prefix>-integrationapi.<domain>             <Load Balancer IP>   80, 443   32d
+redpoint-rpi   <prefix>-realtimeapi.<domain>                <Load Balancer IP>   80, 443   32d
 ```
 
 Create DNS records mapping each hostname to the load balancer IP, then access:
 
 | Service | URL |
 |---------|-----|
-| Deployment Service | `https://rpi-deploymentapi.example.com` |
-| Client            | `https://rpi-interactionapi.example.com` |
-| Integration API   | `https://rpi-integrationapi.example.com` |
-| Realtime API         | `https://rpi-realtimeapi.example.com` |
-| Callback API         | `https://rpi-callbackapi.example.com` |
+| Deployment Service | `https://<prefix>-deploymentapi.<domain>` |
+| Client             | `https://<prefix>-interactionapi.<domain>` |
+| Integration API    | `https://<prefix>-integrationapi.<domain>` |
+| Realtime API       | `https://<prefix>-realtimeapi.<domain>` |
+| Callback API       | `https://<prefix>-callbackapi.<domain>` |
 
 ## Download Client Executable
 
@@ -137,7 +137,7 @@ Download the RPI Client from the Post-release Product Updates section of the [RP
 ###  Activate RPI License
 
 ```bash
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
 ACTIVATION_KEY=<my-license-activation-key>
 SYSTEM_NAME=<my-rpi-system>
 
@@ -152,7 +152,7 @@ curl -X POST "https://$DEPLOYMENT_SERVICE_URL/api/licensing/activatelicense" \
 ### 2. Install Cluster Databases
 
 ```bash
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
 
 curl -X POST \
   "https://$DEPLOYMENT_SERVICE_URL/api/deployment/installcluster?waitTimeoutSeconds=360" \
@@ -174,7 +174,7 @@ Check status with `curl "https://$DEPLOYMENT_SERVICE_URL/api/deployment/status"`
 A JSON builder is available at `https://$DEPLOYMENT_SERVICE_URL/clienteditor.html` to construct the payload.
 
 ```bash
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
 
 curl -X POST \
   "https://$DEPLOYMENT_SERVICE_URL/api/deployment/addclient?waitTimeoutSeconds=360" \
