@@ -12,10 +12,11 @@ This guide walks through deploying RPI from scratch in a new environment — new
 1. Clone this repository
 2. Create a Kubernetes namespace
 3. Create secrets for image pull and TLS
-4. Configure your operational database and data warehouse connections
-5. Create your environment overrides file
-6. Deploy with Helm
-7. Activate your license and install databases
+4. Pre-create Kubernetes secrets (optional — only if not using autoCreateSecrets)
+5. Configure your operational database and data warehouse connections
+6. Create your environment overrides file
+7. Deploy with Helm
+8. Activate your license and install databases
 
 ---
 
@@ -27,7 +28,7 @@ For a guided setup, use the interactive scaffolder to generate your overrides fi
 bash deploy/cli/rpi-init.sh
 ```
 
-This walks you through platform selection, database config, cloud identity, and generates a ready-to-use overrides file plus a prerequisites script. You can then skip directly to [Step 8: Install RPI](#8-install-rpi).
+This walks you through platform selection, database config, cloud identity, and generates a ready-to-use overrides file plus a prerequisites script. You can then skip directly to [Step 9: Install RPI](#9-install-rpi).
 
 ---
 
@@ -113,7 +114,129 @@ ingress:
     enabled: false
 ```
 
-## 5. Configure Operational Database
+## 5. Pre-Create Kubernetes Secrets (When Not Using autoCreateSecrets)
+
+By default, the chart auto-generates the `redpoint-rpi-secrets` Kubernetes Secret from the values you provide in your overrides file (`secretsManagement.kubernetes.autoCreateSecrets: true`). This is the simplest path — skip to [Step 6](#6-configure-operational-database).
+
+However, if you prefer to manage secrets externally (e.g., via a CI/CD pipeline, sealed secrets, or security policy), set `autoCreateSecrets: false` and pre-create the secret manually. The examples below show the minimum required keys for each platform.
+
+### Azure Standard (AzureSQL + Service Bus + MongoDB Cache)
+
+```bash
+NAMESPACE=redpoint-rpi
+
+# -- Operational Database --
+DB_HOST="myserver.database.windows.net"
+DB_USER="rpiadmin"
+DB_PASS="<my-db-password>"
+PULSE_DB="Pulse"
+LOGGING_DB="Pulse_Logging"
+
+# -- Connection strings (SQL Server format) --
+OPS_CONN="Server=tcp:${DB_HOST},1433;Database=${PULSE_DB};User ID=${DB_USER};Password=${DB_PASS};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+LOG_CONN="Server=tcp:${DB_HOST},1433;Database=${LOGGING_DB};User ID=${DB_USER};Password=${DB_PASS};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+
+# -- Realtime API --
+RT_AUTH_TOKEN="$(openssl rand -hex 16)"
+SERVICEBUS_CONN="Endpoint=sb://<my-servicebus>.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<my-key>"
+MONGO_CONN="mongodb+srv://<my-user>:<my-password>@<my-cluster>.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256"
+
+kubectl create secret generic redpoint-rpi-secrets \
+  --namespace $NAMESPACE \
+  --from-literal=ConnectionString_Operations_Database="$OPS_CONN" \
+  --from-literal=ConnectionString_Logging_Database="$LOG_CONN" \
+  --from-literal=Operations_Database_Server_Password="$DB_PASS" \
+  --from-literal=Operations_Database_ServerHost="$DB_HOST" \
+  --from-literal=Operations_Database_Server_Username="$DB_USER" \
+  --from-literal=Operations_Database_Pulse_Database_Name="$PULSE_DB" \
+  --from-literal=Operations_Database_Pulse_Logging_Database_Name="$LOGGING_DB" \
+  --from-literal=RealtimeAPI_Auth_Token="$RT_AUTH_TOKEN" \
+  --from-literal=RealtimeAPI_ServiceBus_ConnectionString="$SERVICEBUS_CONN" \
+  --from-literal=RealtimeAPI_MongoCache_ConnectionString="$MONGO_CONN"
+```
+
+Then in your overrides file:
+
+```yaml
+secretsManagement:
+  provider: kubernetes
+  kubernetes:
+    autoCreateSecrets: false
+    secretName: redpoint-rpi-secrets
+```
+
+### AWS Standard (RDS SQL Server + SQS + MongoDB Cache)
+
+On AWS with IRSA (IAM Roles for Service Accounts), SQS authentication is handled by the pod's IAM role — no connection string secret is needed for the queue provider. If using SQS with access keys instead of IRSA, add `AWS_Access_Key_ID` and `AWS_Secret_Access_Key` to the secret.
+
+```bash
+NAMESPACE=redpoint-rpi
+
+# -- Operational Database --
+DB_HOST="myinstance.xxxx.us-east-1.rds.amazonaws.com"
+DB_USER="rpiadmin"
+DB_PASS="<my-db-password>"
+PULSE_DB="Pulse"
+LOGGING_DB="Pulse_Logging"
+
+# -- Connection strings (SQL Server format) --
+OPS_CONN="Server=tcp:${DB_HOST},1433;Database=${PULSE_DB};User ID=${DB_USER};Password=${DB_PASS};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+LOG_CONN="Server=tcp:${DB_HOST},1433;Database=${LOGGING_DB};User ID=${DB_USER};Password=${DB_PASS};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+
+# -- Realtime API --
+RT_AUTH_TOKEN="$(openssl rand -hex 16)"
+MONGO_CONN="mongodb+srv://<my-user>:<my-password>@<my-cluster>.mongodb.net/?retryWrites=true&w=majority"
+
+kubectl create secret generic redpoint-rpi-secrets \
+  --namespace $NAMESPACE \
+  --from-literal=ConnectionString_Operations_Database="$OPS_CONN" \
+  --from-literal=ConnectionString_Logging_Database="$LOG_CONN" \
+  --from-literal=Operations_Database_Server_Password="$DB_PASS" \
+  --from-literal=Operations_Database_ServerHost="$DB_HOST" \
+  --from-literal=Operations_Database_Server_Username="$DB_USER" \
+  --from-literal=Operations_Database_Pulse_Database_Name="$PULSE_DB" \
+  --from-literal=Operations_Database_Pulse_Logging_Database_Name="$LOGGING_DB" \
+  --from-literal=RealtimeAPI_Auth_Token="$RT_AUTH_TOKEN" \
+  --from-literal=RealtimeAPI_MongoCache_ConnectionString="$MONGO_CONN"
+```
+
+### Secret Key Reference
+
+The table below lists all supported secret keys. Only include the keys relevant to your configuration.
+
+| Key | Required | Used By | Notes |
+|-----|----------|---------|-------|
+| `ConnectionString_Operations_Database` | Always | All services | Full connection string to Pulse database |
+| `ConnectionString_Logging_Database` | Always | All services | Full connection string to Pulse_Logging database |
+| `Operations_Database_Server_Password` | Always | Deployment API, Keycloak | Database password (standalone) |
+| `Operations_Database_ServerHost` | Always | Deployment API | Database server hostname |
+| `Operations_Database_Server_Username` | Always | Deployment API | Database username |
+| `Operations_Database_Pulse_Database_Name` | Always | Deployment API | Pulse database name |
+| `Operations_Database_Pulse_Logging_Database_Name` | Always | Deployment API | Pulse_Logging database name |
+| `RealtimeAPI_Auth_Token` | When Realtime enabled (basic auth) | Realtime API | API authentication token |
+| `RealtimeAPI_ServiceBus_ConnectionString` | Azure Service Bus queue | Realtime API, Callback API | Service Bus connection string |
+| `RealtimeAPI_EventHub_ConnectionString` | Azure Event Hubs queue | Realtime API, Callback API | Event Hubs connection string |
+| `RealtimeAPI_AzureStorage_ConnectionString` | Azure Storage queue | Realtime API, Callback API | Storage account connection string |
+| `RealtimeAPI_MongoCache_ConnectionString` | MongoDB cache | Realtime API | MongoDB connection string |
+| `RealtimeAPI_RedisCache_ConnectionString` | Redis cache | Realtime API | Redis connection string |
+| `RealtimeAPI_RedisCache_Password` | Redis cache | Realtime API | Redis password |
+| `RealtimeAPI_inMemorySql_ConnectionString` | SQL Server cache | Realtime API | SQL in-memory cache connection string |
+| `RealtimeAPI_RabbitMQ_Password` | Internal RabbitMQ queue | Realtime API, Callback API | Auto-generated if internal |
+| `ConnectionString_RealtimeApi_OAuth` | Realtime OAuth mode | Realtime API | OAuth database connection string |
+| `AWS_Access_Key_ID` | SQS with access keys | Realtime API, Callback API | Not needed when using IRSA |
+| `AWS_Secret_Access_Key` | SQS with access keys | Realtime API, Callback API | Not needed when using IRSA |
+| `ExecutionService_RedisCache_ConnectionString` | Execution service cache | Execution Service | Auto-generated if internal |
+| `ExecutionService_RedisCache_Password` | Execution service cache | Execution Service, Redis | Auto-generated if internal |
+| `QueueService_internalCache_ConnectionString` | Distributed queue reader | Queue Reader | Auto-generated if internal |
+| `QueueService_RedisCache_Password` | Distributed queue reader | Queue Reader, Redis | Auto-generated if internal |
+| `QueueService_RabbitMQ_Password` | Distributed queue reader | Queue Reader, RabbitMQ | Auto-generated if internal |
+| `SMTP_Password` | SMTP credentials | Interaction API, Execution Service | Only when `SMTPSettings.UseCredentials: true` |
+
+> **Note:** Keys marked "Auto-generated if internal" are created by the chart when using chart-managed Redis or RabbitMQ. You only need to provide these if you set `autoCreateSecrets: false` and use internal (chart-managed) instances.
+
+---
+
+## 6. Configure Operational Database
 
 > **Quick Start:** To skip external database setup entirely, use **demo mode** instead. Set `global.deployment.mode: demo` and point to the in-cluster databases — see [Demo Database Mode](../README.md#demo-database-mode). Demo mode is for development and evaluation only.
 
@@ -130,7 +253,7 @@ databases:
     pulse_logging_database_name: <my-pulse-logging-database-name>
 ```
 
-## 6. Configure Data Warehouse
+## 7. Configure Data Warehouse
 
 > **Note:** Only required if your [data warehouse]("https://docs.redpointglobal.com/rpi/"supported-connectors#Supportedconnectors-Databaseplatforms) is Redshift or BigQuery. Both use ODBC drivers requiring a DSN configuration. After deployment, use `dsn=redshift` or `dsn=bigquery` as the connection string.
 
@@ -149,7 +272,7 @@ For the selected provider, complete the appropriate `google` or `amazon` section
 
 > **Note:** If you require [RPI Realtime]("https://docs.redpointglobal.com/rpi/"rpi-realtime), complete [Configure Realtime](../README.md#configure-realtime) before proceeding.
 
-## 7. Create Your Overrides File
+## 8. Create Your Overrides File
 
 Start from one of the provided examples in `deploy/values/`:
 
@@ -162,7 +285,7 @@ cp deploy/values/demo/demo.yaml my-overrides.yaml      # Demo/local
 
 Replace all placeholder values with your actual values and remove any sections you don't need. See [readme-values.md](readme-values.md) for details on what each key does.
 
-## 8. Install RPI
+## 9. Install RPI
 
 ```bash
 helm upgrade --install rpi ./chart \
