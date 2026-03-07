@@ -1,4 +1,4 @@
-![redpoint_logo](chart/images/logo.png)
+![redpoint_logo](../chart/images/logo.png)
 # New Installation (Greenfield)
 
 [< Back to main README](../README.md)
