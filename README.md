@@ -9,13 +9,6 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ## Choose Your Path
 
-<p align="left">
-  <a href="docs/readme-configuration.md"><strong>Configuration</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-argocd.md"><strong>GitOps Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-mcp.md"><strong>MCP Guide</strong></a>
-</p>
-
 | | New Installation | Upgrading from v7.6 |
 |:---|:---|:---|
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
@@ -23,9 +16,17 @@ This chart deploys RPI on Kubernetes using Helm.
 | **Databases** | Created from scratch | Existing databases are reused |
 | **Overrides** | Generate with the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) | Convert your existing `values.yaml` to the new format |
 
-![upgrade_diagram](chart/images/upgrade.png)
+---
+<p align="left">
+  <a href="docs/readme-configuration.md"><strong>Configuration</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="docs/readme-argocd.md"><strong>GitOps Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="docs/readme-mcp.md"><strong>MCP Guide</strong></a>
+</p>
 
 ---
+
+![upgrade_diagram](chart/images/upgrade.png)
 
 ## System Requirements
 
