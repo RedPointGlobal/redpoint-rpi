@@ -26,8 +26,6 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ---
 
-![upgrade_diagram](chart/images/upgrade.png)
-
 ## System Requirements
 
 | Component | Requirement |
