@@ -10,8 +10,8 @@
 #   3. prereqs.sh           — kubectl commands for namespace, registry, TLS
 #
 # Usage:
-#   bash deploy/cli/rpi-init.sh
-#   bash deploy/cli/rpi-init.sh -o my-overrides.yaml
+#   bash deploy/cli/interactioncli.sh
+#   bash deploy/cli/interactioncli.sh -o my-overrides.yaml
 # ============================================================
 
 set -euo pipefail

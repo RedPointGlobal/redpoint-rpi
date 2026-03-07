@@ -24,7 +24,7 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 For a guided setup, use the Interaction CLI:
 
 ```bash
-bash deploy/cli/rpi-init.sh
+bash deploy/cli/interactioncli.sh
 ```
 
 This generates three files:
@@ -86,7 +86,7 @@ RPI reads sensitive values (database credentials, connection strings, API tokens
 Use the [Interaction CLI](#quick-start-with-the-interaction-cli) to generate your `rpi-secrets.yaml` manifest. It prompts for your database credentials, cache and queue connection strings, and automatically generates a secure auth token — no manual YAML editing required.
 
 ```bash
-bash deploy/cli/rpi-init.sh
+bash deploy/cli/interactioncli.sh
 ```
 
 The Interaction CLI produces a complete `rpi-secrets.yaml` with correctly formatted connection strings for your platform (Azure SQL, RDS, PostgreSQL). Review the generated file, then apply it:
