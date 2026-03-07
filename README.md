@@ -11,8 +11,7 @@ This chart deploys RPI on Kubernetes using Helm.
   <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-argocd.md"><strong>ArgoCD Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/smartActivation.md"><strong>Smart Activation</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-mcp.md"><strong>AI-Assisted Operations</strong></a>
+  <a href="docs/readme-mcp.md"><strong>MCP Server</strong></a>
 </p>
 
 ---
