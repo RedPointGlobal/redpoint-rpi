@@ -5,6 +5,12 @@ With Redpoint® Interaction you can define your audience and execute highly pers
 
 This chart deploys RPI on Kubernetes using Helm.
 
+![architecture](chart/images/diagram.png)
+
+---
+
+## Choose Your Path
+
 ---
 <p align="left">
   <a href="docs/greenfield.md"><strong>New Installation</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
@@ -16,11 +22,6 @@ This chart deploys RPI on Kubernetes using Helm.
 </p>
 
 ---
-![architecture](chart/images/diagram.png)
-
----
-
-## Choose Your Path
 
 | | New Installation | Upgrading from v7.6 |
 |:---|:---|:---|
