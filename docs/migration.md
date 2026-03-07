@@ -7,8 +7,6 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 
 > **Not ready to upgrade?** The `release/v7.6` branch remains available on GitHub for critical fixes. You are not required to upgrade immediately. Stay on v7.6 as long as needed and migrate when it suits your schedule.
 
----
-
 ## What Changed in v7.7
 
 > **v7.7 Breaking Change**
