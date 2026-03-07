@@ -38,22 +38,21 @@ bash deploy/cli/interactioncli.sh
 
 ```
 ╔══════════════════════════════════════════════╗
-║     ⚡ Redpoint Interaction CLI               ║
-║        Deployment Generator for RPI           ║
+║     ⚡ Redpoint Interaction CLI              ║
+║        Deployment Generator for RPI          ║
 ╚══════════════════════════════════════════════╝
 
-  This tool generates the files needed to deploy
-  Redpoint Interaction (RPI) on Kubernetes.
-  
-```
+This tool generates the files needed to deploy
+Redpoint Interaction (RPI) on Kubernetes.
 
+```
 After generation, review the files:
 
 | File | Purpose |
 |------|---------|
-| `overrides.yaml` | Helm values overrides (excludes sensitive secret values)    |
-| `secrets.yaml`   | Kubernetes Secret manifest with all required keys           |
-| `prereqs.sh`     | kubectl commands for namespace, image pull, and TLS secrets |
+| 📄 `overrides.yaml` | Helm values overrides (excludes sensitive secret values)    |
+| 🔑 `secrets.yaml`   | Kubernetes Secret manifest with all required keys           |
+| 🚀 `prereqs.sh`     | kubectl commands for namespace, image pull, and TLS secrets |
 
 And then deploy:
 
