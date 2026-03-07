@@ -39,7 +39,7 @@ See [readme-values.md](readme-values.md) for full details on the new architectur
 
 ### 1. Update the Chart Source
 
-**Git (direct clone):**
+**If you cloned directly from GitHub:**
 
 ```bash
 cd redpoint-rpi
@@ -48,28 +48,48 @@ git checkout main        # v7.7 is on main
 git pull
 ```
 
-**ArgoCD:**
+**If you maintain an internal copy** (Azure Repos, GitLab, Bitbucket, etc.):
 
-Update `targetRevision` from `release/v7.6` to `main` (or a specific v7.7 tag):
+Most teams mirror the Redpoint GitHub repo into their own version control. To pull in the v7.7 chart, add the upstream GitHub repo as a remote, fetch the latest, and push to your internal repo:
+
+```bash
+cd redpoint-rpi
+
+# Add the upstream Redpoint repo (one-time setup)
+git remote add upstream https://github.com/RedPointGlobal/redpoint-rpi.git
+
+# Fetch the latest from upstream
+git fetch upstream
+
+# Merge v7.7 into your main branch
+git checkout main
+git merge upstream/main
+
+# Push to your internal repo
+git push origin main
+```
+
+**ArgoCD / Flux:**
+
+Update the branch reference from `release/v7.6` to `main` (or a specific v7.7 tag) in your Application or GitRepository manifest:
 
 ```yaml
+# ArgoCD Application
 source:
-  repoURL: https://github.com/RedPointGlobal/redpoint-rpi.git
+  repoURL: https://your-org.visualstudio.com/project/_git/redpoint-rpi  # your internal repo
   targetRevision: main       # was: release/v7.6
   path: chart
 ```
 
-**Flux:**
-
-Update `ref.branch` to `main`:
-
 ```yaml
+# Flux GitRepository
 spec:
+  url: https://your-org.visualstudio.com/project/_git/redpoint-rpi      # your internal repo
   ref:
     branch: main             # was: release/v7.6
 ```
 
-> **Tip:** The `release/v7.6` branch remains available for critical fixes. You can stay on it as long as needed.
+> **Tip:** The `release/v7.6` branch remains available on GitHub for critical fixes. You can stay on it as long as needed.
 
 ### 2. Identify Your Customizations
 
