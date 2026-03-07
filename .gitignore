@@ -3,6 +3,10 @@ deployment
 values-*
 .claude
 
+# Generated secrets (never commit)
+rpi-secrets.yaml
+*-secrets.yaml
+
 # Terraform
 deploy/terraform/modules/*/.terraform/
 deploy/terraform/modules/*/.terraform.lock.hcl

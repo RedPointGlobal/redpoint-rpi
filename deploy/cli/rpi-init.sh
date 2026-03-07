@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================
-# rpi-init.sh — Interactive RPI Helm overrides generator
+# rpi-init.sh — Interactive RPI deployment generator
 # ============================================================
-# Generates a ready-to-use Helm values file and a prerequisites
-# script from interactive prompts. No dependencies beyond bash.
+# Generates three files:
+#   1. my-overrides.yaml    — Helm values (no secrets)
+#   2. rpi-secrets.yaml     — Kubernetes Secret manifest
+#   3. prereqs.sh           — kubectl commands for namespace, registry, TLS
 #
 # Usage:
 #   bash deploy/cli/rpi-init.sh
@@ -14,10 +16,12 @@ set -euo pipefail
 
 # --- Defaults ---
 OUTPUT_FILE="my-overrides.yaml"
+SECRETS_FILE="rpi-secrets.yaml"
 PREREQS_FILE="prereqs.sh"
 DEFAULT_TAG="7.7.20260220.1524"
 DEFAULT_NAMESPACE="redpoint-rpi"
 DEFAULT_REGISTRY="rg1acrpub.azurecr.io/docker/redpointglobal/releases"
+SECRET_NAME="redpoint-rpi-secrets"
 
 # --- Parse arguments ---
 while getopts "o:h" opt; do
@@ -75,12 +79,13 @@ prompt_yesno() {
 
 echo ""
 echo "============================================"
-echo "  RPI Helm Overrides Generator"
+echo "  RPI Deployment Generator"
 echo "============================================"
 echo ""
-echo "This script will generate:"
-echo "  1. ${OUTPUT_FILE} — Helm values overrides file"
-echo "  2. ${PREREQS_FILE} — Prerequisite kubectl commands"
+echo "This script generates:"
+echo "  1. ${OUTPUT_FILE}    — Helm values overrides (no secrets)"
+echo "  2. ${SECRETS_FILE}   — Kubernetes Secret manifest"
+echo "  3. ${PREREQS_FILE}   — Prerequisite kubectl commands"
 echo ""
 
 # ============================================================
@@ -101,13 +106,13 @@ prompt DOMAIN "Ingress domain (e.g., rpi.example.com)" "example.com"
 prompt_yesno DEPLOY_CONTROLLER "Deploy chart-provided ingress controller?" "y"
 
 # ============================================================
-# 3. Database (skip for demo)
+# 3. Database
 # ============================================================
 DB_HOST=""
 DB_USER=""
 DB_PASS=""
-DB_PULSE=""
-DB_LOGGING=""
+DB_PULSE="Pulse"
+DB_LOGGING="Pulse_Logging"
 DB_PROVIDER="sqlserver"
 
 if [ "$MODE" = "standard" ]; then
@@ -154,19 +159,7 @@ if [ "$PLATFORM" != "selfhosted" ]; then
 fi
 
 # ============================================================
-# 5. Secrets Management
-# ============================================================
-echo ""
-echo "--- Secrets Management ---"
-prompt_choice SECRETS_PROVIDER "Secrets provider" "kubernetes|sdk|csi" "kubernetes"
-
-SDK_VAULT_URI=""
-if [ "$SECRETS_PROVIDER" = "sdk" ] && [ "$PLATFORM" = "azure" ]; then
-  prompt SDK_VAULT_URI "Azure Key Vault URI" "https://myvault.vault.azure.net/"
-fi
-
-# ============================================================
-# 6. Realtime API
+# 5. Realtime API
 # ============================================================
 echo ""
 echo "--- Realtime API ---"
@@ -175,44 +168,138 @@ prompt_yesno REALTIME_ENABLED "Enable Realtime API?" "y"
 RT_CACHE_PROVIDER=""
 RT_CACHE_CONNSTR=""
 RT_QUEUE_PROVIDER=""
+RT_QUEUE_CONNSTR=""
 
 if [ "$REALTIME_ENABLED" = "true" ]; then
   prompt_choice RT_CACHE_PROVIDER "Cache provider" "mongodb|redis|inMemorySql" "mongodb"
   if [ "$RT_CACHE_PROVIDER" = "mongodb" ]; then
     prompt RT_CACHE_CONNSTR "MongoDB connection string" ""
   fi
-  prompt_choice RT_QUEUE_PROVIDER "Queue provider" "amazonsqs|azureservicebus|rabbitmq|googlepubsub" "rabbitmq"
+
+  if [ "$PLATFORM" = "azure" ]; then
+    prompt_choice RT_QUEUE_PROVIDER "Queue provider" "azureservicebus|rabbitmq" "azureservicebus"
+  elif [ "$PLATFORM" = "amazon" ]; then
+    prompt_choice RT_QUEUE_PROVIDER "Queue provider" "amazonsqs|rabbitmq" "amazonsqs"
+  elif [ "$PLATFORM" = "google" ]; then
+    prompt_choice RT_QUEUE_PROVIDER "Queue provider" "googlepubsub|rabbitmq" "googlepubsub"
+  else
+    prompt_choice RT_QUEUE_PROVIDER "Queue provider" "rabbitmq" "rabbitmq"
+  fi
+
+  if [ "$RT_QUEUE_PROVIDER" = "azureservicebus" ]; then
+    prompt RT_QUEUE_CONNSTR "Azure Service Bus connection string" ""
+  fi
 fi
 
 # ============================================================
-# 7. Post-Install Automation
+# Generate Realtime auth token
 # ============================================================
-echo ""
-echo "--- Post-Install Automation ---"
-prompt_yesno POSTINSTALL_ENABLED "Enable automated post-install (license + DB setup)?" "n"
-
-PI_ACTIVATION_KEY=""
-PI_SYSTEM_NAME=""
-PI_ADMIN_PASS=""
-PI_ADMIN_EMAIL=""
-
-if [ "$POSTINSTALL_ENABLED" = "true" ]; then
-  prompt PI_ACTIVATION_KEY "License activation key" ""
-  prompt PI_SYSTEM_NAME "System name" "my-rpi-system"
-  read -rsp "Admin password: " PI_ADMIN_PASS; echo ""
-  prompt PI_ADMIN_EMAIL "Admin email" "admin@example.com"
+RT_AUTH_TOKEN=""
+if [ "$REALTIME_ENABLED" = "true" ]; then
+  if command -v openssl &> /dev/null; then
+    RT_AUTH_TOKEN=$(openssl rand -hex 16)
+  else
+    RT_AUTH_TOKEN=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')
+  fi
 fi
 
 # ============================================================
-# Generate overrides YAML
+# Build connection strings for the secret
+# ============================================================
+OPS_CONN=""
+LOG_CONN=""
+
+if [ "$MODE" = "standard" ]; then
+  case "$DB_PROVIDER" in
+    sqlserver)
+      OPS_CONN="Server=tcp:${DB_HOST},1433;Database=${DB_PULSE};User ID=${DB_USER};Password=${DB_PASS};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+      LOG_CONN="Server=tcp:${DB_HOST},1433;Database=${DB_LOGGING};User ID=${DB_USER};Password=${DB_PASS};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+      ;;
+    postgresql)
+      OPS_CONN="PostgreSQL:Server=${DB_HOST};Database=${DB_PULSE};User Id=${DB_USER};Password=${DB_PASS};"
+      LOG_CONN="PostgreSQL:Server=${DB_HOST};Database=${DB_LOGGING};User Id=${DB_USER};Password=${DB_PASS};"
+      ;;
+    sqlserveronvm)
+      OPS_CONN="Server=${DB_HOST},1433;Database=${DB_PULSE};uid=${DB_USER};pwd=${DB_PASS};ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=True;TrustServerCertificate=True;"
+      LOG_CONN="Server=${DB_HOST},1433;Database=${DB_LOGGING};uid=${DB_USER};pwd=${DB_PASS};ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=True;TrustServerCertificate=True;"
+      ;;
+  esac
+fi
+
+# ============================================================
+# Generate rpi-secrets.yaml
 # ============================================================
 echo ""
+echo "Generating ${SECRETS_FILE}..."
+
+cat > "$SECRETS_FILE" << SECRETS_HEADER
+# ============================================================
+# RPI Kubernetes Secret — Generated by rpi-init.sh
+# $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+# ============================================================
+# Apply BEFORE helm install:
+#   kubectl apply -f ${SECRETS_FILE}
+#
+# WARNING: This file contains sensitive values.
+#          Do NOT commit this file to version control.
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${SECRET_NAME}
+  namespace: ${NAMESPACE}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+stringData:
+SECRETS_HEADER
+
+if [ "$MODE" = "standard" ]; then
+  cat >> "$SECRETS_FILE" << SECRETS_DB
+  # -- Operational Database --
+  ConnectionString_Operations_Database: "${OPS_CONN}"
+  ConnectionString_Logging_Database: "${LOG_CONN}"
+  Operations_Database_Server_Password: "${DB_PASS}"
+  Operations_Database_ServerHost: "${DB_HOST}"
+  Operations_Database_Server_Username: "${DB_USER}"
+  Operations_Database_Pulse_Database_Name: "${DB_PULSE}"
+  Operations_Database_Pulse_Logging_Database_Name: "${DB_LOGGING}"
+SECRETS_DB
+fi
+
+if [ "$REALTIME_ENABLED" = "true" ]; then
+  cat >> "$SECRETS_FILE" << SECRETS_RT
+  # -- Realtime API --
+  RealtimeAPI_Auth_Token: "${RT_AUTH_TOKEN}"
+SECRETS_RT
+
+  if [ "$RT_CACHE_PROVIDER" = "mongodb" ] && [ -n "$RT_CACHE_CONNSTR" ]; then
+    cat >> "$SECRETS_FILE" << SECRETS_MONGO
+  RealtimeAPI_MongoCache_ConnectionString: "${RT_CACHE_CONNSTR}"
+SECRETS_MONGO
+  fi
+
+  if [ "$RT_QUEUE_PROVIDER" = "azureservicebus" ] && [ -n "$RT_QUEUE_CONNSTR" ]; then
+    cat >> "$SECRETS_FILE" << SECRETS_SB
+  RealtimeAPI_ServiceBus_ConnectionString: "${RT_QUEUE_CONNSTR}"
+SECRETS_SB
+  fi
+fi
+
+echo "  Created: ${SECRETS_FILE}"
+
+# ============================================================
+# Generate overrides YAML (no secrets)
+# ============================================================
 echo "Generating ${OUTPUT_FILE}..."
 
 cat > "$OUTPUT_FILE" << YAML
 # ============================================================
 # RPI Helm Overrides — Generated by rpi-init.sh
 # $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+# ============================================================
+# This file contains ONLY non-sensitive configuration.
+# Secrets are in ${SECRETS_FILE} (applied separately).
 # ============================================================
 
 global:
@@ -226,9 +313,15 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
+
+secretsManagement:
+  provider: kubernetes
+  kubernetes:
+    autoCreateSecrets: false
+    secretName: ${SECRET_NAME}
 YAML
 
-# Database section
+# Database section (non-sensitive parts only)
 if [ "$MODE" = "standard" ]; then
   cat >> "$OUTPUT_FILE" << YAML
 
@@ -237,22 +330,9 @@ databases:
     provider: ${DB_PROVIDER}
     server_host: ${DB_HOST}
     server_username: ${DB_USER}
-    server_password: ${DB_PASS}
     pulse_database_name: ${DB_PULSE}
     pulse_logging_database_name: ${DB_LOGGING}
     encrypt: true
-YAML
-else
-  cat >> "$OUTPUT_FILE" << YAML
-
-# Demo mode: embedded MSSQL + MongoDB (no external DB needed)
-databases:
-  operational:
-    server_host: rpi-demo-mssql
-    server_username: sa
-    server_password: RETRIEVE_FROM_SECRET
-    pulse_database_name: Pulse
-    pulse_logging_database_name: Pulse_Logging
 YAML
 fi
 
@@ -290,27 +370,6 @@ YAML
 YAML
       ;;
   esac
-else
-  cat >> "$OUTPUT_FILE" << YAML
-
-cloudIdentity:
-  enabled: false
-YAML
-fi
-
-# Secrets Management
-cat >> "$OUTPUT_FILE" << YAML
-
-secretsManagement:
-  provider: ${SECRETS_PROVIDER}
-YAML
-
-if [ "$SECRETS_PROVIDER" = "sdk" ] && [ -n "$SDK_VAULT_URI" ]; then
-  cat >> "$OUTPUT_FILE" << YAML
-  sdk:
-    azure:
-      vaultUri: ${SDK_VAULT_URI}
-YAML
 fi
 
 # Ingress
@@ -322,7 +381,7 @@ ingress:
   domain: ${DOMAIN}
 YAML
 
-# Realtime API
+# Realtime API (non-sensitive parts only)
 if [ "$REALTIME_ENABLED" = "true" ]; then
   cat >> "$OUTPUT_FILE" << YAML
 
@@ -332,16 +391,6 @@ realtimeapi:
   cacheProvider:
     enabled: true
     provider: ${RT_CACHE_PROVIDER}
-YAML
-
-  if [ "$RT_CACHE_PROVIDER" = "mongodb" ] && [ -n "$RT_CACHE_CONNSTR" ]; then
-    cat >> "$OUTPUT_FILE" << YAML
-    mongodb:
-      connectionString: "${RT_CACHE_CONNSTR}"
-YAML
-  fi
-
-  cat >> "$OUTPUT_FILE" << YAML
   queueProvider:
     enabled: true
     provider: ${RT_QUEUE_PROVIDER}
@@ -355,21 +404,7 @@ YAML
   fi
 fi
 
-# Post-Install
-if [ "$POSTINSTALL_ENABLED" = "true" ]; then
-  cat >> "$OUTPUT_FILE" << YAML
-
-postInstall:
-  enabled: true
-  activationKey: "${PI_ACTIVATION_KEY}"
-  systemName: "${PI_SYSTEM_NAME}"
-  adminUsername: coreuser
-  adminPassword: "${PI_ADMIN_PASS}"
-  adminEmail: "${PI_ADMIN_EMAIL}"
-YAML
-fi
-
-# Pre-flight (always enable as test mode)
+# Pre-flight
 cat >> "$OUTPUT_FILE" << YAML
 
 preflight:
@@ -423,8 +458,7 @@ kubectl create secret tls ingress-tls \\
   --dry-run=client -o yaml | kubectl apply -f -
 
 echo ""
-echo "Prerequisites created. Deploy with:"
-echo "  helm upgrade --install rpi ./chart -f ${OUTPUT_FILE} -n \${NAMESPACE} --create-namespace"
+echo "Prerequisites created successfully."
 PREREQS_BODY
 
 chmod +x "$PREREQS_FILE"
@@ -439,8 +473,12 @@ echo "  Generation Complete"
 echo "============================================"
 echo ""
 echo "Next steps:"
-echo "  1. Review ${OUTPUT_FILE} and update any placeholder values"
-echo "  2. Run prerequisites:  bash ${PREREQS_FILE}"
-echo "  3. Deploy:  helm upgrade --install rpi ./chart -f ${OUTPUT_FILE} -n ${NAMESPACE} --create-namespace"
-echo "  4. Validate: helm test rpi -n ${NAMESPACE}"
+echo "  1. Review ${SECRETS_FILE} — ensure all values are correct"
+echo "  2. Run prerequisites:     bash ${PREREQS_FILE}"
+echo "  3. Apply secrets:         kubectl apply -f ${SECRETS_FILE}"
+echo "  4. Deploy:                helm upgrade --install rpi ./chart -f ${OUTPUT_FILE} -n ${NAMESPACE}"
+echo "  5. Validate:              helm test rpi -n ${NAMESPACE}"
+echo ""
+echo "WARNING: ${SECRETS_FILE} contains sensitive values."
+echo "         Do NOT commit it to version control."
 echo ""
