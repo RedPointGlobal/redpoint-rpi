@@ -5,6 +5,8 @@
 
 This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you're deploying RPI for the first time, see the [Greenfield Installation](greenfield.md) guide instead.
 
+> **Not ready to upgrade?** The `release/v7.6` branch remains available on GitHub for critical fixes. You are not required to upgrade immediately. Stay on v7.6 as long as needed and migrate when it suits your schedule.
+
 ---
 
 ## What Changed in v7.7
@@ -89,7 +91,6 @@ spec:
     branch: main             # was: release/v7.6
 ```
 
-> **Tip:** The `release/v7.6` branch remains available on GitHub for critical fixes. You can stay on it as long as needed.
 
 ### 2. Identify Your Customizations
 
