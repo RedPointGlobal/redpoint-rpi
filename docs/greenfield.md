@@ -19,9 +19,18 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 
 ---
 
-## Quick Start with the Interaction CLI
+## 1. Clone This Repository
 
-For a guided setup, use the Interaction CLI:
+```bash
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+cd redpoint-rpi
+```
+
+## 2. Quick Start with the Interaction CLI
+
+RPI reads sensitive values (database credentials, connection strings, API tokens) from a Kubernetes Secret (not from your values file). This keeps secrets out of version control and Helm release metadata.
+
+For a guided setup, use the Interaction CLI to generate your `secrets.yaml` manifest. It prompts for your database credentials, cache and queue connection strings, and automatically generates a Kubernets secrets object. No manual YAML editing required.
 
 ```bash
 bash deploy/cli/interactioncli.sh
@@ -36,83 +45,29 @@ bash deploy/cli/interactioncli.sh
   This tool generates the files needed to deploy
   Redpoint Interaction (RPI) on Kubernetes.
 
-  📄 values-overrides.yaml       — Helm values overrides
-  🔑 redpoint-rpi-secrets.yaml   — Kubernetes Secret manifest
-  🚀 prereqs.sh                  — Prerequisite kubectl commands
+  📄 overrides.yaml       — Helm values overrides
+  🔑 secrets.yaml         — Kubernetes Secret manifest
+  🚀 prereqs.sh           — Prerequisite kubectl commands
 ```
 
-This generates three files:
+After generation, review the files:
 
 | File | Purpose |
 |------|---------|
-| `my-overrides.yaml` | Helm values overrides (no secrets) |
-| `rpi-secrets.yaml` | Kubernetes Secret manifest with all required keys |
-| `prereqs.sh` | kubectl commands for namespace, image pull, and TLS secrets |
+| `overrides.yaml` | Helm values overrides (excludes sensitive secret values)    |
+| `secrets.yaml`   | Kubernetes Secret manifest with all required keys           |
+| `prereqs.sh`     | kubectl commands for namespace, image pull, and TLS secrets |
 
-After generation, review the files and deploy:
+And then deploy:
 
 ```bash
 bash prereqs.sh
-helm upgrade --install rpi ./chart -f my-overrides.yaml -n redpoint-rpi
+helm upgrade --install rpi ./chart -f overrides.yaml -n redpoint-rpi
 ```
 
-The `prereqs.sh` script handles namespace creation, image pull secret, TLS secret, and applies `rpi-secrets.yaml` — all in one step.
+The `prereqs.sh` script handles namespace creation, image pull secret, TLS secret, and applies `secrets.yaml` all in one step.
 
-You can skip the rest of this guide if you use the Interaction CLI.
-
----
-
-## 1. Clone This Repository
-
-```bash
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git
-cd redpoint-rpi
-```
-
-## 2. Create Kubernetes Namespace
-
-```bash
-kubectl create namespace redpoint-rpi
-```
-
-## 3. Create Image Pull and TLS Secrets
-
-Obtain container registry credentials from [Redpoint Support](mailto:support@redpointglobal.com):
-
-```bash
-NAMESPACE=redpoint-rpi
-
-kubectl create secret docker-registry redpoint-rpi \
-  --namespace $NAMESPACE \
-  --docker-server=rg1acrpub.azurecr.io \
-  --docker-username=<your-username> \
-  --docker-password=<your-password>
-
-kubectl create secret tls ingress-tls \
-  --namespace $NAMESPACE \
-  --cert=./your_cert.crt \
-  --key=./your_cert.key
-```
-
-## 4. Create the RPI Secrets Manifest
-
-RPI reads sensitive values (database credentials, connection strings, API tokens) from a Kubernetes Secret — not from your values file. This keeps secrets out of version control and Helm release metadata.
-
-Use the [Interaction CLI](#quick-start-with-the-interaction-cli) to generate your `rpi-secrets.yaml` manifest. It prompts for your database credentials, cache and queue connection strings, and automatically generates a secure auth token — no manual YAML editing required.
-
-```bash
-bash deploy/cli/interactioncli.sh
-```
-
-The Interaction CLI produces a complete `rpi-secrets.yaml` with correctly formatted connection strings for your platform (Azure SQL, RDS, PostgreSQL). Review the generated file, then apply it:
-
-```bash
-kubectl apply -f rpi-secrets.yaml
-```
-
-> **Important:** The generated secret includes the `helm.sh/resource-policy: keep` annotation, which prevents Helm from deleting it on `helm uninstall`. This is intentional — secrets persist independently of Helm releases.
-
-> **Warning:** `rpi-secrets.yaml` contains sensitive credentials. Do **not** commit it to version control. The `.gitignore` already excludes `*-secrets.yaml`.
+> **Warning:** `secrets.yaml` contains sensitive credentials. Do **not** commit it to version control. The `.gitignore` already excludes `*-secrets.yaml`.
 
 <details>
 <summary><strong>Secret Key Reference</strong> — All supported keys (click to expand)</summary>
@@ -141,48 +96,11 @@ The table below lists all keys the chart can read from the secret. The Interacti
 
 </details>
 
-## 5. Create Your Overrides File
+Your overrides file should contain **only non-sensitive configuration** such as platform, database provider/host, cloud identity, ingress domain, realtime settings. All sensitive values (passwords, connection strings, tokens) are in the Kubernetes Secret you created in Step 2
 
-Start from the example that matches your platform:
-
-```bash
-cp deploy/values/azure/azure.yaml my-overrides.yaml   # Azure
-cp deploy/values/aws/amazon.yaml my-overrides.yaml     # AWS
-```
-
-Your overrides file should contain **only non-sensitive configuration** — platform, database provider/host, cloud identity, ingress domain, realtime settings. All sensitive values (passwords, connection strings, tokens) are in the Kubernetes Secret you created in Step 4.
-
-Set the secrets management to use your pre-created secret:
-
-```yaml
-secretsManagement:
-  provider: kubernetes
-  kubernetes:
-    autoCreateSecrets: false
-    secretName: redpoint-rpi-secrets
-```
-
-Replace all remaining `<placeholder>` values. See [readme-values.md](readme-values.md) for details on what each key does.
-
-## 6. Install RPI
+## 3. Validate the deployment
 
 ```bash
-helm upgrade --install rpi ./chart \
-  -f my-overrides.yaml \
-  -n redpoint-rpi \
-  --create-namespace
-```
-
-It may take 5-10 minutes for all services to fully initialize.
-
-### Validate the deployment
-
-```bash
-# Enable preflight checks in your overrides:
-#   preflight:
-#     enabled: true
-#     mode: test
-
 helm test rpi -n redpoint-rpi
 ```
 
@@ -209,10 +127,10 @@ Create DNS records mapping each hostname to the load balancer IP, then access:
 | Service | URL |
 |---------|-----|
 | Deployment Service | `https://rpi-deploymentapi.example.com` |
-| Client | `https://rpi-interactionapi.example.com` |
-| Integration API | `https://rpi-integrationapi.example.com` |
-| Realtime API | `https://rpi-realtimeapi.example.com` |
-| Callback API | `https://rpi-callbackapi.example.com` |
+| Client            | `https://rpi-interactionapi.example.com` |
+| Integration API   | `https://rpi-integrationapi.example.com` |
+| Realtime API         | `https://rpi-realtimeapi.example.com` |
+| Callback API         | `https://rpi-callbackapi.example.com` |
 
 ## Download Client Executable
 
@@ -220,9 +138,9 @@ Download the RPI Client from the Post-release Product Updates section of the [RP
 
 ---
 
-## 7. Post-Deployment: License and Database Setup
+## Post-Deployment: License and Database Setup
 
-### Activate RPI License
+###  Activate RPI License
 
 ```bash
 DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
@@ -237,7 +155,7 @@ curl -X POST "https://$DEPLOYMENT_SERVICE_URL/api/licensing/activatelicense" \
   }'
 ```
 
-### Install Cluster Databases
+### 2. Install Cluster Databases
 
 ```bash
 DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
