@@ -209,10 +209,4 @@ curl -X POST \
 
 ## Next Steps
 
-- [Cloud Identity](../README.md#configure-cloud-identity)
-- [Realtime](../README.md#configure-realtime)
-- [Autoscaling](../README.md#configure-autoscaling)
-- [Service Mesh](../README.md#configure-service-mesh)
-- [Custom Metrics](../README.md#configure-custom-metrics)
-
-See the [main README](../README.md) for all configuration options.
+See the **[CONFIGURATION Reference](docs/readme-configuration.md)** for optional features including cloud identity, secrets management, storage, Realtime API, autoscaling, service mesh, SSO, and more.
