@@ -28,10 +28,10 @@ This chart deploys RPI on Kubernetes using Helm.
 |:---|:---|:---|
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
 | **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
-| **Databases** | Created from scratch | Existing operational and logging databases are reused |
+| **Databases** | Created from scratch | Existing databases are reused |
 | **Overrides** | Generate with the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) | Convert your existing `values.yaml` to the new format |
 
-> **Quick Start (Demo Mode):** For evaluation or development, set `global.deployment.mode: demo` to deploy embedded MSSQL and MongoDB containers — no external database setup required. See [Demo Mode](docs/readme-configuration.md#demo-mode).
+> **Quick Start (Demo Mode):** For evaluation or development, run the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) and select `demo` mode. This deploys embedded MSSQL and MongoDB containers with no external database setup required.
 
 ![upgrade_diagram](chart/images/upgrade.png)
 
