@@ -69,66 +69,33 @@ git merge upstream/main
 git push origin main
 ```
 
-**ArgoCD / Flux:**
 
-Update the branch reference from `release/v7.6` to `main` (or a specific v7.7 tag) in your Application or GitRepository manifest:
+### 2. Generate Your v7.7 Overrides File
 
-```yaml
-# ArgoCD Application
-source:
-  repoURL: https://your-org.visualstudio.com/project/_git/redpoint-rpi  # your internal repo
-  targetRevision: main       # was: release/v7.6
-  path: chart
-```
-
-```yaml
-# Flux GitRepository
-spec:
-  url: https://your-org.visualstudio.com/project/_git/redpoint-rpi      # your internal repo
-  ref:
-    branch: main             # was: release/v7.6
-```
-
-
-### 2. Identify Your Customizations
-
-Diff your current `values.yaml` against the v7.6 chart's original to find what you actually changed:
-
-```bash
-# If you still have the original v7.6 values.yaml
-diff my-current-values.yaml chart/values.yaml.orig
-```
-
-Or compare against the v7.6 branch:
-
-```bash
-git diff release/v7.6:values.yaml -- my-current-values.yaml
-```
-
-Focus on the values that differ — these are the only values you need to carry forward.
-
-### 3. Create Your New Overrides File
-
-**Option A: Interaction CLI (recommended)**
-
-Run the [Interaction CLI](greenfield.md#2-quick-start-with-the-interaction-cli) to generate your overrides file interactively. It handles secrets, ingress hosts, and platform-specific configuration automatically:
+Run the [Interaction CLI](greenfield.md#2-quick-start-with-the-interaction-cli) and enter your existing resource coordinates — database host, credentials, platform, ingress domain, cache/queue providers, etc. The CLI generates a v7.7-compatible overrides file with the correct structure, so you don't need to manually diff or translate your v7.6 values:
 
 ```bash
 bash deploy/cli/interactioncli.sh
 ```
 
-Then transfer any additional customizations from your v7.6 values into the generated `overrides.yaml`.
+The CLI produces three files:
 
-**Option B: Start from an example**
+| File | Purpose |
+|:-----|:--------|
+| `overrides.yaml` | Helm values overrides in v7.7 format |
+| `secrets.yaml` | Kubernetes Secret manifest with all required keys |
+| `prereqs.sh` | kubectl commands for namespace, image pull, TLS, and secrets |
 
-```bash
-# Pick the closest match to your environment
-cp deploy/values/azure/azure.yaml my-overrides.yaml   # Azure
-cp deploy/values/aws/amazon.yaml my-overrides.yaml     # AWS
-cp deploy/values/demo/demo.yaml my-overrides.yaml      # Demo/local
-```
+> **Tip:** Have your v7.6 `values.yaml` open while running the CLI so you can copy values like database hostnames, connection strings, and ingress domains directly into the prompts.
 
-Transfer your customizations into this file. Common values to carry over:
+If you have customizations beyond what the CLI covers (custom plugins, KEDA scaling, advanced overrides), add them to the generated `overrides.yaml` after. See the mapping tables below for key renames.
+
+### 3. Key Mapping Reference
+
+The sections below document every key that changed between v7.6 and v7.7. If you used the Interaction CLI, most of these are handled automatically. Review this section only if you have customizations the CLI doesn't cover, or if you prefer to build your overrides file manually.
+
+<details>
+<summary><strong>Common values to carry over</strong> (click to expand)</summary>
 
 | Category | Keys |
 |:---------|:-----|
@@ -144,6 +111,8 @@ Transfer your customizations into this file. Common values to carry over:
 | **SMTP** | `SMTPSettings.*` |
 | **Pod Metadata** | Per-service `podAnnotations`, `podLabels` |
 | **Service Mesh** | `serviceMesh.*` |
+
+</details>
 
 #### 3a. Map Cloud Identity Changes
 
@@ -506,6 +475,31 @@ helm upgrade rpi ./chart \
   -f my-overrides.yaml \
   -n redpoint-rpi
 ```
+
+<details>
+<summary><strong>ArgoCD / Flux users</strong> (click to expand)</summary>
+
+If you use ArgoCD or Flux instead of `helm upgrade`, update the branch reference from `release/v7.6` to `main` (or a specific v7.7 tag) in your Application or GitRepository manifest. The `repoURL` should point to wherever you host the chart:
+
+```yaml
+# ArgoCD Application
+source:
+  repoURL: https://your-org.visualstudio.com/project/_git/redpoint-rpi
+  targetRevision: main       # was: release/v7.6
+  path: chart
+```
+
+```yaml
+# Flux GitRepository
+spec:
+  url: https://your-org.visualstudio.com/project/_git/redpoint-rpi
+  ref:
+    branch: main             # was: release/v7.6
+```
+
+Commit your `overrides.yaml` to the repo and sync. See the [GitOps Guide](readme-argocd.md) for detailed ArgoCD configuration.
+
+</details>
 
 ---
 
