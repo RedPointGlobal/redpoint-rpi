@@ -7,21 +7,14 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ![architecture](chart/images/diagram.png)
 
----
-
 ## Choose Your Path
 
----
 <p align="left">
-  <a href="docs/greenfield.md"><strong>New Installation</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/migration.md"><strong>Upgrade from v7.6</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-configuration.md"><strong>Configuration</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-argocd.md"><strong>GitOps Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-mcp.md"><strong>MCP Guide</strong></a>
 </p>
-
----
 
 | | New Installation | Upgrading from v7.6 |
 |:---|:---|:---|
@@ -29,8 +22,6 @@ This chart deploys RPI on Kubernetes using Helm.
 | **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
 | **Databases** | Created from scratch | Existing databases are reused |
 | **Overrides** | Generate with the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) | Convert your existing `values.yaml` to the new format |
-
-> **Quick Start (Demo Mode):** For evaluation or development, run the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) and select `demo` mode. This deploys embedded MSSQL and MongoDB containers with no external database setup required.
 
 ![upgrade_diagram](chart/images/upgrade.png)
 

@@ -9,12 +9,12 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 
 ## What Changed in v7.7
 
-> **v7.7 Breaking Change** 
+> **v7.7 Breaking Change**
 
-The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a **879-line user-facing configuration** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file.  You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](docs/readme-values.md) for details
+The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a **879-line user-facing configuration** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
 
 | Before (v7.6) | After (v7.7) |
-|---------------|-------------|
+|:---|:---|
 | Copy the full `values.yaml` and edit it | Maintain a small overrides file with only your customizations |
 | 2,608 lines to manage | 50-100 lines typical |
 | Upgrades require diffing the entire file | Upgrades apply new defaults automatically |
@@ -27,6 +27,8 @@ The `values.yaml` has been redesigned from a **2,972-line monolithic file** to a
 - **CSI SecretProviderClass** — Create SecretProviderClass resources for Azure Key Vault, AWS Secrets Manager, and other CSI secret providers
 - **Persistent volume creation** — Create PV + PVC pairs for CSI-backed storage (Azure Blob, Azure Files, AWS EFS, GCP Filestore)
 - **Per-service pod annotations/labels** — Apply `podAnnotations` and `podLabels` to individual services without affecting others
+- **Automatic database upgrade Job** — Helm-native Job that runs schema migrations on each `helm upgrade`
+- **Interaction CLI** — Interactive script that generates your overrides file, secrets, and prerequisites in one step
 
 See [readme-values.md](readme-values.md) for full details on the new architecture.
 
@@ -39,7 +41,6 @@ See [readme-values.md](readme-values.md) for full details on the new architectur
 **Git (direct clone):**
 
 ```bash
-# If you cloned with a specific branch
 cd redpoint-rpi
 git fetch origin
 git checkout main        # v7.7 is on main
@@ -88,7 +89,17 @@ Focus on the values that differ — these are the only values you need to carry 
 
 ### 3. Create Your New Overrides File
 
-Start from one of the provided examples:
+**Option A: Interaction CLI (recommended)**
+
+Run the [Interaction CLI](greenfield.md#2-quick-start-with-the-interaction-cli) to generate your overrides file interactively. It handles secrets, ingress hosts, and platform-specific configuration automatically:
+
+```bash
+bash deploy/cli/interactioncli.sh
+```
+
+Then transfer any additional customizations from your v7.6 values into the generated `overrides.yaml`.
+
+**Option B: Start from an example**
 
 ```bash
 # Pick the closest match to your environment
@@ -100,7 +111,7 @@ cp deploy/values/demo/demo.yaml my-overrides.yaml      # Demo/local
 Transfer your customizations into this file. Common values to carry over:
 
 | Category | Keys |
-|----------|------|
+|:---------|:-----|
 | **Platform** | `global.deployment.platform`, `global.deployment.images.tag` |
 | **Database** | `databases.operational.*` |
 | **Data Warehouse** | `databases.datawarehouse.*` |
@@ -206,7 +217,7 @@ cloudIdentity:
 ```
 
 | v7.6 Key | v7.7 Key | Notes |
-|----------|----------|-------|
+|:---------|:---------|:------|
 | `cloudIdentity.provider` | *(removed)* | Derived from `global.deployment.platform` |
 | `cloudIdentity.azureSettings.*` | `cloudIdentity.azure.*` | Flattened |
 | `cloudIdentity.amazonSettings.*` | `cloudIdentity.amazon.*` | Flattened; `credentialsType` replaced by `useAccessKeys` boolean |
@@ -235,7 +246,7 @@ secretsManagement:
 ```
 
 | v7.6 Provider | v7.7 Provider | Notes |
-|--------------|--------------|-------|
+|:-------------|:-------------|:------|
 | `kubernetes` | `kubernetes` | Unchanged |
 | `keyvault` | `sdk` | Azure Key Vault settings move to `secretsManagement.sdk.azure.*` |
 | `awssecretsmanager` | `sdk` | AWS SM settings move to `secretsManagement.sdk.amazon.*` |
@@ -260,76 +271,7 @@ secretsManagement:
       useADTokenForDatabaseConnection: true
 ```
 
-### 4. Move Hidden Defaults to `advanced:`
-
-If you customized values that are no longer top-level in v7.7 (health probes, security contexts, logging levels, service ports), place them under the `advanced:` block:
-
-```yaml
-# Before (v7.6 values.yaml):
-livenessProbe:
-  periodSeconds: 30
-  failureThreshold: 5
-
-securityContext:
-  runAsUser: 1000
-  fsGroup: 1000
-
-# After (v7.7 overrides file):
-advanced:
-  livenessProbe:
-    periodSeconds: 30
-    failureThreshold: 5
-  securityContext:
-    runAsUser: 1000
-    fsGroup: 1000
-```
-
-Per-component overrides go under `advanced.<component>`:
-
-```yaml
-# Before (v7.6):
-realtimeapi:
-  logging:
-    realtimeapi:
-      default: Debug
-
-# After (v7.7):
-advanced:
-  realtimeapi:
-    logging:
-      realtimeapi:
-        default: Debug
-```
-
-Open `docs/values-reference.yaml` to see every available key under `advanced:`.
-
-### 5. Validate with Helm Template
-
-Before applying, render the manifests and compare against your current running state:
-
-```bash
-# Render with new overrides
-helm template rpi ./chart -f my-overrides.yaml -n redpoint-rpi > rendered-v77.yaml
-
-# Compare against current deployment
-kubectl get all -n redpoint-rpi -o yaml > current-state.yaml
-
-# Or diff against what Helm currently has
-helm get manifest rpi -n redpoint-rpi > current-manifest.yaml
-diff current-manifest.yaml rendered-v77.yaml
-```
-
-Review the diff carefully. Expected differences:
-- New labels/annotations added by the chart
-- Default values that changed between v7.6 and v7.7 (probe timings, resource defaults, etc.)
-- Template structure changes from the merge helper refactor
-
-Unexpected differences to investigate:
-- Missing environment variables or config maps
-- Changed service ports or endpoints
-- Missing volume mounts
-
-### 5a. Update Image Configuration
+#### 3c. Map Image Configuration
 
 v7.6 listed full image paths per service. v7.7 uses a shared `repository` prefix:
 
@@ -356,7 +298,29 @@ global:
         name: redpoint-rpi
 ```
 
-### 5b. Update ServiceAccount Configuration
+#### 3d. Map Per-Service Labels and Annotations
+
+v7.6 used `customLabels` and `customAnnotations` per service. v7.7 renames these to `podLabels` and `podAnnotations`:
+
+```yaml
+# Before (v7.6):
+realtimeapi:
+  customLabels:
+    environment: "prod"
+  customAnnotations:
+    my-annotation: "my-value"
+
+# After (v7.7):
+realtimeapi:
+  podLabels:
+    environment: "prod"
+  podAnnotations:
+    my-annotation: "my-value"
+```
+
+Global custom labels and annotations are still available at the top level as `customLabels` and `customAnnotations`.
+
+#### 3e. Map ServiceAccount Configuration
 
 Per-service `serviceAccount.enabled` fields are removed. ServiceAccount is now managed centrally:
 
@@ -369,15 +333,13 @@ realtimeapi:
 # After (v7.7 — set once):
 cloudIdentity:
   serviceAccount:
-    create: true       # true = shared SA, false = per-service SAs
+    create: true
     name: redpoint-rpi
 ```
 
-### 6. Ingress TLS and FQDN Hosts
+#### 3f. Map Ingress Changes
 
-The `ingress.tlsSecretName` key has been replaced by an `ingress.tls` array, and host values now support FQDNs.
-
-**TLS:** If your v7.6 overrides set `tlsSecretName`, convert it to the `tls` array:
+**TLS:** The `ingress.tlsSecretName` key has been replaced by an `ingress.tls` array:
 
 ```yaml
 # Before (v7.6):
@@ -399,10 +361,16 @@ ingress:
       hosts:
         - client.example.com
         - config.example.com
-        - realtime.example.com
     - secretName: certsecrets
       hosts:
         - mpulse.example.com
+```
+
+**className:** The default `ingress.className` now uses the release namespace (e.g., `redpoint-rpi`) instead of the hardcoded `nginx-redpoint-rpi` from v7.6. If your ingress controller expects the old class name, set it explicitly:
+
+```yaml
+ingress:
+  className: nginx-redpoint-rpi   # override if your controller uses the old name
 ```
 
 **FQDN hosts:** Host values containing a dot are now treated as FQDNs and used as-is (not prepended to `domain`). Values without dots continue to be treated as subdomains:
@@ -411,11 +379,92 @@ ingress:
 ingress:
   domain: example.com
   hosts:
-    client: rpi-interactionapi        # → rpi-interactionapi.example.com
-    callbackapi: mpulse.example.com   # → mpulse.example.com (FQDN, used as-is)
+    client: rpi-interactionapi        # becomes rpi-interactionapi.example.com
+    callbackapi: mpulse.example.com   # used as-is (FQDN)
 ```
 
-### 7. Apply the Upgrade
+#### 3g. Map Queue Reader Changes
+
+Queue path keys have been simplified:
+
+| v7.6 Key | v7.7 Key |
+|:---------|:---------|
+| `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` |
+| `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` |
+| `queuereader.isFormProcessingEnabled` | `advanced.queuereader.isFormProcessingEnabled` |
+| `queuereader.isEventProcessingEnabled` | `advanced.queuereader.isEventProcessingEnabled` |
+| `queuereader.isCacheProcessingEnabled` | `advanced.queuereader.isCacheProcessingEnabled` |
+| `queuereader.queueListenerEnabled` | `advanced.queuereader.queueListenerEnabled` |
+| `queuereader.isCallbackServiceProcessingEnabled` | `advanced.queuereader.isCallbackServiceProcessingEnabled` |
+
+### 4. Move Hidden Defaults to `advanced:`
+
+Many values that were top-level in v7.6 are now internal chart defaults in v7.7. If you customized any of these, move them under the `advanced:` block:
+
+| v7.6 Location | v7.7 Location |
+|:--------------|:--------------|
+| `securityContext.*` | `advanced.securityContext.*` |
+| `topologySpreadConstraints.*` | `advanced.topologySpreadConstraints.*` |
+| `<service>.livenessProbe.*` | `advanced.<service>.livenessProbe.*` |
+| `<service>.readinessProbe.*` | `advanced.<service>.readinessProbe.*` |
+| `<service>.startupProbe.*` | `advanced.<service>.startupProbe.*` |
+| `<service>.logging.*` | `advanced.<service>.logging.*` |
+| `<service>.service.port` | `advanced.<service>.service.port` |
+| `<service>.terminationGracePeriodSeconds` | `advanced.<service>.terminationGracePeriodSeconds` |
+| `<service>.resources.enabled` | *(removed — resources always applied)* |
+| `<service>.podDisruptionBudget.*` | `advanced.<service>.podDisruptionBudget.*` |
+
+Example:
+
+```yaml
+# Before (v7.6 values.yaml):
+securityContext:
+  runAsUser: 1000
+  fsGroup: 1000
+
+realtimeapi:
+  logging:
+    default: Debug
+
+# After (v7.7 overrides file):
+advanced:
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000
+  realtimeapi:
+    logging:
+      default: Debug
+```
+
+> **Note:** If you kept the v7.6 defaults and didn't customize these values, you don't need to add them — the chart manages sensible defaults automatically.
+
+Open [values-reference.yaml](values-reference.yaml) to see every available key under `advanced:`.
+
+### 5. Validate with Helm Template
+
+Before applying, render the manifests and compare against your current running state:
+
+```bash
+# Render with new overrides
+helm template rpi ./chart -f my-overrides.yaml -n redpoint-rpi > rendered-v77.yaml
+
+# Diff against what Helm currently has
+helm get manifest rpi -n redpoint-rpi > current-manifest.yaml
+diff current-manifest.yaml rendered-v77.yaml
+```
+
+Review the diff carefully. Expected differences:
+- New labels/annotations added by the chart
+- Default values that changed between v7.6 and v7.7 (probe timings, resource defaults, etc.)
+- Template structure changes from the merge helper refactor
+- `ingressClassName` changed from `nginx-redpoint-rpi` to release namespace
+
+Unexpected differences to investigate:
+- Missing environment variables or config maps
+- Changed service ports or endpoints
+- Missing volume mounts
+
+### 6. Apply the Upgrade
 
 **Staging first** — always upgrade a non-production environment before production:
 
@@ -444,7 +493,7 @@ helm upgrade rpi ./chart \
 
 ### Trigger Database Upgrade
 
-After the v7 containers are running, the operational databases must be upgraded.
+After the v7.7 containers are running, the operational databases must be upgraded.
 
 **Option A: Automatic (recommended)**
 
@@ -462,14 +511,14 @@ kubectl get jobs -n redpoint-rpi -l app.kubernetes.io/component=upgrade
 kubectl logs -n redpoint-rpi -l app.kubernetes.io/component=upgrade --tail=50
 ```
 
-See [Configure Automatic Database Upgrades](../README.md#configure-automatic-database-upgrades) for advanced options.
+See [Database Upgrades](readme-configuration.md#automatic-database-upgrades) for advanced options.
 
 **Option B: Manual**
 
 Call the upgrade endpoint directly:
 
 ```bash
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
+DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
 
 curl -X 'GET' \
   "https://$DEPLOYMENT_SERVICE_URL/api/deployment/upgrade?waitTimeoutSeconds=360" \
@@ -508,8 +557,8 @@ Wait for `"Status": "LastRunComplete"` and `Upgrade Complete` in the response.
 ### Activate RPI License
 
 ```bash
+DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
 ACTIVATION_KEY="your_license_activation_key"
-DEPLOYMENT_SERVICE_URL=rpi-deploymentapi.example.com
 SYSTEM_NAME="my_dev_rpi_system"
 
 curl -X 'POST' \
@@ -527,11 +576,11 @@ curl -X 'POST' \
 Review and update tenant-level settings via the **Configuration** tab in the RPI client:
 
 | Setting | Description |
-|---------|-------------|
+|:--------|:------------|
 | `Environment > FileExportLocation` | Export destination: 0 = File Output Directory, 1 = Default FTP, 2 = External Content Provider |
 | `Environment > FileOutputDirectory` | Mount path for FileOutputDirectory volume (default: `/fileoutputdir`) |
 | `Environment > DataManagementUploadDirectory` | Mount path for RPDM upload volume (default: `/rpdmuploaddirectory`) |
-| `Channels > Channel name` | Update channel configuration to match your v7 requirements |
+| `Channels > Channel name` | Update channel configuration to match your v7.7 requirements |
 
 ---
 
@@ -568,9 +617,12 @@ Expected. The new defaults in `_defaults.tpl` change rendered manifests even if 
 
 If services fail to start, check that all your v7.6 customizations have been transferred to the new overrides file. Common misses:
 
-- Logging levels (now under `advanced:<component>.logging`)
-- Security contexts (now under `advanced:securityContext` or `advanced:<component>.securityContext`)
-- Service ports (now in chart defaults, override via `advanced:<component>.service.port`)
+- Logging levels (now under `advanced.<service>.logging`)
+- Security contexts (now under `advanced.securityContext` or `advanced.<service>.securityContext`)
+- Service ports (now in chart defaults, override via `advanced.<service>.service.port`)
+- Per-service `customLabels`/`customAnnotations` (renamed to `podLabels`/`podAnnotations`)
+- Queue reader processing flags (moved to `advanced.queuereader.*`)
+- `ingress.className` (default changed from `nginx-redpoint-rpi` to release namespace)
 
 ### Helm template shows unexpected changes
 
@@ -582,12 +634,41 @@ helm template rpi ./chart -f my-overrides.yaml --debug 2>&1 | head -100
 
 ---
 
+## Quick Reference: Key Renames
+
+| v7.6 | v7.7 | Change Type |
+|:-----|:-----|:------------|
+| `cloudIdentity.provider` | *(removed)* | Derived from platform |
+| `cloudIdentity.azureSettings.*` | `cloudIdentity.azure.*` | Renamed |
+| `cloudIdentity.amazonSettings.*` | `cloudIdentity.amazon.*` | Renamed |
+| `cloudIdentity.googleSettings.*` | `cloudIdentity.google.*` | Renamed |
+| `cloudIdentity.secretsManagement.*` | `secretsManagement.*` | Moved to top-level |
+| `global.deployment.serviceAccount.*` | `cloudIdentity.serviceAccount.*` | Moved |
+| `global.deployment.images.<service>` | `global.deployment.images.repository` | Consolidated |
+| `<service>.serviceAccount.enabled` | `cloudIdentity.serviceAccount.create` | Centralized |
+| `<service>.customLabels` | `<service>.podLabels` | Renamed |
+| `<service>.customAnnotations` | `<service>.podAnnotations` | Renamed |
+| `<service>.resources.enabled` | *(removed)* | Always applied |
+| `ingress.tlsSecretName` | `ingress.tls[].secretName` | Array format |
+| `ingress.className` | `ingress.className` | Default changed |
+| `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` | Shortened |
+| `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` | Shortened |
+| `securityContext.*` | `advanced.securityContext.*` | Moved to defaults |
+| `topologySpreadConstraints.*` | `advanced.topologySpreadConstraints.*` | Moved to defaults |
+| `<service>.logging.*` | `advanced.<service>.logging.*` | Moved to defaults |
+| `<service>.livenessProbe.*` | `advanced.<service>.livenessProbe.*` | Moved to defaults |
+| `<service>.readinessProbe.*` | `advanced.<service>.readinessProbe.*` | Moved to defaults |
+| `<service>.startupProbe.*` | `advanced.<service>.startupProbe.*` | Moved to defaults |
+
+---
+
 ## Next Steps
 
-After migration, review the optional configuration sections in the [main README](../README.md):
+After migration, review the optional configuration sections in the [Configuration Reference](readme-configuration.md):
 
-- [Cloud Identity](../README.md#configure-cloud-identity)
-- [Secrets Management](../README.md#configure-secrets-management)
-- [Service Mesh](../README.md#configure-service-mesh)
-- [Autoscaling](../README.md#configure-autoscaling)
-- [Customizing This Helm Chart](../README.md#customizing-this-helm-chart)
+- [Cloud Identity](readme-configuration.md#cloud-identity)
+- [Secrets Management](readme-configuration.md#secrets-management)
+- [Storage](readme-configuration.md#storage)
+- [Service Mesh](readme-configuration.md#service-mesh)
+- [Autoscaling](readme-configuration.md#autoscaling)
+- [Advanced Overrides](readme-configuration.md#advanced-overrides)
