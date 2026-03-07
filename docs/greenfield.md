@@ -10,12 +10,10 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 ## Overview
 
 1. Clone this repository
-2. Create a Kubernetes namespace
-3. Create the image pull and TLS secrets
-4. Create the RPI secrets manifest
-5. Create your overrides file
-6. Deploy with Helm
-7. Activate your license and install databases
+2. Run the Interaction CLI to generate secrets, overrides, and prerequisites
+3. Run prerequisites and deploy with Helm
+4. Validate the deployment
+5. Activate your license and install databases
 
 ---
 
