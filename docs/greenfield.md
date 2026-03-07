@@ -83,76 +83,26 @@ kubectl create secret tls ingress-tls \
 
 RPI reads sensitive values (database credentials, connection strings, API tokens) from a Kubernetes Secret — not from your values file. This keeps secrets out of version control and Helm release metadata.
 
-Create a file called `rpi-secrets.yaml` with the keys for your platform. Replace all placeholder values before applying.
+Use the [CLI scaffolder](#quick-start-with-cli-scaffolder) to generate your `rpi-secrets.yaml` manifest. It prompts for your database credentials, cache and queue connection strings, and automatically generates a secure auth token — no manual YAML editing required.
 
-### Azure (AzureSQL + Service Bus + MongoDB Cache)
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: redpoint-rpi-secrets
-  namespace: redpoint-rpi
-  annotations:
-    helm.sh/resource-policy: keep
-type: Opaque
-stringData:
-  # -- Operational Database --
-  ConnectionString_Operations_Database: "Server=tcp:<my-server>.database.windows.net,1433;Database=Pulse;User ID=<my-user>;Password=<my-password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
-  ConnectionString_Logging_Database: "Server=tcp:<my-server>.database.windows.net,1433;Database=Pulse_Logging;User ID=<my-user>;Password=<my-password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
-  Operations_Database_Server_Password: "<my-password>"
-  Operations_Database_ServerHost: "<my-server>.database.windows.net"
-  Operations_Database_Server_Username: "<my-user>"
-  Operations_Database_Pulse_Database_Name: "Pulse"
-  Operations_Database_Pulse_Logging_Database_Name: "Pulse_Logging"
-
-  # -- Realtime API --
-  RealtimeAPI_Auth_Token: "<generate-a-random-token>"
-  RealtimeAPI_ServiceBus_ConnectionString: "Endpoint=sb://<my-servicebus>.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<my-key>"
-  RealtimeAPI_MongoCache_ConnectionString: "mongodb+srv://<my-user>:<my-password>@<my-cluster>.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256"
+```bash
+bash deploy/cli/rpi-init.sh
 ```
 
-### AWS (RDS SQL Server + SQS + MongoDB Cache)
-
-SQS authentication is handled by IRSA (IAM Roles for Service Accounts) — no queue secret is needed.
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: redpoint-rpi-secrets
-  namespace: redpoint-rpi
-  annotations:
-    helm.sh/resource-policy: keep
-type: Opaque
-stringData:
-  # -- Operational Database --
-  ConnectionString_Operations_Database: "Server=tcp:<my-instance>.xxxx.us-east-1.rds.amazonaws.com,1433;Database=Pulse;User ID=<my-user>;Password=<my-password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
-  ConnectionString_Logging_Database: "Server=tcp:<my-instance>.xxxx.us-east-1.rds.amazonaws.com,1433;Database=Pulse_Logging;User ID=<my-user>;Password=<my-password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
-  Operations_Database_Server_Password: "<my-password>"
-  Operations_Database_ServerHost: "<my-instance>.xxxx.us-east-1.rds.amazonaws.com"
-  Operations_Database_Server_Username: "<my-user>"
-  Operations_Database_Pulse_Database_Name: "Pulse"
-  Operations_Database_Pulse_Logging_Database_Name: "Pulse_Logging"
-
-  # -- Realtime API --
-  RealtimeAPI_Auth_Token: "<generate-a-random-token>"
-  RealtimeAPI_MongoCache_ConnectionString: "mongodb+srv://<my-user>:<my-password>@<my-cluster>.mongodb.net/?retryWrites=true&w=majority"
-```
-
-### Apply the secret
+The scaffolder produces a complete `rpi-secrets.yaml` with correctly formatted connection strings for your platform (Azure SQL, RDS, PostgreSQL). Review the generated file, then apply it:
 
 ```bash
 kubectl apply -f rpi-secrets.yaml
 ```
 
-> **Tip:** Generate a random auth token with `openssl rand -hex 16`.
+> **Important:** The generated secret includes the `helm.sh/resource-policy: keep` annotation, which prevents Helm from deleting it on `helm uninstall`. This is intentional — secrets persist independently of Helm releases.
 
-> **Important:** The `helm.sh/resource-policy: keep` annotation prevents Helm from deleting the secret on `helm uninstall`. This is intentional — secrets persist independently of Helm releases.
+> **Warning:** `rpi-secrets.yaml` contains sensitive credentials. Do **not** commit it to version control. The `.gitignore` already excludes `*-secrets.yaml`.
 
-### Secret Key Reference
+<details>
+<summary><strong>Secret Key Reference</strong> — All supported keys (click to expand)</summary>
 
-The table below lists all supported keys. Include only the keys that apply to your configuration.
+The table below lists all keys the chart can read from the secret. The scaffolder generates the keys relevant to your platform automatically. Include additional keys only if your configuration requires them.
 
 | Key | When Required | Description |
 |-----|---------------|-------------|
@@ -163,7 +113,7 @@ The table below lists all supported keys. Include only the keys that apply to yo
 | `Operations_Database_Server_Username` | Always | Database username |
 | `Operations_Database_Pulse_Database_Name` | Always | Pulse database name |
 | `Operations_Database_Pulse_Logging_Database_Name` | Always | Pulse_Logging database name |
-| `RealtimeAPI_Auth_Token` | Realtime enabled (basic auth) | API authentication token |
+| `RealtimeAPI_Auth_Token` | Realtime enabled (basic auth) | API authentication token (auto-generated) |
 | `RealtimeAPI_ServiceBus_ConnectionString` | Azure Service Bus queue | Service Bus connection string |
 | `RealtimeAPI_EventHub_ConnectionString` | Azure Event Hubs queue | Event Hubs connection string |
 | `RealtimeAPI_AzureStorage_ConnectionString` | Azure Storage queue | Storage account connection string |
@@ -173,6 +123,8 @@ The table below lists all supported keys. Include only the keys that apply to yo
 | `AWS_Access_Key_ID` | SQS without IRSA | Not needed when using IRSA |
 | `AWS_Secret_Access_Key` | SQS without IRSA | Not needed when using IRSA |
 | `SMTP_Password` | SMTP email credentials | Only when `SMTPSettings.UseCredentials: true` |
+
+</details>
 
 ## 5. Create Your Overrides File
 
