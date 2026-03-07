@@ -383,7 +383,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
-              key: QueueService_internalCache_ConnectionString
+              key: QueueService_RedisCache_ConnectionString
         {{- end }}
         {{- end }}
         {{- if $cfg.realtimeConfiguration.isDistributed }}

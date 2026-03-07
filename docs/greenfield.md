@@ -27,6 +27,20 @@ For a guided setup, use the Interaction CLI:
 bash deploy/cli/interactioncli.sh
 ```
 
+```
+╔══════════════════════════════════════════════╗
+║        Redpoint Interaction CLI               ║
+║        Deployment Generator for RPI           ║
+╚══════════════════════════════════════════════╝
+
+  This tool generates the files needed to deploy
+  Redpoint Interaction (RPI) on Kubernetes.
+
+  📄 values-overrides.yaml       — Helm values overrides
+  🔑 redpoint-rpi-secrets.yaml   — Kubernetes Secret manifest
+  🚀 prereqs.sh                  — Prerequisite kubectl commands
+```
+
 This generates three files:
 
 | File | Purpose |
@@ -39,9 +53,10 @@ After generation, review the files and deploy:
 
 ```bash
 bash prereqs.sh
-kubectl apply -f rpi-secrets.yaml
 helm upgrade --install rpi ./chart -f my-overrides.yaml -n redpoint-rpi
 ```
+
+The `prereqs.sh` script handles namespace creation, image pull secret, TLS secret, and applies `rpi-secrets.yaml` — all in one step.
 
 You can skip the rest of this guide if you use the Interaction CLI.
 
