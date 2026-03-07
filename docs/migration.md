@@ -11,7 +11,9 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 
 > **v7.7 Breaking Change**
 
-The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to a **few line user-facing override** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file. You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
+The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to a **few line user-facing override** file. Internal defaults (health probes, security contexts, logging levels, service ports, rollout strategies, etc.) are now managed by the chart and no longer need to be carried in your overrides file. 
+
+You now maintain a small overrides file instead of a full copy of `values.yaml`. See [readme-values.md](readme-values.md) for details.
 
 | Before (v7.6) | After (v7.7) |
 |:---|:---|
@@ -22,12 +24,12 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 
 **New in v7.7:**
 
-- **Demo database mode** — Set `global.deployment.mode: demo` to deploy embedded MSSQL + MongoDB for development without external databases
-- **Service mesh support** — Generate Linkerd Server CRDs via `serviceMesh.servers[]`
-- **CSI SecretProviderClass** — Create SecretProviderClass resources for Azure Key Vault, AWS Secrets Manager, and other CSI secret providers
-- **Persistent volume creation** — Create PV + PVC pairs for CSI-backed storage (Azure Blob, Azure Files, AWS EFS, GCP Filestore)
-- **Automatic database upgrade Job** — Helm-native Job that runs schema migrations on each `helm upgrade`
-- **Interaction CLI** — Interactive script that generates your overrides file, secrets, and prerequisites in one step
+- **Demo mode**: Set `global.deployment.mode: demo` to deploy embedded MSSQL + MongoDB for development without external databases
+- **Service mesh support**: Generate Linkerd Server CRDs via `serviceMesh.servers[]`
+- **Secrets Store CSI**: Create SecretProviderClass resources for Azure Key Vault
+- **Static Persistent volumes**: Create static PV + PVC pairs for CSI-backed storage (Azure Blob and Azure Files)
+- **Database upgrade Assistant**: Helm-native Job that runs schema migrations on each RPI image version upgrade
+- **Interaction CLI**: Interactive script that generates your overrides file, secrets, and prerequisites in one step
 
 See [readme-values.md](readme-values.md) for full details on the new architecture.
 
