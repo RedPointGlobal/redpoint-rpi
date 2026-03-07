@@ -17,8 +17,8 @@
 set -euo pipefail
 
 # --- Defaults ---
-OUTPUT_FILE="values-overrides.yaml"
-SECRETS_FILE="redpoint-rpi-secrets.yaml"
+OUTPUT_FILE="overrides.yaml"
+SECRETS_FILE="secrets.yaml"
 PREREQS_FILE="prereqs.sh"
 DEFAULT_TAG="7.7.20260220.1524"
 DEFAULT_NAMESPACE="redpoint-rpi"
@@ -105,16 +105,16 @@ prompt_yesno() {
 
 echo ""
 echo "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}"
-echo "${CYAN}${BOLD}║        Redpoint Interaction CLI               ║${RESET}"
+echo "${CYAN}${BOLD}║     ⚡ Redpoint Interaction CLI               ║${RESET}"
 echo "${CYAN}${BOLD}║        Deployment Generator for RPI           ║${RESET}"
 echo "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}"
 echo ""
 echo "  This tool generates the files needed to deploy"
 echo "  Redpoint Interaction (RPI) on Kubernetes."
 echo ""
-echo "  ${ICON_FILE} ${OUTPUT_FILE}    — Helm values overrides"
-echo "  ${ICON_KEY} ${SECRETS_FILE}   — Kubernetes Secret manifest"
-echo "  ${ICON_ROCKET} ${PREREQS_FILE}   — Prerequisite kubectl commands"
+echo "  ${ICON_FILE} overrides.yaml       — Helm values overrides"
+echo "  ${ICON_KEY} secrets.yaml         — Kubernetes Secret manifest"
+echo "  ${ICON_ROCKET} prereqs.sh           — Prerequisite kubectl commands"
 echo ""
 
 # ============================================================
