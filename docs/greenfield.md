@@ -19,9 +19,9 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 
 ---
 
-## Quick Start with CLI Scaffolder
+## Quick Start with the Interaction CLI
 
-For a guided setup, use the interactive scaffolder:
+For a guided setup, use the Interaction CLI:
 
 ```bash
 bash deploy/cli/rpi-init.sh
@@ -43,7 +43,7 @@ kubectl apply -f rpi-secrets.yaml
 helm upgrade --install rpi ./chart -f my-overrides.yaml -n redpoint-rpi
 ```
 
-You can skip the rest of this guide if you use the scaffolder.
+You can skip the rest of this guide if you use the Interaction CLI.
 
 ---
 
@@ -83,13 +83,13 @@ kubectl create secret tls ingress-tls \
 
 RPI reads sensitive values (database credentials, connection strings, API tokens) from a Kubernetes Secret — not from your values file. This keeps secrets out of version control and Helm release metadata.
 
-Use the [CLI scaffolder](#quick-start-with-cli-scaffolder) to generate your `rpi-secrets.yaml` manifest. It prompts for your database credentials, cache and queue connection strings, and automatically generates a secure auth token — no manual YAML editing required.
+Use the [Interaction CLI](#quick-start-with-the-interaction-cli) to generate your `rpi-secrets.yaml` manifest. It prompts for your database credentials, cache and queue connection strings, and automatically generates a secure auth token — no manual YAML editing required.
 
 ```bash
 bash deploy/cli/rpi-init.sh
 ```
 
-The scaffolder produces a complete `rpi-secrets.yaml` with correctly formatted connection strings for your platform (Azure SQL, RDS, PostgreSQL). Review the generated file, then apply it:
+The Interaction CLI produces a complete `rpi-secrets.yaml` with correctly formatted connection strings for your platform (Azure SQL, RDS, PostgreSQL). Review the generated file, then apply it:
 
 ```bash
 kubectl apply -f rpi-secrets.yaml
@@ -102,7 +102,7 @@ kubectl apply -f rpi-secrets.yaml
 <details>
 <summary><strong>Secret Key Reference</strong> — All supported keys (click to expand)</summary>
 
-The table below lists all keys the chart can read from the secret. The scaffolder generates the keys relevant to your platform automatically. Include additional keys only if your configuration requires them.
+The table below lists all keys the chart can read from the secret. The Interaction CLI generates the keys relevant to your platform automatically. Include additional keys only if your configuration requires them.
 
 | Key | When Required | Description |
 |-----|---------------|-------------|

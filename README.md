@@ -73,7 +73,7 @@ redpoint-rpi/
 │       ├── _helpers.tpl          # Merge helpers
 │       └── deploy-*.yaml         # Resource templates
 ├── deploy/
-│   ├── cli/rpi-init.sh           # Interactive overrides generator
+│   ├── cli/rpi-init.sh           # Interaction CLI — deployment generator
 │   ├── terraform/modules/        # IaC modules (Azure, AWS, GCP)
 │   └── values/                   # Your environment overrides
 │       ├── azure/azure.yaml      # Azure example
