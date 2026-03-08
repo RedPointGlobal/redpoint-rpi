@@ -26,9 +26,9 @@ cd redpoint-rpi
 
 ## 2. Quick Start with the Interaction CLI
 
-RPI reads sensitive values such as database credentials, connection strings and API tokens from a Kubernetes Secret. This keeps secrets out of version control and Helm release metadata.
+As a security best practice, the Kubernetes Secret containing sensitive values (database credentials, connection strings, API tokens) is created outside the chart. This keeps secrets out of version control and Helm release metadata.
 
-For a guided setup, use the **Interaction CLI** to generate your `secrets.yaml` manifest. It prompts for your database credentials, cache and queue connection strings, and automatically generates a Kubernets secrets object. No manual YAML editing required.
+The **Interaction CLI** generates this Secret manifest for you. It prompts for your database credentials, cache and queue connection strings, and produces a ready to apply `secrets.yaml`. No manual YAML editing required.
 
 ```bash
 bash deploy/cli/interactioncli.sh
