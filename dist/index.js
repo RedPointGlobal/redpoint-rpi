@@ -10,7 +10,7 @@ import { explain } from "./tools/explain.js";
 import { status } from "./tools/status.js";
 import { troubleshoot } from "./tools/troubleshoot.js";
 import { docsSearch, docsFetch } from "./tools/docs.js";
-const server = new Server({ name: "rpi-helm", version: "1.0.0" }, { capabilities: { tools: {}, resources: {} } });
+const server = new Server({ name: "interaction-copilot", version: "1.0.0" }, { capabilities: { tools: {}, resources: {} } });
 // ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------

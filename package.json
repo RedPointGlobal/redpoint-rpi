@@ -1,7 +1,7 @@
 {
   "name": "@redpoint-rpi/helm-mcp",
   "version": "1.0.0",
-  "description": "MCP server for Redpoint RPI Helm chart — validate, generate, template, explain, and troubleshoot deployments",
+  "description": "Interaction Copilot — AI-powered assistant for the Redpoint RPI Helm chart",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

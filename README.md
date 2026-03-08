@@ -1,6 +1,6 @@
-# @redpoint-rpi/helm-mcp
+# Interaction Copilot
 
-MCP (Model Context Protocol) server for the Redpoint RPI Helm chart. Enables AI assistants to validate configurations, generate overrides files, render templates, explain settings, diagnose deployments, and search the RPI product documentation.
+AI-powered assistant for the Redpoint RPI Helm chart. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it enables AI assistants to validate configurations, generate overrides, render templates, explain settings, diagnose deployments, and search the RPI product documentation.
 
 ## Quick Start
 
