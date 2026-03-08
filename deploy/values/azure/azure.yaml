@@ -190,7 +190,6 @@ realtimeapi:
     enabled: true
     provider: mongodb
     mongodb:
-      connectionString: mongodb+srv://myUsername:MyPassword@myServerHostname/?retryWrites=true&w=majority
       databaseName: RealtimeCacheDB
       collectionName: RealtimeCacheCollection
   # azureservicebus | amazonsqs | googlepubsub | azureeventhubs | rabbitmq | azurestorage

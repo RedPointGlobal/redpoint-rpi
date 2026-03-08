@@ -88,7 +88,7 @@ redpoint-rpi/
 
 After completing either the [Greenfield](docs/greenfield.md) or [Migration](docs/migration.md) guide, see the **[Configuration Reference](docs/readme-configuration.md)** for optional features including cloud identity, secrets management, storage, Realtime API, autoscaling, service mesh, SSO, and more.
 
-The [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) generates commented-out examples for each feature in your overrides file. For the complete list of every key, see [values-reference.yaml](docs/values-reference.yaml).
+Use the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) to generate your base overrides, then add features on demand with `bash deploy/cli/interactioncli.sh -a <feature>`. For the complete list of every key, see [values-reference.yaml](docs/values-reference.yaml).
 
 After install or upgrade, run `helm test rpi -n redpoint-rpi` to verify all services are healthy.
 

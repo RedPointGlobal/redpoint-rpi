@@ -3,7 +3,14 @@
 
 [< Back to main README](../README.md)
 
-After completing either the [Greenfield](greenfield.md) or [Migration](migration.md) guide, configure the optional features below. The [Interaction CLI](greenfield.md#2-quick-start-with-the-interaction-cli) generates commented-out examples for each of these in your overrides file.
+After completing either the [Greenfield](greenfield.md) or [Migration](migration.md) guide, configure the optional features below. Use the Interaction CLI to add any feature to your existing overrides file on demand:
+
+```bash
+bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature
+bash deploy/cli/interactioncli.sh -a menu          # interactive feature picker
+```
+
+Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `advanced`.
 
 For the complete list of every key, see [values-reference.yaml](values-reference.yaml).
 

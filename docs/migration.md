@@ -95,11 +95,18 @@ The CLI produces three files:
 
 > **Tip:** Have your v7.6 `values.yaml` open while running the CLI so you can copy values like database hostnames, connection strings, and ingress domains directly into the prompts.
 
-If you have customizations beyond what the CLI covers (custom plugins, KEDA scaling, advanced overrides), add them to the generated `overrides.yaml` after. See the mapping tables below for key renames.
+For features beyond the initial setup (SMTP, content generation, autoscaling, service mesh, etc.), use the CLI's `--add` mode to append them to your existing overrides:
+
+```bash
+bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
+bash deploy/cli/interactioncli.sh -a redpointAI     # add a specific feature
+```
+
+See the mapping tables below for key renames if you prefer to build your overrides manually.
 
 ### 3. Key Mapping Reference
 
-The sections below document every key that changed between v7.6 and v7.7. If you used the Interaction CLI, most of these are handled automatically. Review this section only if you have customizations the CLI doesn't cover, or if you prefer to build your overrides file manually.
+The sections below document every key that changed between v7.6 and v7.7. If you used the Interaction CLI, most of these are handled automatically. Review this section only if you prefer to build your overrides file manually.
 
 <details>
 <summary><strong>Common values to carry over</strong> (click to expand)</summary>

@@ -56,7 +56,7 @@ And then deploy:
 
 ```bash
 bash prereqs.sh
-helm upgrade --install rpi ./chart -f overrides.yaml -n redpoint-rpi
+helm install redpoint-rpi ./chart -f overrides.yaml -n redpoint-rpi
 ```
 
 The `prereqs.sh` script handles namespace creation, image pull secret, TLS secret, and applies `secrets.yaml` all in one step.
@@ -207,6 +207,23 @@ curl -X POST \
 
 ---
 
+## Adding Features
+
+After your initial deployment, add optional features to your overrides file on demand using the Interaction CLI:
+
+```bash
+bash deploy/cli/interactioncli.sh -a redpointAI    # add a specific feature
+bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
+```
+
+The CLI prompts for the required values, appends the configuration block to your `overrides.yaml`, and reminds you of any secret keys to add. Then redeploy:
+
+```bash
+helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
+```
+
+Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `advanced`.
+
 ## Next Steps
 
-See the **[CONFIGURATION Reference](docs/readme-configuration.md)** for optional features including cloud identity, secrets management, storage, Realtime API, autoscaling, service mesh, SSO, and more.
+See the **[Configuration Reference](readme-configuration.md)** for details on each feature, or [values-reference.yaml](values-reference.yaml) for every available key.

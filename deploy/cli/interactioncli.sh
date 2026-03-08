@@ -26,12 +26,37 @@ DEFAULT_REGISTRY="rg1acrpub.azurecr.io/docker/redpointglobal/releases"
 SECRET_NAME="redpoint-rpi-secrets"
 
 # --- Parse arguments ---
-while getopts "o:h" opt; do
+ADD_MODE=false
+ADD_FEATURE=""
+while getopts "o:a:h" opt; do
   case $opt in
     o) OUTPUT_FILE="$OPTARG" ;;
+    a) ADD_MODE=true; ADD_FEATURE="$OPTARG" ;;
     h)
-      echo "Usage: $0 [-o output-file]"
-      echo "  -o  Output file path (default: my-overrides.yaml)"
+      echo "Usage: $0 [-o output-file] [-a feature]"
+      echo ""
+      echo "  No flags       Full setup — generates overrides, secrets, and prereqs"
+      echo "  -a <feature>   Add a feature to an existing overrides file"
+      echo "  -a menu        Show interactive feature menu"
+      echo "  -o <file>      Output file path (default: overrides.yaml)"
+      echo ""
+      echo "  Available features:"
+      echo "    databaseUpgrade   Automatic database schema upgrades"
+      echo "    queuereader       Queue Listener and Realtime queue processing"
+      echo "    autoscaling       HPA or KEDA autoscaling for services"
+      echo "    customMetrics     Prometheus /metrics endpoints"
+      echo "    serviceMesh       Linkerd Server CRDs"
+      echo "    smokeTests        PVC and CSI mount validation"
+      echo "    entraID           Microsoft Entra ID (Azure AD) SSO"
+      echo "    oidc              OpenID Connect (Keycloak, Okta, etc.)"
+      echo "    smtp              Email delivery configuration"
+      echo "    redpointAI        OpenAI and Azure Cognitive Search"
+      echo "    storage           PVC and CSI storage volumes"
+      echo "    advanced          Fine-tune internal defaults"
+      echo ""
+      echo "  Examples:"
+      echo "    bash interactioncli.sh -a redpointAI"
+      echo "    bash interactioncli.sh -a menu"
       exit 0
       ;;
     *) echo "Unknown option: -$opt" >&2; exit 1 ;;
@@ -103,6 +128,507 @@ prompt_yesno() {
   done
 }
 
+# ============================================================
+# --add mode: append a feature block to an existing overrides
+# ============================================================
+
+has_block() {
+  local file=$1 key=$2
+  grep -qE "^${key}:" "$file" 2>/dev/null
+}
+
+append_block() {
+  local file=$1 block=$2
+  echo "" >> "$file"
+  echo "$block" >> "$file"
+}
+
+add_databaseUpgrade() {
+  local file=$1
+  if has_block "$file" "databaseUpgrade"; then
+    echo "  ${ICON_WARN} ${YELLOW}databaseUpgrade already exists in ${file}${RESET}"; return 0
+  fi
+  local notify email
+  prompt_yesno notify "Send email notifications on upgrade?" "n"
+  if [ "$notify" = "true" ]; then
+    prompt email "Notification email address" ""
+    append_block "$file" "$(cat <<BLOCK
+databaseUpgrade:
+  enabled: true
+  notification:
+    enabled: true
+    recipientEmail: ${email}
+BLOCK
+)"
+  else
+    append_block "$file" "$(cat <<'BLOCK'
+databaseUpgrade:
+  enabled: true
+BLOCK
+)"
+  fi
+  echo "  ${ICON_CHECK} Added databaseUpgrade to ${file}"
+}
+
+add_queuereader() {
+  local file=$1
+  if has_block "$file" "queuereader"; then
+    echo "  ${ICON_WARN} ${YELLOW}queuereader already exists in ${file}${RESET}"; return 0
+  fi
+  local tenant_id distributed
+  prompt tenant_id "RPI Client (Tenant) ID" ""
+  prompt_yesno distributed "Enable distributed mode?" "n"
+  if [ "$distributed" = "true" ]; then
+    local cache_type queue_type
+    prompt_choice cache_type "Internal cache Redis type" "internal|external" "internal"
+    prompt_choice queue_type "Internal queue RabbitMQ type" "internal|external" "internal"
+    local cache_block="" queue_block=""
+    if [ "$cache_type" = "external" ]; then
+      local redis_conn
+      prompt redis_conn "External Redis connection string" "my-redis-host:6379,password=<password>,abortConnect=False"
+      cache_block="      redisSettings:
+        connectionString: \"${redis_conn}\""
+    fi
+    if [ "$queue_type" = "external" ]; then
+      local rmq_host rmq_user
+      prompt rmq_host "External RabbitMQ hostname" ""
+      prompt rmq_user "RabbitMQ username" "rabbitmq"
+      queue_block="      rabbitmqSettings:
+        hostname: \"${rmq_host}\"
+        username: ${rmq_user}"
+    fi
+    append_block "$file" "$(cat <<BLOCK
+queuereader:
+  enabled: true
+  realtimeConfiguration:
+    isDistributed: true
+    internalCache:
+      provider: redis
+      type: ${cache_type}
+${cache_block}
+    distributedQueue:
+      provider: rabbitmq
+      type: ${queue_type}
+${queue_block}
+    tenantIds:
+      - "${tenant_id}"
+  errorQueuePath: listenerQueueError
+  nonActiveQueuePath: listenerQueueNonActive
+BLOCK
+)"
+    echo ""
+    echo "  ${ICON_CHECK} Added queuereader (distributed) to ${file}"
+    if [ "$cache_type" = "internal" ]; then
+      echo "  ${ICON_WARN} ${YELLOW}Add QueueService_RedisCache_ConnectionString to your Kubernetes Secret.${RESET}"
+    fi
+    if [ "$queue_type" = "internal" ]; then
+      echo "  ${ICON_WARN} ${YELLOW}Add QueueService_RabbitMQ_Password to your Kubernetes Secret.${RESET}"
+    fi
+  else
+    append_block "$file" "$(cat <<BLOCK
+queuereader:
+  enabled: true
+  realtimeConfiguration:
+    isDistributed: false
+    tenantIds:
+      - "${tenant_id}"
+  errorQueuePath: listenerQueueError
+  nonActiveQueuePath: listenerQueueNonActive
+BLOCK
+)"
+    echo "  ${ICON_CHECK} Added queuereader to ${file}"
+  fi
+}
+
+add_autoscaling() {
+  local file=$1
+  local svc
+  prompt_choice svc "Service to autoscale" "realtimeapi|executionservice|interactionapi|integrationapi" "realtimeapi"
+  if grep -qE "^${svc}:" "$file" 2>/dev/null && grep -qA5 "^${svc}:" "$file" | grep -q "autoscaling:"; then
+    echo "  ${ICON_WARN} ${YELLOW}autoscaling for ${svc} already exists in ${file}${RESET}"; return 0
+  fi
+  local type min_r max_r
+  prompt_choice type "Autoscaling type" "hpa|keda" "hpa"
+  prompt min_r "Min replicas" "1"
+  prompt max_r "Max replicas" "5"
+  if [ "$type" = "hpa" ]; then
+    local cpu_pct
+    prompt cpu_pct "Target CPU utilization %" "80"
+    append_block "$file" "$(cat <<BLOCK
+${svc}:
+  autoscaling:
+    enabled: true
+    type: hpa
+    minReplicas: ${min_r}
+    maxReplicas: ${max_r}
+    targetCPUUtilizationPercentage: ${cpu_pct}
+BLOCK
+)"
+  else
+    local prom_addr threshold
+    prompt prom_addr "Prometheus server address" "http://prometheus-server.monitoring.svc.cluster.local"
+    prompt threshold "KEDA threshold" "5"
+    append_block "$file" "$(cat <<BLOCK
+${svc}:
+  autoscaling:
+    enabled: true
+    type: keda
+    minReplicas: ${min_r}
+    maxReplicas: ${max_r}
+    keda:
+      serverAddress: ${prom_addr}
+      threshold: "${threshold}"
+BLOCK
+)"
+  fi
+  echo "  ${ICON_CHECK} Added autoscaling (${type}) for ${svc} to ${file}"
+}
+
+add_customMetrics() {
+  local file=$1
+  if has_block "$file" "customMetrics"; then
+    echo "  ${ICON_WARN} ${YELLOW}customMetrics already exists in ${file}${RESET}"; return 0
+  fi
+  append_block "$file" "$(cat <<'BLOCK'
+customMetrics:
+  enabled: true
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added customMetrics to ${file}"
+}
+
+add_serviceMesh() {
+  local file=$1
+  if has_block "$file" "serviceMesh"; then
+    echo "  ${ICON_WARN} ${YELLOW}serviceMesh already exists in ${file}${RESET}"; return 0
+  fi
+  append_block "$file" "$(cat <<'BLOCK'
+serviceMesh:
+  enabled: true
+  provider: linkerd
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added serviceMesh to ${file}"
+}
+
+add_smokeTests() {
+  local file=$1
+  if has_block "$file" "smokeTests"; then
+    echo "  ${ICON_WARN} ${YELLOW}smokeTests already exists in ${file}${RESET}"; return 0
+  fi
+  local deployments=""
+  local more="true"
+  while [ "$more" = "true" ]; do
+    local test_name test_type
+    prompt test_name "Smoke test name" "storage-check"
+    prompt_choice test_type "Type" "pvc|csiSecret" "pvc"
+    if [ "$test_type" = "pvc" ]; then
+      local pvc_name mount_path
+      prompt pvc_name "PVC claim name" "rpifileoutputdir"
+      prompt mount_path "Mount path" "/mnt/rpifileoutputdir"
+      deployments="${deployments}
+    - name: ${test_name}
+      type: pvc
+      claimName: ${pvc_name}
+      mountPath: ${mount_path}"
+    else
+      local spc mount_path
+      prompt spc "SecretProviderClass name" "rpi-secret-provider"
+      prompt mount_path "Mount path" "/mnt/secrets"
+      deployments="${deployments}
+    - name: ${test_name}
+      type: csiSecret
+      secretProviderClass: ${spc}
+      mountPath: ${mount_path}"
+    fi
+    prompt_yesno more "Add another smoke test?" "n"
+  done
+  append_block "$file" "$(cat <<BLOCK
+smokeTests:
+  enabled: true
+  deployments:${deployments}
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added smokeTests to ${file}"
+}
+
+add_entraID() {
+  local file=$1
+  if has_block "$file" "MicrosoftEntraID"; then
+    echo "  ${ICON_WARN} ${YELLOW}MicrosoftEntraID already exists in ${file}${RESET}"; return 0
+  fi
+  local client_id api_id tenant_id
+  prompt client_id "Interaction Client App ID" ""
+  prompt api_id "Interaction API App ID" ""
+  prompt tenant_id "Azure AD Tenant ID" ""
+  append_block "$file" "$(cat <<BLOCK
+MicrosoftEntraID:
+  enabled: true
+  interaction_client_id: ${client_id}
+  interaction_api_id: ${api_id}
+  tenant_id: ${tenant_id}
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added MicrosoftEntraID to ${file}"
+}
+
+add_oidc() {
+  local file=$1
+  if has_block "$file" "OpenIdProviders"; then
+    echo "  ${ICON_WARN} ${YELLOW}OpenIdProviders already exists in ${file}${RESET}"; return 0
+  fi
+  local provider_name auth_host client_id audience redirect_url
+  local enable_refresh validate_issuer validate_audience logout_param supports_user_mgmt
+  prompt_choice provider_name "OIDC provider" "Keycloak|Okta" "Keycloak"
+  prompt auth_host "Authorization host URL" ""
+  prompt client_id "Client ID" ""
+  prompt audience "Audience" ""
+  prompt redirect_url "Redirect URL (RPI client URL)" ""
+  prompt_yesno enable_refresh "Enable refresh tokens?" "y"
+  prompt_yesno validate_issuer "Validate issuer?" "n"
+  prompt_yesno validate_audience "Validate audience?" "y"
+  prompt logout_param "Logout ID token parameter" "id_token_hint"
+  prompt_yesno supports_user_mgmt "Supports user management?" "n"
+  local scopes_block=""
+  local add_scope
+  prompt_yesno add_scope "Add custom scopes?" "n"
+  if [ "$add_scope" = "true" ]; then
+    scopes_block=$'\n  customScopes:'
+    local scope more="true"
+    while [ "$more" = "true" ]; do
+      prompt scope "Custom scope URI" ""
+      scopes_block="${scopes_block}"$'\n'"    - ${scope}"
+      prompt_yesno more "Add another scope?" "n"
+    done
+  fi
+  append_block "$file" "$(cat <<BLOCK
+OpenIdProviders:
+  enabled: true
+  name: ${provider_name}
+  authorizationHost: ${auth_host}
+  clientID: ${client_id}
+  audience: ${audience}
+  redirectURL: ${redirect_url}
+  enableRefreshTokens: ${enable_refresh}
+  validateIssuer: ${validate_issuer}
+  validateAudience: ${validate_audience}
+  logoutIdTokenParameter: ${logout_param}
+  supportsUserManagement: ${supports_user_mgmt}${scopes_block}
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added OpenIdProviders to ${file}"
+}
+
+add_smtp() {
+  local file=$1
+  if has_block "$file" "SMTPSettings"; then
+    echo "  ${ICON_WARN} ${YELLOW}SMTPSettings already exists in ${file}${RESET}"; return 0
+  fi
+  local server port from_addr sender_name enable_ssl use_creds username
+  prompt server "SMTP server hostname" "smtp.example.com"
+  prompt port "SMTP port" "587"
+  prompt from_addr "Sender email address" "noreply@example.com"
+  prompt sender_name "Sender display name" "Redpoint Global"
+  prompt_yesno enable_ssl "Enable SSL/TLS?" "y"
+  prompt_yesno use_creds "Use SMTP credentials?" "y"
+  local creds_block=""
+  if [ "$use_creds" = "true" ]; then
+    prompt username "SMTP username" ""
+    creds_block="
+  SMTP_Username: ${username}"
+  fi
+  append_block "$file" "$(cat <<BLOCK
+SMTPSettings:
+  SMTP_Address: ${server}
+  SMTP_Port: ${port}
+  SMTP_SenderAddress: ${from_addr}
+  SMTP_SenderName: "${sender_name}"
+  EnableSSL: ${enable_ssl}
+  UseCredentials: ${use_creds}${creds_block}
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added SMTPSettings to ${file}"
+  if [ "$use_creds" = "true" ]; then
+    echo "  ${ICON_WARN} ${YELLOW}Add SMTP_Password to your Kubernetes Secret.${RESET}"
+  fi
+}
+
+add_redpointAI() {
+  local file=$1
+  if has_block "$file" "redpointAI"; then
+    echo "  ${ICON_WARN} ${YELLOW}redpointAI already exists in ${file}${RESET}"; return 0
+  fi
+  echo ""
+  echo "  ${BOLD}Natural Language (OpenAI)${RESET}"
+  local api_base api_version engine temp
+  prompt api_base "OpenAI API base URL" "https://example.openai.azure.com/"
+  prompt api_version "API version" "2023-07-01-preview"
+  prompt engine "ChatGPT engine/model" "gpt-5.1"
+  prompt temp "ChatGPT temperature (0.0–1.0)" "0.5"
+  echo ""
+  echo "  ${BOLD}Azure Cognitive Search${RESET}"
+  local search_endpoint vector_profile vector_config
+  prompt search_endpoint "Search endpoint URL" "https://example.search.windows.net"
+  prompt vector_profile "Vector search profile" "vector-profile-000000000000"
+  prompt vector_config "Vector search config" "vector-config-000000000000"
+  echo ""
+  echo "  ${BOLD}Model Storage${RESET}"
+  local embeddings_model model_dims container_name blob_folder
+  prompt embeddings_model "Embeddings model" "text-embedding-ada-002"
+  prompt model_dims "Model dimensions" "1536"
+  prompt container_name "Blob container name" ""
+  prompt blob_folder "Blob folder name" ""
+  append_block "$file" "$(cat <<BLOCK
+redpointAI:
+  enabled: true
+  naturalLanguage:
+    ApiBase: ${api_base}
+    ApiVersion: ${api_version}
+    ChatGptEngine: ${engine}
+    ChatGptTemp: ${temp}
+  cognitiveSearch:
+    SearchEndpoint: ${search_endpoint}
+    VectorSearchProfile: ${vector_profile}
+    VectorSearchConfig: ${vector_config}
+  modelStorage:
+    EmbeddingsModel: ${embeddings_model}
+    ModelDimensions: ${model_dims}
+    ContainerName: ${container_name}
+    BlobFolder: ${blob_folder}
+BLOCK
+)"
+  echo ""
+  echo "  ${ICON_CHECK} Added redpointAI to ${file}"
+  echo ""
+  echo "  ${ICON_WARN} ${YELLOW}Add these keys to your Kubernetes Secret:${RESET}"
+  echo "    ${DIM}RPI_NLP_API_KEY                  — OpenAI API key${RESET}"
+  echo "    ${DIM}RPI_NLP_SEARCH_KEY               — Cognitive Search key${RESET}"
+  echo "    ${DIM}RPI_NLP_MODEL_CONNECTION_STRING   — Blob storage connection string${RESET}"
+}
+
+add_storage() {
+  local file=$1
+  if has_block "$file" "storage"; then
+    echo "  ${ICON_WARN} ${YELLOW}storage already exists in ${file}${RESET}"; return 0
+  fi
+  local claim mount_path
+  prompt claim "PVC claim name" "rpifileoutputdir"
+  prompt mount_path "Mount path" "/rpifileoutputdir"
+  append_block "$file" "$(cat <<BLOCK
+storage:
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: true
+      claimName: ${claim}
+      mountPath: ${mount_path}
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added storage to ${file}"
+  echo "  ${DIM}  For PV+PVC pairs (Azure Files, EFS, Filestore), see docs/readme-configuration.md#storage${RESET}"
+}
+
+add_advanced() {
+  local file=$1
+  if has_block "$file" "advanced"; then
+    echo "  ${ICON_WARN} ${YELLOW}advanced already exists in ${file}${RESET}"; return 0
+  fi
+  append_block "$file" "$(cat <<'BLOCK'
+advanced:
+  # Override any internal default here. See docs/values-reference.yaml for all keys.
+  # Example:
+  # interactionapi:
+  #   resources:
+  #     requests:
+  #       cpu: 500m
+  #       memory: 1Gi
+  #   livenessProbe:
+  #     periodSeconds: 30
+BLOCK
+)"
+  echo "  ${ICON_CHECK} Added advanced block to ${file}"
+  echo "  ${DIM}  See docs/values-reference.yaml for all available keys.${RESET}"
+}
+
+show_feature_menu() {
+  echo ""
+  echo "  ${BOLD}Available features:${RESET}"
+  echo ""
+  echo "    ${CYAN}1${RESET})  databaseUpgrade   — Automatic database schema upgrades"
+  echo "    ${CYAN}2${RESET})  queuereader       — Queue Listener and Realtime queue processing"
+  echo "    ${CYAN}3${RESET})  autoscaling       — HPA or KEDA autoscaling for services"
+  echo "    ${CYAN}4${RESET})  customMetrics     — Prometheus /metrics endpoints"
+  echo "    ${CYAN}5${RESET})  serviceMesh       — Linkerd Server CRDs"
+  echo "    ${CYAN}6${RESET})  smokeTests        — PVC and CSI mount validation"
+  echo "    ${CYAN}7${RESET})  entraID           — Microsoft Entra ID (Azure AD) SSO"
+  echo "    ${CYAN}8${RESET})  oidc              — OpenID Connect (Keycloak, Okta, etc.)"
+  echo "    ${CYAN}9${RESET})  smtp              — Email delivery configuration"
+  echo "    ${CYAN}10${RESET}) redpointAI        — OpenAI and Azure Cognitive Search"
+  echo "    ${CYAN}11${RESET}) storage           — PVC and CSI storage volumes"
+  echo "    ${CYAN}12${RESET}) advanced          — Fine-tune internal defaults"
+  echo ""
+  local choice
+  read -rp "  Enter feature number or name: " choice
+  case "$choice" in
+    1|databaseUpgrade)  ADD_FEATURE="databaseUpgrade" ;;
+    2|queuereader)      ADD_FEATURE="queuereader" ;;
+    3|autoscaling)      ADD_FEATURE="autoscaling" ;;
+    4|customMetrics)    ADD_FEATURE="customMetrics" ;;
+    5|serviceMesh)      ADD_FEATURE="serviceMesh" ;;
+    6|smokeTests)       ADD_FEATURE="smokeTests" ;;
+    7|entraID)          ADD_FEATURE="entraID" ;;
+    8|oidc)             ADD_FEATURE="oidc" ;;
+    9|smtp)             ADD_FEATURE="smtp" ;;
+    10|redpointAI)      ADD_FEATURE="redpointAI" ;;
+    11|storage)         ADD_FEATURE="storage" ;;
+    12|advanced)        ADD_FEATURE="advanced" ;;
+    *) echo "  ${RED}Unknown feature: ${choice}${RESET}"; exit 1 ;;
+  esac
+}
+
+run_add_feature() {
+  local file=$1 feature=$2
+  case "$feature" in
+    databaseUpgrade)  add_databaseUpgrade "$file" ;;
+    queuereader)      add_queuereader "$file" ;;
+    autoscaling)      add_autoscaling "$file" ;;
+    customMetrics)    add_customMetrics "$file" ;;
+    serviceMesh)      add_serviceMesh "$file" ;;
+    smokeTests)       add_smokeTests "$file" ;;
+    entraID)          add_entraID "$file" ;;
+    oidc)             add_oidc "$file" ;;
+    smtp)             add_smtp "$file" ;;
+    redpointAI)       add_redpointAI "$file" ;;
+    storage)          add_storage "$file" ;;
+    advanced)         add_advanced "$file" ;;
+    *) echo "  ${RED}Unknown feature: ${feature}${RESET}"; exit 1 ;;
+  esac
+}
+
+# --- Handle --add mode ---
+if [ "$ADD_MODE" = "true" ]; then
+  echo ""
+  echo "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}"
+  echo "${CYAN}${BOLD}║     ⚡ Redpoint Interaction CLI               ║${RESET}"
+  echo "${CYAN}${BOLD}║        Add Feature to Overrides               ║${RESET}"
+  echo "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+  echo ""
+
+  if [ ! -f "$OUTPUT_FILE" ]; then
+    echo "  ${RED}Error: ${OUTPUT_FILE} not found.${RESET}"
+    echo "  Run the CLI without -a first to generate your base overrides."
+    exit 1
+  fi
+
+  if [ "$ADD_FEATURE" = "menu" ]; then
+    show_feature_menu
+  fi
+
+  run_add_feature "$OUTPUT_FILE" "$ADD_FEATURE"
+  echo ""
+  exit 0
+fi
+
+# --- Full setup mode ---
 echo ""
 echo "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}"
 echo "${CYAN}${BOLD}║     ⚡ Redpoint Interaction CLI               ║${RESET}"
@@ -462,140 +988,7 @@ ingress:
     smartactivation: ${HOST_PREFIX}-smartActivation
 YAML
 
-# Storage (commented-out, platform-specific examples)
-case "$PLATFORM" in
-  azure)
-    cat >> "$OUTPUT_FILE" << 'YAML'
-
-# ---------------------------------------------------------------
-# Storage — Uncomment and configure for your environment.
-# See README.md > Configure Storage for details.
-# ---------------------------------------------------------------
-# storage:
-#   persistentVolumeClaims:
-#     FileOutputDirectory:
-#       enabled: true
-#       claimName: rpifileoutputdir
-#       mountPath: /rpifileoutputdir
-#     Plugins:
-#       enabled: true
-#       claimName: realtimeplugins
-#       mountPath: /app/plugins
-#     DataManagementUploadDirectory:
-#       enabled: true
-#       claimName: rpdmuploaddirectory
-#       mountPath: /rpdmuploaddirectory
-#   persistentVolumes:
-#     - name: rpi-blob-storage
-#       capacity: 100Gi
-#       accessModes: [ReadWriteMany]
-#       storageClassName: blob-fuse
-#       reclaimPolicy: Retain
-#       mountOptions:
-#         - -o allow_other
-#         - --file-cache-timeout-in-seconds=120
-#       csi:
-#         driver: blob.csi.azure.com
-#         volumeHandle: unique-volume-handle
-#         volumeAttributes:
-#           containerName: rpi-data
-#           storageAccount: <my-storage-account>
-#       pvc:
-#         claimName: rpifileoutputdir
-YAML
-    ;;
-  amazon)
-    cat >> "$OUTPUT_FILE" << 'YAML'
-
-# ---------------------------------------------------------------
-# Storage — Uncomment and configure for your environment.
-# See README.md > Configure Storage for details.
-# ---------------------------------------------------------------
-# storage:
-#   persistentVolumeClaims:
-#     FileOutputDirectory:
-#       enabled: true
-#       claimName: rpifileoutputdir
-#       mountPath: /rpifileoutputdir
-#     Plugins:
-#       enabled: true
-#       claimName: realtimeplugins
-#       mountPath: /app/plugins
-#     DataManagementUploadDirectory:
-#       enabled: true
-#       claimName: rpdmuploaddirectory
-#       mountPath: /rpdmuploaddirectory
-#   persistentVolumes:
-#     - name: rpi-efs-storage
-#       capacity: 100Gi
-#       accessModes: [ReadWriteMany]
-#       storageClassName: efs-sc
-#       reclaimPolicy: Retain
-#       csi:
-#         driver: efs.csi.aws.com
-#         volumeHandle: <my-efs-filesystem-id>
-#       pvc:
-#         claimName: rpifileoutputdir
-YAML
-    ;;
-  google)
-    cat >> "$OUTPUT_FILE" << 'YAML'
-
-# ---------------------------------------------------------------
-# Storage — Uncomment and configure for your environment.
-# See README.md > Configure Storage for details.
-# ---------------------------------------------------------------
-# storage:
-#   persistentVolumeClaims:
-#     FileOutputDirectory:
-#       enabled: true
-#       claimName: rpifileoutputdir
-#       mountPath: /rpifileoutputdir
-#     Plugins:
-#       enabled: true
-#       claimName: realtimeplugins
-#       mountPath: /app/plugins
-#     DataManagementUploadDirectory:
-#       enabled: true
-#       claimName: rpdmuploaddirectory
-#       mountPath: /rpdmuploaddirectory
-#   persistentVolumes:
-#     - name: rpi-filestore
-#       capacity: 100Gi
-#       accessModes: [ReadWriteMany]
-#       storageClassName: filestore-sc
-#       reclaimPolicy: Retain
-#       csi:
-#         driver: filestore.csi.storage.gke.io
-#         volumeHandle: "modeInstance/<my-zone>/<my-filestore-instance>/<my-share-name>"
-#       pvc:
-#         claimName: rpifileoutputdir
-YAML
-    ;;
-  *)
-    cat >> "$OUTPUT_FILE" << 'YAML'
-
-# ---------------------------------------------------------------
-# Storage — Uncomment and configure for your environment.
-# See README.md > Configure Storage for details.
-# ---------------------------------------------------------------
-# storage:
-#   persistentVolumeClaims:
-#     FileOutputDirectory:
-#       enabled: true
-#       claimName: rpifileoutputdir
-#       mountPath: /rpifileoutputdir
-#     Plugins:
-#       enabled: true
-#       claimName: realtimeplugins
-#       mountPath: /app/plugins
-#     DataManagementUploadDirectory:
-#       enabled: true
-#       claimName: rpdmuploaddirectory
-#       mountPath: /rpdmuploaddirectory
-YAML
-    ;;
-esac
+# Storage is added on demand via: bash interactioncli.sh -a storage
 
 # Realtime API (non-sensitive parts only)
 if [ "$REALTIME_ENABLED" = "true" ]; then
@@ -635,141 +1028,20 @@ preflight:
   mode: test
 YAML
 
-# Optional features (commented-out reference)
+# Optional features hint
 cat >> "$OUTPUT_FILE" << 'YAML'
 
 # ---------------------------------------------------------------
-# Database Upgrade — Automatically upgrades operational databases
-# when the image tag changes. Recommended for all environments.
-# See README.md > Configure Automatic Database Upgrades.
-# ---------------------------------------------------------------
-# databaseUpgrade:
-#   enabled: true
-#   notification:
-#     enabled: true
-#     recipientEmail: admin@example.com
-
-# ---------------------------------------------------------------
-# Queue Reader — Drains Queue Listener and Realtime queues.
-# See README.md > RPI Queue Reader.
-# ---------------------------------------------------------------
-# queuereader:
-#   enabled: true
-#   realtimeConfiguration:
-#     isDistributed: false
-#     tenantIds:
-#       - "<my-rpi-client-id>"
-
-# ---------------------------------------------------------------
-# Autoscaling — Resource-based (HPA) or custom metrics (KEDA).
-# See README.md > Configure Autoscaling.
-# ---------------------------------------------------------------
-# realtimeapi:
-#   autoscaling:
-#     enabled: true
-#     type: hpa
-#     minReplicas: 1
-#     maxReplicas: 5
-#     targetCPUUtilizationPercentage: 80
-#     targetMemoryUtilizationPercentage: 80
+# Add features on demand with the Interaction CLI:
+#   bash deploy/cli/interactioncli.sh -a <feature>
+#   bash deploy/cli/interactioncli.sh -a menu
 #
-# executionservice:
-#   autoscaling:
-#     enabled: true
-#     type: keda
-#     kedaScaledObject:
-#       serverAddress: <my-prometheus-query-endpoint>
-
+# Available: databaseUpgrade, queuereader, autoscaling,
+#   customMetrics, serviceMesh, smokeTests, entraID, oidc,
+#   smtp, redpointAI, storage, advanced
+#
+# See docs/readme-configuration.md for details on each feature.
 # ---------------------------------------------------------------
-# Custom Metrics — Expose /metrics endpoints for Prometheus.
-# See README.md > Configure Custom Metrics.
-# ---------------------------------------------------------------
-# customMetrics:
-#   enabled: true
-#   prometheus_scrape: true
-
-# ---------------------------------------------------------------
-# Service Mesh — Linkerd Server CRDs for L7 traffic policy.
-# See README.md > Configure Service Mesh.
-# ---------------------------------------------------------------
-# serviceMesh:
-#   enabled: true
-#   provider: linkerd
-#   servers:
-#     - name: realtimeapi
-#       podSelector:
-#         app.kubernetes.io/name: rpi-realtimeapi
-#       port: 8080
-#       proxyProtocol: HTTP/1
-#     - name: executionservice
-#       podSelector:
-#         app.kubernetes.io/name: rpi-executionservice
-#       port: 8080
-#       proxyProtocol: HTTP/1
-
-# ---------------------------------------------------------------
-# Smoke Tests — Deploy minimal pods to validate storage mounts
-# and CSI drivers before running the full application.
-# See README.md > Smoke Tests.
-# ---------------------------------------------------------------
-# smokeTests:
-#   enabled: true
-#   deployments:
-#     - name: blob
-#       type: pvc
-#       claimName: rpifileoutputdir
-#       mountPath: /mnt/rpifileoutputdir
-#     - name: kv-secrets
-#       type: csiSecret
-#       secretProviderClass: rpi-secrets
-#       mountPath: /mnt/secrets
-
-# ---------------------------------------------------------------
-# Microsoft Entra ID — SSO for the RPI Client.
-# See README.md > Configure Microsoft Entra ID.
-# ---------------------------------------------------------------
-# MicrosoftEntraID:
-#   enabled: true
-#   name: Microsoft
-#   interaction_client_id: <interaction-client-id>
-#   interaction_api_id: <interaction-api-id>
-#   tenant_id: <azure-tenant-id>
-
-# ---------------------------------------------------------------
-# SMTP — Email delivery for notifications and workflows.
-# ---------------------------------------------------------------
-# SMTPSettings:
-#   UseCredentials: true
-#   SMTP_Server: smtp.example.com
-#   SMTP_Port: "587"
-#   SMTP_From: noreply@example.com
-#   SMTP_Username: <my-smtp-username>
-
-# ---------------------------------------------------------------
-# Content Generation — OpenAI and Azure Cognitive Search.
-# See README.md > Configure Content Generation Tools.
-# ---------------------------------------------------------------
-# redpointAI:
-#   enabled: true
-
-# ---------------------------------------------------------------
-# Advanced Overrides — Fine-tune any internal default without
-# forking the chart: probes, security context, logging, ports,
-# rollout strategy, thread pools, retry policies, and more.
-# See docs/values-reference.yaml for every available key.
-# ---------------------------------------------------------------
-# advanced:
-#   securityContext:
-#     runAsUser: 7777
-#     runAsGroup: 777
-#     fsGroup: 777
-#   livenessProbe:
-#     periodSeconds: 30
-#     failureThreshold: 5
-#   realtimeapi:
-#     logging:
-#       realtimeapi:
-#         default: Debug
 YAML
 
 # ============================================================
@@ -842,6 +1114,9 @@ echo "  ${CYAN}1.${RESET} Review ${BOLD}${SECRETS_FILE}${RESET} — ensure all v
 echo "  ${CYAN}2.${RESET} Run prerequisites:  ${DIM}bash ${PREREQS_FILE}${RESET}"
 echo "  ${CYAN}3.${RESET} Deploy:             ${DIM}helm upgrade --install rpi ./chart -f ${OUTPUT_FILE} -n ${NAMESPACE}${RESET}"
 echo "  ${CYAN}4.${RESET} Validate:           ${DIM}helm test rpi -n ${NAMESPACE}${RESET}"
+echo ""
+echo "  ${BOLD}Add features later:${RESET}"
+echo "  ${DIM}bash deploy/cli/interactioncli.sh -a menu${RESET}"
 echo ""
 echo "  ${ICON_WARN}  ${YELLOW}${SECRETS_FILE} contains sensitive values.${RESET}"
 echo "     ${YELLOW}Do NOT commit it to version control.${RESET}"
