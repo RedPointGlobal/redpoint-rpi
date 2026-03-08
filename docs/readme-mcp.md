@@ -1,11 +1,11 @@
 ![redpoint_logo](../chart/images/redpoint.png)
-# Interaction Copilot
+# Interaction Helm Copilot
 
 [< Back to main README](../README.md)
 
 ## Overview
 
-The **Interaction Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to your AI assistant of choice and lets you work in plain English to validate configurations, generate overrides, explain settings, and diagnose issues.
+The **Interaction Helm Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to your AI assistant of choice and lets you work in plain English to validate configurations, generate overrides, explain settings, and diagnose issues.
 
 It also searched the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content covering features, administration, external configuration, channels, realtime decisions, and more. You can also ask it to fetch a specific documentation page by name.
 
