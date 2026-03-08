@@ -858,6 +858,14 @@ customLabels: {}
 customAnnotations: {}
 
 # ==========================
+# Custom Metrics
+# ==========================
+# Enable Prometheus scrape annotations on all RPI service pods.
+# When enabled, each pod gets prometheus.io/scrape, /port, and /path annotations.
+customMetrics:
+  enabled: false
+
+# ==========================
 # Post-Install Automation
 # ==========================
 # Automates license activation, cluster DB install, and optional tenant creation.

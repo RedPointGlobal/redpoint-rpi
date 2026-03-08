@@ -134,7 +134,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" . | trim) }}{{- . | nindent 8 }}{{- end }}
-      {{- if or .Values.customAnnotations $cfg.podAnnotations $cfg.customMetrics.enabled }}
+      {{- if or .Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) }}
       annotations:
         {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -142,8 +142,8 @@ spec:
         {{- with $cfg.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if $cfg.customMetrics.enabled }}
-        prometheus.io/scrape: {{ $cfg.customMetrics.prometheus_scrape | quote }}
+        {{- if (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) }}
+        prometheus.io/scrape: {{ or .Values.customMetrics.enabled $cfg.customMetrics.prometheus_scrape | quote }}
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
         {{- end }}
@@ -268,7 +268,7 @@ spec:
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- if eq .Values.global.deployment.platform "azure" }}
-        {{- if $dwEnabled }}
+        {{- if (($dw.bigquery | default dict).enabled | default false) }}
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
         {{- end }}

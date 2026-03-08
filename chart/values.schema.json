@@ -1709,6 +1709,17 @@
         "type": "string"
       }
     },
+    "customMetrics": {
+      "type": "object",
+      "description": "Enable Prometheus scrape annotations on all RPI service pods",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Prometheus metrics annotations on all services"
+        }
+      }
+    },
     "postInstall": {
       "type": "object",
       "description": "Post-install automation: license activation, cluster DB install, and optional tenant creation. Runs as a Helm post-install hook.",
