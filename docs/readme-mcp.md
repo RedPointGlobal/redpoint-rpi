@@ -7,75 +7,66 @@
 
 The **Interaction Helm Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to your AI assistant of choice and lets you work in plain English to validate configurations, generate overrides, explain settings, and diagnose issues.
 
-It also searched the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content covering features, administration, external configuration, channels, realtime decisions, and more. You can also ask it to fetch a specific documentation page by name.
+It also searches the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content covering features, administration, external configuration, channels, realtime decisions, and more.
 
 ## Prerequisites
 
-- **Node.js 18+**: Required to run the MCP server. [Download](https://nodejs.org/)
-- **Helm** (optional): Required only if you want the assistant to render templates
-- **kubectl** (optional): Required only if you want the assistant to check deployment health
+- An RPI deployment with `helmcopilot.enabled: true`
+- An MCP-compatible AI client (Claude Code, Claude Desktop, Cursor, Windsurf, etc.)
 
 ## Setup
 
-Choose the MCP client you use and add the configuration below.
+### 1. Enable in your overrides file
 
-### Claude Desktop
-
-Edit your `claude_desktop_config.json`:
-
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "rpi-helm": {
-      "command": "npx",
-      "args": ["-y", "@redpoint-rpi/helm-mcp"],
-      "env": {
-        "CHART_DIR": "/path/to/redpoint-rpi/chart"
-      }
-    }
-  }
-}
+```yaml
+helmcopilot:
+  enabled: true
 ```
 
-Restart Claude Desktop after saving.
+The chart creates a Deployment, Service, and ingress route alongside your other RPI services. The image is tagged and versioned with the rest of the RPI images.
 
-### Claude Code
+### 2. Configure ingress hostname (optional)
 
-Add a `.mcp.json` file to the root of your RPI chart repository:
+The default hostname is `rpi-helmcopilot`. Override it in your overrides file if needed:
 
-```json
-{
-  "mcpServers": {
-    "rpi-helm": {
-      "command": "npx",
-      "args": ["-y", "@redpoint-rpi/helm-mcp"],
-      "env": {
-        "CHART_DIR": "./chart"
-      }
-    }
-  }
-}
+```yaml
+ingress:
+  hosts:
+    helmcopilot: rpi-helmcopilot    # becomes rpi-helmcopilot.yourdomain.com
 ```
 
-### Other MCP Clients (Cursor, Windsurf, etc.)
-
-Configure your client to run the following command using stdio transport:
+### 3. Deploy
 
 ```bash
-npx -y @redpoint-rpi/helm-mcp
+helm upgrade --install rpi ./chart -f my-overrides.yaml -n redpoint-rpi
 ```
 
-Set the `CHART_DIR` environment variable to the path to your `chart/` directory.
+### 4. Connect your MCP client
 
-## Configuration
+Once deployed, the MCP server is available at `https://<helmcopilot-host>.<domain>/mcp`.
 
-| Environment Variable | Purpose | Default |
-|---------------------|---------|---------|
-| `CHART_DIR` | Path to the RPI `chart/` directory | Auto-detected if run from the repo root |
-| `KUBECONFIG` | Path to kubeconfig for cluster operations | Default kubectl config |
+**Claude Code:**
+
+```bash
+claude mcp add rpi-helm --transport http https://rpi-helmcopilot.yourdomain.com/mcp
+```
+
+**Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "rpi-helm": {
+      "type": "http",
+      "url": "https://rpi-helmcopilot.yourdomain.com/mcp"
+    }
+  }
+}
+```
+
+**Other MCP Clients (Cursor, Windsurf, etc.):**
+
+Configure HTTP transport pointing to `https://rpi-helmcopilot.yourdomain.com/mcp`.
 
 ## What You Can Do
 

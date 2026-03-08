@@ -721,6 +721,21 @@ open(sys.argv[1], 'w').writelines(lines)
   fi
 }
 
+add_helmcopilot() {
+  local file=$1
+  if has_block "$file" "helmcopilot"; then
+    echo "  ${ICON_WARN} ${YELLOW}helmcopilot already exists in ${file}${RESET}"; return 0
+  fi
+  append_block "$file" "$(cat <<'BLOCK'
+helmcopilot:
+  enabled: true
+BLOCK
+)" "Interaction Copilot (MCP Server)"
+  echo "  ${ICON_CHECK} Added Interaction Copilot to ${file}"
+  echo "  ${DIM}  AI-powered assistant for configuring and troubleshooting RPI.${RESET}"
+  echo "  ${DIM}  Connect via: claude mcp add rpi-helm --transport http https://<helmcopilot-host>/mcp${RESET}"
+}
+
 add_advanced() {
   local file=$1
   if has_block "$file" "advanced"; then
@@ -758,7 +773,8 @@ show_feature_menu() {
   echo "    ${CYAN}9${RESET})  smtp              — Email delivery configuration"
   echo "    ${CYAN}10${RESET}) redpointAI        — OpenAI and Azure Cognitive Search"
   echo "    ${CYAN}11${RESET}) storage           — PVC and CSI storage volumes"
-  echo "    ${CYAN}12${RESET}) advanced          — Fine-tune internal defaults"
+  echo "    ${CYAN}12${RESET}) helmcopilot       — AI-powered Helm assistant (MCP)"
+  echo "    ${CYAN}13${RESET}) advanced          — Fine-tune internal defaults"
   echo ""
   local choice
   read -rp "  Enter feature number or name: " choice
@@ -774,7 +790,8 @@ show_feature_menu() {
     9|smtp)             ADD_FEATURE="smtp" ;;
     10|redpointAI)      ADD_FEATURE="redpointAI" ;;
     11|storage)         ADD_FEATURE="storage" ;;
-    12|advanced)        ADD_FEATURE="advanced" ;;
+    12|helmcopilot)     ADD_FEATURE="helmcopilot" ;;
+    13|advanced)        ADD_FEATURE="advanced" ;;
     *) echo "  ${RED}Unknown feature: ${choice}${RESET}"; exit 1 ;;
   esac
 }
@@ -793,6 +810,7 @@ run_add_feature() {
     smtp)             add_smtp "$file" ;;
     redpointAI)       add_redpointAI "$file" ;;
     storage)          add_storage "$file" ;;
+    helmcopilot)      add_helmcopilot "$file" ;;
     advanced)         add_advanced "$file" ;;
     *) echo "  ${RED}Unknown feature: ${feature}${RESET}"; exit 1 ;;
   esac
@@ -1231,7 +1249,7 @@ echo "  Select features to include now. You can always add more later"
 echo "  with ${DIM}bash interactioncli.sh -a <feature>${RESET}"
 echo ""
 
-FEATURES_LIST="databaseUpgrade queuereader storage smtp redpointAI oidc entraID autoscaling customMetrics serviceMesh smokeTests advanced"
+FEATURES_LIST="databaseUpgrade queuereader storage smtp redpointAI oidc entraID autoscaling customMetrics serviceMesh smokeTests helmcopilot advanced"
 SELECTED_FEATURES=""
 for feat in $FEATURES_LIST; do
   local label
@@ -1247,6 +1265,7 @@ for feat in $FEATURES_LIST; do
     customMetrics)   label="Custom Metrics (Prometheus endpoints)" ;;
     serviceMesh)     label="Service Mesh (Linkerd)" ;;
     smokeTests)      label="Smoke Tests (PVC / CSI validation)" ;;
+    helmcopilot)     label="Interaction Copilot (AI-powered Helm assistant)" ;;
     advanced)        label="Advanced Overrides (fine-tune internals)" ;;
     *) label="$feat" ;;
   esac
@@ -1273,6 +1292,7 @@ for feat in $SELECTED_FEATURES; do
     customMetrics)   add_customMetrics "$OUTPUT_FILE" ;;
     serviceMesh)     add_serviceMesh "$OUTPUT_FILE" ;;
     smokeTests)      add_smokeTests "$OUTPUT_FILE" ;;
+    helmcopilot)     add_helmcopilot "$OUTPUT_FILE" ;;
     advanced)        add_advanced "$OUTPUT_FILE" ;;
   esac
 done

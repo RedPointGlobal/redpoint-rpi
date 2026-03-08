@@ -9,6 +9,9 @@ global:
     images:
       tag: "${rpi_image_tag}"
 
+# ----------------------------------------------------------
+# Operational Database (Amazon RDS)
+# ----------------------------------------------------------
 databases:
   operational:
     provider: sqlserver
@@ -19,6 +22,9 @@ databases:
     pulse_logging_database_name: PulseLogging
     encrypt: true
 
+# ----------------------------------------------------------
+# Cloud Identity (IRSA)
+# ----------------------------------------------------------
 cloudIdentity:
   enabled: true
   serviceAccount:
@@ -28,6 +34,9 @@ cloudIdentity:
     roleArn: "${irsa_role_arn}"
     region: "${region}"
 
+# ----------------------------------------------------------
+# Secrets Management
+# ----------------------------------------------------------
 secretsManagement:
   provider: "${secrets_provider}"
 %{ if secrets_provider == "sdk" ~}
@@ -36,11 +45,29 @@ secretsManagement:
       secretTagKey: "redpoint:application"
 %{ endif ~}
 
+# ----------------------------------------------------------
+# Ingress
+# ----------------------------------------------------------
 ingress:
   domain: "${ingress_domain}"
 
+# ----------------------------------------------------------
+# Realtime API
+# ----------------------------------------------------------
 realtimeapi:
   queueProvider:
     provider: amazonsqs
     amazonsqs:
       credentialsType: accessKey
+
+# ----------------------------------------------------------
+# Optional Features
+# Uncomment to enable. See docs/readme-configuration.md
+# ----------------------------------------------------------
+# helmcopilot:
+#   enabled: true
+# databaseUpgrade:
+#   enabled: true
+# preflight:
+#   enabled: true
+#   mode: test

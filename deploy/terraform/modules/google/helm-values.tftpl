@@ -11,6 +11,9 @@ global:
     images:
       tag: "${rpi_image_tag}"
 
+# ----------------------------------------------------------
+# Operational Database (Cloud SQL)
+# ----------------------------------------------------------
 databases:
   operational:
     provider: sqlserver
@@ -21,6 +24,9 @@ databases:
     pulse_logging_database_name: "Pulse_Logging"
     encrypt: true
 
+# ----------------------------------------------------------
+# Cloud Identity (Workload Identity)
+# ----------------------------------------------------------
 cloudIdentity:
   enabled: true
   serviceAccount:
@@ -30,6 +36,9 @@ cloudIdentity:
     serviceAccountEmail: "${service_account_email}"
     projectId: "${project_id}"
 
+# ----------------------------------------------------------
+# Secrets Management
+# ----------------------------------------------------------
 secretsManagement:
   provider: "${secrets_provider}"
 %{ if secrets_provider == "sdk" ~}
@@ -38,5 +47,20 @@ secretsManagement:
       projectId: "${project_id}"
 %{ endif ~}
 
+# ----------------------------------------------------------
+# Ingress
+# ----------------------------------------------------------
 ingress:
   domain: "${ingress_domain}"
+
+# ----------------------------------------------------------
+# Optional Features
+# Uncomment to enable. See docs/readme-configuration.md
+# ----------------------------------------------------------
+# helmcopilot:
+#   enabled: true
+# databaseUpgrade:
+#   enabled: true
+# preflight:
+#   enabled: true
+#   mode: test

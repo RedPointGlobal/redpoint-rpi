@@ -1175,3 +1175,24 @@ resources:
     cpu: 200m
     memory: 128Mi
 {{- end -}}
+
+{{/* ------ Helm Copilot (MCP Server) ------ */}}
+{{- define "rpi.defaults.helmcopilot" -}}
+podAnnotations: {}
+podLabels: {}
+type: deployment
+replicas: 1
+serviceAccount:
+  enabled: true
+service:
+  port: 80
+terminationGracePeriodSeconds: 30
+resources:
+  enabled: true
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+{{- end -}}
