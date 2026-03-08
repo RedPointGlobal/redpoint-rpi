@@ -1,4 +1,4 @@
-# Interaction Copilot
+# Interaction Helm Copilot
 
 AI-powered assistant for the Redpoint RPI Helm chart. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it enables AI assistants to validate configurations, generate overrides, render templates, explain settings, diagnose deployments, and search the RPI product documentation.
 

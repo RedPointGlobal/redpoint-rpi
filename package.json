@@ -1,7 +1,7 @@
 {
   "name": "@redpoint-rpi/helm-mcp",
   "version": "1.0.0",
-  "description": "Interaction Copilot — AI-powered assistant for the Redpoint RPI Helm chart",
+  "description": "Interaction Helm Copilot — AI-powered assistant for the Redpoint RPI Helm chart",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

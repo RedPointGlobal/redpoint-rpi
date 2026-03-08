@@ -15,7 +15,7 @@ import { troubleshoot } from "./tools/troubleshoot.js";
 import { docsSearch, docsFetch } from "./tools/docs.js";
 
 const server = new Server(
-  { name: "interaction-copilot", version: "1.0.0" },
+  { name: "interaction-helm-copilot", version: "1.0.0" },
   { capabilities: { tools: {}, resources: {} } },
 );
 
