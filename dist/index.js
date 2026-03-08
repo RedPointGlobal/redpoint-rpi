@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
+import { createServer } from "node:http";
 import { registerResources } from "./resources/index.js";
 import { validate } from "./tools/validate.js";
 import { generate } from "./tools/generate.js";
@@ -10,6 +12,8 @@ import { explain } from "./tools/explain.js";
 import { status } from "./tools/status.js";
 import { troubleshoot } from "./tools/troubleshoot.js";
 import { docsSearch, docsFetch } from "./tools/docs.js";
+import { migrate } from "./tools/migrate.js";
+import { migrateTemplates } from "./tools/migrate-templates.js";
 const server = new Server({ name: "interaction-helm-copilot", version: "1.0.0" }, { capabilities: { tools: {}, resources: {} } });
 // ---------------------------------------------------------------------------
 // Tool definitions
@@ -246,17 +250,47 @@ const TOOLS = [
             required: ["url"],
         },
     },
+    {
+        name: "rpi_migrate",
+        description: "Simple migration — Migrate a v7.6 RPI values file to v7.7 format. Analyzes the existing file, identifies " +
+            "customizations vs defaults, maps renamed keys, and produces a minimal v7.7 overrides file. " +
+            "Input can be raw YAML content or an absolute file path to the v7.6 values.yaml. " +
+            "Use this when the user has NOT modified any Helm template files.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                values: {
+                    type: "string",
+                    description: "v7.6 values YAML content or absolute file path",
+                },
+            },
+            required: ["values"],
+        },
+    },
+    {
+        name: "rpi_migrate_templates",
+        description: "Advanced migration — Analyze a v7.6 chart/templates/ directory for customizations. " +
+            "Compares each template against the stock v7.6 templates to find: (1) custom files the user added, " +
+            "(2) stock templates the user modified, and (3) unchanged files. For modified files, shows a diff " +
+            "and provides guidance on how to carry the changes forward to v7.7. " +
+            "Use this when the user has added or modified Helm template files beyond just values.yaml.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                templatesPath: {
+                    type: "string",
+                    description: "Absolute path to the v7.6 templates directory, chart directory, or repository root. " +
+                        "Examples: '/path/to/redpoint-rpi/templates', '/path/to/chart', '/path/to/redpoint-rpi'",
+                },
+            },
+            required: ["templatesPath"],
+        },
+    },
 ];
 // ---------------------------------------------------------------------------
-// Register tool list handler
+// Tool call handler (shared between stdio and HTTP sessions)
 // ---------------------------------------------------------------------------
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: TOOLS };
-});
-// ---------------------------------------------------------------------------
-// Register tool call handler
-// ---------------------------------------------------------------------------
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+const toolCallHandler = async (request) => {
     const { name, arguments: args } = request.params;
     switch (name) {
         case "rpi_validate": {
@@ -316,14 +350,147 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
             };
         }
+        case "rpi_migrate": {
+            const input = args;
+            const result = migrate(input.values);
+            return {
+                content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+            };
+        }
+        case "rpi_migrate_templates": {
+            const input = args;
+            const result = migrateTemplates(input.templatesPath);
+            return {
+                content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+            };
+        }
         default:
             throw new Error(`Unknown tool: ${name}`);
     }
+};
+// ---------------------------------------------------------------------------
+// Register handlers on the primary server (used in stdio mode)
+// ---------------------------------------------------------------------------
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return { tools: TOOLS };
 });
+server.setRequestHandler(CallToolRequestSchema, toolCallHandler);
 // ---------------------------------------------------------------------------
 // Register resources and start server
 // ---------------------------------------------------------------------------
 registerResources(server);
-const transport = new StdioServerTransport();
-await server.connect(transport);
+const mode = process.env.MCP_TRANSPORT ?? "stdio";
+const port = parseInt(process.env.MCP_PORT ?? "8080", 10);
+if (mode === "http") {
+    // ---------------------------------------------------------------------------
+    // HTTP mode — runs as a long-lived server for remote MCP clients
+    // ---------------------------------------------------------------------------
+    const sessions = new Map();
+    const httpServer = createServer(async (req, res) => {
+        const url = req.url ?? "/";
+        // Health check endpoint for Kubernetes probes
+        if (url === "/health" || url === "/health/live" || url === "/health/ready") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ status: "ok" }));
+            return;
+        }
+        if (url === "/mcp") {
+            // Handle MCP protocol requests
+            if (req.method === "POST") {
+                // Read body
+                const chunks = [];
+                for await (const chunk of req)
+                    chunks.push(chunk);
+                const body = JSON.parse(Buffer.concat(chunks).toString());
+                const sessionId = req.headers["mcp-session-id"];
+                if (sessionId && sessions.has(sessionId)) {
+                    // Existing session
+                    const transport = sessions.get(sessionId);
+                    await transport.handleRequest(req, res, body);
+                }
+                else if (!sessionId && isInitializeRequest(body)) {
+                    // New session
+                    const transport = new StreamableHTTPServerTransport({
+                        sessionIdGenerator: () => crypto.randomUUID(),
+                        onsessioninitialized: (id) => {
+                            sessions.set(id, transport);
+                        },
+                    });
+                    transport.onclose = () => {
+                        if (transport.sessionId) {
+                            sessions.delete(transport.sessionId);
+                        }
+                    };
+                    const sessionServer = new Server({ name: "interaction-helm-copilot", version: "1.0.0" }, { capabilities: { tools: {}, resources: {} } });
+                    // Register the same handlers on the session server
+                    sessionServer.setRequestHandler(ListToolsRequestSchema, async () => {
+                        return { tools: TOOLS };
+                    });
+                    sessionServer.setRequestHandler(CallToolRequestSchema, toolCallHandler);
+                    registerResources(sessionServer);
+                    await sessionServer.connect(transport);
+                    await transport.handleRequest(req, res, body);
+                }
+                else {
+                    res.writeHead(400, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify({ error: "Bad request — no session ID or not an initialize request" }));
+                }
+            }
+            else if (req.method === "GET") {
+                // SSE stream for existing session
+                const sessionId = req.headers["mcp-session-id"];
+                if (sessionId && sessions.has(sessionId)) {
+                    const transport = sessions.get(sessionId);
+                    await transport.handleRequest(req, res);
+                }
+                else {
+                    res.writeHead(400, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify({ error: "Invalid or missing session ID" }));
+                }
+            }
+            else if (req.method === "DELETE") {
+                // Session termination
+                const sessionId = req.headers["mcp-session-id"];
+                if (sessionId && sessions.has(sessionId)) {
+                    const transport = sessions.get(sessionId);
+                    await transport.close();
+                    sessions.delete(sessionId);
+                    res.writeHead(200);
+                    res.end();
+                }
+                else {
+                    res.writeHead(404);
+                    res.end();
+                }
+            }
+            else {
+                res.writeHead(405);
+                res.end();
+            }
+        }
+        else {
+            res.writeHead(404);
+            res.end();
+        }
+    });
+    httpServer.listen(port, () => {
+        console.log(`MCP server listening on http://0.0.0.0:${port}/mcp`);
+    });
+}
+else {
+    // ---------------------------------------------------------------------------
+    // Stdio mode — for local MCP clients (Claude Desktop, Claude Code, etc.)
+    // ---------------------------------------------------------------------------
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function isInitializeRequest(body) {
+    if (Array.isArray(body)) {
+        return body.some((msg) => msg?.method === "initialize");
+    }
+    return body?.method === "initialize";
+}
 //# sourceMappingURL=index.js.map

@@ -1,0 +1,1727 @@
+MicrosoftEntraID:
+  enabled: false
+  interaction_api_id: 00000000-0000-0000-0000-000000000000
+  interaction_client_id: 00000000-0000-0000-0000-000000000000
+  tenant_id: 00000000-0000-0000-0000-000000000000
+OpenIdProviders:
+  audience: api://00000000-0000-0000-0000-000000000000
+  authorizationHost: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0
+  clientID: 00000000-0000-0000-0000-000000000000
+  customScopes:
+  - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
+  enableRefreshTokens: true
+  enabled: false
+  logoutIdTokenParameter: id_token_hint
+  name: KeyCloak
+  redirectURL: https://rpi-interactionapi.example.com
+  supportsUserManagement: false
+  validateAudience: true
+  validateIssuer: false
+SMTPSettings:
+  EnableSSL: true
+  SMTP_Address: your_smtp_host
+  SMTP_Password: your_smtp_server_password
+  SMTP_Port: 587
+  SMTP_SenderAddress: noreply-rpi@example.com
+  SMTP_SenderName: Redpoint Global
+  SMTP_Username: your_smtp_server_username
+  UseCredentials: true
+authservice:
+  autoscaling:
+    enabled: false
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  default_password: my_Super_Strong_Pwd
+  default_username: admin@noemail.com
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    verbosity: DEBUG
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    java_options: -Xmx1536m
+    limits:
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 2Gi
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+    progressDeadlineSeconds: 600
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: true
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+    seccompProfile:
+      type: RuntimeDefault
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  type: deployment
+callbackapi:
+  autoscaling:
+    enabled: true
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    type: hpa
+  channelLabel: SendGrid
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: true
+  enabled: true
+  instances:
+  - name: tenant1
+    replicas: 1
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  multitenancy:
+    enabled: false
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  type: deployment
+cdpcache:
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  enabled: true
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 2Gi
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: false
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+  service:
+    port: 6379
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  type: StatefulSet
+  volumeClaimTemplates:
+    storage: 100Gi
+cloudIdentity:
+  amazonSettings:
+    accessKeyId: <my-aws-iam-access-key>
+    credentialsType: accessKey
+    region: us-east-1
+    secretAccessKey: <my-aws-iam-secret-access-key>
+    secretsManagerSettings:
+      credentialSecretName: aws-sm-access-keys
+      secretTagKey: rpi-app
+  azureSettings:
+    UseADTokenForDatabaseConnection: false
+    appSettingsVaultUri: https://myvault.vault.azure.net/
+    credentialsType: workloadIdentity
+    managedIdentityClientId: your_managed_identity_client_id
+    vaultUri: https://myvault.vault.azure.net/
+  enabled: false
+  googleSettings:
+    ConfigMapFilePath: /app/google-creds
+    configMapName: my-google-svs-account
+    credentialsType: serviceAccount
+    keyName: my-google-svs-account.json
+    projectId: your_google_project_id
+    serviceAccountEmail: my-google-svs-account@my-project.iam.gserviceaccount.com
+  provider: Amazon
+  secretsManagement:
+    ConfigurationReloadIntervalSeconds: 30
+    UseForAppSettings: true
+    UseForConfigPasswords: true
+    autoCreateSecrets: true
+    enabled: false
+    secretName: redpoint-rpi-secrets
+    secretsProvider: kubernetes
+databases:
+  datawarehouse:
+    autoCreateSecrets: true
+    bigquery:
+      connections:
+      - ConfigMapFilePath: /app/google-creds
+        OAuthMechanism: 0
+        allowLargeResults: 0
+        configMapName: gbq-tenant1
+        credentialsType: serviceAccount
+        keyName: gbq-tenant1.json
+        largeResultsDataSetId: _bqodbc_temp_tables
+        largeResultsTempTableExpirationTime: '3600000'
+        name: gbq-tenant1
+        projectId: gbq-tenant1
+        serviceAccountEmail: gbq-tenant1@my-project.iam.gserviceaccount.com
+        sqlDialect: 1
+      enabled: false
+    databricks:
+      connections:
+      - authMechanism: 3
+        host: my-host.2.azuredatabricks.net
+        httpPath: /sql/1.0/warehouses/c546e1e69e8d2ac9
+        name: dbx-tenant1
+        password: my_databricks_token
+        port: 443
+        schema: my_schema_name
+        username: token
+      enabled: false
+    redshift:
+      connections:
+      - database: db_tenant1
+        name: rsh-tenant1
+        password: pass1
+        port: 5439
+        server: redshift-tenant1.endpoint.aws
+        username: user1
+      - database: db_tenant2
+        name: rsh-tenant2
+        password: pass2
+        port: 5439
+        server: redshift-tenant2.endpoint.aws
+        username: user2
+      enabled: true
+    snowflake:
+      ConfigMapFilePath: /app/snowflake-creds
+      ConfigMapName: snowflake-creds
+      credentialsType: password
+      enabled: false
+      keyName: my-snowflake-rsakey.p8
+  operational:
+    databaseSchema: dbo
+    dateTimeSource: OperatingSystem
+    encrypt: true
+    provider: sqlserver
+    pulse_database_name: <my-pulse-database-name>
+    pulse_logging_database_name: <my-logging-database-name>
+    server_host: <my-database-server-host>
+    server_password: <my-database-server-password>
+    server_username: <my-database-server-username>
+deploymentapi:
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: false
+  enabled: true
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  templateTenant:
+    templateTenantFilesPath: /tmp/templatetenantfiles
+    useTemplateFiles: false
+    volumeClaimName: templatetenantfiles
+  terminationGracePeriodSeconds: 120
+  type: deployment
+diagnosticsMode:
+  copytoAzureBlob:
+    UseDataLakeStorageGen2: false
+    accessKey: <yourstorageaccount-access-key>
+    accountName: <yourstorageaccount>
+    blobServiceEndpoint: https://yourstorage.blob.core.windows.net
+    containerName: <yourstorageaccount-container-name>
+    enableCdn: false
+    enabled: false
+  copytoSftp:
+    enabled: false
+    sftpHost: <your-sftp-host>
+    sftpPassword: <your-sftp-password>
+    sftpPort: '22'
+    sftpUsername: <your-sftp-username>
+  dotNetTools:
+    enabled: false
+    extractionBaseDir: /tmp
+    path: /app/dotnet-tools
+    useCounters: false
+    useGcDump: false
+  netutils:
+    enabled: false
+    securityContext:
+      allowPrivilegeEscalation: false
+      appArmorProfile:
+        type: RuntimeDefault
+      capabilities:
+        add:
+        - NET_ADMIN
+        - NET_RAW
+        drop:
+        - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
+      runAsGroup: 7777
+      runAsNonRoot: true
+      runAsUser: 7777
+executionservice:
+  autoscaling:
+    enabled: false
+    kedaScaledObject:
+      authenticationRef: rpi-executionservice
+      behavior:
+        scaleDown:
+          policies:
+            periodSeconds: 60
+            type: Percent
+            value: 50
+          stabilizationWindowSeconds: 300
+        scaleUp:
+          policies:
+            periodSeconds: 60
+            type: Percent
+            value: 100
+          stabilizationWindowSeconds: 300
+      fallback:
+        failureThreshold: 3
+        replicas: 2
+      identityId: <my-workload_identity-id>
+      maxReplicaCount: 10
+      metricName: execution_max_thread_count
+      minReplicaCount: 2
+      pollingInterval: 30
+      query: sum(execution_max_thread_count{kubernetes_namespace="<my-rpi-namespace>", app="rpi-executionservice"})
+      serverAddress: <my-prometheus-query-endpoint>
+      terminationGracePeriodSeconds: 120
+      threshold: '80'
+      useTriggerAuthentication: true
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    type: hpa
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: false
+  enableRPIAuthentication: true
+  enabled: true
+  extraEnvs:
+  - enabled: false
+    name: Plugins__LuxSci__IsSandboxMode
+    value: 'true'
+  - enabled: false
+    name: Plugins__SendGrid__EnableSandBoxMode
+    value: 'true'
+  - enabled: false
+    name: Plugins__Twilio__DisableSendSMSCampaign
+    value: 'true'
+  - enabled: false
+    name: RPI_MPULSE_UPSERT_CONTACT_DEBUG
+    value: '1'
+  - enabled: false
+    name: RPI_MPULSE_EVENT_UPLOAD_DEBUG
+    value: '1'
+  - enabled: false
+    name: LC_ALL
+    value: en_US.UTF-8
+  - enabled: false
+    name: LANG
+    value: en_US.UTF-8
+  - enabled: false
+    name: LANGUAGE
+    value: en_US.UTF-8
+  - enabled: false
+    name: RPI_MPULSE_EVENT_UPLOAD_FAIL_DEBUG
+    value: '0'
+  - enabled: false
+    name: RPI_MPULSE_EVENT_UPLOAD_SCENARIO
+    value: 1,5,2,3,5,7
+  - enabled: false
+    name: RPI_MPULSE_SAVE_MPULSE_EVENT_CONTENT_DEBUG
+    value: '1'
+  - enabled: false
+    name: RPI_MPULSE_UPSERT_CONTACT_IMPORT_PATH_DEBUG
+    value: /rpifileoutputdir/mpulse-debug-path
+  internalCache:
+    backupToOpsDBInterval: 00:00:20
+    enabled: true
+    failOnCacheConnectionError: true
+    failOnPrimaryDataLoss: true
+    maxNumberRetries: '100'
+    maxRetryDelay: 00:01:00
+    redisSettings:
+      connectionString: rpi-executionservice-cache-0.rpi-executionservice-cache.{{ .Release.Namespace }}.svc.cluster.local,password={{
+        myPassword }},abortConnect=False
+      password: my_Super_Strong_Pwd
+      podDisruptionBudget:
+        enabled: false
+        minAvailable: 1
+      replicas: 1
+      resources:
+        enabled: true
+        limits:
+          memory: 3Gi
+        requests:
+          cpu: 500m
+          memory: 3Gi
+      volumeClaimTemplates:
+        enabled: true
+        storage: 100Gi
+    type: internal
+  jobExecution:
+    auditTaskEvents: true
+    defaultMaintenanceModeBufferTime: 00:05:00
+    executionShutdownWaitForActivity: 00:08:00
+    internalAddress: ''
+    maxSmartAssetInstancesForOfferCodes: '100000'
+    maxThreadsPerExecutionService: 100
+    overrideCustomSQLReservedWords: false
+    rpdmOApiPrefixUri: /v1/
+    rpdmOApiRequestTimeout: '200'
+    taskTimeout: 60
+    triggerCheckCriteriaInterval: 60
+    triggersMaxDaysInactive: 180
+    workflowPrioritization:
+      enabled: true
+      maxConcurrentWorkflowActivities: 100
+      maximumQueueTime: '24:00:00'
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 3
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  probes:
+    enabled: true
+  readinessProbe:
+    failureThreshold: 5
+    initialDelaySeconds: 20
+    periodSeconds: 15
+    timeoutSeconds: 5
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  seedService:
+    maxNumberRetries: '100'
+    maxRetryDelay: 00:01:00
+    memoryCacheSize: '10'
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  type: deployment
+global:
+  application:
+    name: redpoint-interaction
+    version: 7
+  deployment:
+    images:
+      callbackapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-callbackapi
+      cdpauthservices: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-authservice
+      cdpinitservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-init
+      cdpmaintenanceservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-maintenance
+      cdpmessageq: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-messageq
+      cdpservicesapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-servicesapi
+      cdpsocketio: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-socketio
+      cdpuiservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/cdp-ui
+      deploymentapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-deploymentapi
+      executionservice: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-executionservice
+      imagePullPolicy: IfNotPresent
+      imagePullSecret:
+        enabled: true
+        name: redpoint-rpi
+      ingress_controller: rg1acrpub.azurecr.io/docker/redpointglobal/releases/nginx-ingress-controller
+      integrationapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-integrationapi
+      interactionapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-interactionapi
+      keycloak: rg1acrpub.azurecr.io/docker/redpointglobal/releases/keycloak
+      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
+      nodemanager: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-nodemanager
+      queuereader: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-queuereader
+      rabbitmq: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rabbitmq
+      realtimeapi: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rpi-realtimeapi
+      rediscache: rg1acrpub.azurecr.io/docker/redpointglobal/releases/rediscache
+      tag: 7.6.20260212.1413
+    platform: amazon
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/enable-access-log: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/proxy-body-size: 4096m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '3600'
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+  certificateArn: your_acm_certificate_arn
+  certificateSource: kubernetes
+  className: nginx-redpoint-rpi
+  controller:
+    enabled: true
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  domain: example.com
+  hosts:
+    callbackapi: rpi-callbackapi
+    client: rpi-interactionapi
+    config: rpi-deploymentapi
+    integration: rpi-integrationapi
+    queuereader: rpi-queuereader
+    rabbitmqconsole: rpi-rabbitmq-console
+    realtime: rpi-realtimeapi
+    smartactivation: rpi-smartActivation
+  mode: public
+  privateLink:
+    azure:
+      enabled: false
+  service:
+    port: 80
+  subnetName: <my-ingress-vpc-subnet-name>
+  tlsSecretName: ingress-tls
+initservice:
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  database:
+    operational:
+      connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
+      name: smart_activation_db
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    verbosity: DEBUG
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    java_opts: -Xmx2150m
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+    progressDeadlineSeconds: 600
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: false
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  type: deployment
+integrationapi:
+  authMetaHttpEnabled: false
+  autoscaling:
+    enabled: true
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    type: hpa
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: true
+  enableRPIAuthentication: true
+  enableSwagger: true
+  enabled: true
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  password: my_Super_Strong_Pwd
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  read_timeout: '300000'
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  type: deployment
+  username: admin@noemail.com
+interactionapi:
+  allowSavingLoginDetails: true
+  alwaysShowClientsAtLogin: true
+  authMetaHttpEnabled: true
+  autoscaling:
+    enabled: true
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    type: hpa
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: false
+  enableRPIAuthentication: true
+  enableSwagger: true
+  enabled: true
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  type: deployment
+  useExternalUserManagement: false
+keycloak:
+  autoscaling:
+    enabled: false
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  database_name: keycloak
+  hostname: keycloak
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  password: my_Super_Strong_Pwd
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  realm_client_id: rpi-service
+  realm_client_secret: <my-realm-client-secret>
+  realm_name: redpoint-mercury
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+    progressDeadlineSeconds: 600
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 1001
+    privileged: false
+    readOnlyRootFilesystem: false
+    runAsGroup: 1001
+    runAsNonRoot: true
+    runAsUser: 1001
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  type: deployment
+  username: admin@noemail.com
+maintenanceservice:
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    verbosity: DEBUG
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  port: 80
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    resources:
+      enabled: true
+      java_opts: -Xmx1536m
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 25%
+    progressDeadlineSeconds: 600
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: false
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  type: deployment
+messageq:
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  password: guest
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  port: 5672
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: true
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+  serviceAccount:
+    enabled: true
+  type: StatefulSet
+  username: guest
+  volumeClaimTemplates:
+    storage: 100Gi
+networkPolicy:
+  allowDNS: true
+  enabled: false
+nodeSelector:
+  enabled: false
+  key: app
+  value: redpoint-rpi
+nodemanager:
+  autoscaling:
+    enabled: true
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    type: hpa
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: false
+  enableRPIAuthentication: true
+  enabled: true
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  type: deployment
+queuereader:
+  autoscaling:
+    enabled: true
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    type: hpa
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: true
+  enabled: true
+  isCacheProcessingEnabled: true
+  isCallbackServiceProcessingEnabled: true
+  isEventProcessingEnabled: true
+  isFormProcessingEnabled: true
+  listenerQueueErrorQueuePath: listenerQueueError
+  listenerQueueErrorTTLDays: 14
+  listenerQueueNonActiveQueuePath: listenerQueueNonActive
+  listenerQueueNonActiveTTLDays: 14
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  maxBatchSize: 50
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  queueListenerEnabled: true
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  realtimeConfiguration:
+    distributedCache:
+      provider: redis
+      redisSettings:
+        connectionString: rpi-queuereader-cache-0.rpi-queuereader-cache.{{ .Release.Namespace }}.svc.cluster.local,password=my_Super_Strong_Pwd,abortConnect=False
+        password: my_Super_Strong_Pwd
+        podDisruptionBudget:
+          enabled: false
+          minAvailable: 1
+        replicas: 1
+        resources:
+          enabled: true
+          limits:
+            memory: 3Gi
+          requests:
+            cpu: 500m
+            memory: 3Gi
+        volumeClaimTemplates:
+          enabled: true
+          storage: 100Gi
+      type: internal
+    distributedQueue:
+      provider: rabbitmq
+      rabbitmqSettings:
+        hostname: rpi-queuereader-rabbitmq-0.rpi-queuereader-rabbitmq.{{ .Release.Namespace }}.svc.cluster.local
+        password: my_Super_Strong_Pwd
+        resources:
+          enabled: true
+          limits:
+            memory: 3Gi
+          requests:
+            cpu: 500m
+            memory: 3Gi
+        username: redpointrpi
+        virtualhost: /
+        volumeClaimTemplates:
+          enabled: true
+          storage: 100Gi
+      type: internal
+    isDistributed: false
+    tenantIds:
+    - 00000000-0000-0000-0000-000000000000
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  threadPoolSize: 10
+  timeoutMinutes: 60
+  type: deployment
+  useMessageLocks: true
+realtimeapi:
+  CORSOrigins:
+  - '*'
+  CacheOutputCollectIPAddress: true
+  CacheWebFormData: false
+  EventListeningLocalCacheDuration: 60
+  HashVisitorID: false
+  RealtimeServerCookieDomain: ''
+  RealtimeServerCookieEnabled: false
+  RealtimeServerCookieExpires: 60
+  RealtimeServerCookieHttpOnly: false
+  RealtimeServerCookieName: rg-visitor
+  ThresholdBetweenPageVisitsMinutes: 1
+  ThresholdBetweenSiteVisitsMinutes: 120
+  authentication:
+    basic:
+      authToken: 00000000-0000-0000-0000-000000000000
+      forms: true
+      listenerQueue: true
+      recommendations: true
+      standard: false
+    oauth:
+      accessTokenLifetimeSeconds: 360
+      databaseName: RPIRealtimeCore
+      refreshTokenLifetimeSeconds: 360
+    type: basic
+  autoscaling:
+    enabled: true
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    type: hpa
+  cacheOutputQueueEnabled: true
+  cacheProvider:
+    azureredis:
+      connectionstring: redis://<my-redis-name>.redis.cache.windows.net:6380?ssl=true&password=<my-access-key>
+    enabled: true
+    googlebigtable:
+      instanceId: <my-bigtable-instance-id>
+      projectId: <my-bigtable-project-id>
+    inMemorySql:
+      database_name: <my-cache-database-name>
+      password: <my-cache-database-password>
+      server_host: <my-cache-database-server-host>
+      username: <my-cache-database-username>
+    mongodb:
+      collectionName: <my-realtime-cache-collection>
+      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true
+      databaseName: <my-realtime-cache-db>
+    provider: mongodb
+    redis:
+      connectionstring: <my-redis-hostname>:6379,ssl=True,abortConnect=false,user=<my-username>,password=<my-username>
+      internal: false
+      replicas: 1
+      resources:
+        enabled: true
+        limits:
+          memory: 1Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  customMetrics:
+    enabled: false
+    prometheus_scrape: true
+  customPlugins:
+    enabled: false
+    list:
+    - factory:
+        assembly: RedPoint.Realtime.Example.Plugins
+        type: RealtimeExamplePlugin.Decisions.PreDecisionPluginFactory
+      name: Pre-Decision Example
+      settings:
+      - key: Param1
+        value: my-custom-parameter1
+      - key: Param2
+        value: my-custom-parameter2
+      type:
+        apiContentFilterOperator: Include
+        apiContextFilters:
+        - apply-plugin
+        name: Predecision
+    - factory:
+        assembly: RedPoint.Realtime.Example.Plugins
+        type: RealtimeExamplePlugin.Decisions.PostDecisionFactory
+      name: Post-Decision Example
+      settings:
+      - key: Prefix
+        value: my-custom-prefix
+      - key: Suffix
+        value: my-custom-suffix
+      type:
+        apiContentFilterOperator: ''
+        apiContextFilters: null
+        name: Postdecision
+    - factory:
+        assembly: RedPoint.Realtime.Example.Plugins
+        type: RealtimeExamplePlugin.Decisions.SmartAssetPluginFactory
+      name: Smart Asset Result Plugin Example
+      settings:
+      - key: ParameterName1
+        value: MySmartAssetPluginCounter1
+      - key: ParameterName2
+        value: MySmartAssetPluginCounter2
+      type:
+        apiContentFilterOperator: ''
+        apiContextFilters:
+        - apply-plugin
+        name: SmartAssetResults
+    - factory:
+        assembly: RedPoint.Realtime.Example.Plugins
+        type: RealtimeExamplePlugin.Events.EventPluginFactory
+      name: Event Plugin Example
+      settings:
+      - key: Param1
+        value: my-custom-parameter1
+      - key: Param2
+        value: my-custom-parameter2
+      type:
+        apiContentFilterOperator: ''
+        apiContextFilters: null
+        name: Event
+    - factory:
+        assembly: RedPoint.Realtime.Example.Plugins
+        type: RealtimeExamplePlugin.Forms.FormProcessingFactory
+      name: Form Processing Plugin Example
+      settings:
+      - key: extrafield1
+        value: my-value
+      - key: extrafield2
+        value: my-value
+      type:
+        apiContentFilterOperator: ''
+        apiContextFilters: null
+        name: FormProcessing
+    - factory:
+        assembly: RedPoint.Realtime.Example.Plugins
+        type: RealtimeExamplePlugin.Visitor.VisitorCachePluginFactory
+      name: Visitor Profile Plugin Example
+      settings:
+      - key: Param1
+        value: my-custom-parameter
+      - key: Param2
+        value: my-custom-parameter
+      type:
+        apiContentFilterOperator: ''
+        apiContextFilters: null
+        name: Visitor
+  dataMaps:
+    messageHistory:
+      CompressData: true
+      DaysToPersist: 365
+    nonVisitorData:
+      CompressData: true
+      DaysToPersist: 365
+    offerHistory:
+      CompressData: true
+      DaysToPersist: 365
+    productRecommendation:
+      CompressData: true
+      DaysToPersist: 365
+    visitorHistory:
+      CompressData: true
+      DaysToPersist: 365
+    visitorProfile:
+      CompressData: true
+      DaysToPersist: 365
+  decisionCacheDuration: 60
+  enableAuditMetricsInHeaders: true
+  enableEventListening: true
+  enableHelpPages: true
+  enabled: true
+  idValidation:
+    deviceID:
+      enableLetters: true
+      enableNumbers: true
+      maximumLength: 36
+      minimumLength: 1
+      permittedCharacters:
+      - '-'
+      - _
+      - /
+      - .
+      - '@'
+      - '#'
+      - '&'
+      - '?'
+    enableDeviceIDValidation: true
+    enableVisitorIDValidation: true
+    visitorID:
+      enableLetters: true
+      enableNumbers: true
+      maximumLength: 36
+      minimumLength: 1
+      permittedCharacters:
+      - '-'
+      - _
+      - /
+      - .
+      - '@'
+      - '#'
+      - '&'
+      - '?'
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    Console: Error
+    database: Error
+    default: Error
+    rpiError: Error
+    rpiTrace: Error
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  queueProvider:
+    amazonmsk:
+      Acks: None
+      BatchSize: '1000000'
+      CompressionType: Snappy
+      LingerTime: 0
+      MaxRetryAttempt: 10
+      UseAwsMsk: true
+      accessKeyId: <my-aws-iam-access-key>
+      bootstrapServers: <my-server1.c2.kafka.us-east-1.amazonaws.com:9198>
+      region: <my-aws-region>
+      secretAccessKey: <my-aws-iam-secret-access-key>
+    amazonsqs:
+      credentialsType: accessKey
+      visibilityTimeout: '301'
+    azureeventhubs:
+      NamespaceName: my_eventhub_namespace_name
+      PartitionIds:
+      - '0'
+      ReceiveMessageBatchSize: 200
+      SendMessageBatchSize: 200
+      connectionstring: Endpoint=sb://<my-event-hubs-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy-name>;SharedAccessKey=<my-policy-key>;EntityPath=<my-event-hub-name>
+      eventHubName: RPIQueueListener
+    azureservicebus:
+      connectionstring: Endpoint=sb://<my-service-bus-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy-name>;SharedAccessKey=<my-policy-key>
+    enabled: true
+    googlepubsub:
+      projectId: <my-google-project-id>
+    provider: amazonsqs
+    queueNames:
+      cacheOutputQueuePath: RPIWebCacheData
+      callbackServiceQueuePath: RPICallbackApiQueue
+      eventsQueuePath: RPIWebEvents
+      formQueuePath: RPIWebFormSubmission
+      listenerQueuePath: RPIQueueListener
+      recommendationsQueuePath: RPIWebRecommendations
+    rabbitmq:
+      rabbitmqSettings:
+        hostname: rpi-realtimeapi-rabbitmq-0.rpi-realtimeapi-rabbitmq.{{ .Release.Namespace }}.svc.cluster.local
+        password: my_Super_Strong_Pwd
+        podDisruptionBudget:
+          enabled: false
+          minAvailable: 1
+        resources:
+          enabled: true
+          limits:
+            cpu: 1
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        username: redpointrpi
+        virtualhost: /
+        volumeClaimTemplates:
+          enabled: true
+          storage: 100Gi
+      type: internal
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  realtimeProcessingEnabled: true
+  replicas: 1
+  resources:
+    enabled: true
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  rpiClientID: 00000000-0000-0000-0000-000000000000
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  terminationGracePeriodSeconds: 120
+  type: deployment
+redpointAI:
+  cognitiveSearch:
+    SearchEndpoint: https://example.search.windows.net
+    SearchKey: <my-cognitivesearch-key>
+    VectorSearchConfig: vector-config-000000000000
+    VectorSearchProfile: vector-profile-000000000000
+  enabled: false
+  modelStorage:
+    BlobFolder: my_blob_container_folder_name
+    ConnectionString: DefaultEndpointsProtocol=https;AccountName=my_account_name;AccountKey=my_account_access_key
+    ContainerName: my_blob_container_name
+    EmbeddingsModel: text-embedding-ada-002
+    ModelDimensions: 1536
+  naturalLanguage:
+    ApiBase: https://example.openai.azure.com/
+    ApiKey: <my-openai-key>
+    ApiVersion: 2023-07-01-preview
+    ChatGptEngine: gpt-4-32k
+    ChatGptTemp: 0.5
+reportingservice:
+  sigma:
+    api_url: https://api.us.azure.sigmacomputing.com
+    client_id: 48dd1982ab835ff53177e9cbd7fb5608b1db8c56491a040f2f0843a3bfc6b440
+    client_secret: my_sigma_client_secret
+    enabled: false
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  enabled: true
+  fsGroup: 7777
+  privileged: false
+  readOnlyRootFilesystem: true
+  runAsGroup: 7777
+  runAsNonRoot: true
+  runAsUser: 7777
+  supplementalGroups:
+  - 4000
+  - 5000
+servicesapi:
+  autoscaling:
+    enabled: false
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    verbosity: DEBUG
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    java_opts: -Xmx2150m
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: false
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  sso_enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  type: deployment
+smartActivation:
+  enabled: false
+socketio:
+  autoscaling:
+    enabled: false
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  keycloak_realm: redpoint-mercury
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    verbosity: DEBUG
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    java_opts: -Xmx1536m
+    limits:
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 2Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: false
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  type: deployment
+storage:
+  persistentVolumeClaims:
+    DataManagementUploadDirectory:
+      claimName: rpdmuploaddirectory
+      enabled: false
+      mountPath: /rpdmuploaddirectory
+    FileOutputDirectory:
+      claimName: rpifileoutputdir
+      enabled: false
+      mountPath: /rpifileoutputdir
+    Plugins:
+      claimName: realtimeplugins
+      enabled: false
+      mountPath: /app/plugins
+tolerations:
+  effect: NoSchedule
+  enabled: false
+  key: app
+  operator: Equal
+  value: redpoint-rpi
+topologySpreadConstraints:
+  enabled: true
+  maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
+uiservice:
+  autoscaling:
+    enabled: false
+    maxReplicas: 5
+    minReplicas: 2
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  customAnnotations:
+    my-custom-annotation: my-value
+  customLabels:
+    environment: prod
+    team: marketing
+  livenessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  logging:
+    verbosity: DEBUG
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 2
+  replicas: 1
+  resources:
+    enabled: true
+    java_opts: -Xmx2150m
+    limits:
+      memory: 3Gi
+    requests:
+      cpu: 500m
+      memory: 3Gi
+  rollout:
+    autoPromotionEnabled: true
+    revisionHistoryLimit: 3
+  securityContext:
+    allowPrivilegeEscalation: false
+    appArmorProfile: runtime/default
+    capabilities:
+      drop:
+      - ALL
+    enabled: true
+    fsGroup: 7777
+    privileged: false
+    readOnlyRootFilesystem: false
+    runAsGroup: 7777
+    runAsNonRoot: true
+    runAsUser: 7777
+  service:
+    port: 80
+  serviceAccount:
+    enabled: true
+  startupProbe:
+    failureThreshold: 30
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+  type: deployment

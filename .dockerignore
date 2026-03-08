@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.claude
+.npmignore
+*.tgz
+test-*
+deployment
+values-*

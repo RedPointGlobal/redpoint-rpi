@@ -7,10 +7,37 @@
   "bin": {
     "rpi-helm-mcp": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/resources/*.yaml src/resources/*.json dist/resources/",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "helm",
+    "kubernetes",
+    "redpoint",
+    "rpi",
+    "ai-assistant"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RedPointGlobal/redpoint-rpi.git"
+  },
+  "homepage": "https://github.com/RedPointGlobal/redpoint-rpi/tree/mcp",
+  "bugs": {
+    "url": "https://github.com/RedPointGlobal/redpoint-rpi/issues"
+  },
+  "author": "Redpoint Global Inc.",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
