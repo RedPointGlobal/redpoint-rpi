@@ -5,13 +5,15 @@
 
 ## Overview
 
-The **Interaction Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to your AI assistant of choice and lets you work in plain English — validate configurations, generate overrides, explain settings, and diagnose issues.
+The **Interaction Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to your AI assistant of choice and lets you work in plain English to validate configurations, generate overrides, explain settings, and diagnose issues.
+
+It also searched the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content covering features, administration, external configuration, channels, realtime decisions, and more. You can also ask it to fetch a specific documentation page by name.
 
 ## Prerequisites
 
-- **Node.js 18+** — Required to run the MCP server. [Download](https://nodejs.org/)
-- **Helm** (optional) — Required only if you want the assistant to render templates
-- **kubectl** (optional) — Required only if you want the assistant to check deployment health
+- **Node.js 18+**: Required to run the MCP server. [Download](https://nodejs.org/)
+- **Helm** (optional): Required only if you want the assistant to render templates
+- **kubectl** (optional): Required only if you want the assistant to check deployment health
 
 ## Setup
 
@@ -120,8 +122,6 @@ Analyzes pod logs, events, secrets, and ingress configuration to diagnose the is
 > "How do I configure MongoDB as a realtime cache provider?"
 
 > "What are the supported queue providers in RPI?"
-
-Searches the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content — covering features, administration, external configuration, channels, realtime decisions, and more. You can also ask it to fetch a specific documentation page by name.
 
 ## IDE Autocomplete
 
