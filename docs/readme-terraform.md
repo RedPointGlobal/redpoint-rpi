@@ -1,4 +1,4 @@
-![redpoint_logo](../chart/images/logo.png)
+![redpoint_logo](../chart/images/redpoint.png)
 # Deploying RPI with Terraform
 
 [< Back to main README](../README.md)
