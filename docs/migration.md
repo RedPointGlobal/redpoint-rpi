@@ -55,6 +55,18 @@ git push origin main
 
 ### 2. Generate Your v7.7 Overrides
 
+You have two options: use the **Interaction Copilot** for automatic migration, or use the **Interaction CLI** to build a new overrides file interactively.
+
+**Option A — Automatic migration with Interaction Copilot (recommended)**
+
+If you have the [Interaction Copilot](readme-mcp.md) connected, ask it to migrate your v7.6 values file:
+
+> "Migrate my v7.6 values file at /path/to/my-values.yaml to v7.7"
+
+The Copilot analyzes your file, identifies customizations vs defaults, remaps renamed keys, and produces a minimal v7.7 overrides file. It warns about breaking changes like `secretsManagement` relocation and `ingress.className` default changes.
+
+**Option B — Interactive CLI**
+
 Run the Interaction CLI with your existing v7.6 values at hand (database host, credentials, ingress domain, cache/queue providers). The CLI generates a v7.7-compatible overrides file — no manual diffing or key translation required:
 
 ```bash

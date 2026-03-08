@@ -21,7 +21,7 @@ This chart deploys RPI on Kubernetes using Helm.
   <a href="docs/readme-configuration.md"><strong>Configuration</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-argocd.md"><strong>GitOps Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-mcp.md"><strong>Interaction Helm Copilot</strong></a>
+  <a href="docs/readme-mcp.md"><strong>MCP Guide</strong></a>
 </p>
 
 ---
