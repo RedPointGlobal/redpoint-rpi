@@ -3,9 +3,77 @@
 
 [< Back to main README](../README.md)
 
-## Overview
+## What is GitOps?
 
-This guide covers deploying the RPI Helm chart using ArgoCD. The chart is consumed directly from the Git repository — there is no packaged Helm repository to configure.
+GitOps is an operational model where your entire deployment state — application configuration, infrastructure, and release versions — is declared in Git. Instead of running `helm upgrade` manually, a GitOps controller watches your repository and automatically reconciles the cluster to match what's committed.
+
+**Benefits for RPI deployments:**
+
+- **Audit trail** — every change is a Git commit with author, timestamp, and diff
+- **Rollback** — revert a deployment by reverting a commit
+- **Consistency** — dev, staging, and production all deploy the same way
+- **Self-healing** — if someone manually changes a resource in the cluster, the controller reverts it
+
+## What is ArgoCD?
+
+[ArgoCD](https://argo-cd.readthedocs.io/en/stable/) is a Kubernetes-native GitOps controller. It watches one or more Git repositories, renders Helm charts (or plain YAML), and applies the result to your cluster. It provides a web UI for visualizing deployments, a CLI for scripting, and built-in health monitoring.
+
+For full documentation, see the [ArgoCD Getting Started Guide](https://argo-cd.readthedocs.io/en/stable/getting_started/).
+
+## Repository Access
+
+ArgoCD needs read access to the Git repository containing the Helm chart. You have two options:
+
+### Option 1: Use the public repository directly
+
+Point ArgoCD to the public GitHub repository. This is the simplest setup — ArgoCD pulls the chart on each sync.
+
+```yaml
+source:
+  repoURL: https://github.com/RedPointGlobal/redpoint-rpi.git
+  targetRevision: main
+  path: chart
+```
+
+### Option 2: Import into your internal repository (recommended for production)
+
+Fork or mirror the RPI repository into your organization's internal Git server (GitHub Enterprise, GitLab, Bitbucket, Azure DevOps, etc.). This gives you:
+
+- **No external dependency** — syncs work even if GitHub is unreachable
+- **Change control** — review upstream updates before they reach your clusters
+- **Network compliance** — ArgoCD never reaches outside your network
+
+To set this up:
+
+1. Create an internal repository (e.g., `https://git.yourorg.com/platform/redpoint-rpi.git`)
+2. Mirror the public repo:
+   ```bash
+   git clone --mirror https://github.com/RedPointGlobal/redpoint-rpi.git
+   cd redpoint-rpi.git
+   git remote set-url origin https://git.yourorg.com/platform/redpoint-rpi.git
+   git push --mirror
+   ```
+3. To pull upstream updates periodically:
+   ```bash
+   git remote add upstream https://github.com/RedPointGlobal/redpoint-rpi.git
+   git fetch upstream
+   git push origin --all
+   git push origin --tags
+   ```
+4. Update your ArgoCD Application to point to the internal URL:
+   ```yaml
+   source:
+     repoURL: https://git.yourorg.com/platform/redpoint-rpi.git
+     targetRevision: main
+     path: chart
+   ```
+
+Register the internal repository in ArgoCD:
+
+```bash
+argocd repo add https://git.yourorg.com/platform/redpoint-rpi.git \
+  --username <user> --password <token>
+```
 
 ## Repository Layout
 
@@ -13,12 +81,12 @@ ArgoCD needs to know two things: where the chart lives and where your values fil
 
 ```
 redpoint-rpi/               (this repo)
-├── chart/                   ← ArgoCD Application path
+├── chart/                   <- ArgoCD Application path
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   └── templates/
 └── deploy/
-    └── values/               ← Your overrides
+    └── values/               <- Your overrides
         ├── azure/azure.yaml
         ├── aws/amazon.yaml
         └── demo/demo.yaml
@@ -38,7 +106,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RedPointGlobal/redpoint-rpi.git
-    targetRevision: main              # or release/v7.6 for previous version
+    targetRevision: main
     path: chart
     helm:
       valueFiles:
@@ -223,19 +291,17 @@ Add the sealed secret as a separate source or manage it alongside your Applicati
 
 ### External Secrets Operator
 
-Reference secrets from AWS Secrets Manager, Azure Key Vault, or GCP Secret Manager. The chart supports this natively via `cloudIdentity.secretsManagement`:
+Reference secrets from AWS Secrets Manager, Azure Key Vault, or GCP Secret Manager. The chart supports this natively via `secretsManagement`:
 
 ```yaml
-# In your overrides file
-cloudIdentity:
-  enabled: true
-  secretsManagement:
-    enabled: true
-    secretsProvider: amazonsm    # or keyvault
-    secretName: redpoint-rpi-secrets
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://my-keyvault.vault.azure.net
 ```
 
-ArgoCD will sync the chart and the External Secrets Operator will populate the Kubernetes secrets from your cloud provider.
+ArgoCD syncs the chart and the External Secrets Operator (or the chart's built-in SDK integration) populates the Kubernetes secrets from your cloud provider.
 
 ### ArgoCD Vault Plugin (AVP)
 
