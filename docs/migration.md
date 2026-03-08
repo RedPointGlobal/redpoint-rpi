@@ -37,9 +37,16 @@ See [readme-values.md](readme-values.md) for full details on the new architectur
 
 ## Migration Steps
 
-### 1. Update the Chart Source
+### 1. Get the v7.7 Chart
 
-**If you cloned directly from GitHub:**
+Clone the repository if you haven't already:
+
+```bash
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+cd redpoint-rpi
+```
+
+If you already have a local clone, pull the latest:
 
 ```bash
 cd redpoint-rpi
@@ -262,7 +269,7 @@ secretsManagement:
 
 #### 3c. Map Image Configuration
 
-v7.6 listed full image paths per service. v7.7 uses a shared `repository` prefix:
+v7.6 listed full image paths per service. v7.7 uses a shared `repository` prefix. Note that `imagePullPolicy` default changed from `IfNotPresent` to `Always`:
 
 ```yaml
 # Before (v7.6):
@@ -374,17 +381,71 @@ ingress:
 
 #### 3g. Map Queue Reader Changes
 
-Queue path keys have been simplified:
+Queue path keys have been simplified, and the distributed cache section has been renamed:
 
 | v7.6 Key | v7.7 Key |
 |:---------|:---------|
 | `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` |
 | `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` |
+| `queuereader.realtimeConfiguration.distributedCache` | `queuereader.realtimeConfiguration.internalCache` |
+| `queuereader.threadPoolSize` | `advanced.queuereader.threadPoolSize` |
+| `queuereader.timeoutMinutes` | `advanced.queuereader.timeoutMinutes` |
+| `queuereader.maxBatchSize` | `advanced.queuereader.maxBatchSize` |
+| `queuereader.useMessageLocks` | `advanced.queuereader.useMessageLocks` |
 | `queuereader.isFormProcessingEnabled` | `advanced.queuereader.isFormProcessingEnabled` |
 | `queuereader.isEventProcessingEnabled` | `advanced.queuereader.isEventProcessingEnabled` |
 | `queuereader.isCacheProcessingEnabled` | `advanced.queuereader.isCacheProcessingEnabled` |
 | `queuereader.queueListenerEnabled` | `advanced.queuereader.queueListenerEnabled` |
 | `queuereader.isCallbackServiceProcessingEnabled` | `advanced.queuereader.isCallbackServiceProcessingEnabled` |
+
+#### 3h. Map Execution Service Changes
+
+The execution service internal cache now supports additional providers, and several job execution settings have moved to defaults:
+
+```yaml
+# Before (v7.6):
+executionservice:
+  internalCache:
+    enabled: true
+    type: internal        # internal | external
+  jobExecution:
+    maxThreadsPerExecutionService: 100
+    auditTaskEvents: true
+    # ... 10+ more fields
+  seedService:
+    memoryCacheSize: "10"
+
+# After (v7.7):
+executionservice:
+  internalCache:
+    enabled: true
+    provider: filesystem  # NEW: default (Redis), filesystem, azureblob
+    redisSettings:
+      type: internal
+```
+
+| v7.6 Key | v7.7 Key |
+|:---------|:---------|
+| `executionservice.internalCache.type` | `executionservice.internalCache.redisSettings.type` |
+| `executionservice.jobExecution.*` | `advanced.executionservice.jobExecution.*` |
+| `executionservice.seedService.*` | `advanced.executionservice.seedService.*` |
+
+#### 3i. Map Realtime API Changes
+
+Several Realtime API sections have moved to chart defaults:
+
+| v7.6 Key | v7.7 Key |
+|:---------|:---------|
+| `realtimeapi.dataMaps.*` | `advanced.realtimeapi.dataMaps.*` |
+| `realtimeapi.idValidation.*` | `advanced.realtimeapi.idValidation.*` |
+| `realtimeapi.customPlugins.*` | `advanced.realtimeapi.customPlugins.*` |
+| `realtimeapi.CORSOrigins` | `advanced.realtimeapi.CORSOrigins` |
+| `realtimeapi.ThresholdBetweenSiteVisitsMinutes` | `advanced.realtimeapi.ThresholdBetweenSiteVisitsMinutes` |
+| `realtimeapi.enableHelpPages` | `advanced.realtimeapi.enableHelpPages` |
+| `realtimeapi.enableEventListening` | `advanced.realtimeapi.enableEventListening` |
+| `realtimeapi.decisionCacheDuration` | `advanced.realtimeapi.decisionCacheDuration` |
+
+If you didn't customize these in v7.6, the chart defaults handle them automatically.
 
 ### 4. Move Hidden Defaults to `advanced:`
 
@@ -394,6 +455,10 @@ Many values that were top-level in v7.6 are now internal chart defaults in v7.7.
 |:--------------|:--------------|
 | `securityContext.*` | `advanced.securityContext.*` |
 | `topologySpreadConstraints.*` | `advanced.topologySpreadConstraints.*` |
+| `nodeSelector.*` | `advanced.nodeSelector.*` |
+| `tolerations.*` | `advanced.tolerations.*` |
+| `<service>.type` (deployment/rollout) | `advanced.<service>.type` |
+| `<service>.rollout.*` | `advanced.<service>.rollout.*` |
 | `<service>.livenessProbe.*` | `advanced.<service>.livenessProbe.*` |
 | `<service>.readinessProbe.*` | `advanced.<service>.readinessProbe.*` |
 | `<service>.startupProbe.*` | `advanced.<service>.startupProbe.*` |
@@ -402,6 +467,7 @@ Many values that were top-level in v7.6 are now internal chart defaults in v7.7.
 | `<service>.terminationGracePeriodSeconds` | `advanced.<service>.terminationGracePeriodSeconds` |
 | `<service>.resources.enabled` | *(removed — resources always applied)* |
 | `<service>.podDisruptionBudget.*` | `advanced.<service>.podDisruptionBudget.*` |
+| `<service>.customMetrics.*` | `advanced.<service>.customMetrics.*` |
 
 Example:
 
@@ -568,23 +634,6 @@ Wait for `"Status": "LastRunComplete"` and `Upgrade Complete` in the response.
 
 </details>
 
-### Activate RPI License
-
-```bash
-DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
-ACTIVATION_KEY="your_license_activation_key"
-SYSTEM_NAME="my_dev_rpi_system"
-
-curl -X 'POST' \
-  "https://$DEPLOYMENT_SERVICE_URL/api/licensing/activatelicense" \
-  -H 'accept: */*' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "ActivationKey": "'"${ACTIVATION_KEY}"'",
-  "SystemName": "'"${SYSTEM_NAME}"'"
-}'
-```
-
 ### Update System Configuration
 
 Review and update tenant-level settings via the **Configuration** tab in the RPI client:
@@ -635,8 +684,13 @@ If services fail to start, check that all your v7.6 customizations have been tra
 - Security contexts (now under `advanced.securityContext` or `advanced.<service>.securityContext`)
 - Service ports (now in chart defaults, override via `advanced.<service>.service.port`)
 - Per-service `customLabels`/`customAnnotations` (renamed to `podLabels`/`podAnnotations`)
+- Per-service `customMetrics` (moved to `advanced.<service>.customMetrics`)
 - Queue reader processing flags (moved to `advanced.queuereader.*`)
+- Queue reader `distributedCache` (renamed to `internalCache`)
+- Execution service `jobExecution` and `seedService` (moved to `advanced.executionservice.*`)
+- Realtime `dataMaps`, `idValidation`, `customPlugins` (moved to `advanced.realtimeapi.*`)
 - `ingress.className` (default changed from `nginx-redpoint-rpi` to release namespace)
+- `imagePullPolicy` (default changed from `IfNotPresent` to `Always`)
 
 ### Helm template shows unexpected changes
 
@@ -652,27 +706,48 @@ helm template rpi ./chart -f my-overrides.yaml --debug 2>&1 | head -100
 
 | v7.6 | v7.7 | Change Type |
 |:-----|:-----|:------------|
+| **Global** | | |
+| `global.deployment.images.<service>` | `global.deployment.images.repository` | Consolidated |
+| `global.deployment.serviceAccount.*` | `cloudIdentity.serviceAccount.*` | Moved |
+| `imagePullPolicy: IfNotPresent` | `imagePullPolicy: Always` | Default changed |
+| **Cloud Identity** | | |
 | `cloudIdentity.provider` | *(removed)* | Derived from platform |
 | `cloudIdentity.azureSettings.*` | `cloudIdentity.azure.*` | Renamed |
 | `cloudIdentity.amazonSettings.*` | `cloudIdentity.amazon.*` | Renamed |
 | `cloudIdentity.googleSettings.*` | `cloudIdentity.google.*` | Renamed |
 | `cloudIdentity.secretsManagement.*` | `secretsManagement.*` | Moved to top-level |
-| `global.deployment.serviceAccount.*` | `cloudIdentity.serviceAccount.*` | Moved |
-| `global.deployment.images.<service>` | `global.deployment.images.repository` | Consolidated |
+| **Per-Service** | | |
 | `<service>.serviceAccount.enabled` | `cloudIdentity.serviceAccount.create` | Centralized |
 | `<service>.customLabels` | `<service>.podLabels` | Renamed |
 | `<service>.customAnnotations` | `<service>.podAnnotations` | Renamed |
 | `<service>.resources.enabled` | *(removed)* | Always applied |
-| `ingress.tlsSecretName` | `ingress.tls[].secretName` | Array format |
-| `ingress.className` | `ingress.className` | Default changed |
-| `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` | Shortened |
-| `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` | Shortened |
-| `securityContext.*` | `advanced.securityContext.*` | Moved to defaults |
-| `topologySpreadConstraints.*` | `advanced.topologySpreadConstraints.*` | Moved to defaults |
+| `<service>.type` / `<service>.rollout.*` | `advanced.<service>.type` | Moved to defaults |
+| `<service>.customMetrics.*` | `advanced.<service>.customMetrics.*` | Moved to defaults |
 | `<service>.logging.*` | `advanced.<service>.logging.*` | Moved to defaults |
 | `<service>.livenessProbe.*` | `advanced.<service>.livenessProbe.*` | Moved to defaults |
 | `<service>.readinessProbe.*` | `advanced.<service>.readinessProbe.*` | Moved to defaults |
 | `<service>.startupProbe.*` | `advanced.<service>.startupProbe.*` | Moved to defaults |
+| **Ingress** | | |
+| `ingress.tlsSecretName` | `ingress.tls[].secretName` | Array format |
+| `ingress.className: nginx-redpoint-rpi` | `ingress.className` (defaults to namespace) | Default changed |
+| **Queue Reader** | | |
+| `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` | Shortened |
+| `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` | Shortened |
+| `queuereader.realtimeConfiguration.distributedCache` | `queuereader.realtimeConfiguration.internalCache` | Renamed |
+| `queuereader.threadPoolSize` / `maxBatchSize` / etc. | `advanced.queuereader.*` | Moved to defaults |
+| **Execution Service** | | |
+| `executionservice.internalCache.type` | `executionservice.internalCache.redisSettings.type` | Restructured |
+| `executionservice.jobExecution.*` | `advanced.executionservice.jobExecution.*` | Moved to defaults |
+| `executionservice.seedService.*` | `advanced.executionservice.seedService.*` | Moved to defaults |
+| **Realtime API** | | |
+| `realtimeapi.dataMaps.*` | `advanced.realtimeapi.dataMaps.*` | Moved to defaults |
+| `realtimeapi.idValidation.*` | `advanced.realtimeapi.idValidation.*` | Moved to defaults |
+| `realtimeapi.customPlugins.*` | `advanced.realtimeapi.customPlugins.*` | Moved to defaults |
+| **Security & Scheduling** | | |
+| `securityContext.*` | `advanced.securityContext.*` | Moved to defaults |
+| `topologySpreadConstraints.*` | `advanced.topologySpreadConstraints.*` | Moved to defaults |
+| `nodeSelector.*` | `advanced.nodeSelector.*` | Moved to defaults |
+| `tolerations.*` | `advanced.tolerations.*` | Moved to defaults |
 
 ---
 
