@@ -92,17 +92,17 @@ Controls how RPI reads sensitive values (database passwords, connection strings,
 
 ### Kubernetes Secrets (default)
 
-Secrets are stored in a Kubernetes Secret object. The Interaction CLI generates a pre-created secret with `autoCreateSecrets: false`.
+Secrets are stored in a Kubernetes Secret object that you create and manage outside the chart. The [Interaction CLI](greenfield.md#2-quick-start-with-the-interaction-cli) generates this Secret manifest for you (`secrets.yaml`) with all the required keys pre-populated.
 
 ```yaml
 secretsManagement:
   provider: kubernetes
   kubernetes:
-    autoCreateSecrets: false   # true = chart creates secrets, false = pre-created
+    autoCreateSecrets: false
     secretName: redpoint-rpi-secrets
 ```
 
-When `autoCreateSecrets: true`, the chart creates the Secret from values in your overrides file. When `false`, you manage the Secret externally (recommended for production).
+The chart does not create the Secret — that is the administrator's responsibility. This keeps sensitive values out of Helm release metadata and version control. Apply the Secret before running `helm install` or `helm upgrade`.
 
 ### SDK (Cloud Vault)
 
