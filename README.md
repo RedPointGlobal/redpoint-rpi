@@ -21,7 +21,7 @@ This chart deploys RPI on Kubernetes using Helm.
   <a href="docs/readme-configuration.md"><strong>Configuration</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="docs/readme-argocd.md"><strong>GitOps Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-mcp.md"><strong>MCP Guide</strong></a>
+  <a href="docs/readme-mcp.md"><strong>Interaction Copilot</strong></a>
 </p>
 
 ---
@@ -80,7 +80,7 @@ redpoint-rpi/
 │   ├── readme-configuration.md   # Configuration reference
 │   ├── readme-values.md          # Values & overrides guide
 │   ├── readme-argocd.md          # ArgoCD deployment guide
-│   ├── readme-mcp.md             # AI-assisted operations guide
+│   ├── readme-mcp.md             # Interaction Copilot guide
 │   ├── readme-terraform.md       # Terraform deployment guide
 │   ├── smartActivation.md        # Smart Activation guide
 │   └── values-reference.yaml     # Complete reference of all keys
@@ -104,9 +104,9 @@ After install or upgrade, run `helm test rpi -n redpoint-rpi` to verify all serv
 ## AI-Assisted Operations
 
 - **`values.schema.json`** — IDE autocomplete and Helm-native validation. Bundled with the chart, no setup required.
-- **`@redpoint-rpi/helm-mcp`** — AI assistants validate configs, generate overrides, render templates, and diagnose issues via [MCP](https://modelcontextprotocol.io).
+- **Interaction Copilot** — AI-powered assistant that validates configs, generates overrides, renders templates, and diagnoses issues via [MCP](https://modelcontextprotocol.io).
 
-See [readme-mcp.md](docs/readme-mcp.md) for setup.
+See the [Interaction Copilot Guide](docs/readme-mcp.md) for setup.
 
 ---
 

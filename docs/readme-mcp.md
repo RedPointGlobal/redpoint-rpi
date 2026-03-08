@@ -1,11 +1,11 @@
 ![redpoint_logo](../chart/images/redpoint.png)
-# AI-Assisted Operations with MCP
+# Interaction Copilot
 
 [< Back to main README](../README.md)
 
 ## Overview
 
-RPI includes an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that lets AI assistants help you configure, deploy, and troubleshoot your RPI installation. Ask questions in plain English and the assistant will validate your configuration, generate overrides files, explain settings, and diagnose issues.
+The **Interaction Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to your AI assistant of choice and lets you work in plain English — validate configurations, generate overrides, explain settings, and diagnose issues.
 
 ## Prerequisites
 
