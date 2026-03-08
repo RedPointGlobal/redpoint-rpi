@@ -54,22 +54,27 @@ Before starting, ensure you have:
 ## Repository Structure
 
 ```
+# DO NOT EDIT — managed by Redpoint
 redpoint-rpi/
-├── chart/                        # DO NOT EDIT — managed by Redpoint
+├── chart/                        
 │   ├── Chart.yaml
 │   ├── values.yaml               # Chart defaults (do not override directly)
 │   └── templates/
 │       ├── _defaults.tpl         # Internal defaults (do not edit)
 │       ├── _helpers.tpl          # Merge helpers (do not edit)
 │       └── deploy-*.yaml         # Resource templates (do not edit)
-├── deploy/                       # YOUR TOOLS — use these
+
+# YOUR TOOLS — use these
+├── deploy/                       
 │   ├── cli/interactioncli.sh     # Interaction CLI — generates overrides & secrets
 │   ├── terraform/modules/        # IaC modules (Azure, AWS, GCP)
 │   └── values/                   # Example overrides (copy, don't edit in place)
 │       ├── azure/azure.yaml      # Azure example
 │       ├── aws/amazon.yaml       # AWS example
 │       └── demo/demo.yaml        # Demo/dev example
-├── docs/                         # Deployment guides & reference
+
+# Deployment guides & reference
+├── docs/                         
 │   ├── greenfield.md             # New installation guide
 │   ├── migration.md              # v7.6 → v7.7 upgrade guide
 │   ├── readme-configuration.md   # Configuration reference
