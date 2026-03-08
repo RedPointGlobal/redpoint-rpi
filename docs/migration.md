@@ -177,6 +177,24 @@ helm upgrade rpi ./chart -f my-old-values.yaml -n redpoint-rpi
 
 ---
 
+## Template Customizations
+
+If you added custom template files to your v7.6 `chart/templates/` directory (e.g., CronJobs, NetworkPolicies, custom ConfigMaps) or modified any of the stock templates (e.g., added sidecars, init containers, extra env vars), these changes need to be carried forward manually.
+
+**With Interaction Copilot:**
+
+> "Analyze my v7.6 templates at /path/to/chart/templates for migration to v7.7"
+
+The Copilot compares your templates against the stock v7.6 versions, identifies every custom file and every modification, and provides specific guidance for each — including diffs and advice on which changes can now be expressed as values instead of template edits.
+
+**Without the Copilot:**
+
+1. Copy custom template files (files not in the stock v7.6 chart) to the v7.7 `chart/templates/` directory. Review for compatibility with v7.7 values paths.
+2. For modified stock templates, diff your version against the [stock v7.6 templates](https://github.com/RedPointGlobal/redpoint-rpi/tree/release/v7.6/redpoint-rpi/templates) and apply your changes to the v7.7 versions.
+3. Many v7.6 template-level customizations (probes, resources, labels, annotations, security context) can now be set through values or the `advanced:` block — check values first before editing templates.
+
+---
+
 ## Troubleshooting
 
 If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Re-run the CLI to regenerate your overrides, or check the reference below.

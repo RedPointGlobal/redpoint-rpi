@@ -108,11 +108,19 @@ Shows pod health, service endpoints, and recent events from your cluster.
 
 Analyzes pod logs, events, secrets, and ingress configuration to diagnose the issue and suggest specific fixes.
 
-### Migrate from v7.6 to v7.7
+### Migrate from v7.6 to v7.7 (simple)
 
 > "Migrate my v7.6 values file at /path/to/values.yaml to v7.7"
 
-Analyzes your existing v7.6 configuration, identifies customizations vs defaults, remaps renamed keys, and generates a minimal v7.7 overrides file. Warns about breaking changes that need manual attention. See the [Migration Guide](migration.md) for details.
+Analyzes your existing v7.6 values configuration, identifies customizations vs defaults, remaps renamed keys, and generates a minimal v7.7 overrides file. Warns about breaking changes that need manual attention. Use this when you have not modified any Helm template files.
+
+### Migrate from v7.6 to v7.7 (advanced)
+
+> "Analyze my v7.6 templates at /path/to/chart/templates for migration to v7.7"
+
+Compares your v7.6 template files against the stock v7.6 templates to find custom files you added and stock templates you modified. For modified files, shows a diff and provides guidance on how to carry the changes forward to v7.7. Use this when you have added or modified Helm template files beyond just values.yaml.
+
+See the [Migration Guide](migration.md) for details.
 
 ### Search RPI product documentation
 
