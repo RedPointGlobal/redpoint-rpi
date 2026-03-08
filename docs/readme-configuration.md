@@ -3,7 +3,10 @@
 
 [< Back to main README](../README.md)
 
-After completing either the [Greenfield](greenfield.md) or [Migration](migration.md) guide, configure the optional features below. Use the Interaction CLI to add any feature to your existing overrides file on demand:
+After completing either the [Greenfield](greenfield.md) or [Migration](migration.md) guide, configure the optional features below. The Interaction CLI supports two workflows:
+
+- **During initial setup** — the CLI offers each feature after generating your base config, so you can include everything in one pass.
+- **After deployment** — add features to an existing overrides file at any time:
 
 ```bash
 bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature

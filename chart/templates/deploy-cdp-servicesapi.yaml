@@ -17,7 +17,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
   {{- if $annotations }}
   annotations:
     {{- $annotations | nindent 4 }}
@@ -95,10 +95,10 @@ metadata:
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- with .Values.customAnnotations }}
   annotations:
-    {{- with .Values.customAnnotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
 spec:
@@ -122,10 +122,10 @@ spec:
         {{- with .Values.customLabels }}
         {{- toYaml . | nindent 8 }} 
         {{- end }}
+      {{- with .Values.customAnnotations }}
       annotations:
-        {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
@@ -298,7 +298,7 @@ spec:
           value: "cdp-messageq-0.cdp-messageq.{{ .Release.Namespace }}.svc.cluster.local"
         - name: API_BASE_URL
           value: "https://{{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.smartactivation "domain" $ingCfg.domain) }}"
-        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         volumeMounts:
           - name: tempstore
             mountPath: /tmp

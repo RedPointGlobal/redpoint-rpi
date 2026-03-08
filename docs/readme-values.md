@@ -228,9 +228,11 @@ databases:
 Values are resolved in three layers, with later layers winning:
 
 ```
-Chart defaults  →  advanced overrides  →  Your top-level values
-(_defaults.tpl)    (advanced.X)           (X)
+Chart defaults  →  Your top-level values  →  advanced overrides
+(_defaults.tpl)    (X)                       (advanced.X)
 ```
+
+The `advanced:` block always takes the highest priority — use it to override any value, including ones set at the top level.
 
 For example, with this overrides file:
 
@@ -239,10 +241,15 @@ realtimeapi:
   replicas: 3
   resources:
     requests:
-      cpu: "2"
+      cpu: 500m
+      memory: 3Gi
 
 advanced:
   realtimeapi:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
     logging:
       realtimeapi:
         default: Debug
@@ -250,7 +257,8 @@ advanced:
 
 The resolved realtimeapi config will have:
 - `replicas: 3` — from your top-level value
-- `resources.requests.cpu: "2"` — from your top-level value
+- `resources.requests.cpu: 50m` — from advanced (overrides top-level)
+- `resources.requests.memory: 256Mi` — from advanced (overrides top-level)
 - `logging.realtimeapi.default: Debug` — from your advanced override
 - `service.port: 80` — from chart default
 - `terminationGracePeriodSeconds: 120` — from chart default

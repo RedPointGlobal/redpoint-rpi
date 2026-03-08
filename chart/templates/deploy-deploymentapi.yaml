@@ -17,7 +17,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
   {{- if $annotations }}
   annotations:
     {{- $annotations | nindent 4 }}
@@ -83,10 +83,10 @@ metadata:
     {{- with .Values.customLabels }}
     {{- toYaml . | nindent 4 }} 
     {{- end }}
+  {{- with .Values.customAnnotations }}
   annotations:
-    {{- with .Values.customAnnotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
 spec:
   replicas: {{ $cfg.replicas }}
   selector:
@@ -111,7 +111,8 @@ spec:
         {{- with $cfg.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- include "rpi.cloudidentity.podLabels" . | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.podLabels" . | trim) }}{{- . | nindent 8 }}{{- end }}
+      {{- if or .Values.customAnnotations $cfg.podAnnotations }}
       annotations:
         {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -119,6 +120,7 @@ spec:
         {{- with $cfg.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      {{- end }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
@@ -243,9 +245,9 @@ spec:
         {{- end }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
           value: "true"
-        {{- include "rpi.secrets.sdk.envvars" . | nindent 8 }}
-        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
-        {{- include "rpi.cloudidentity.awsAccessKeyEnvvars" . | nindent 8 }}
+        {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserver" }}
         {{- if eq .Values.global.deployment.platform "amazon" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType

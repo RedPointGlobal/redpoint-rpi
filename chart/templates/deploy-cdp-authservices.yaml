@@ -15,7 +15,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
   {{- if $annotations }}
   annotations:
     {{- $annotations | nindent 4 }}
@@ -93,10 +93,10 @@ metadata:
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- with .Values.customAnnotations }}
   annotations:
-    {{- with .Values.customAnnotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
 spec:
@@ -120,10 +120,10 @@ spec:
         {{- with .Values.customLabels }}
         {{- toYaml . | nindent 8 }} 
         {{- end }}
+      {{- with .Values.customAnnotations }}
       annotations:
-        {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
@@ -270,7 +270,7 @@ spec:
               key: CDP_Mongo_ConnectionString
         - name: MONGODB_MERCURY_DB
           value: {{ .Values.initservice.database.operational.name | quote }}
-        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         volumeMounts:
           - name: tempstore
             mountPath: /tmp

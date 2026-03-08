@@ -156,7 +156,7 @@ spec:
                 secretKeyRef:
                   name: {{ include "rpi.secrets.secretName" . | quote }}
                   key: CDP_RabbitMQ_ErlangCookie
-            {{- include "rpi.cloudidentity.envvars" . | nindent 12 }}
+            {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 12 }}{{- end }}
           volumeMounts:
             - name: {{ $name }}-data
               mountPath: /data

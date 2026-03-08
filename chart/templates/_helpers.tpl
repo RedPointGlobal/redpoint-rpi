@@ -225,126 +225,126 @@ false
 {{- $d := fromYaml (include "rpi.defaults.realtimeapi" .) -}}
 {{- $a := ((.Values.advanced).realtimeapi) | default dict -}}
 {{- $u := .Values.realtimeapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.callbackapi" -}}
 {{- $d := fromYaml (include "rpi.defaults.callbackapi" .) -}}
 {{- $a := ((.Values.advanced).callbackapi) | default dict -}}
 {{- $u := .Values.callbackapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.executionservice" -}}
 {{- $d := fromYaml (include "rpi.defaults.executionservice" .) -}}
 {{- $a := ((.Values.advanced).executionservice) | default dict -}}
 {{- $u := .Values.executionservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.interactionapi" -}}
 {{- $d := fromYaml (include "rpi.defaults.interactionapi" .) -}}
 {{- $a := ((.Values.advanced).interactionapi) | default dict -}}
 {{- $u := .Values.interactionapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.integrationapi" -}}
 {{- $d := fromYaml (include "rpi.defaults.integrationapi" .) -}}
 {{- $a := ((.Values.advanced).integrationapi) | default dict -}}
 {{- $u := .Values.integrationapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.nodemanager" -}}
 {{- $d := fromYaml (include "rpi.defaults.nodemanager" .) -}}
 {{- $a := ((.Values.advanced).nodemanager) | default dict -}}
 {{- $u := .Values.nodemanager | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.deploymentapi" -}}
 {{- $d := fromYaml (include "rpi.defaults.deploymentapi" .) -}}
 {{- $a := ((.Values.advanced).deploymentapi) | default dict -}}
 {{- $u := .Values.deploymentapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.queuereader" -}}
 {{- $d := fromYaml (include "rpi.defaults.queuereader" .) -}}
 {{- $a := ((.Values.advanced).queuereader) | default dict -}}
 {{- $u := .Values.queuereader | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.rebrandly" -}}
 {{- $d := fromYaml (include "rpi.defaults.rebrandly" .) -}}
 {{- $a := ((.Values.advanced).rebrandly) | default dict -}}
 {{- $u := .Values.rebrandly | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.authservice" -}}
 {{- $d := fromYaml (include "rpi.defaults.authservice" .) -}}
 {{- $a := ((.Values.advanced).authservice) | default dict -}}
 {{- $u := .Values.authservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.keycloak" -}}
 {{- $d := fromYaml (include "rpi.defaults.keycloak" .) -}}
 {{- $a := ((.Values.advanced).keycloak) | default dict -}}
 {{- $u := .Values.keycloak | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.initservice" -}}
 {{- $d := fromYaml (include "rpi.defaults.initservice" .) -}}
 {{- $a := ((.Values.advanced).initservice) | default dict -}}
 {{- $u := .Values.initservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.messageq" -}}
 {{- $d := fromYaml (include "rpi.defaults.messageq" .) -}}
 {{- $a := ((.Values.advanced).messageq) | default dict -}}
 {{- $u := .Values.messageq | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.maintenanceservice" -}}
 {{- $d := fromYaml (include "rpi.defaults.maintenanceservice" .) -}}
 {{- $a := ((.Values.advanced).maintenanceservice) | default dict -}}
 {{- $u := .Values.maintenanceservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.servicesapi" -}}
 {{- $d := fromYaml (include "rpi.defaults.servicesapi" .) -}}
 {{- $a := ((.Values.advanced).servicesapi) | default dict -}}
 {{- $u := .Values.servicesapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.socketio" -}}
 {{- $d := fromYaml (include "rpi.defaults.socketio" .) -}}
 {{- $a := ((.Values.advanced).socketio) | default dict -}}
 {{- $u := .Values.socketio | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.uiservice" -}}
 {{- $d := fromYaml (include "rpi.defaults.uiservice" .) -}}
 {{- $a := ((.Values.advanced).uiservice) | default dict -}}
 {{- $u := .Values.uiservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.cdpcache" -}}
 {{- $d := fromYaml (include "rpi.defaults.cdpcache" .) -}}
 {{- $a := ((.Values.advanced).cdpcache) | default dict -}}
 {{- $u := .Values.cdpcache | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{/* --- Cross-cutting merge helpers --- */}}
@@ -353,42 +353,42 @@ false
 {{- $d := fromYaml (include "rpi.defaults.securityContext" .) -}}
 {{- $a := ((.Values.advanced).securityContext) | default dict -}}
 {{- $u := .Values.securityContext | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.livenessProbe" -}}
 {{- $d := fromYaml (include "rpi.defaults.livenessProbe" .) -}}
 {{- $a := ((.Values.advanced).livenessProbe) | default dict -}}
 {{- $u := .Values.livenessProbe | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.readinessProbe" -}}
 {{- $d := fromYaml (include "rpi.defaults.readinessProbe" .) -}}
 {{- $a := ((.Values.advanced).readinessProbe) | default dict -}}
 {{- $u := .Values.readinessProbe | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.startupProbe" -}}
 {{- $d := fromYaml (include "rpi.defaults.startupProbe" .) -}}
 {{- $a := ((.Values.advanced).startupProbe) | default dict -}}
 {{- $u := .Values.startupProbe | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.topologySpreadConstraints" -}}
 {{- $d := fromYaml (include "rpi.defaults.topologySpreadConstraints" .) -}}
 {{- $a := ((.Values.advanced).topologySpreadConstraints) | default dict -}}
 {{- $u := .Values.topologySpreadConstraints | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.ingress" -}}
 {{- $d := fromYaml (include "rpi.defaults.ingress" .) -}}
 {{- $a := ((.Values.advanced).ingress) | default dict -}}
 {{- $u := .Values.ingress | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{/*
@@ -414,28 +414,28 @@ nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 {{- $d := fromYaml (include "rpi.defaults.diagnosticsMode" .) -}}
 {{- $a := ((.Values.advanced).diagnosticsMode) | default dict -}}
 {{- $u := .Values.diagnosticsMode | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.networkPolicy" -}}
 {{- $d := fromYaml (include "rpi.defaults.networkPolicy" .) -}}
 {{- $a := ((.Values.advanced).networkPolicy) | default dict -}}
 {{- $u := .Values.networkPolicy | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.postInstall" -}}
 {{- $d := fromYaml (include "rpi.defaults.postInstall" .) -}}
 {{- $a := ((.Values.advanced).postInstall) | default dict -}}
 {{- $u := .Values.postInstall | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{- define "rpi.merged.databaseUpgrade" -}}
 {{- $d := fromYaml (include "rpi.defaults.databaseUpgrade" .) -}}
 {{- $a := ((.Values.advanced).databaseUpgrade) | default dict -}}
 {{- $u := .Values.databaseUpgrade | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $a $u) -}}
+{{- toYaml (mustMergeOverwrite $d $u $a) -}}
 {{- end -}}
 
 {{/*

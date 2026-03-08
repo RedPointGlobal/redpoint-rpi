@@ -41,7 +41,7 @@ spec:
         container.apparmor.security.beta.kubernetes.io/secrets: runtime/default
       labels:
         app.kubernetes.io/name: {{ $name }}
-        {{- include "rpi.cloudidentity.podLabels" $ | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
     spec:
       {{- if $.Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:

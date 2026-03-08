@@ -23,7 +23,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
   {{- if $annotations }}
   annotations:
     {{- $annotations | nindent 4 }}
@@ -106,10 +106,10 @@ metadata:
     {{- with .Values.customLabels }}
     {{- toYaml . | nindent 4 }} 
     {{- end }}
+  {{- with .Values.customAnnotations }}
   annotations:
-    {{- with .Values.customAnnotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
 spec:
   {{- if not $cfg.autoscaling.enabled }}
   replicas: {{ $cfg.replicas }}
@@ -136,7 +136,8 @@ spec:
         {{- with $cfg.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- include "rpi.cloudidentity.podLabels" . | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.podLabels" . | trim) }}{{- . | nindent 8 }}{{- end }}
+      {{- if or .Values.customAnnotations $cfg.podAnnotations $cfg.customMetrics.enabled }}
       annotations:
         {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -149,6 +150,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
         {{- end }}
+      {{- end }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
@@ -300,9 +302,9 @@ spec:
           value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
         {{- end }}
         {{- end }}
-        {{- include "rpi.secrets.sdk.envvars" . | nindent 8 }}
-        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
-        {{- include "rpi.cloudidentity.awsAccessKeyEnvvars" . | nindent 8 }}
+        {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
         - name: RPI__FileOutput__Directory
           value: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}

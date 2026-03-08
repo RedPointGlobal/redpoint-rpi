@@ -13,7 +13,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
-  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
   {{- if $annotations }}
   annotations:
     {{- $annotations | nindent 4 }}
@@ -91,10 +91,10 @@ metadata:
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
     app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- with .Values.customAnnotations }}
   annotations:
-    {{- with .Values.customAnnotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
 spec:
@@ -252,7 +252,7 @@ spec:
           value: "xforwarded"
         - name: KEYCLOAK_HOSTNAME_STRICT
           value: 'false'
-        {{- include "rpi.cloudidentity.envvars" . | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

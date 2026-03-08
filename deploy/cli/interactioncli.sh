@@ -134,12 +134,17 @@ prompt_yesno() {
 
 has_block() {
   local file=$1 key=$2
-  grep -qE "^${key}:" "$file" 2>/dev/null
+  grep -qE "^[[:space:]]*${key}:" "$file" 2>/dev/null
 }
 
 append_block() {
-  local file=$1 block=$2
+  local file=$1 block=$2 heading=$3
   echo "" >> "$file"
+  if [ -n "$heading" ]; then
+    echo "# ----------------------------------------------------------" >> "$file"
+    echo "#  ${heading}" >> "$file"
+    echo "# ----------------------------------------------------------" >> "$file"
+  fi
   echo "$block" >> "$file"
 }
 
@@ -159,13 +164,13 @@ databaseUpgrade:
     enabled: true
     recipientEmail: ${email}
 BLOCK
-)"
+)" "Database Upgrade"
   else
     append_block "$file" "$(cat <<'BLOCK'
 databaseUpgrade:
   enabled: true
 BLOCK
-)"
+)" "Database Upgrade"
   fi
   echo "  ${ICON_CHECK} Added databaseUpgrade to ${file}"
 }
@@ -215,7 +220,7 @@ ${queue_block}
   errorQueuePath: listenerQueueError
   nonActiveQueuePath: listenerQueueNonActive
 BLOCK
-)"
+)" "Queue Reader"
     echo ""
     echo "  ${ICON_CHECK} Added queuereader (distributed) to ${file}"
     if [ "$cache_type" = "internal" ]; then
@@ -235,7 +240,7 @@ queuereader:
   errorQueuePath: listenerQueueError
   nonActiveQueuePath: listenerQueueNonActive
 BLOCK
-)"
+)" "Queue Reader"
     echo "  ${ICON_CHECK} Added queuereader to ${file}"
   fi
 }
@@ -263,7 +268,7 @@ ${svc}:
     maxReplicas: ${max_r}
     targetCPUUtilizationPercentage: ${cpu_pct}
 BLOCK
-)"
+)" "Autoscaling"
   else
     local prom_addr threshold
     prompt prom_addr "Prometheus server address" "http://prometheus-server.monitoring.svc.cluster.local"
@@ -279,7 +284,7 @@ ${svc}:
       serverAddress: ${prom_addr}
       threshold: "${threshold}"
 BLOCK
-)"
+)" "Autoscaling"
   fi
   echo "  ${ICON_CHECK} Added autoscaling (${type}) for ${svc} to ${file}"
 }
@@ -293,7 +298,7 @@ add_customMetrics() {
 customMetrics:
   enabled: true
 BLOCK
-)"
+)" "Custom Metrics"
   echo "  ${ICON_CHECK} Added customMetrics to ${file}"
 }
 
@@ -307,7 +312,7 @@ serviceMesh:
   enabled: true
   provider: linkerd
 BLOCK
-)"
+)" "Service Mesh"
   echo "  ${ICON_CHECK} Added serviceMesh to ${file}"
 }
 
@@ -348,7 +353,7 @@ smokeTests:
   enabled: true
   deployments:${deployments}
 BLOCK
-)"
+)" "Smoke Tests"
   echo "  ${ICON_CHECK} Added smokeTests to ${file}"
 }
 
@@ -368,7 +373,7 @@ MicrosoftEntraID:
   interaction_api_id: ${api_id}
   tenant_id: ${tenant_id}
 BLOCK
-)"
+)" "Microsoft Entra ID"
   echo "  ${ICON_CHECK} Added MicrosoftEntraID to ${file}"
 }
 
@@ -415,7 +420,7 @@ OpenIdProviders:
   logoutIdTokenParameter: ${logout_param}
   supportsUserManagement: ${supports_user_mgmt}${scopes_block}
 BLOCK
-)"
+)" "OpenID Connect (OIDC)"
   echo "  ${ICON_CHECK} Added OpenIdProviders to ${file}"
 }
 
@@ -446,7 +451,7 @@ SMTPSettings:
   EnableSSL: ${enable_ssl}
   UseCredentials: ${use_creds}${creds_block}
 BLOCK
-)"
+)" "SMTP Email Configuration"
   echo "  ${ICON_CHECK} Added SMTPSettings to ${file}"
   if [ "$use_creds" = "true" ]; then
     echo "  ${ICON_WARN} ${YELLOW}Add SMTP_Password to your Kubernetes Secret.${RESET}"
@@ -496,7 +501,7 @@ redpointAI:
     ContainerName: ${container_name}
     BlobFolder: ${blob_folder}
 BLOCK
-)"
+)" "Redpoint AI"
   echo ""
   echo "  ${ICON_CHECK} Added redpointAI to ${file}"
   echo ""
@@ -508,13 +513,27 @@ BLOCK
 
 add_storage() {
   local file=$1
-  if has_block "$file" "storage"; then
-    echo "  ${ICON_WARN} ${YELLOW}storage already exists in ${file}${RESET}"; return 0
-  fi
-  local claim mount_path
-  prompt claim "PVC claim name" "rpifileoutputdir"
-  prompt mount_path "Mount path" "/rpifileoutputdir"
-  append_block "$file" "$(cat <<BLOCK
+
+  local storage_type
+  prompt_choice storage_type "Storage type" "pvc|csi" "pvc"
+
+  if [ "$storage_type" = "pvc" ]; then
+    if has_block "$file" "persistentVolumeClaims"; then
+      echo "  ${ICON_WARN} ${YELLOW}persistentVolumeClaims already exists in ${file}${RESET}"; return 0
+    fi
+    local claim mount_path
+    prompt claim "PVC claim name" "rpifileoutputdir"
+    prompt mount_path "Mount path" "/rpifileoutputdir"
+    if has_block "$file" "storage"; then
+      # Append under existing storage: block
+      sed -i "/^storage:/a\\
+  persistentVolumeClaims:\\
+    FileOutputDirectory:\\
+      enabled: true\\
+      claimName: ${claim}\\
+      mountPath: ${mount_path}" "$file"
+    else
+      append_block "$file" "$(cat <<BLOCK
 storage:
   persistentVolumeClaims:
     FileOutputDirectory:
@@ -522,9 +541,184 @@ storage:
       claimName: ${claim}
       mountPath: ${mount_path}
 BLOCK
-)"
-  echo "  ${ICON_CHECK} Added storage to ${file}"
-  echo "  ${DIM}  For PV+PVC pairs (Azure Files, EFS, Filestore), see docs/readme-configuration.md#storage${RESET}"
+)" "Storage Configuration"
+    fi
+    echo "  ${ICON_CHECK} Added PVC storage to ${file}"
+
+  else
+    # Detect platform from overrides file, or prompt
+    local csi_platform
+    csi_platform=$(grep -A2 'platform:' "$file" 2>/dev/null | grep 'platform:' | head -1 | sed 's/.*platform: *//' | tr -d ' "'"'"'')
+    if [ -z "$csi_platform" ] || ! echo "azure|amazon|google" | tr '|' '\n' | grep -qx "$csi_platform"; then
+      prompt_choice csi_platform "Cloud platform" "azure|amazon|google" "azure"
+    else
+      echo "  ${DIM}Detected platform: ${csi_platform}${RESET}"
+    fi
+
+    local pv_name storage_account container_name client_id resource_group volume_handle claim_name
+    # pv_entry holds just the "- name: ..." list item (no persistentVolumes: header)
+    local pv_entry pv_comment
+
+    case "$csi_platform" in
+      azure)
+        local azure_type
+        prompt_choice azure_type "Azure storage type" "blob|fileshare" "blob"
+        prompt pv_name "PV name" "rpifileoutputdir"
+        prompt storage_account "Storage account name" ""
+        prompt claim_name "PVC claim name" "pvc-${azure_type}"
+
+        if [ "$azure_type" = "blob" ]; then
+          prompt container_name "Blob container name" ""
+          prompt client_id "Managed Identity Client ID (for auth)" ""
+          prompt resource_group "Resource group" ""
+          prompt volume_handle "Volume handle (unique in cluster)" "${resource_group}-${storage_account}-${container_name}"
+          pv_comment="# Azure Blob Storage"
+          pv_entry="    - name: ${pv_name}
+      capacity: 10Gi
+      accessModes:
+        - ReadWriteMany
+      storageClassName: blob-fuse
+      reclaimPolicy: Retain
+      mountOptions:
+        - -o allow_other
+        - --file-cache-timeout-in-seconds=120
+      csi:
+        driver: blob.csi.azure.com
+        volumeHandle: ${volume_handle}
+        volumeAttributes:
+          storageAccount: ${storage_account}
+          containerName: ${container_name}
+          clientID: ${client_id}
+          resourcegroup: ${resource_group}
+          # subscriptionid: <only if storage account is in a different subscription>
+      pvc:
+        claimName: ${claim_name}
+      annotations:
+        pv.kubernetes.io/provisioned-by: blob.csi.azure.com
+        helm.sh/resource-policy: keep"
+        else
+          local share_name
+          prompt share_name "File share name" ""
+          prompt client_id "Managed Identity Client ID (for auth)" ""
+          prompt resource_group "Resource group" ""
+          prompt volume_handle "Volume handle (unique in cluster)" "${resource_group}#${storage_account}#${share_name}"
+          pv_comment="# Azure File Share"
+          pv_entry="    - name: ${pv_name}
+      capacity: 10Gi
+      accessModes:
+        - ReadWriteMany
+      storageClassName: azurefile-csi
+      reclaimPolicy: Retain
+      mountOptions:
+        - -o allow_other
+        - --file-cache-timeout-in-seconds=120
+      csi:
+        driver: file.csi.azure.com
+        volumeHandle: \"${volume_handle}\"
+        volumeAttributes:
+          storageaccount: ${storage_account}
+          shareName: ${share_name}
+          clientID: ${client_id}
+          resourcegroup: ${resource_group}
+          # subscriptionid: <only if storage account is in a different subscription>
+      pvc:
+        claimName: ${claim_name}"
+        fi
+        ;;
+
+      amazon)
+        local efs_id
+        prompt pv_name "PV name" "rpifileoutputdir"
+        prompt efs_id "EFS filesystem ID" ""
+        prompt claim_name "PVC claim name" "pvc-efs"
+        pv_comment="# AWS EFS"
+        pv_entry="    - name: ${pv_name}
+      capacity: 10Gi
+      accessModes:
+        - ReadWriteMany
+      storageClassName: efs-sc
+      reclaimPolicy: Retain
+      csi:
+        driver: efs.csi.aws.com
+        volumeHandle: ${efs_id}
+      pvc:
+        claimName: ${claim_name}"
+        ;;
+
+      google)
+        local filestore_ip share_name
+        prompt pv_name "PV name" "rpifileoutputdir"
+        prompt filestore_ip "Filestore instance IP" ""
+        prompt share_name "File share name" "rpi_data"
+        prompt claim_name "PVC claim name" "pvc-filestore"
+        pv_comment="# GCP Filestore"
+        pv_entry="    - name: ${pv_name}
+      capacity: 10Gi
+      accessModes:
+        - ReadWriteMany
+      storageClassName: filestore-sc
+      reclaimPolicy: Retain
+      csi:
+        driver: filestore.csi.storage.gke.io
+        volumeHandle: \"modeInstance/${filestore_ip}/${share_name}\"
+        volumeAttributes:
+          ip: ${filestore_ip}
+          volume: ${share_name}
+      pvc:
+        claimName: ${claim_name}"
+        ;;
+    esac
+
+    if has_block "$file" "persistentVolumes"; then
+      # Append new entry to existing persistentVolumes list
+      python3 -c "
+import sys
+lines = open(sys.argv[1]).readlines()
+comment = sys.argv[2]
+entry = sys.argv[3]
+# Find last '    - name:' line under persistentVolumes to locate end of list
+last_entry_end = -1
+in_pv = False
+for i, l in enumerate(lines):
+    if 'persistentVolumes:' in l and not l.strip().startswith('#'):
+        in_pv = True
+    elif in_pv:
+        stripped = l.rstrip()
+        # A top-level key or a new sibling key at 2-space indent ends the block
+        if stripped and not stripped.startswith('#') and not stripped.startswith(' '):
+            break
+        if stripped and not stripped.startswith('#') and len(stripped) - len(stripped.lstrip()) <= 2 and ':' in stripped:
+            break
+        last_entry_end = i
+# Insert after the last line of the existing list
+insert_at = last_entry_end + 1
+new_lines = '    ' + comment + '\n' + entry + '\n'
+lines.insert(insert_at, new_lines)
+open(sys.argv[1], 'w').writelines(lines)
+" "$file" "$pv_comment" "$pv_entry"
+    elif has_block "$file" "storage"; then
+      # storage: exists but no persistentVolumes yet — append the section
+      python3 -c "
+import sys
+lines = open(sys.argv[1]).readlines()
+comment = sys.argv[2]
+entry = sys.argv[3]
+idx = next(i for i, l in enumerate(lines) if l.startswith('storage:'))
+end = len(lines)
+for j in range(idx + 1, len(lines)):
+    if lines[j][0:1] not in (' ', '#', ''):
+        end = j
+        break
+insert = '  persistentVolumes:\n    ' + comment + '\n' + entry + '\n'
+lines.insert(end, insert)
+open(sys.argv[1], 'w').writelines(lines)
+" "$file" "$pv_comment" "$pv_entry"
+    else
+      # No storage: block at all — create from scratch
+      append_block "$file" "$(printf 'storage:\n  persistentVolumes:\n    %s\n%s' "$pv_comment" "$pv_entry")" "Storage Configuration"
+    fi
+    echo "  ${ICON_CHECK} Added CSI storage (PV + PVC) to ${file}"
+  fi
 }
 
 add_advanced() {
@@ -544,7 +738,7 @@ advanced:
   #   livenessProbe:
   #     periodSeconds: 30
 BLOCK
-)"
+)" "Advanced Overrides"
   echo "  ${ICON_CHECK} Added advanced block to ${file}"
   echo "  ${DIM}  See docs/values-reference.yaml for all available keys.${RESET}"
 }
@@ -1028,17 +1222,68 @@ preflight:
   mode: test
 YAML
 
-# Optional features hint
+# ============================================================
+# Optional features — prompt during initial setup
+# ============================================================
+section "Optional Features"
+echo ""
+echo "  Select features to include now. You can always add more later"
+echo "  with ${DIM}bash interactioncli.sh -a <feature>${RESET}"
+echo ""
+
+FEATURES_LIST="databaseUpgrade queuereader storage smtp redpointAI oidc entraID autoscaling customMetrics serviceMesh smokeTests advanced"
+SELECTED_FEATURES=""
+for feat in $FEATURES_LIST; do
+  local label
+  case "$feat" in
+    databaseUpgrade) label="Database Upgrade (automatic schema upgrades)" ;;
+    queuereader)     label="Queue Reader (Realtime queue processing)" ;;
+    storage)         label="Storage (PVC / CSI volumes)" ;;
+    smtp)            label="SMTP (email delivery)" ;;
+    redpointAI)      label="Redpoint AI (OpenAI + Cognitive Search)" ;;
+    oidc)            label="OIDC (OpenID Connect SSO)" ;;
+    entraID)         label="Microsoft Entra ID (Azure AD SSO)" ;;
+    autoscaling)     label="Autoscaling (HPA / KEDA)" ;;
+    customMetrics)   label="Custom Metrics (Prometheus endpoints)" ;;
+    serviceMesh)     label="Service Mesh (Linkerd)" ;;
+    smokeTests)      label="Smoke Tests (PVC / CSI validation)" ;;
+    advanced)        label="Advanced Overrides (fine-tune internals)" ;;
+    *) label="$feat" ;;
+  esac
+  local yn
+  read -rp "  Add ${BOLD}${label}${RESET}? ${DIM}(y/n) [n]${RESET}: " yn
+  if [ "${yn:-n}" = "y" ] || [ "${yn:-n}" = "Y" ]; then
+    SELECTED_FEATURES="${SELECTED_FEATURES} ${feat}"
+  fi
+done
+
+# Run each selected feature's add function against the generated overrides
+for feat in $SELECTED_FEATURES; do
+  echo ""
+  section "Configuring: ${feat}"
+  case "$feat" in
+    databaseUpgrade) add_databaseUpgrade "$OUTPUT_FILE" ;;
+    queuereader)     add_queuereader "$OUTPUT_FILE" ;;
+    storage)         add_storage "$OUTPUT_FILE" ;;
+    smtp)            add_smtp "$OUTPUT_FILE" ;;
+    redpointAI)      add_redpointAI "$OUTPUT_FILE" ;;
+    oidc)            add_oidc "$OUTPUT_FILE" ;;
+    entraID)         add_entraID "$OUTPUT_FILE" ;;
+    autoscaling)     add_autoscaling "$OUTPUT_FILE" ;;
+    customMetrics)   add_customMetrics "$OUTPUT_FILE" ;;
+    serviceMesh)     add_serviceMesh "$OUTPUT_FILE" ;;
+    smokeTests)      add_smokeTests "$OUTPUT_FILE" ;;
+    advanced)        add_advanced "$OUTPUT_FILE" ;;
+  esac
+done
+
+# Add hint for future feature additions
 cat >> "$OUTPUT_FILE" << 'YAML'
 
 # ---------------------------------------------------------------
-# Add features on demand with the Interaction CLI:
+# Add more features with the Interaction CLI:
 #   bash deploy/cli/interactioncli.sh -a <feature>
 #   bash deploy/cli/interactioncli.sh -a menu
-#
-# Available: databaseUpgrade, queuereader, autoscaling,
-#   customMetrics, serviceMesh, smokeTests, entraID, oidc,
-#   smtp, redpointAI, storage, advanced
 #
 # See docs/readme-configuration.md for details on each feature.
 # ---------------------------------------------------------------
