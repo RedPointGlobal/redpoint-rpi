@@ -28,14 +28,18 @@ SECRET_NAME="redpoint-rpi-secrets"
 # --- Parse arguments ---
 ADD_MODE=false
 ADD_FEATURE=""
-while getopts "o:a:h" opt; do
+FILE_MODE=false
+INPUT_FILE="inputs.yaml"
+while getopts "o:a:fh" opt; do
   case $opt in
     o) OUTPUT_FILE="$OPTARG" ;;
     a) ADD_MODE=true; ADD_FEATURE="$OPTARG" ;;
+    f) FILE_MODE=true ;;
     h)
-      echo "Usage: $0 [-o output-file] [-a feature]"
+      echo "Usage: $0 [-o output-file] [-a feature] [-f]"
       echo ""
-      echo "  No flags       Full setup — generates overrides, secrets, and prereqs"
+      echo "  No flags       Full interactive setup"
+      echo "  -f             File-driven setup — reads values from inputs.yaml"
       echo "  -a <feature>   Add a feature to an existing overrides file"
       echo "  -a menu        Show interactive feature menu"
       echo "  -o <file>      Output file path (default: overrides.yaml)"
@@ -58,8 +62,10 @@ while getopts "o:a:h" opt; do
       echo "    advanced          Fine-tune internal defaults"
       echo ""
       echo "  Examples:"
-      echo "    bash interactioncli.sh -a redpoint_ai"
-      echo "    bash interactioncli.sh -a menu"
+      echo "    bash interactioncli.sh                        # Interactive setup"
+      echo "    bash interactioncli.sh -f                     # File-driven (reads inputs.yaml)"
+      echo "    bash interactioncli.sh -a redpoint_ai         # Add a feature"
+      echo "    bash interactioncli.sh -a menu                # Feature menu"
       exit 0
       ;;
     *) echo "Unknown option: -$opt" >&2; exit 1 ;;
@@ -179,6 +185,229 @@ gen_password() {
     head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n'
   fi
 }
+
+# ============================================================
+# File mode: read values from YAML input instead of prompting
+# ============================================================
+if [ "$FILE_MODE" = "true" ]; then
+  if [ "$ADD_MODE" = "true" ]; then
+    echo "${RED}Error: -f and -a cannot be used together.${RESET}" >&2; exit 1
+  fi
+  if [ ! -f "$INPUT_FILE" ]; then
+    echo "${RED}Error: ${INPUT_FILE} not found.${RESET}" >&2
+    echo "  Copy the template and fill in your values:" >&2
+    echo "    cp deploy/values/input-template.yaml ${INPUT_FILE}" >&2
+    exit 1
+  fi
+
+  # Auto-install yq if not present
+  if ! command -v yq &>/dev/null; then
+    echo "  ${CYAN}Installing yq...${RESET}"
+    _yq_version="v4.44.6"
+    _yq_arch=$(uname -m)
+    case "$_yq_arch" in
+      x86_64)  _yq_arch="amd64" ;;
+      aarch64) _yq_arch="arm64" ;;
+    esac
+    _yq_os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    _yq_url="https://github.com/mikefarah/yq/releases/download/${_yq_version}/yq_${_yq_os}_${_yq_arch}"
+    if curl -fsSL "$_yq_url" -o /usr/local/bin/yq 2>/dev/null && chmod +x /usr/local/bin/yq; then
+      echo "  ${ICON_CHECK} yq installed to /usr/local/bin/yq"
+    elif curl -fsSL "$_yq_url" -o "${HOME}/.local/bin/yq" 2>/dev/null && chmod +x "${HOME}/.local/bin/yq"; then
+      export PATH="${HOME}/.local/bin:${PATH}"
+      echo "  ${ICON_CHECK} yq installed to ${HOME}/.local/bin/yq"
+    else
+      echo "${RED}Error: Failed to install yq. Install manually:${RESET}" >&2
+      echo "  https://github.com/mikefarah/yq#install" >&2
+      exit 1
+    fi
+  fi
+
+  # Helper: read a value from the input YAML with a default fallback
+  cfg() {
+    local val
+    val=$(yq eval "$1" "$INPUT_FILE" 2>/dev/null)
+    if [ "$val" = "null" ] || [ -z "$val" ]; then echo "${2:-}"; else echo "$val"; fi
+  }
+
+  # Associative array holding all config values keyed by shell variable name
+  declare -A _CFG=()
+
+  # --- Core settings ---
+  _CFG[PLATFORM]=$(cfg '.platform' 'azure')
+  _CFG[MODE]=$(cfg '.mode' 'standard')
+  _CFG[TAG]=$(cfg '.image_tag' "$DEFAULT_TAG")
+  _CFG[NAMESPACE]=$(cfg '.namespace' "$DEFAULT_NAMESPACE")
+
+  # --- Ingress ---
+  _CFG[DOMAIN]=$(cfg '.ingress.domain' 'example.com')
+  _CFG[HOST_PREFIX]=$(cfg '.ingress.host_prefix' 'rpi')
+  _CFG[DEPLOY_CONTROLLER]=$(cfg '.ingress.deploy_controller' 'true')
+
+  # --- Database ---
+  _CFG[DB_PROVIDER]=$(cfg '.database.provider' 'sqlserver')
+  _CFG[DB_HOST]=$(cfg '.database.host' '')
+  _CFG[DB_USER]=$(cfg '.database.username' '')
+  _CFG[DB_PASS]=$(cfg '.database.password' '')
+  _CFG[DB_PULSE]=$(cfg '.database.pulse_database' 'Pulse')
+  _CFG[DB_LOGGING]=$(cfg '.database.logging_database' 'Pulse_Logging')
+
+  # --- Data warehouse ---
+  _dw_provider=$(cfg '.data_warehouse.provider' '')
+  if [ -n "$_dw_provider" ]; then
+    _CFG[DW_ENABLED]="true"
+  else
+    _CFG[DW_ENABLED]="false"
+  fi
+
+  # --- Cloud identity ---
+  _CFG[CLOUD_IDENTITY_ENABLED]=$(cfg '.cloud_identity.enabled' 'false')
+  _CFG[AZURE_CLIENT_ID]=$(cfg '.cloud_identity.azure.client_id' '')
+  _CFG[AZURE_TENANT_ID]=$(cfg '.cloud_identity.azure.tenant_id' '')
+  _CFG[AMAZON_ROLE_ARN]=$(cfg '.cloud_identity.amazon.role_arn' '')
+  _CFG[AMAZON_REGION]=$(cfg '.cloud_identity.amazon.region' 'us-east-1')
+  _CFG[GOOGLE_SA_EMAIL]=$(cfg '.cloud_identity.google.service_account_email' '')
+
+  # --- Realtime ---
+  _CFG[REALTIME_ENABLED]=$(cfg '.realtime.enabled' 'true')
+  _CFG[RT_CACHE_PROVIDER]=$(cfg '.realtime.cache.provider' 'mongodb')
+  _CFG[RT_CACHE_CONNSTR]=$(cfg '.realtime.cache.connection_string' '')
+  _CFG[RT_CACHE_BIGTABLE_PROJECT]=$(cfg '.realtime.cache.bigtable_project' '')
+  _CFG[RT_CACHE_BIGTABLE_INSTANCE]=$(cfg '.realtime.cache.bigtable_instance' '')
+  _CFG[RT_QUEUE_PROVIDER]=$(cfg '.realtime.queue.provider' 'rabbitmq')
+  _CFG[RT_QUEUE_CONNSTR]=$(cfg '.realtime.queue.connection_string' '')
+  _CFG[RT_EVENTHUB_NAME]=$(cfg '.realtime.queue.event_hub_name' 'RPIQueueListener')
+  _CFG[RT_EVENTHUB_NAMESPACE]=$(cfg '.realtime.queue.namespace' '')
+  _CFG[RT_PUBSUB_PROJECT]=$(cfg '.realtime.queue.pubsub_project' '')
+
+  # --- Feature: SMTP ---
+  _CFG[server]=$(cfg '.features.smtp.host' '')
+  _CFG[port]=$(cfg '.features.smtp.port' '')
+  _CFG[from_addr]=$(cfg '.features.smtp.from' '')
+  _CFG[sender_name]=$(cfg '.features.smtp.sender_name' '')
+  _CFG[enable_ssl]=$(cfg '.features.smtp.enable_ssl' '')
+  _CFG[use_creds]=$(cfg '.features.smtp.use_credentials' '')
+  _CFG[username]=$(cfg '.features.smtp.username' '')
+  _CFG[smtp_password]=$(cfg '.features.smtp.password' '')
+
+  # --- Feature: Entra ID ---
+  _CFG[client_id]=$(cfg '.features.entra_id.client_id' '')
+  _CFG[api_id]=$(cfg '.features.entra_id.api_id' '')
+  _CFG[tenant_id]=$(cfg '.features.entra_id.tenant_id' '')
+
+  # --- Feature: OIDC ---
+  _CFG[provider_name]=$(cfg '.features.oidc.provider' '')
+  _CFG[auth_host]=$(cfg '.features.oidc.authority' '')
+  # client_id already mapped from entra_id — will be overwritten per feature context
+  _CFG[audience]=$(cfg '.features.oidc.audience' '')
+  _CFG[redirect_url]=$(cfg '.features.oidc.redirect_url' '')
+  _CFG[enable_refresh]=$(cfg '.features.oidc.enable_refresh' '')
+  _CFG[validate_issuer]=$(cfg '.features.oidc.validate_issuer' '')
+  _CFG[validate_audience]=$(cfg '.features.oidc.validate_audience' '')
+  _CFG[logout_param]=$(cfg '.features.oidc.logout_param' '')
+  _CFG[supports_user_mgmt]=$(cfg '.features.oidc.supports_user_management' '')
+  _CFG[add_scope]="false"   # custom scopes not supported in file mode
+
+  # --- Feature: Redpoint AI ---
+  _CFG[api_base]=$(cfg '.features.redpoint_ai.endpoint' '')
+  _CFG[api_version]=$(cfg '.features.redpoint_ai.api_version' '')
+  _CFG[engine]=$(cfg '.features.redpoint_ai.deployment' '')
+  _CFG[temp]=$(cfg '.features.redpoint_ai.temperature' '')
+  _CFG[search_endpoint]=$(cfg '.features.redpoint_ai.search_endpoint' '')
+  _CFG[vector_profile]=$(cfg '.features.redpoint_ai.vector_profile' '')
+  _CFG[vector_config]=$(cfg '.features.redpoint_ai.vector_config' '')
+  _CFG[embeddings_model]=$(cfg '.features.redpoint_ai.embeddings_model' '')
+  _CFG[model_dims]=$(cfg '.features.redpoint_ai.model_dimensions' '')
+  _CFG[container_name]=$(cfg '.features.redpoint_ai.container_name' '')
+  _CFG[blob_folder]=$(cfg '.features.redpoint_ai.blob_folder' '')
+  _CFG[nlp_api_key]=$(cfg '.features.redpoint_ai.nlp_api_key' '')
+  _CFG[nlp_search_key]=$(cfg '.features.redpoint_ai.search_key' '')
+  _CFG[nlp_model_connstr]=$(cfg '.features.redpoint_ai.blob_connection_string' '')
+
+  # --- Feature: Queue Reader ---
+  _CFG[tenant_id_qr]=$(cfg '.features.queue_reader.tenant_id' '')
+  _CFG[distributed]=$(cfg '.features.queue_reader.distributed' '')
+
+  # --- Feature: Data Warehouse (from top-level data_warehouse section) ---
+  _CFG[provider]="$_dw_provider"
+  _CFG[conn_name]=$(cfg '.data_warehouse.redshift.connection_name' 'rsh-tenant1')
+  _CFG[rs_server]=$(cfg '.data_warehouse.redshift.host' '')
+  _CFG[rs_database]=$(cfg '.data_warehouse.redshift.database' '')
+  _CFG[rs_username]=$(cfg '.data_warehouse.redshift.username' '')
+  _CFG[rs_password]=$(cfg '.data_warehouse.redshift.password' '')
+  _CFG[sf_configmap]=$(cfg '.data_warehouse.snowflake.configmap_name' '')
+  _CFG[sf_keyname]=$(cfg '.data_warehouse.snowflake.key_name' '')
+  _CFG[bq_name]=$(cfg '.data_warehouse.bigquery.connection_name' '')
+  _CFG[bq_configmap]=$(cfg '.data_warehouse.bigquery.configmap_name' '')
+  _CFG[bq_sa_email]=$(cfg '.data_warehouse.bigquery.service_account_email' '')
+  _CFG[bq_project]=$(cfg '.data_warehouse.bigquery.project_id' '')
+
+  # --- Feature: Autoscaling ---
+  _CFG[svc]=$(cfg '.features.autoscaling.service' '')
+  _CFG[type]=$(cfg '.features.autoscaling.type' '')
+  _CFG[min_r]=$(cfg '.features.autoscaling.min_replicas' '')
+  _CFG[max_r]=$(cfg '.features.autoscaling.max_replicas' '')
+  _CFG[cpu_pct]=$(cfg '.features.autoscaling.target_cpu' '')
+
+  # --- Feature: Database Upgrade ---
+  _CFG[notify]=$(cfg '.features.database_upgrade.notification' '')
+  _CFG[email]=$(cfg '.features.database_upgrade.notification_email' '')
+
+  # --- Feature: Storage ---
+  _CFG[storage_type]=$(cfg '.features.storage.type' '')
+  _CFG[claim]=$(cfg '.features.storage.pvc_claim_name' '')
+  _CFG[mount_path]=$(cfg '.features.storage.mount_path' '')
+
+  # Helper: check if a feature is enabled in the input file
+  _feature_enabled() {
+    local val
+    val=$(yq eval ".features.$1" "$INPUT_FILE" 2>/dev/null)
+    case "$val" in
+      true) return 0 ;;
+      false|null|"") return 1 ;;
+      *) return 0 ;;   # it's a map/object, so feature is enabled
+    esac
+  }
+
+  # Override prompt functions — read from _CFG silently
+  prompt() {
+    local var_name=$1 prompt_text=$2 default=$3
+    local value="${_CFG[$var_name]:-}"
+    eval "$var_name=\"\${value:-\$default}\""
+  }
+
+  prompt_choice() {
+    local var_name=$1 prompt_text=$2 options=$3 default=$4
+    local value="${_CFG[$var_name]:-}"
+    eval "$var_name=\"\${value:-\$default}\""
+  }
+
+  prompt_yesno() {
+    local var_name=$1 prompt_text=$2 default=$3
+    local value="${_CFG[$var_name]:-}"
+    if [ -n "$value" ]; then
+      case "$value" in
+        true|y|Y|yes) eval "$var_name=true" ;;
+        *) eval "$var_name=false" ;;
+      esac
+    else
+      case "$default" in
+        y|Y) eval "$var_name=true" ;;
+        *) eval "$var_name=false" ;;
+      esac
+    fi
+  }
+
+  prompt_secret() {
+    local var_name=$1 prompt_text=$2
+    local value="${_CFG[$var_name]:-}"
+    eval "$var_name=\"\$value\""
+  }
+
+  # Quieter section headers in file mode
+  _orig_section=$(declare -f section)
+  section() { echo "  ${CYAN}▸${RESET} $1"; }
+fi
 
 # ============================================================
 # --add mode: append a feature block to an existing overrides
@@ -1074,18 +1303,24 @@ fi
 
 # --- Full setup mode ---
 echo ""
-echo "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}"
-echo "${CYAN}${BOLD}║     ⚡ Redpoint Interaction CLI               ║${RESET}"
-echo "${CYAN}${BOLD}║        Deployment Generator for RPI           ║${RESET}"
-echo "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}"
-echo ""
-echo "  This tool generates the files needed to deploy"
-echo "  Redpoint Interaction (RPI) on Kubernetes."
-echo ""
-echo "  ${ICON_FILE} overrides.yaml       — Helm values overrides"
-echo "  ${ICON_KEY} secrets.yaml         — Kubernetes Secret manifest"
-echo "  ${ICON_ROCKET} prereqs.sh           — Prerequisite kubectl commands"
-echo ""
+if [ "$FILE_MODE" = "true" ]; then
+  echo "${CYAN}${BOLD}Redpoint Interaction CLI — File Mode${RESET}"
+  echo "  Reading from: ${BOLD}${INPUT_FILE}${RESET}"
+  echo ""
+else
+  echo "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${RESET}"
+  echo "${CYAN}${BOLD}║     ⚡ Redpoint Interaction CLI               ║${RESET}"
+  echo "${CYAN}${BOLD}║        Deployment Generator for RPI           ║${RESET}"
+  echo "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo "  This tool generates the files needed to deploy"
+  echo "  Redpoint Interaction (RPI) on Kubernetes."
+  echo ""
+  echo "  ${ICON_FILE} overrides.yaml       — Helm values overrides"
+  echo "  ${ICON_KEY} secrets.yaml         — Kubernetes Secret manifest"
+  echo "  ${ICON_ROCKET} prereqs.sh           — Prerequisite kubectl commands"
+  echo ""
+fi
 
 # ============================================================
 # 1. Platform & Mode
@@ -1119,7 +1354,11 @@ if [ "$MODE" = "standard" ]; then
   prompt_choice DB_PROVIDER "Database provider" "sqlserver|postgresql|sqlserveronvm" "sqlserver"
   prompt DB_HOST "Database server host" ""
   prompt DB_USER "Database username" ""
-  read -rsp "  Database password: " DB_PASS; echo ""
+  if [ "$FILE_MODE" = "true" ]; then
+    DB_PASS="${_CFG[DB_PASS]:-}"
+  else
+    read -rsp "  Database password: " DB_PASS; echo ""
+  fi
   prompt DB_PULSE "Pulse database name" "Pulse"
   prompt DB_LOGGING "Pulse logging database name" "Pulse_Logging"
 fi
@@ -1276,12 +1515,16 @@ fi
 # Generate rpi-secrets.yaml
 # ============================================================
 echo ""
-printf "${CYAN}${BOLD}Generating files ${RESET}"
-for i in $(seq 1 30); do
-  printf "${CYAN}▪${RESET}"
-  sleep 1
-done
-echo ""
+if [ "$FILE_MODE" = "true" ]; then
+  echo "${CYAN}${BOLD}Generating files...${RESET}"
+else
+  printf "${CYAN}${BOLD}Generating files ${RESET}"
+  for i in $(seq 1 30); do
+    printf "${CYAN}▪${RESET}"
+    sleep 1
+  done
+  echo ""
+fi
 
 cat > "$SECRETS_FILE" << SECRETS_HEADER
 # ============================================================
@@ -1546,44 +1789,74 @@ fi
 # ============================================================
 # Optional features — prompt during initial setup
 # ============================================================
-section "Optional Features"
-echo ""
-echo "  Select features to include now. You can always add more later"
-echo "  with ${DIM}bash interactioncli.sh -a <feature>${RESET}"
-echo ""
-
 FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests helm_copilot extra_envs advanced"
 SELECTED_FEATURES=""
-for feat in $FEATURES_LIST; do
-  label=""
-  case "$feat" in
-    database_upgrade) label="Database Upgrade — run schema migrations automatically after upgrades" ;;
-    queue_reader)     label="Queue Reader — process realtime queue events (forms, listeners, callbacks)" ;;
-    storage)          label="Storage — persistent volumes for file-based processing and caching" ;;
-    smtp)             label="SMTP — send transactional emails from RPI workflows" ;;
-    redpoint_ai)      label="Redpoint AI — AI-powered content generation (OpenAI + Cognitive Search)" ;;
-    oidc)             label="OIDC — single sign-on via OpenID Connect (Keycloak, Okta, etc.)" ;;
-    entra_id)         label="Entra ID — single sign-on via Microsoft Entra ID (Azure AD)" ;;
-    autoscaling)      label="Autoscaling — scale services based on CPU/memory with HPA or KEDA" ;;
-    custom_metrics)   label="Custom Metrics — expose Prometheus /metrics endpoints for monitoring" ;;
-    service_mesh)     label="Service Mesh — enable Linkerd mTLS and traffic policies" ;;
-    smoke_tests)      label="Smoke Tests — validate PVC mounts and CSI drivers post-deploy" ;;
-    helm_copilot)     label="Interaction Copilot — AI assistant for chart configuration and troubleshooting" ;;
-    extra_envs)       label="Extra Envs — debug and plugin environment variables for execution service" ;;
-    advanced)         label="Advanced Overrides — override internal defaults (probes, security, logging)" ;;
-    *) label="$feat" ;;
-  esac
-  yn=""
-  read -rp "  Add ${BOLD}${label}${RESET}? ${DIM}(y/n) [n]${RESET}: " yn
-  if [ "${yn:-n}" = "y" ] || [ "${yn:-n}" = "Y" ]; then
-    SELECTED_FEATURES="${SELECTED_FEATURES} ${feat}"
-  fi
-done
+
+if [ "$FILE_MODE" = "true" ]; then
+  # Build feature list from input file
+  section "Optional Features"
+  for feat in $FEATURES_LIST; do
+    if _feature_enabled "$feat"; then
+      SELECTED_FEATURES="${SELECTED_FEATURES} ${feat}"
+      echo "  ${ICON_CHECK} ${feat}"
+    fi
+  done
+  [ -z "$SELECTED_FEATURES" ] && echo "  ${DIM}(none selected)${RESET}"
+else
+  section "Optional Features"
+  echo ""
+  echo "  Select features to include now. You can always add more later"
+  echo "  with ${DIM}bash interactioncli.sh -a <feature>${RESET}"
+  echo ""
+  for feat in $FEATURES_LIST; do
+    label=""
+    case "$feat" in
+      database_upgrade) label="Database Upgrade — run schema migrations automatically after upgrades" ;;
+      queue_reader)     label="Queue Reader — process realtime queue events (forms, listeners, callbacks)" ;;
+      storage)          label="Storage — persistent volumes for file-based processing and caching" ;;
+      smtp)             label="SMTP — send transactional emails from RPI workflows" ;;
+      redpoint_ai)      label="Redpoint AI — AI-powered content generation (OpenAI + Cognitive Search)" ;;
+      oidc)             label="OIDC — single sign-on via OpenID Connect (Keycloak, Okta, etc.)" ;;
+      entra_id)         label="Entra ID — single sign-on via Microsoft Entra ID (Azure AD)" ;;
+      autoscaling)      label="Autoscaling — scale services based on CPU/memory with HPA or KEDA" ;;
+      custom_metrics)   label="Custom Metrics — expose Prometheus /metrics endpoints for monitoring" ;;
+      service_mesh)     label="Service Mesh — enable Linkerd mTLS and traffic policies" ;;
+      smoke_tests)      label="Smoke Tests — validate PVC mounts and CSI drivers post-deploy" ;;
+      helm_copilot)     label="Interaction Copilot — AI assistant for chart configuration and troubleshooting" ;;
+      extra_envs)       label="Extra Envs — debug and plugin environment variables for execution service" ;;
+      advanced)         label="Advanced Overrides — override internal defaults (probes, security, logging)" ;;
+      *) label="$feat" ;;
+    esac
+    yn=""
+    read -rp "  Add ${BOLD}${label}${RESET}? ${DIM}(y/n) [n]${RESET}: " yn
+    if [ "${yn:-n}" = "y" ] || [ "${yn:-n}" = "Y" ]; then
+      SELECTED_FEATURES="${SELECTED_FEATURES} ${feat}"
+    fi
+  done
+fi
 
 # Run each selected feature's add function against the generated overrides
 for feat in $SELECTED_FEATURES; do
   echo ""
   section "Configuring: ${feat}"
+
+  # In file mode, set context-specific _CFG entries for features that
+  # share variable names (e.g., client_id used by both entra_id and oidc)
+  if [ "$FILE_MODE" = "true" ]; then
+    case "$feat" in
+      entra_id)
+        _CFG[client_id]=$(cfg '.features.entra_id.client_id' '')
+        _CFG[tenant_id]=$(cfg '.features.entra_id.tenant_id' '')
+        ;;
+      oidc)
+        _CFG[client_id]=$(cfg '.features.oidc.client_id' '')
+        ;;
+      queue_reader)
+        _CFG[tenant_id]=$(cfg '.features.queue_reader.tenant_id' '')
+        ;;
+    esac
+  fi
+
   case "$feat" in
     database_upgrade) add_database_upgrade "$OUTPUT_FILE" ;;
     queue_reader)     add_queue_reader "$OUTPUT_FILE" ;;
@@ -1690,6 +1963,13 @@ echo "  ${DIM}bash deploy/cli/interactioncli.sh -a menu${RESET}"
 echo ""
 echo "  ${ICON_WARN}  ${YELLOW}${SECRETS_FILE} contains sensitive values.${RESET}"
 echo "     ${YELLOW}Do NOT commit it to version control.${RESET}"
+
+# Delete input file after successful generation (contains sensitive values)
+if [ "$FILE_MODE" = "true" ] && [ -f "$INPUT_FILE" ]; then
+  rm -f "$INPUT_FILE"
+  echo ""
+  echo "  ${ICON_CHECK} ${DIM}Deleted ${INPUT_FILE} (contained sensitive values)${RESET}"
+fi
 echo ""
 echo "${DIM}──────────────────────────────────────────────${RESET}"
 echo "  ${BOLD}Redpoint Global${RESET}"

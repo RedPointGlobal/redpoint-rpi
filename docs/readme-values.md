@@ -19,13 +19,13 @@ You maintain a small per-environment overrides file with only the values you've 
 
 ## Generating Your Overrides
 
-The **Interaction CLI** is the primary way to create your overrides file. It walks you through every configuration decision, prompts for sensitive values, and writes both your `overrides.yaml` and `secrets.yaml` in one pass.
+Run the **Interaction CLI** to generate your overrides. It walks you through every configuration decision, prompts for sensitive values, and writes both `overrides.yaml` and `secrets.yaml` in one pass.
 
 ```bash
 bash deploy/cli/interactioncli.sh
 ```
 
-The CLI covers:
+The CLI guides you through:
 
 | Step | What it configures |
 |------|--------------------|
@@ -34,7 +34,6 @@ The CLI covers:
 | Operational database | Provider, host, credentials, database names |
 | Data warehouse | Snowflake, Redshift, or BigQuery (optional) |
 | Cloud identity | Managed Identity, IRSA, or Workload Identity |
-| Secrets management | `kubernetes`, `sdk`, or `csi` |
 | Ingress | Domain, TLS, and controller settings |
 | Realtime API | Cache provider, queue provider, connection details |
 
@@ -60,7 +59,7 @@ After the base configuration, the CLI prompts for optional features:
 
 ### Adding Features Later
 
-You can add any feature to an existing overrides file without re-running the full setup:
+Add any feature to an existing overrides file without re-running the full setup:
 
 ```bash
 # Interactive menu
@@ -87,6 +86,18 @@ kubectl apply -f secrets.yaml
 helm upgrade --install rpi ./chart -f overrides.yaml -n redpoint-rpi --create-namespace
 ```
 
+### File-Driven Mode
+
+For CI/CD pipelines or automated environments where interactive prompts are not available, the CLI supports a file-driven mode. Copy the input template, fill in your values, and run with `-f`:
+
+```bash
+cp deploy/values/input-template.yaml inputs.yaml
+# Edit inputs.yaml
+bash deploy/cli/interactioncli.sh -f
+```
+
+The input file is automatically deleted after generation since it contains sensitive values.
+
 ## Reference Examples
 
 The `deploy/values/` directory contains read-only reference examples showing what a typical override looks like on each platform:
@@ -97,11 +108,7 @@ The `deploy/values/` directory contains read-only reference examples showing wha
 | `deploy/values/aws/amazon.yaml` | AWS with IRSA, Amazon SQS, MongoDB cache |
 | `deploy/values/demo/demo.yaml` | Self-hosted demo mode with built-in databases |
 
-These are **not** starting points to copy and edit. Use the Interaction CLI to generate your overrides. The examples are useful for:
-
-- **Reviewing** what the CLI generated — "does my output look right?"
-- **Automation** — CI/CD or GitOps pipelines where interactive prompts are not available
-- **Understanding** what a complete override looks like for a given platform
+These are **not** starting points to copy and edit. Use the Interaction CLI to generate your overrides. The examples are useful for reviewing what the CLI generated or understanding what a complete override looks like for a given platform.
 
 ## Repository Structure
 
@@ -116,7 +123,8 @@ redpoint-rpi/
 │       └── deploy-*.yaml         # Resource templates
 ├── deploy/
 │   ├── cli/interactioncli.sh     # Interaction CLI — generates overrides & secrets
-│   ├── values/                   # Read-only reference examples
+│   ├── values/                   # Reference examples & input template
+│   │   ├── input-template.yaml   # Template for file-driven mode (-f flag)
 │   │   ├── azure/azure.yaml
 │   │   ├── aws/amazon.yaml
 │   │   └── demo/demo.yaml

@@ -1,0 +1,240 @@
+# ============================================================
+# Redpoint Interaction CLI — Input Template
+# ============================================================
+# 1. Copy this file:
+#      cp deploy/values/input-template.yaml inputs.yaml
+#
+# 2. Fill in your values below
+#
+# 3. Run the CLI:
+#      bash deploy/cli/interactioncli.sh -f
+#
+# The CLI reads inputs.yaml, generates overrides.yaml + secrets.yaml,
+# then DELETES this file (it contains sensitive values).
+#
+# Rules:
+#   - Uncomment and fill in sections you need
+#   - Leave sections commented out to skip them
+#   - Required fields are marked with (required)
+#   - Sensitive values (passwords, keys) go inline — they are
+#     written to secrets.yaml (never to overrides.yaml)
+#   - The CLI auto-generates internal passwords (RabbitMQ, Redis, etc.)
+# ============================================================
+
+# ----------------------------------------------------------
+# Platform & Mode (required)
+# ----------------------------------------------------------
+platform: azure                # azure | amazon | google | selfhosted
+mode: standard                 # standard | demo
+image_tag: "7.7.20260220.1524"
+namespace: redpoint-rpi
+
+# ----------------------------------------------------------
+# Ingress (required)
+# ----------------------------------------------------------
+ingress:
+  domain: example.com                          # (required) Your ingress domain
+  host_prefix: rpi                             # Hostname prefix (e.g., rpi-deploymentapi.example.com)
+  deploy_controller: true                      # Deploy chart-provided ingress controller
+
+# ----------------------------------------------------------
+# Operational Database
+# Required when mode is "standard", ignored when mode is "demo"
+# ----------------------------------------------------------
+database:
+  provider: sqlserver          # sqlserver | postgresql | sqlserveronvm
+  host: ""                     # (required) Database server host
+  username: ""                 # (required) Database username
+  password: ""                 # (required) Database password
+  pulse_database: Pulse
+  logging_database: Pulse_Logging
+
+# ----------------------------------------------------------
+# Data Warehouse (optional)
+# Uncomment ONE provider block below to enable
+# ----------------------------------------------------------
+# data_warehouse:
+#   provider: snowflake        # snowflake | redshift | bigquery
+#
+#   # --- Snowflake (JWT authentication) ---
+#   snowflake:
+#     configmap_name: snowflake-creds           # ConfigMap containing RSA private key
+#     key_name: my-snowflake-rsakey.p8          # Key file name in ConfigMap
+#
+#   # --- Redshift ---
+#   redshift:
+#     connection_name: rsh-tenant1
+#     host: ""                                  # Redshift cluster endpoint
+#     database: ""                              # Database name
+#     username: ""                              # Username
+#     password: ""                              # Password
+#
+#   # --- BigQuery (service account authentication) ---
+#   bigquery:
+#     connection_name: gbq-tenant1              # Also used as DSN
+#     configmap_name: gbq-tenant1               # ConfigMap containing SA key JSON
+#     service_account_email: ""                 # GCP service account email
+#     project_id: ""                            # Google Cloud project ID
+
+# ----------------------------------------------------------
+# Cloud Identity (optional, ignored for selfhosted)
+# ----------------------------------------------------------
+# cloud_identity:
+#   enabled: true
+#
+#   # --- Azure (uncomment for platform: azure) ---
+#   azure:
+#     client_id: ""                             # Managed Identity Client ID
+#     tenant_id: ""                             # Azure Tenant ID
+#
+#   # --- Amazon (uncomment for platform: amazon) ---
+#   amazon:
+#     role_arn: ""                              # IAM Role ARN for IRSA
+#     region: us-east-1
+#
+#   # --- Google (uncomment for platform: google) ---
+#   google:
+#     service_account_email: ""                 # GCP Service Account email
+
+# ----------------------------------------------------------
+# Realtime API
+# ----------------------------------------------------------
+realtime:
+  enabled: true
+
+  cache:
+    provider: mongodb          # mongodb | azureredis | redis | inMemorySql | googlebigtable
+
+    # --- MongoDB (default) ---
+    connection_string: ""      # MongoDB connection string
+
+    # --- Redis / Azure Redis ---
+    # connection_string: ""    # Redis connection string
+
+    # --- In-Memory SQL ---
+    # connection_string: ""    # SQL Server connection string
+
+    # --- Google Bigtable ---
+    # bigtable_project: ""     # Project ID
+    # bigtable_instance: ""    # Instance ID
+
+  queue:
+    provider: azureservicebus  # azureservicebus | amazonsqs | googlepubsub | azureeventhubs | rabbitmq
+
+    # --- Azure Service Bus ---
+    connection_string: ""      # Connection string
+
+    # --- Azure Event Hubs ---
+    # connection_string: ""    # Connection string
+    # event_hub_name: RPIQueueListener
+    # namespace: ""            # Event Hubs namespace name
+
+    # --- Google Pub/Sub ---
+    # pubsub_project: ""       # Project ID
+
+# ----------------------------------------------------------
+# Features (optional)
+# Set to true for simple features, or provide a config map
+# for features that need additional settings.
+# ----------------------------------------------------------
+features:
+
+  # --- Database Upgrade ---
+  # Runs schema migrations automatically after helm upgrade.
+  # database_upgrade: true
+  # Or with email notification:
+  # database_upgrade:
+  #   notification: true
+  #   notification_email: admin@example.com
+
+  # --- Queue Reader ---
+  # Processes realtime queue events (forms, listeners, callbacks).
+  # queue_reader:
+  #   tenant_id: ""                             # RPI Client (Tenant) ID
+  #   distributed: false                        # Enable distributed mode (internal cache + queue)
+
+  # --- Storage ---
+  # Persistent volumes for file-based processing and caching.
+  # storage:
+  #   type: pvc                                 # pvc | csi
+  #   pvc_claim_name: rpifileoutputdir
+  #   mount_path: /rpifileoutputdir
+
+  # --- Autoscaling ---
+  # autoscaling:
+  #   service: realtimeapi                      # realtimeapi | executionservice | interactionapi | integrationapi
+  #   type: hpa                                 # hpa | keda
+  #   min_replicas: 1
+  #   max_replicas: 5
+  #   target_cpu: 80                            # HPA only — target CPU utilization %
+
+  # --- Custom Metrics ---
+  # Exposes Prometheus /metrics endpoints on all services.
+  # custom_metrics: true
+
+  # --- Service Mesh ---
+  # Enables Linkerd mTLS and traffic policies.
+  # service_mesh: true
+
+  # --- Smoke Tests ---
+  # Validates PVC mounts and CSI drivers post-deploy.
+  # smoke_tests: true
+
+  # --- Helm Copilot ---
+  # AI assistant for chart configuration and troubleshooting.
+  # helm_copilot: true
+
+  # --- Extra Envs ---
+  # Debug and plugin environment variables (all disabled by default).
+  # extra_envs: true
+
+  # --- Advanced Overrides ---
+  # Adds an advanced: block for overriding internal defaults.
+  # advanced: true
+
+  # --- SMTP ---
+  # smtp:
+  #   host: smtp.example.com
+  #   port: 587
+  #   from: noreply@example.com
+  #   sender_name: Redpoint Global
+  #   enable_ssl: true
+  #   use_credentials: true
+  #   username: ""
+  #   password: ""                              # SMTP password
+
+  # --- OIDC (OpenID Connect) ---
+  # oidc:
+  #   provider: Keycloak                        # Keycloak | Okta
+  #   authority: https://idp.example.com/realms/rpi
+  #   client_id: rpi-client
+  #   audience: rpi-api
+  #   redirect_url: https://rpi-interactionapi.example.com
+  #   enable_refresh: true
+  #   validate_issuer: false
+  #   validate_audience: true
+  #   logout_param: id_token_hint
+  #   supports_user_management: false
+
+  # --- Entra ID (Microsoft Azure AD) ---
+  # entra_id:
+  #   client_id: ""                             # Interaction Client App ID
+  #   api_id: ""                                # Interaction API App ID
+  #   tenant_id: ""                             # Azure AD Tenant ID
+
+  # --- Redpoint AI ---
+  # redpoint_ai:
+  #   endpoint: https://my-openai.openai.azure.com/
+  #   deployment: gpt-5.1
+  #   api_version: "2023-07-01-preview"
+  #   temperature: "0.5"
+  #   search_endpoint: https://my-search.search.windows.net
+  #   vector_profile: vector-profile-000000000000
+  #   vector_config: vector-config-000000000000
+  #   embeddings_model: text-embedding-ada-002
+  #   model_dimensions: "1536"
+  #   container_name: ""                        # Blob container name
+  #   blob_folder: ""                           # Blob folder name
+  #   nlp_api_key: ""                           # OpenAI API key
+  #   search_key: ""                            # Cognitive Search key
+  #   blob_connection_string: ""                # Blob storage connection string
