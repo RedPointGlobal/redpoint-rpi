@@ -18,7 +18,7 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 | Copy the full `values.yaml` and edit it | Maintain a small overrides file with only your customizations |
 | 3,000+ lines to manage | 50–100 lines typical |
 | Upgrades require diffing the entire file | Upgrades apply new defaults automatically |
-| No escape hatch for hidden internals | `advanced:` block overrides any internal default |
+| No escape hatch for hidden internals | Any internal default can be overridden directly under its top-level key |
 
 ---
 
@@ -191,7 +191,7 @@ The Copilot compares your templates against the stock v7.6 versions, identifies 
 
 1. Copy custom template files (files not in the stock v7.6 chart) to the v7.7 `chart/templates/` directory. Review for compatibility with v7.7 values paths.
 2. For modified stock templates, diff your version against the [stock v7.6 templates](https://github.com/RedPointGlobal/redpoint-rpi/tree/release/v7.6/redpoint-rpi/templates) and apply your changes to the v7.7 versions.
-3. Many v7.6 template-level customizations (probes, resources, labels, annotations, security context) can now be set through values or the `advanced:` block — check values first before editing templates.
+3. Many v7.6 template-level customizations (probes, resources, labels, annotations, security context) can now be set directly through values — check values first before editing templates.
 
 ---
 
@@ -199,13 +199,7 @@ The Copilot compares your templates against the stock v7.6 versions, identifies 
 
 If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Re-run the CLI to regenerate your overrides, or check the reference below.
 
-If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these now live under the `advanced:` block:
-
-```bash
-bash deploy/cli/interactioncli.sh -a advanced
-```
-
-Then add your customizations under the generated `advanced:` section. See [values-reference.yaml](values-reference.yaml) for every available key.
+If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. See [values-reference.yaml](values-reference.yaml) for every available key.
 
 <details>
 <summary><strong>Key renames reference</strong> (for manual overrides)</summary>
@@ -226,28 +220,28 @@ If you prefer to build your overrides manually instead of using the CLI, here ar
 | `ingress.className` default | Defaults to release namespace | Was `nginx-redpoint-rpi` |
 | `<service>.customLabels` | `<service>.podLabels` | Renamed |
 | `<service>.customAnnotations` | `<service>.podAnnotations` | Renamed |
-| `<service>.serviceAccount.enabled` | `cloudIdentity.serviceAccount.create` | Centralized |
+| `<service>.serviceAccount.enabled` | `cloudIdentity.serviceAccount.mode` | Centralized (shared/per-service/both) |
 | `<service>.resources.enabled` | *(removed)* | Always applied |
 | `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` | Shortened |
 | `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` | Shortened |
 | `queuereader.realtimeConfiguration.distributedCache` | `queuereader.realtimeConfiguration.internalCache` | Renamed |
 | `executionservice.internalCache.type` | `executionservice.internalCache.redisSettings.type` | Restructured |
 
-**Moved to `advanced:` block** (only needed if you customized these in v7.6):
+**Now set directly under the top-level key** (only needed if you customized these in v7.6):
 
 | v7.6 | v7.7 |
 |:-----|:-----|
-| `securityContext.*` | `advanced.securityContext.*` |
-| `topologySpreadConstraints.*` | `advanced.topologySpreadConstraints.*` |
-| `<service>.logging.*` | `advanced.<service>.logging.*` |
-| `<service>.livenessProbe.*` | `advanced.<service>.livenessProbe.*` |
-| `<service>.readinessProbe.*` | `advanced.<service>.readinessProbe.*` |
-| `<service>.type` / `.rollout.*` | `advanced.<service>.type` |
-| `<service>.customMetrics.*` | `advanced.<service>.customMetrics.*` |
-| `<service>.terminationGracePeriodSeconds` | `advanced.<service>.terminationGracePeriodSeconds` |
-| `queuereader.threadPoolSize` / `.maxBatchSize` / etc. | `advanced.queuereader.*` |
-| `executionservice.jobExecution.*` | `advanced.executionservice.jobExecution.*` |
-| `realtimeapi.dataMaps.*` / `.idValidation.*` / `.customPlugins.*` | `advanced.realtimeapi.*` |
+| `securityContext.*` | `securityContext.*` |
+| `topologySpreadConstraints.*` | `topologySpreadConstraints.*` |
+| `<service>.logging.*` | `<service>.logging.*` |
+| `<service>.livenessProbe.*` | `livenessProbe.*` (shared) or `<service>.livenessProbe.*` |
+| `<service>.readinessProbe.*` | `readinessProbe.*` (shared) or `<service>.readinessProbe.*` |
+| `<service>.type` / `.rollout.*` | `<service>.type` / `<service>.rollout.*` |
+| `<service>.customMetrics.*` | `<service>.customMetrics.*` |
+| `<service>.terminationGracePeriodSeconds` | `<service>.terminationGracePeriodSeconds` |
+| `queuereader.threadPoolSize` / `.maxBatchSize` / etc. | `queuereader.threadPoolSize` / `queuereader.maxBatchSize` / etc. |
+| `executionservice.jobExecution.*` | `executionservice.jobExecution.*` |
+| `realtimeapi.dataMaps.*` / `.idValidation.*` / `.customPlugins.*` | `realtimeapi.dataMaps.*` / `realtimeapi.idValidation.*` / etc. |
 
 </details>
 

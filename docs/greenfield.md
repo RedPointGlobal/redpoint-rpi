@@ -225,7 +225,7 @@ Either way, the CLI prompts for the required values, appends the configuration b
 helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
 ```
 
-Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `helmcopilot`, `advanced`.
+Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `helmcopilot`, `secrets_management`.
 
 ## Next Steps
 

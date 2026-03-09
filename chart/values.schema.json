@@ -532,7 +532,7 @@
             "provider": {
               "type": "string",
               "description": "Cache provider type",
-              "enum": ["mongodb", "azureredis", "redis", "inMemorySql", "googlebigtable"]
+              "enum": ["", "mongodb", "azureredis", "redis", "inMemorySql", "googlebigtable"]
             },
             "mongodb": {
               "type": "object",
@@ -598,7 +598,7 @@
             "provider": {
               "type": "string",
               "description": "Queue provider type",
-              "enum": ["amazonsqs", "azureservicebus", "googlepubsub", "azureeventhubs", "rabbitmq", "azurestorage", "amazonmsk"]
+              "enum": ["", "amazonsqs", "azureservicebus", "googlepubsub", "azureeventhubs", "rabbitmq", "azurestorage", "amazonmsk"]
             },
             "queueNames": {
               "type": "object",
@@ -1904,11 +1904,6 @@
           }
         }
       }
-    },
-    "advanced": {
-      "type": "object",
-      "description": "Override any internal default. See docs/values-reference.yaml for all available keys. Most users should NOT modify these.",
-      "additionalProperties": true
     }
   },
   "allOf": [

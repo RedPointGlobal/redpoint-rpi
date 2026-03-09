@@ -13,7 +13,7 @@ bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature
 bash deploy/cli/interactioncli.sh -a menu          # interactive feature picker
 ```
 
-Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `helmcopilot`, `advanced`.
+Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `helmcopilot`, `secrets_management`.
 
 For the complete list of every key, see [values-reference.yaml](values-reference.yaml).
 
@@ -51,7 +51,7 @@ Requires an AKS cluster with [Workload Identity](https://learn.microsoft.com/en-
 cloudIdentity:
   enabled: true
   serviceAccount:
-    create: true
+    mode: shared        # shared | per-service | both
     name: redpoint-rpi
   azure:
     managedIdentityClientId: <client-id>
@@ -66,7 +66,7 @@ Requires an EKS cluster with an [OIDC provider](https://docs.aws.amazon.com/eks/
 cloudIdentity:
   enabled: true
   serviceAccount:
-    create: true
+    mode: shared        # shared | per-service | both
     name: redpoint-rpi
   amazon:
     roleArn: arn:aws:iam::123456789012:role/rpi
@@ -81,7 +81,7 @@ Requires a GKE cluster with [Workload Identity](https://cloud.google.com/kuberne
 cloudIdentity:
   enabled: true
   serviceAccount:
-    create: true
+    mode: shared        # shared | per-service | both
     name: redpoint-rpi
   google:
     serviceAccountEmail: rpi-sa@my-project.iam.gserviceaccount.com
@@ -338,15 +338,14 @@ databaseUpgrade:
   enabled: true
 ```
 
-Advanced options:
+Additional options:
 
 ```yaml
 databaseUpgrade:
   enabled: true
-  advanced:
-    sendEmailOnUpgradeStart: false
-    sendEmailOnUpgradeComplete: false
-    monitorUpgrade: false
+  sendEmailOnUpgradeStart: false
+  sendEmailOnUpgradeComplete: false
+  monitorUpgrade: false
 ```
 
 ---
@@ -399,11 +398,10 @@ customMetrics:
 When enabled, each service pod exposes a `/metrics` endpoint on its service port. Configure your Prometheus instance to scrape these endpoints, or use pod annotations for auto-discovery:
 
 ```yaml
-advanced:
-  interactionapi:
-    podAnnotations:
-      prometheus.io/scrape: "true"
-      prometheus.io/port: "8080"
+interactionapi:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
 ```
 
 ---
@@ -527,29 +525,28 @@ When `UseCredentials: true`, the SMTP password is read from the Kubernetes Secre
 
 ---
 
-## Advanced Overrides
+## Overriding Internal Defaults
 
-Every internal default — probes, security contexts, logging, ports, rollout strategies, thread pools — can be overridden via the `advanced:` block without forking the chart.
+Every internal default — probes, security contexts, logging, ports, rollout strategies, thread pools — can be overridden directly under the matching top-level key without forking the chart.
 
 ```yaml
-advanced:
-  interactionapi:
-    resources:
-      requests:
-        cpu: 500m
-        memory: 1Gi
-      limits:
-        cpu: 2000m
-        memory: 4Gi
-    livenessProbe:
-      httpGet:
-        path: /health
-        port: 8080
-      initialDelaySeconds: 30
-      periodSeconds: 10
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
+interactionapi:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
 ```
 
 See [values-reference.yaml](values-reference.yaml) for every available key.
@@ -568,4 +565,4 @@ helm test rpi -n redpoint-rpi
 
 ## Customizing This Helm Chart
 
-The chart uses a **two-tier values system**: a small overrides file with your customizations, and internal defaults managed by the chart. See [readme-values.md](readme-values.md) for details on how the merge works and how to use the `advanced:` block.
+The chart uses a **two-tier values system**: a small overrides file with your customizations, and internal defaults managed by the chart. See [readme-values.md](readme-values.md) for details on how the merge works.

@@ -3,20 +3,19 @@
   INTERNAL DEFAULTS — _defaults.tpl
 ============================================================
   Chart-managed defaults that users should NOT edit directly.
-  Override any value via the `advanced:` block in your
-  overrides file.
+  Override any value directly in your overrides file under
+  the matching top-level key (e.g., realtimeapi:, ingress:).
 
   Architecture:
     _defaults.tpl   — this file, defines default YAML per component
     _helpers.tpl    — merge helpers that combine:
-                      defaults + advanced overrides + user values
+                      defaults + user values (user wins)
 
   Each component has a named template that returns YAML:
 
     {{- $d := fromYaml (include "rpi.defaults.realtimeapi" .) -}}
-    {{- $a := ((.Values.advanced).realtimeapi) | default dict -}}
     {{- $u := .Values.realtimeapi | default dict -}}
-    {{- $cfg := mustMergeOverwrite $d $a $u -}}
+    {{- $cfg := mustMergeOverwrite $d $u -}}
 
   Sections:
     1. Cross-cutting defaults (probes, security, topology, ingress)
@@ -253,6 +252,7 @@ logging:
     other: Error
     console: Error
 autoscaling:
+  enabled: false
   type: hpa
   minReplicas: 2
   maxReplicas: 5
@@ -342,6 +342,7 @@ logging:
   rpiError: Error
   Console: Error
 autoscaling:
+  enabled: false
   type: hpa
   minReplicas: 2
   maxReplicas: 5
@@ -378,6 +379,7 @@ logging:
   rpiError: Error
   Console: Error
 autoscaling:
+  enabled: false
   type: hpa
   minReplicas: 2
   maxReplicas: 5
@@ -531,6 +533,7 @@ logging:
   rpiError: Error
   Console: Error
 autoscaling:
+  enabled: false
   type: hpa
   minReplicas: 2
   maxReplicas: 5
@@ -570,6 +573,7 @@ logging:
   rpiError: Error
   Console: Error
 autoscaling:
+  enabled: false
   type: hpa
   minReplicas: 2
   maxReplicas: 5
@@ -606,6 +610,7 @@ logging:
   rpiError: Error
   Console: Error
 autoscaling:
+  enabled: false
   type: hpa
   minReplicas: 2
   maxReplicas: 5
@@ -726,6 +731,7 @@ logging:
   rpiError: Error
   Console: Error
 autoscaling:
+  enabled: false
   type: hpa
   minReplicas: 2
   maxReplicas: 5

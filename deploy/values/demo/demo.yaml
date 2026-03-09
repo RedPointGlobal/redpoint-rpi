@@ -295,33 +295,35 @@ databaseUpgrade:
   enabled: false
 
 # ----------------------------------------------------------
-#  Advanced Overrides
+#  Relaxed Probes (demo)
 # ----------------------------------------------------------
-# Relaxed probes and debug logging for demo environments
-advanced:
-  livenessProbe:
-    initialDelaySeconds: 120
-    periodSeconds: 30
-    failureThreshold: 10
-  startupProbe:
-    initialDelaySeconds: 30
-    periodSeconds: 15
-    failureThreshold: 60
-  realtimeapi:
-    logging:
-      realtimeapi:
-        default: Debug
-      realtimeagent:
-        default: Debug
-    queueProvider:
-      rabbitmq:
-        rabbitmqSettings:
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              memory: 512Mi
+livenessProbe:
+  initialDelaySeconds: 120
+  periodSeconds: 30
+  failureThreshold: 10
+startupProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  failureThreshold: 60
+
+# ----------------------------------------------------------
+#  Realtime API Overrides (demo)
+# ----------------------------------------------------------
+realtimeapi:
+  logging:
+    realtimeapi:
+      default: Debug
+    realtimeagent:
+      default: Debug
+  queueProvider:
+    rabbitmq:
+      rabbitmqSettings:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 512Mi
     cacheProvider:
       redis:
         redisSettings:

@@ -9,7 +9,7 @@
 
 {{- if $cfg.serviceAccount.enabled }}
 {{- if $cfg.enabled }}
-{{- if not .Values.cloudIdentity.serviceAccount.create }}
+{{- if ne (.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:

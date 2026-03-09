@@ -55,7 +55,7 @@ After the base configuration, the CLI prompts for optional features:
 | `helm_copilot` | AI assistant for chart configuration and troubleshooting |
 | `extra_envs` | Debug and plugin environment variables |
 | `data_warehouse` | Connect to Snowflake, Redshift, or BigQuery |
-| `advanced` | Override internal defaults (probes, security, logging) |
+| `extraEnvs` | Additional environment variables for debugging |
 
 ### Adding Features Later
 
@@ -74,9 +74,13 @@ bash deploy/cli/interactioncli.sh -a queue_reader
 
 The CLI prompts for passwords, API keys, and connection strings during configuration and writes them directly to `secrets.yaml`. You never need to manually edit the Secret manifest.
 
+### Reviewing Before You Deploy
+
+The CLI does not support going back to a previous prompt during generation. If you enter a wrong value, don't worry — both `overrides.yaml` and `secrets.yaml` are plain YAML files. Open them in any editor, correct the value, and save before deploying. The generated files are yours to review and adjust.
+
 ### Deploying
 
-After the CLI generates your files:
+After the CLI generates your files, review them, then deploy:
 
 ```bash
 # Apply secrets first
@@ -138,78 +142,70 @@ redpoint-rpi/
 └── README.md
 ```
 
-## The `advanced:` Block
+## Overriding Internal Defaults
 
-Every internal default can be overridden without forking the chart. The `advanced:` block in your overrides file gives you full control over any setting the chart manages.
-
-The CLI adds an `advanced:` block when you select the **Advanced Overrides** feature, but you can also add entries manually at any time.
+Every internal default can be overridden without forking the chart. Override any setting directly under the matching top-level key in your overrides file.
 
 ### Finding Available Keys
 
-Open `docs/values-reference.yaml` and scroll to the `advanced:` section at the bottom. Every key is documented with its default value shown as commented-out YAML.
+Open `docs/values-reference.yaml` for the complete reference. Every key is documented with its default value shown as commented-out YAML.
 
 ### Examples
 
 **Change liveness probe timing for all services:**
 
 ```yaml
-advanced:
-  livenessProbe:
-    periodSeconds: 30
-    failureThreshold: 5
+livenessProbe:
+  periodSeconds: 30
+  failureThreshold: 5
 ```
 
 **Enable debug logging for the realtime API:**
 
 ```yaml
-advanced:
-  realtimeapi:
-    logging:
-      realtimeapi:
-        default: Debug
-        endpoint: Debug
+realtimeapi:
+  logging:
+    realtimeapi:
+      default: Debug
+      endpoint: Debug
 ```
 
 **Increase data map retention to 2 years:**
 
 ```yaml
-advanced:
-  realtimeapi:
-    dataMaps:
-      visitorProfile:
-        DaysToPersist: 730
-      visitorHistory:
-        DaysToPersist: 730
+realtimeapi:
+  dataMaps:
+    visitorProfile:
+      DaysToPersist: 730
+    visitorHistory:
+      DaysToPersist: 730
 ```
 
 **Change execution service job timeout and thread count:**
 
 ```yaml
-advanced:
-  executionservice:
-    jobExecution:
-      taskTimeout: 120
-      maxThreadsPerExecutionService: 200
+executionservice:
+  jobExecution:
+    taskTimeout: 120
+    maxThreadsPerExecutionService: 200
 ```
 
 **Override security context for a specific component:**
 
 ```yaml
-advanced:
-  authservice:
-    securityContext:
-      runAsUser: 1000
-      fsGroup: 1000
+authservice:
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000
 ```
 
 **Switch a service to Argo Rollouts blue-green deployment:**
 
 ```yaml
-advanced:
-  realtimeapi:
-    type: rollout
-    rollout:
-      autoPromotionEnabled: false
+realtimeapi:
+  type: rollout
+  rollout:
+    autoPromotionEnabled: false
 ```
 
 **Enable demo database mode for development:**
@@ -230,14 +226,14 @@ databases:
 
 ### How Merging Works
 
-Values are resolved in three layers, with later layers winning:
+Values are resolved in two layers, with the later layer winning:
 
 ```
-Chart defaults  →  Your top-level values  →  advanced overrides
-(_defaults.tpl)    (X)                       (advanced.X)
+Chart defaults  →  Your overrides
+(_defaults.tpl)    (your overrides file)
 ```
 
-The `advanced:` block always takes the highest priority — use it to override any value, including ones set at the top level.
+Your values always take priority over chart defaults. You only specify what you change. Unset keys always use the chart's defaults.
 
 For example, with this overrides file:
 
@@ -248,28 +244,19 @@ realtimeapi:
     requests:
       cpu: 500m
       memory: 3Gi
-
-advanced:
-  realtimeapi:
-    resources:
-      requests:
-        cpu: 50m
-        memory: 256Mi
-    logging:
-      realtimeapi:
-        default: Debug
+  logging:
+    realtimeapi:
+      default: Debug
 ```
 
 The resolved realtimeapi config will have:
-- `replicas: 3` — from your top-level value
-- `resources.requests.cpu: 50m` — from advanced (overrides top-level)
-- `resources.requests.memory: 256Mi` — from advanced (overrides top-level)
-- `logging.realtimeapi.default: Debug` — from your advanced override
+- `replicas: 3` — from your override
+- `resources.requests.cpu: 500m` — from your override
+- `resources.requests.memory: 3Gi` — from your override
+- `logging.realtimeapi.default: Debug` — from your override
 - `service.port: 80` — from chart default
 - `terminationGracePeriodSeconds: 120` — from chart default
 - Everything else — from chart defaults
-
-You only specify what you change. Unset keys always use the chart's defaults.
 
 ## Why This Approach
 
@@ -285,9 +272,9 @@ A typical deployment needs 50-100 lines instead of 2,600. Less to read, less to 
 
 Because you never copy the full defaults, your configuration can't silently drift from the chart's intended values. Bug fixes to default probe timings, security contexts, or resource settings apply on the next upgrade without any action on your part.
 
-### Safe Escape Hatch
+### Full Control
 
-The `advanced:` block gives you full control when you need it, without cluttering your day-to-day configuration. Every internal default is overridable — nothing is locked away.
+Every internal default is overridable directly under its top-level key — nothing is locked away. You get full control without any special syntax or nesting.
 
 ## Migrating from a Previous Version
 

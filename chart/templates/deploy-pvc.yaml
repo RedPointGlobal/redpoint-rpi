@@ -4,12 +4,14 @@
   (Azure Blob, Azure File, AWS EFS, GCP Filestore, etc.).
   Configured via: storage.persistentVolumes[]
 */}}
+
 {{- range .Values.storage.persistentVolumes }}
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
   {{- if .annotations }}
   annotations:
     {{- toYaml .annotations | nindent 4 }}

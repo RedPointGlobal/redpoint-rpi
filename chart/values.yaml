@@ -5,8 +5,6 @@
 # defaults (health probes, security contexts, logging levels,
 # service ports, rollout strategies, etc.) are managed by the
 # chart via _defaults.tpl.
-#
-# For advanced tuning, use the `advanced:` block at the bottom.
 # ============================================================
 
 # ==========================
@@ -28,6 +26,8 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
+      # Utility image for jobs (upgrade, post-install, smoke tests)
+      net_utils: busybox:1.37
     # Optional: set the pod's timezone (e.g., "America/New_York"); leave empty to use default UTC
     podTimezone: "" # 
 
@@ -52,7 +52,7 @@ databases:
 
     # Redshift
     redshift:
-      enabled: true
+      enabled: false
       connections:
         - name: rsh-tenant1
           server: redshift-tenant1.endpoint.aws
@@ -116,13 +116,13 @@ databases:
 #   amazon -> IRSA (ServiceAccount annotation + env vars)
 # ============================================================
 cloudIdentity:
-  enabled: true
+  enabled: false
   # ServiceAccount mode:
-  #   create: true  -> one shared SA used by all services
-  #   create: false -> each service creates its own SA (for per-service identity federation)
-  # Both modes use the same cloud identity values below for annotations.
+  #   shared      -> one shared SA used by all services (simplest)
+  #   per-service -> each service creates its own SA (for per-service IAM roles)
+  #   both        -> shared SA + per-service SAs (shared for common resources, per-service for identity)
   serviceAccount:
-    create: false
+    mode: per-service
     name: redpoint-rpi
   # --- Azure Workload Identity ---
   azure:
@@ -295,7 +295,7 @@ realtimeapi:
   cacheProvider:
     enabled: true
     # Supported: mongodb, azureredis, redis, inMemorySql, googlebigtable
-    provider: mongodb
+    provider: ""
     mongodb:
       connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true
       databaseName: <my-realtime-cache-db>
@@ -319,7 +319,7 @@ realtimeapi:
   queueProvider:
     enabled: true
     # Supported: amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq, azurestorage, amazonmsk
-    provider: amazonsqs
+    provider: ""
     queueNames:
       formQueuePath: RPIWebFormSubmission
       eventsQueuePath: RPIWebEvents
@@ -365,7 +365,7 @@ realtimeapi:
     limits:
       memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
 # ==========================
 # Callback API
@@ -389,7 +389,7 @@ callbackapi:
     limits:
       memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
 # ==========================
 # Execution Service
@@ -440,7 +440,7 @@ interactionapi:
     limits:
       memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
 # ==========================
 # Integration API
@@ -459,7 +459,7 @@ integrationapi:
     limits:
       memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
 # ==========================
 # Node Manager
@@ -475,7 +475,7 @@ nodemanager:
     limits:
       memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
 # ==========================
 # Deployment API
@@ -531,7 +531,7 @@ queuereader:
     limits:
       memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
 # ==========================
 # Rebrandly (URL Shortener)
@@ -623,7 +623,7 @@ SMTPSettings:
 
 ingress:
   controller:
-    enabled: true                         # false if supplying your own controller
+    enabled: false
   mode: public                            # public | private
   certificateSource: kubernetes           # kubernetes | acm
   # TLS entries (rendered when certificateSource=kubernetes)
@@ -903,31 +903,3 @@ postInstall:
 preflight:
   enabled: false
   mode: test
-
-# ============================================================
-# ADVANCED CONFIGURATION
-# ============================================================
-# Override any internal default by nesting the component path
-# under `advanced`. Most users should NOT modify these.
-#
-# Example — override execution service job timeout:
-#   advanced:
-#     executionservice:
-#       jobExecution:
-#         taskTimeout: 120
-#
-# Example — override health probe timing:
-#   advanced:
-#     livenessProbe:
-#       periodSeconds: 30
-#
-# Example — override realtime data map retention:
-#   advanced:
-#     realtimeapi:
-#       dataMaps:
-#         visitorProfile:
-#           DaysToPersist: 180
-#
-# See docs/advanced-configuration.md for all available keys.
-# ============================================================
-advanced: {}

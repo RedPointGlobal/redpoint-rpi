@@ -452,12 +452,3 @@ storage:
         volumeHandle: fs-0123456789abcdef0
       pvc:
         claimName: pvc-efs
-
-# ----------------------------------------------------------
-#  Advanced Overrides (only if needed)
-# ----------------------------------------------------------
-# advanced:
-#   realtimeapi:
-#     autoscaling:
-#       minReplicas: 3
-#       maxReplicas: 10
