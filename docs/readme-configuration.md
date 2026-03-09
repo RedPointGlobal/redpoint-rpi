@@ -91,7 +91,11 @@ cloudIdentity:
 
 ## Secrets Management
 
-Controls how RPI reads sensitive values (database passwords, connection strings, API tokens). Three modes are available.
+Controls how RPI reads sensitive values (database passwords, connection strings, API tokens). Three providers are available. Use the Interaction CLI to configure:
+
+```bash
+bash deploy/cli/interactioncli.sh -a secrets_management
+```
 
 ### Kubernetes Secrets (default)
 
@@ -114,28 +118,145 @@ Reads secrets directly from a cloud vault using the cloud SDK. Requires [Cloud I
 ```yaml
 secretsManagement:
   provider: sdk
+  kubernetes:
+    autoCreateSecrets: false
+    secretName: redpoint-rpi-secrets
   sdk:
     azure:
       vaultUri: https://my-keyvault.vault.azure.net/
-    # amazon:
-    #   region: us-east-1
-    #   secretName: rpi/secrets
-    # google:
-    #   projectId: my-project
+      configurationReloadIntervalSeconds: 30
+      useADTokenForDatabaseConnection: true
 ```
+
+To add Azure SDK settings to an existing `secretsManagement` block, run the CLI and choose `add_sdk_settings`.
 
 ### CSI (Volume-Mounted)
 
-Mounts secrets from a cloud vault as files using the [Secrets Store CSI Driver](https://secrets-store-csi-driver.sigs.k8s.io/).
+Mounts secrets from a cloud vault as files using the [Secrets Store CSI Driver](https://secrets-store-csi-driver.sigs.k8s.io/). The chart includes a template at `chart/templates/secret-providerclass.yaml` that generates `SecretProviderClass` resources from values.
 
 ```yaml
 secretsManagement:
   provider: csi
+  kubernetes:
+    autoCreateSecrets: false
+    secretName: redpoint-rpi-secrets
   csi:
-    secretProviderClass: rpi-secret-provider
+    secretProviderClasses:
+      - name: redpoint-rpi-secrets
+        provider: azure
+        secretObjects:
+          - secretName: rpi-synced-secrets
+            type: Opaque
+            data:
+              - key: ConnectionString_Operations_Database
+                objectName: V7-ConnectionString-Operations-Database
+        parameters:
+          keyvaultName: my-keyvault
+          resourceGroup: my-resource-group
+          subscriptionId: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+          clientID: "11111111-2222-3333-4444-555555555555"
+          tenantId: "66666666-7777-8888-9999-000000000000"
+          usePodIdentity: "false"
+          useVMManagedIdentity: "false"
+          useWorkloadIdentity: "true"
+          syncSecret: "true"
+          enable-secret-rotation: "true"
+        objects:
+          - objectName: "V7-ConnectionString-Operations-Database"
+            objectType: secret
 ```
 
-A `SecretProviderClass` resource must exist in the namespace. The chart includes a template at `chart/templates/secret-providerclass.yaml` that can generate one when configured in values.
+### Managing CSI Classes with the CLI
+
+The CLI supports incremental updates — you don't need to rebuild the entire block each time.
+
+| CLI action | What it does |
+|:-----------|:-------------|
+| `add_csi_class` | Add a new `SecretProviderClass` entry to the list |
+| `update_csi_class` | Add objects or secret data mappings to an existing class |
+| `add_sdk_settings` | Add Azure SDK vault settings to an existing block |
+| `change_provider` | Replace the entire `secretsManagement` block |
+
+**Adding a new class:**
+
+```bash
+bash deploy/cli/interactioncli.sh -a secrets_management
+# Choose: add_csi_class
+# Follow prompts for name, provider, vault parameters, objects, and secret mappings
+```
+
+**Updating an existing class — adding vault objects:**
+
+```bash
+bash deploy/cli/interactioncli.sh -a secrets_management
+# Choose: update_csi_class
+# Select class name (auto-selected if only one exists)
+# Choose: objects
+# Enter object names and types to add
+```
+
+This appends new entries to the class's `objects:` list:
+
+```yaml
+        objects:
+          - objectName: "V7-ConnectionString-Operations-Database"
+            objectType: secret
+          # ← new entries are inserted here
+          - objectName: "V7-ConnectionString-LoggingDatabase"
+            objectType: secret
+          - objectName: "V7-SMTP-Password"
+            objectType: secret
+```
+
+**Updating an existing class — adding secret data mappings:**
+
+```bash
+bash deploy/cli/interactioncli.sh -a secrets_management
+# Choose: update_csi_class
+# Select class name
+# Choose: secret_data
+# Enter key/objectName pairs to add
+```
+
+This appends new entries to the class's `secretObjects[].data:` list:
+
+```yaml
+        secretObjects:
+          - secretName: rpi-synced-secrets
+            type: Opaque
+            data:
+              - key: ConnectionString_Operations_Database
+                objectName: V7-ConnectionString-Operations-Database
+              # ← new entries are inserted here
+              - key: ConnectionString_Logging_Database
+                objectName: V7-ConnectionString-LoggingDatabase
+              - key: SMTP_Password
+                objectName: V7-SMTP-Password
+```
+
+Choose `both` to add vault objects and secret data mappings in one pass.
+
+### Combining Providers
+
+You can configure multiple providers in a single `secretsManagement` block. For example, using Kubernetes Secrets as the primary provider while also configuring SDK and CSI for specific use cases:
+
+```yaml
+secretsManagement:
+  provider: kubernetes
+  kubernetes:
+    autoCreateSecrets: false
+    secretName: redpoint-rpi-secrets
+  sdk:
+    azure:
+      vaultUri: https://my-keyvault.vault.azure.net/
+      configurationReloadIntervalSeconds: 30
+      useADTokenForDatabaseConnection: true
+  csi:
+    secretProviderClasses:
+      - name: redpoint-rpi-secrets
+        provider: azure
+        # ... (see CSI example above)
+```
 
 ---
 
