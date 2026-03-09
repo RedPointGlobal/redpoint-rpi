@@ -87,7 +87,7 @@ For optional features (SMTP, content generation, autoscaling, service mesh, etc.
 
 ```bash
 bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
-bash deploy/cli/interactioncli.sh -a redpointAI     # add a specific feature
+bash deploy/cli/interactioncli.sh -a redpoint_ai     # add a specific feature
 ```
 
 ### 3. Upgrade
@@ -140,7 +140,7 @@ After the v7.7 containers are running, the operational databases need a schema u
 **Option A — Automatic (recommended):**
 
 ```bash
-bash deploy/cli/interactioncli.sh -a databaseUpgrade
+bash deploy/cli/interactioncli.sh -a database_upgrade
 helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
 ```
 

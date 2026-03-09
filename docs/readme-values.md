@@ -55,7 +55,7 @@ After the base configuration, the CLI prompts for optional features:
 | `helm_copilot` | AI assistant for chart configuration and troubleshooting |
 | `extra_envs` | Debug and plugin environment variables |
 | `data_warehouse` | Connect to Snowflake, Redshift, or BigQuery |
-| `extraEnvs` | Additional environment variables for debugging |
+| `secrets_management` | Configure secrets provider, CSI classes, SDK vault settings |
 
 ### Adding Features Later
 

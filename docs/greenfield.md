@@ -215,7 +215,7 @@ The Interaction CLI offers optional features (SMTP, storage, Redpoint AI, etc.) 
 2. **After deployment** — add features to an existing overrides file at any time:
 
 ```bash
-bash deploy/cli/interactioncli.sh -a redpointAI    # add a specific feature
+bash deploy/cli/interactioncli.sh -a redpoint_ai    # add a specific feature
 bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
 ```
 
@@ -225,7 +225,7 @@ Either way, the CLI prompts for the required values, appends the configuration b
 helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
 ```
 
-Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `helmcopilot`, `secrets_management`.
+Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `helm_copilot`, `secrets_management`.
 
 ## Next Steps
 

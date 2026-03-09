@@ -13,29 +13,29 @@ bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature
 bash deploy/cli/interactioncli.sh -a menu          # interactive feature picker
 ```
 
-Available features: `databaseUpgrade`, `queuereader`, `autoscaling`, `customMetrics`, `serviceMesh`, `smokeTests`, `entraID`, `oidc`, `smtp`, `redpointAI`, `storage`, `helmcopilot`, `secrets_management`.
+Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `helm_copilot`, `secrets_management`.
 
 For the complete list of every key, see [values-reference.yaml](values-reference.yaml).
 
 ---
 
-| Feature | Key | Description |
-|---------|-----|-------------|
-| [Cloud Identity](#cloud-identity) | `cloudIdentity` | Azure Workload Identity, Google WI, Amazon IRSA |
-| [Secrets Management](#secrets-management) | `secretsManagement` | Kubernetes Secrets, cloud vault SDK, CSI driver |
-| [Storage](#storage) | `storage` | PVCs and PV+PVC pairs for file output, plugins, RPDM |
-| [Realtime API](#realtime-api) | `realtimeapi` | Queue providers, cache providers, API auth, multi-tenancy |
-| [Queue Reader](#queue-reader) | `queuereader` | Drains queue listener and realtime queues |
-| [Database Upgrades](#automatic-database-upgrades) | `databaseUpgrade` | Auto-upgrade operational databases on image tag change |
-| [Autoscaling](#autoscaling) | `autoscaling` | HPA (CPU/memory) or KEDA (Prometheus custom metrics) |
-| [Custom Metrics](#custom-metrics) | `customMetrics` | Prometheus `/metrics` endpoint for all services |
-| [Service Mesh](#service-mesh) | `serviceMesh` | Linkerd Server CRDs for L7 traffic policy |
-| [Smoke Tests](#smoke-tests) | `smokeTests` | Validate PVC mounts and CSI drivers before deploying |
-| [Microsoft Entra ID](#microsoft-entra-id) | `MicrosoftEntraID` | SSO via Azure AD |
-| [OIDC](#open-id-connect) | `OpenIdProviders` | SSO via Keycloak or other OIDC providers |
-| [Demo Mode](#demo-mode) | `global.deployment.mode` | Embedded MSSQL + MongoDB for dev/eval |
-| [Content Generation](#content-generation) | `redpointAI` | OpenAI and Azure Cognitive Search integration |
-| [SMTP](#smtp) | `SMTPSettings` | Email delivery for notifications and workflows |
+| Feature | Values Key | CLI Feature | Description |
+|---------|-----------|-------------|-------------|
+| [Cloud Identity](#cloud-identity) | `cloudIdentity` | *(base config)* | Azure Workload Identity, Google WI, Amazon IRSA |
+| [Secrets Management](#secrets-management) | `secretsManagement` | `secrets_management` | Kubernetes Secrets, cloud vault SDK, CSI driver |
+| [Storage](#storage) | `storage` | `storage` | PVCs and PV+PVC pairs for file output, plugins, RPDM |
+| [Realtime API](#realtime-api) | `realtimeapi` | *(base config)* | Queue providers, cache providers, API auth, multi-tenancy |
+| [Queue Reader](#queue-reader) | `queuereader` | `queue_reader` | Drains queue listener and realtime queues |
+| [Database Upgrades](#automatic-database-upgrades) | `databaseUpgrade` | `database_upgrade` | Auto-upgrade operational databases on image tag change |
+| [Autoscaling](#autoscaling) | `autoscaling` | `autoscaling` | HPA (CPU/memory) or KEDA (Prometheus custom metrics) |
+| [Custom Metrics](#custom-metrics) | `customMetrics` | `custom_metrics` | Prometheus `/metrics` endpoint for all services |
+| [Service Mesh](#service-mesh) | `serviceMesh` | `service_mesh` | Linkerd Server CRDs for L7 traffic policy |
+| [Smoke Tests](#smoke-tests) | `smokeTests` | `smoke_tests` | Validate PVC mounts and CSI drivers before deploying |
+| [Microsoft Entra ID](#microsoft-entra-id) | `MicrosoftEntraID` | `entra_id` | SSO via Azure AD |
+| [OIDC](#open-id-connect) | `OpenIdProviders` | `oidc` | SSO via Keycloak or other OIDC providers |
+| [Demo Mode](#demo-mode) | `global.deployment.mode` | *(base config)* | Embedded MSSQL + MongoDB for dev/eval |
+| [Content Generation](#content-generation) | `redpointAI` | `redpoint_ai` | OpenAI and Azure Cognitive Search integration |
+| [SMTP](#smtp) | `SMTPSettings` | `smtp` | Email delivery for notifications and workflows |
 
 ---
 
