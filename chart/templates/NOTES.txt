@@ -1,73 +1,25 @@
 {{- include "rpi.validateConfig" . -}}
-{{- $appVersion := .Values.global.deployment.images.tag -}}
-{{- $releaseName := .Release.Name -}}
-{{- $namespace := .Release.Namespace -}}
-{{- $platform := .Values.global.deployment.platform -}}
+{{- $v := .Values.global.deployment.images.tag -}}
+{{- $ns := .Release.Namespace -}}
 
-╔══════════════════════════════════════════════════════════════════════╗
-║                        DEPLOYMENT SUCCESSFUL!                        ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ RPI {{ $appVersion }} has been successfully deployed                 ║
-╚══════════════════════════════════════════════════════════════════════╝
+  Redpoint RPI {{ $v }}
+  Release:   {{ .Release.Name }}
+  Namespace: {{ $ns }}
+  Platform:  {{ .Values.global.deployment.platform }}
 
-────────────────────────────────────────────────────────────────────────
-                             DEPLOYMENT DETAILS
-────────────────────────────────────────────────────────────────────────
-• Release:    {{ $releaseName }}
-• Namespace:  {{ $namespace }}
-• Platform:   {{ $platform }}
-• Version:    {{ $appVersion }}
-• Timestamp:  {{ now | date "2006-01-02 15:04:05 UTC" }}
+  Quick checks:
 
-────────────────────────────────────────────────────────────────────────
-                     NEXT STEPS & USEFUL COMMANDS
-────────────────────────────────────────────────────────────────────────
+    kubectl get pods -n {{ $ns }}
+    kubectl get ingress -n {{ $ns }}
 
-1. MONITOR DEPLOYMENT PROGRESS
-   It may take several minutes for all RPI services to start completely.
-   
-   Watch pod status:
-   $ kubectl get pods -n {{ $namespace }} --watch
-   
-   Check pod details:
-   $ kubectl get pods -n {{ $namespace }} -o wide
-   $ kubectl describe pods -n {{ $namespace }} -l app.kubernetes.io/part-of=rpi
+  Watch live rollout progress:
 
-2. ACCESS APPLICATION ENDPOINTS
-   Retrieve RPI client and Configuration Editor URLs:
-   
-   $ kubectl get ingress -n {{ $namespace }}
-   
-3. VERIFY SERVICE HEALTH
-   Check deployment status:
-   $ kubectl get deployments -n {{ $namespace }}
-   
-   Verify all pods are ready:
-   $ kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=rpi -n {{ $namespace }} --timeout=300s
-   
-   Check service endpoints:
-   $ kubectl get endpoints -n {{ $namespace }}
+    bash deploy/cli/deploy.sh --watch -n {{ $ns }}
 
-4. PRINT DEFAULT PASSWORDS
-   Redis Password:
-   kubectl get secret rpi-rebrandly -n {{ .Release.Namespace }} \
-   -o jsonpath="{.data.Rebrandly_RedisPassword}" | base64 -d
+  Troubleshoot:
 
-5. TROUBLESHOOTING & LOGS
-   View application logs:
-   $ kubectl logs -n {{ $namespace }} -l app.kubernetes.io/part-of=rpi --tail=50
-   
-   Check for errors:
-   $ kubectl get events -n {{ $namespace }} --sort-by='.lastTimestamp'
-   
-   Verify resource usage:
-   $ kubectl top pods -n {{ $namespace }}
+    kubectl logs -n {{ $ns }} -l app.kubernetes.io/part-of=rpi --tail=50
+    kubectl get events -n {{ $ns }} --sort-by='.lastTimestamp'
 
-────────────────────────────────────────────────────────────────────────
-                          SUPPORT INFORMATION
-────────────────────────────────────────────────────────────────────────
-• For technical support, please contact: support@redpointglobal.com
-• Documentation: ["https://docs.redpointglobal.com/rpi/"]
-
-Note: Ensure proper network access and DNS configuration to reach the
-      deployed services from your intended access points.
+  Docs:  https://docs.redpointglobal.com/rpi/
+  Help:  support@redpointglobal.com

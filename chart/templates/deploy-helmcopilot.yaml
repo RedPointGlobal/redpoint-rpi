@@ -7,6 +7,20 @@
 {{- if .Values.helmcopilot.enabled }}
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
+  {{- if $annotations }}
+  annotations:
+    {{- $annotations | nindent 4 }}
+  {{- end }}
+
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: {{ $name }}
@@ -70,31 +84,11 @@ spec:
       {{- end }}
       terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
       serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        fsGroup: {{ $secCtx.fsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-        supplementalGroups:
-          {{- with $secCtx.supplementalGroups }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-      {{- end }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       containers:
       - name: {{ $name }}
         image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
-        {{- if $secCtx.enabled }}
-        securityContext:
-          privileged: {{ $secCtx.privileged }}
-          allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
-          readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
-          capabilities:
-            drop:
-            {{- range $secCtx.capabilities.drop }}
-              - {{ . }}
-            {{- end }}
-        {{- end }}
+        {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
         livenessProbe:
           httpGet:
             path: /health/live

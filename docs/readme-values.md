@@ -32,7 +32,7 @@ The CLI guides you through:
 | Platform | `azure`, `amazon`, `google`, or `selfhosted` |
 | Deployment mode | `standard` (existing databases) or `demo` (self-contained) |
 | Operational database | Provider, host, credentials, database names |
-| Data warehouse | Snowflake, Redshift, or BigQuery (optional) |
+| Data warehouse | Snowflake or BigQuery (optional) |
 | Cloud identity | Managed Identity, IRSA, or Workload Identity |
 | Ingress | Domain, TLS, and controller settings |
 | Realtime API | Cache provider, queue provider, connection details |
@@ -54,8 +54,9 @@ After the base configuration, the CLI prompts for optional features:
 | `smoke_tests` | Validate PVC mounts and CSI drivers post-deploy |
 | `helm_copilot` | AI assistant for chart configuration and troubleshooting |
 | `extra_envs` | Debug and plugin environment variables |
-| `data_warehouse` | Connect to Snowflake, Redshift, or BigQuery |
+| `data_warehouse` | Connect to Snowflake or BigQuery |
 | `secrets_management` | Configure secrets provider, CSI classes, SDK vault settings |
+| `node_scheduling` | Node selector and tolerations for dedicated nodes |
 
 ### Adding Features Later
 
@@ -152,6 +153,29 @@ Open `docs/values-reference.yaml` for the complete reference. Every key is docum
 
 ### Examples
 
+**Change global resource defaults for all services:**
+
+```yaml
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    memory: 4Gi
+```
+
+**Override resources for a single service:**
+
+```yaml
+interactionapi:
+  resources:
+    requests:
+      cpu: 1
+      memory: 4Gi
+    limits:
+      memory: 8Gi
+```
+
 **Change liveness probe timing for all services:**
 
 ```yaml
@@ -226,14 +250,16 @@ databases:
 
 ### How Merging Works
 
-Values are resolved in two layers, with the later layer winning:
+Values are resolved in three layers, with later layers winning:
 
 ```
-Chart defaults  →  Your overrides
-(_defaults.tpl)    (your overrides file)
+Chart defaults  →  Global resources  →  Per-service overrides
+(_defaults.tpl)    (resources:)         (your overrides file)
 ```
 
-Your values always take priority over chart defaults. You only specify what you change. Unset keys always use the chart's defaults.
+The `resources:` key in `values.yaml` sets CPU and memory defaults for all services. To override resources for a specific service, set `<service>.resources` in your overrides file — per-service values always win.
+
+For all other settings, your overrides take priority over chart defaults. You only specify what you change. Unset keys always use the chart's defaults.
 
 For example, with this overrides file:
 

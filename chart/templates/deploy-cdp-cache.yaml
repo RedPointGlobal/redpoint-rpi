@@ -184,28 +184,8 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
-          {{- if $cfg.securityContext.enabled }}
-          securityContext:
-            privileged: {{ $cfg.securityContext.privileged }}
-            allowPrivilegeEscalation: {{ $cfg.securityContext.allowPrivilegeEscalation }}
-            readOnlyRootFilesystem: {{ $cfg.securityContext.readOnlyRootFilesystem }}
-            capabilities:
-              drop:
-              {{- range $cfg.securityContext.capabilities.drop }}
-                - {{ . }}
-              {{- end }}
-          {{- end }}
-      {{- if $cfg.securityContext.enabled }}
-      securityContext:
-        runAsUser: {{ $cfg.securityContext.runAsUser }}
-        runAsGroup: {{ $cfg.securityContext.runAsGroup }}
-        fsGroup: {{ $cfg.securityContext.fsGroup }}
-        runAsNonRoot: {{ $cfg.securityContext.runAsNonRoot }}
-        supplementalGroups:
-          {{- with $cfg.securityContext.supplementalGroups }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-      {{- end }}
+          {{- include "rpi.container.securityContext" (dict "sc" $cfg.securityContext) | nindent 10 }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $cfg.securityContext) | nindent 6 }}
       volumes:
         - name: {{ $name }}-config
           configMap:

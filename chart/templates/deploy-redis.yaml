@@ -230,28 +230,8 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
-          {{- if $secCtx.enabled }}
-          securityContext:
-            privileged: {{ $secCtx.privileged }}
-            allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
-            readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
-            capabilities:
-              drop:
-              {{- range $secCtx.capabilities.drop }}
-                - {{ . }}
-              {{- end }}
-          {{- end }}
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        fsGroup: {{ $secCtx.fsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-        supplementalGroups:
-          {{- with $secCtx.supplementalGroups }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-      {{- end }}
+          {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 10 }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       volumes:
         - name: {{ $QueueReadercacheName }}-config
           configMap:
@@ -505,28 +485,8 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
-          {{- if $secCtx.enabled }}
-          securityContext:
-            privileged: {{ $secCtx.privileged }}
-            allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
-            readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
-            capabilities:
-              drop:
-              {{- range $secCtx.capabilities.drop }}
-                - {{ . }}
-              {{- end }}
-          {{- end }}
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        fsGroup: {{ $secCtx.fsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-        supplementalGroups:
-          {{- with $secCtx.supplementalGroups }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-      {{- end }}
+          {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 10 }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       volumes:
         - name: {{ $ExecutioncacheName }}-config
           configMap:

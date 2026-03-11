@@ -183,23 +183,8 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
-          {{- if $secCtx.enabled }}
-          securityContext:
-            privileged: {{ $secCtx.privileged }}
-            allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
-            readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
-            capabilities:
-              drop:
-              {{- range $secCtx.capabilities.drop }}
-                - {{ . }}
-              {{- end }}
-          {{- end }}
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-      {{- end }}
+          {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 10 }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noFsGroup" true "noSupplementalGroups" true) | nindent 6 }}
       volumes:
         - name: {{ $QueueReaderMQ }}-config
           configMap:
@@ -414,23 +399,8 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
-          {{- if $secCtx.enabled }}
-          securityContext:
-            privileged: {{ $secCtx.privileged }}
-            allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
-            readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
-            capabilities:
-              drop:
-              {{- range $secCtx.capabilities.drop }}
-                - {{ . }}
-              {{- end }}
-          {{- end }}
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-      {{- end }}
+          {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 10 }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noFsGroup" true "noSupplementalGroups" true) | nindent 6 }}
       volumes:
         - name: {{ $RealtimeapiMQ }}-config
           configMap:

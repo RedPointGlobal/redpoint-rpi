@@ -78,28 +78,12 @@ spec:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
       restartPolicy: Never
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        fsGroup: {{ $secCtx.fsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-      {{- end }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noSupplementalGroups" true) | nindent 6 }}
       containers:
       - name: postinstall
         image: {{ .Values.global.deployment.images.net_utils }}
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
-        {{- if $secCtx.enabled }}
-        securityContext:
-          privileged: {{ $secCtx.privileged }}
-          allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
-          readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
-          capabilities:
-            drop:
-            {{- range $secCtx.capabilities.drop }}
-              - {{ . }}
-            {{- end }}
-        {{- end }}
+        {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
         env:
         - name: ACTIVATION_KEY
           valueFrom:

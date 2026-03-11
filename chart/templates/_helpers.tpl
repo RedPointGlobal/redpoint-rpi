@@ -71,30 +71,49 @@ app.kubernetes.io/part-of: smartactivation
 {{- end }}
 
 {{/*
-Default security context for RPI services
+Pod-level security context.
+Usage: {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
+Options: set "noFsGroup" true or "noSupplementalGroups" true for services that need a minimal context.
 */}}
-{{- define "redpoint-rpi.securityContext" -}}
+{{- define "rpi.pod.securityContext" -}}
+{{- $sc := .sc -}}
+{{- if $sc.enabled -}}
 securityContext:
-  runAsUser: {{ (fromYaml (include "rpi.merged.securityContext" .)).runAsUser }}
-  runAsGroup: {{ (fromYaml (include "rpi.merged.securityContext" .)).runAsGroup }}
-  fsGroup: {{ (fromYaml (include "rpi.merged.securityContext" .)).fsGroup }}
-  runAsNonRoot: {{ (fromYaml (include "rpi.merged.securityContext" .)).runAsNonRoot }}
-  seccompProfile:
-    type: RuntimeDefault
+  runAsUser: {{ $sc.runAsUser }}
+  runAsGroup: {{ $sc.runAsGroup }}
+  {{- if not .noFsGroup }}
+  fsGroup: {{ $sc.fsGroup }}
+  {{- end }}
+  runAsNonRoot: {{ $sc.runAsNonRoot }}
+  {{- if not .noSupplementalGroups }}
+  {{- with $sc.supplementalGroups }}
+  supplementalGroups:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
 {{- end }}
+{{- end -}}
 
 {{/*
-Default container security context for RPI services
+Container-level security context.
+Usage: {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
 */}}
-{{- define "redpoint-rpi.containerSecurityContext" -}}
+{{- define "rpi.container.securityContext" -}}
+{{- $sc := .sc -}}
+{{- if $sc.enabled -}}
 securityContext:
-  readOnlyRootFilesystem: {{ .readOnlyRootFilesystem | default true }}
-  allowPrivilegeEscalation: false
-  privileged: false
+  privileged: {{ $sc.privileged }}
+  allowPrivilegeEscalation: {{ $sc.allowPrivilegeEscalation }}
+  readOnlyRootFilesystem: {{ $sc.readOnlyRootFilesystem }}
+  appArmorProfile:
+    type: RuntimeDefault
   capabilities:
     drop:
-      - ALL
+    {{- range $sc.capabilities.drop }}
+      - {{ . }}
+    {{- end }}
 {{- end }}
+{{- end -}}
 
 {{/*
 Topology spread constraints
@@ -196,15 +215,13 @@ tolerations:
 {{/* DatawarehouseProviders */}}
 {{- define "redpoint.DatawarehouseProviders" -}}
 {{- $dw := .Values.databases.datawarehouse | default dict -}}
-{{- $redshift := $dw.redshift | default dict -}}
 {{- $bigquery := $dw.bigquery | default dict -}}
 {{- $databricks := $dw.databricks | default dict -}}
 
-{{- $redshiftEnabled := $redshift.enabled | default false -}}
 {{- $bigqueryEnabled := $bigquery.enabled | default false -}}
 {{- $databricksEnabled := $databricks.enabled | default false -}}
 
-{{- if or $redshiftEnabled $bigqueryEnabled $databricksEnabled -}}
+{{- if or $bigqueryEnabled $databricksEnabled -}}
 true
 {{- else -}}
 false
@@ -219,112 +236,126 @@ false
        {{- $cfg := fromYaml (include "rpi.merged.realtimeapi" .) -}}
      ============================================================ */}}
 
-{{/* --- Component merge helpers --- */}}
+{{/* --- Component merge helpers ---
+     Merge order: service defaults → global resources → per-service user values.
+     Global .Values.resources sets a baseline for all services.
+     Per-service overrides (e.g. .Values.interactionapi.resources) win.
+*/}}
+
+{{/* Apply global resources onto a service defaults dict */}}
+{{- define "rpi.applyGlobalResources" -}}
+{{- $d := index . 0 -}}
+{{- $g := index . 1 -}}
+{{- if $g -}}
+{{- $_ := set $d "resources" (mustMergeOverwrite ($d.resources | default dict) $g) -}}
+{{- end -}}
+{{- toYaml $d -}}
+{{- end -}}
 
 {{- define "rpi.merged.realtimeapi" -}}
-{{- $d := fromYaml (include "rpi.defaults.realtimeapi" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.realtimeapi" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.realtimeapi | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.callbackapi" -}}
-{{- $d := fromYaml (include "rpi.defaults.callbackapi" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.callbackapi" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.callbackapi | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.executionservice" -}}
-{{- $d := fromYaml (include "rpi.defaults.executionservice" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.executionservice" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.executionservice | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.interactionapi" -}}
-{{- $d := fromYaml (include "rpi.defaults.interactionapi" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.interactionapi" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.interactionapi | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.integrationapi" -}}
-{{- $d := fromYaml (include "rpi.defaults.integrationapi" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.integrationapi" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.integrationapi | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.nodemanager" -}}
-{{- $d := fromYaml (include "rpi.defaults.nodemanager" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.nodemanager" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.nodemanager | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.deploymentapi" -}}
-{{- $d := fromYaml (include "rpi.defaults.deploymentapi" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.deploymentapi" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.deploymentapi | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.queuereader" -}}
-{{- $d := fromYaml (include "rpi.defaults.queuereader" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.queuereader" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.queuereader | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.rebrandly" -}}
-{{- $d := fromYaml (include "rpi.defaults.rebrandly" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.rebrandly" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.rebrandly | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.authservice" -}}
-{{- $d := fromYaml (include "rpi.defaults.authservice" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.authservice" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.authservice | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.keycloak" -}}
-{{- $d := fromYaml (include "rpi.defaults.keycloak" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.keycloak" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.keycloak | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.initservice" -}}
-{{- $d := fromYaml (include "rpi.defaults.initservice" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.initservice" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.initservice | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.messageq" -}}
-{{- $d := fromYaml (include "rpi.defaults.messageq" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.messageq" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.messageq | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.maintenanceservice" -}}
-{{- $d := fromYaml (include "rpi.defaults.maintenanceservice" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.maintenanceservice" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.maintenanceservice | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.servicesapi" -}}
-{{- $d := fromYaml (include "rpi.defaults.servicesapi" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.servicesapi" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.servicesapi | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.socketio" -}}
-{{- $d := fromYaml (include "rpi.defaults.socketio" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.socketio" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.socketio | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.uiservice" -}}
-{{- $d := fromYaml (include "rpi.defaults.uiservice" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.uiservice" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.uiservice | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
 {{- define "rpi.merged.cdpcache" -}}
-{{- $d := fromYaml (include "rpi.defaults.cdpcache" .) -}}
+{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.cdpcache" .)) (.Values.resources | default dict))) -}}
 {{- $u := .Values.cdpcache | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}

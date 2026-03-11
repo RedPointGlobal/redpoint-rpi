@@ -127,7 +127,6 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       annotations:
-        container.apparmor.security.beta.kubernetes.io/{{ $name }}: {{ $cfg.securityContext.appArmorProfile }}
         {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -137,13 +136,7 @@ spec:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
       serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
-      {{- if $cfg.securityContext.enabled }}
-      securityContext:
-        runAsUser: {{ $cfg.securityContext.runAsUser }}
-        runAsGroup: {{ $cfg.securityContext.runAsGroup }}
-        fsGroup: {{ $cfg.securityContext.fsGroup }}
-        runAsNonRoot: {{ $cfg.securityContext.runAsNonRoot }}
-      {{- end }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $cfg.securityContext "noSupplementalGroups" true) | nindent 6 }}
       terminationGracePeriodSeconds: 120
       affinity:
         podAntiAffinity:
@@ -207,11 +200,8 @@ spec:
           privileged: {{ $cfg.securityContext.privileged }}
           allowPrivilegeEscalation: {{ $cfg.securityContext.allowPrivilegeEscalation }}
           readOnlyRootFilesystem: {{ $cfg.securityContext.readOnlyRootFilesystem }}
-#          capabilities:
-#            drop:
-#            {{- range $cfg.securityContext.capabilities.drop }}
-#              - {{ . }}
-#            {{- end }}
+          appArmorProfile:
+            type: RuntimeDefault
         {{- end }}
         env:
         {{- if .Values.global.deployment.podTimezone }}

@@ -29,7 +29,19 @@ global:
       # Utility image for jobs (upgrade, post-install, smoke tests)
       net_utils: busybox:1.37
     # Optional: set the pod's timezone (e.g., "America/New_York"); leave empty to use default UTC
-    podTimezone: "" # 
+    podTimezone: "" #
+
+# ==========================
+# Global Resource Defaults
+# ==========================
+# Applied to all services unless overridden per-service.
+# Per-service overrides (e.g. interactionapi.resources) take priority.
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 3Gi
 
 # ==========================
 # Operational Database
@@ -49,23 +61,6 @@ databases:
   # Data Warehouse Providers
   # ==========================
   datawarehouse:
-
-    # Redshift
-    redshift:
-      enabled: false
-      connections:
-        - name: rsh-tenant1
-          server: redshift-tenant1.endpoint.aws
-          port: 5439
-          database: db_tenant1
-          username: user1
-          password: pass1
-      # - name: rsh-tenant2
-      #   server: redshift-tenant2.endpoint.aws
-      #   port: 5439
-      #   database: db_tenant2
-      #   username: user2
-      #   password: pass2
 
     # BigQuery
     bigquery:
@@ -358,12 +353,6 @@ realtimeapi:
     enabled: false
     # list: []
 
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
 
@@ -382,12 +371,6 @@ callbackapi:
       replicas: 1
   #  - name: "client2"
   #    replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
 
@@ -415,12 +398,6 @@ executionservice:
       containerName: rpi
       connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net
       useCloudIdentity: false
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
     # Supported: hpa, keda (KEDA is recommended for execution service)
@@ -433,12 +410,6 @@ interactionapi:
   enabled: true
   replicas: 1
   enableRPIAuthentication: true
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
 
@@ -452,12 +423,6 @@ integrationapi:
   # Credentials (required if Smart Activation is enabled)
   username: admin@noemail.com
   password: my_Super_Strong_Pwd
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
 
@@ -468,12 +433,6 @@ nodemanager:
   enabled: true
   replicas: 1
   enableRPIAuthentication: true
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
 
@@ -488,12 +447,6 @@ deploymentapi:
     useTemplateFiles: false
     templateTenantFilesPath: "/tmp/templatetenantfiles"
     volumeClaimName: templatetenantfiles
-  resources:
-    requests:
-      cpu: 500m
-      memory: 1Gi
-    limits:
-      memory: 1Gi
 
 # ==========================
 # Queue Reader
@@ -524,12 +477,6 @@ queuereader:
       - 00000000-0000-0000-0000-000000000000
   errorQueuePath: listenerQueueError 
   nonActiveQueuePath: listenerQueueNonActive
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
 
@@ -550,12 +497,6 @@ rebrandly:
     password: my_redis_password
     useAzureCredentials: false
     port: 6379
-  resources:
-    requests:
-      cpu: 50m
-      memory: 256Mi
-    limits:
-      memory: 4Gi
 
 # ==========================
 # Diagnostics Mode
@@ -736,12 +677,6 @@ authservice:
   replicas: 1
   default_username: admin@noemail.com
   default_password: my_Super_Strong_Pwd
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
 # Keycloak (Smart Activation)
 keycloak:
@@ -753,12 +688,6 @@ keycloak:
   realm_name: redpoint-mercury
   realm_client_id: rpi-service
   realm_client_secret: <my-realm-client-secret>
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
 # Reporting Service
 reportingservice:
@@ -775,75 +704,33 @@ initservice:
     operational:
       name: smart_activation_db
       connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
 # Message Queue (Smart Activation)
 messageq:
   replicas: 1
   username: redpointrpi
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
 # Maintenance Service (Smart Activation)
 maintenanceservice:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
 # Services API (Smart Activation)
 servicesapi:
   replicas: 1
   sso_enabled: true
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
 # Socket.io (Smart Activation)
 socketio:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
 # UI Service (Smart Activation)
 uiservice:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
 # CDP Cache (Smart Activation)
 cdpcache:
   enabled: true
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
 # ==========================
 # Custom Labels and Annotations

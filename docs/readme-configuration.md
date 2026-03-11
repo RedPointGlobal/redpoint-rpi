@@ -13,7 +13,7 @@ bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature
 bash deploy/cli/interactioncli.sh -a menu          # interactive feature picker
 ```
 
-Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `helm_copilot`, `secrets_management`.
+Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `helm_copilot`, `secrets_management`, `node_scheduling`.
 
 For the complete list of every key, see [values-reference.yaml](values-reference.yaml).
 
@@ -36,6 +36,7 @@ For the complete list of every key, see [values-reference.yaml](values-reference
 | [Demo Mode](#demo-mode) | `global.deployment.mode` | *(base config)* | Embedded MSSQL + MongoDB for dev/eval |
 | [Content Generation](#content-generation) | `redpointAI` | `redpoint_ai` | OpenAI and Azure Cognitive Search integration |
 | [SMTP](#smtp) | `SMTPSettings` | `smtp` | Email delivery for notifications and workflows |
+| [Node Scheduling](#node-scheduling) | `nodeSelector` / `tolerations` | `node_scheduling` | Schedule pods on dedicated node pools |
 
 ---
 
@@ -538,6 +539,42 @@ serviceMesh:
 ```
 
 When enabled, the chart creates Server resources for each RPI service, defining the ports and protocols for Linkerd's policy engine.
+
+---
+
+## Node Scheduling
+
+Controls which nodes RPI pods are placed on. Use this to schedule workloads on dedicated node pools (e.g., nodes labeled for RPI) and tolerate their taints.
+
+```bash
+bash deploy/cli/interactioncli.sh -a node_scheduling
+```
+
+### Node Selector
+
+When enabled, all RPI pods are scheduled only on nodes with the specified label.
+
+```yaml
+nodeSelector:
+  enabled: true
+  key: app
+  value: redpoint-rpi
+```
+
+### Tolerations
+
+When enabled, RPI pods tolerate the matching taint so they can run on dedicated nodes that reject other workloads.
+
+```yaml
+tolerations:
+  enabled: true
+  effect: NoSchedule
+  key: app
+  operator: Equal
+  value: redpoint-rpi
+```
+
+Both settings apply globally to all RPI services, including Smart Activation and supporting services (Redis, RabbitMQ). Smoke test deployments support per-entry `nodeSelector` overrides via `smokeTests.deployments[].nodeSelector`.
 
 ---
 

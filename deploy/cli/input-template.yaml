@@ -54,20 +54,12 @@ database:
 # Uncomment ONE provider block below to enable
 # ----------------------------------------------------------
 # data_warehouse:
-#   provider: snowflake        # snowflake | redshift | bigquery
+#   provider: snowflake        # snowflake | bigquery
 #
 #   # --- Snowflake (JWT authentication) ---
 #   snowflake:
 #     configmap_name: snowflake-creds           # ConfigMap containing RSA private key
 #     key_name: my-snowflake-rsakey.p8          # Key file name in ConfigMap
-#
-#   # --- Redshift ---
-#   redshift:
-#     connection_name: rsh-tenant1
-#     host: ""                                  # Redshift cluster endpoint
-#     database: ""                              # Database name
-#     username: ""                              # Username
-#     password: ""                              # Password
 #
 #   # --- BigQuery (service account authentication) ---
 #   bigquery:

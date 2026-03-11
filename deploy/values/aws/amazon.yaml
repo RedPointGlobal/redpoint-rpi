@@ -35,12 +35,8 @@ databases:
   # ==========================
   # Data Warehouse Providers
   # ==========================
-  # redshift | snowflake | bigquery | databricks
+  # snowflake | bigquery | databricks
   datawarehouse:
-
-    # Redshift
-    redshift:
-      enabled: true
 
     # Snowflake
     snowflake:

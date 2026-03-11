@@ -3,7 +3,10 @@
   "title": "Redpoint RPI Helm Chart Values",
   "description": "Configuration values for the Redpoint Interaction (RPI) Helm chart v7.7",
   "type": "object",
-  "required": ["global", "databases"],
+  "required": [
+    "global",
+    "databases"
+  ],
   "additionalProperties": false,
   "properties": {
     "nameOverride": {
@@ -17,25 +20,37 @@
     "global": {
       "type": "object",
       "description": "Global settings shared across all chart components",
-      "required": ["deployment"],
+      "required": [
+        "deployment"
+      ],
       "additionalProperties": true,
       "properties": {
         "deployment": {
           "type": "object",
           "description": "Core deployment configuration",
-          "required": ["platform"],
+          "required": [
+            "platform"
+          ],
           "additionalProperties": true,
           "properties": {
             "mode": {
               "type": "string",
               "description": "Deployment mode: standard (default) or demo. Demo mode deploys embedded MSSQL + MongoDB containers.",
-              "enum": ["standard", "demo"],
+              "enum": [
+                "standard",
+                "demo"
+              ],
               "default": "standard"
             },
             "platform": {
               "type": "string",
               "description": "Cloud environment: azure, amazon, google, or selfhosted",
-              "enum": ["azure", "amazon", "google", "selfhosted"]
+              "enum": [
+                "azure",
+                "amazon",
+                "google",
+                "selfhosted"
+              ]
             },
             "images": {
               "type": "object",
@@ -53,7 +68,11 @@
                 "imagePullPolicy": {
                   "type": "string",
                   "description": "Kubernetes image pull policy",
-                  "enum": ["Always", "IfNotPresent", "Never"],
+                  "enum": [
+                    "Always",
+                    "IfNotPresent",
+                    "Never"
+                  ],
                   "default": "Always"
                 },
                 "imagePullSecret": {
@@ -94,7 +113,11 @@
             "provider": {
               "type": "string",
               "description": "Database provider type",
-              "enum": ["sqlserver", "postgresql", "sqlserveronvm"]
+              "enum": [
+                "sqlserver",
+                "postgresql",
+                "sqlserveronvm"
+              ]
             },
             "server_host": {
               "type": "string",
@@ -127,33 +150,6 @@
           "description": "Data warehouse provider configurations",
           "additionalProperties": true,
           "properties": {
-            "redshift": {
-              "type": "object",
-              "description": "Amazon Redshift data warehouse configuration",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Enable Redshift data warehouse provider"
-                },
-                "connections": {
-                  "type": "array",
-                  "description": "List of Redshift connection configurations",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": true,
-                    "properties": {
-                      "name": { "type": "string", "description": "Connection identifier name" },
-                      "server": { "type": "string", "description": "Redshift cluster endpoint" },
-                      "port": { "type": "integer", "description": "Redshift port (default 5439)" },
-                      "database": { "type": "string", "description": "Database name" },
-                      "username": { "type": "string", "description": "Database username" },
-                      "password": { "type": "string", "description": "Database password" }
-                    }
-                  }
-                }
-              }
-            },
             "bigquery": {
               "type": "object",
               "description": "Google BigQuery data warehouse configuration",
@@ -326,7 +322,11 @@
         "provider": {
           "type": "string",
           "description": "Secrets management provider",
-          "enum": ["kubernetes", "sdk", "csi"]
+          "enum": [
+            "kubernetes",
+            "sdk",
+            "csi"
+          ]
         },
         "kubernetes": {
           "type": "object",
@@ -345,7 +345,7 @@
         },
         "sdk": {
           "type": "object",
-          "description": "SDK settings — app reads from cloud vault directly (provider: sdk)",
+          "description": "SDK settings \u2014 app reads from cloud vault directly (provider: sdk)",
           "additionalProperties": true,
           "properties": {
             "azure": {
@@ -393,7 +393,7 @@
         },
         "csi": {
           "type": "object",
-          "description": "CSI driver settings — syncs cloud vault to K8s Secret (provider: csi)",
+          "description": "CSI driver settings \u2014 syncs cloud vault to K8s Secret (provider: csi)",
           "additionalProperties": true,
           "properties": {
             "secretName": {
@@ -427,9 +427,18 @@
               "description": "PVC for file output directory",
               "additionalProperties": true,
               "properties": {
-                "enabled": { "type": "boolean", "description": "Enable this PVC" },
-                "claimName": { "type": "string", "description": "PVC claim name" },
-                "mountPath": { "type": "string", "description": "Mount path in the container" }
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable this PVC"
+                },
+                "claimName": {
+                  "type": "string",
+                  "description": "PVC claim name"
+                },
+                "mountPath": {
+                  "type": "string",
+                  "description": "Mount path in the container"
+                }
               }
             },
             "Plugins": {
@@ -437,9 +446,18 @@
               "description": "PVC for realtime plugins",
               "additionalProperties": true,
               "properties": {
-                "enabled": { "type": "boolean", "description": "Enable this PVC" },
-                "claimName": { "type": "string", "description": "PVC claim name" },
-                "mountPath": { "type": "string", "description": "Mount path in the container" }
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable this PVC"
+                },
+                "claimName": {
+                  "type": "string",
+                  "description": "PVC claim name"
+                },
+                "mountPath": {
+                  "type": "string",
+                  "description": "Mount path in the container"
+                }
               }
             },
             "DataManagementUploadDirectory": {
@@ -447,9 +465,18 @@
               "description": "PVC for data management upload directory",
               "additionalProperties": true,
               "properties": {
-                "enabled": { "type": "boolean", "description": "Enable this PVC" },
-                "claimName": { "type": "string", "description": "PVC claim name" },
-                "mountPath": { "type": "string", "description": "Mount path in the container" }
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable this PVC"
+                },
+                "claimName": {
+                  "type": "string",
+                  "description": "PVC claim name"
+                },
+                "mountPath": {
+                  "type": "string",
+                  "description": "Mount path in the container"
+                }
               }
             }
           }
@@ -466,7 +493,7 @@
     },
     "realtimeapi": {
       "type": "object",
-      "description": "Realtime API service configuration — handles real-time decisioning, caching, and queue processing",
+      "description": "Realtime API service configuration \u2014 handles real-time decisioning, caching, and queue processing",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -490,17 +517,32 @@
             "type": {
               "type": "string",
               "description": "Authentication type for the Realtime API",
-              "enum": ["basic", "oauth"]
+              "enum": [
+                "basic",
+                "oauth"
+              ]
             },
             "basic": {
               "type": "object",
               "description": "Basic authentication settings",
               "additionalProperties": true,
               "properties": {
-                "standard": { "type": "boolean", "description": "Enable standard basic auth" },
-                "forms": { "type": "boolean", "description": "Enable forms basic auth" },
-                "listenerQueue": { "type": "boolean", "description": "Enable listener queue basic auth" },
-                "recommendations": { "type": "boolean", "description": "Enable recommendations basic auth" }
+                "standard": {
+                  "type": "boolean",
+                  "description": "Enable standard basic auth"
+                },
+                "forms": {
+                  "type": "boolean",
+                  "description": "Enable forms basic auth"
+                },
+                "listenerQueue": {
+                  "type": "boolean",
+                  "description": "Enable listener queue basic auth"
+                },
+                "recommendations": {
+                  "type": "boolean",
+                  "description": "Enable recommendations basic auth"
+                }
               }
             },
             "oauth": {
@@ -508,9 +550,18 @@
               "description": "OAuth authentication settings",
               "additionalProperties": true,
               "properties": {
-                "databaseName": { "type": "string", "description": "OAuth database name" },
-                "accessTokenLifetimeSeconds": { "type": "integer", "description": "Access token lifetime in seconds" },
-                "refreshTokenLifetimeSeconds": { "type": "integer", "description": "Refresh token lifetime in seconds" }
+                "databaseName": {
+                  "type": "string",
+                  "description": "OAuth database name"
+                },
+                "accessTokenLifetimeSeconds": {
+                  "type": "integer",
+                  "description": "Access token lifetime in seconds"
+                },
+                "refreshTokenLifetimeSeconds": {
+                  "type": "integer",
+                  "description": "Refresh token lifetime in seconds"
+                }
               }
             }
           }
@@ -518,7 +569,9 @@
         "CORSOrigins": {
           "type": "array",
           "description": "Allowed CORS origins for the Realtime API",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "cacheProvider": {
           "type": "object",
@@ -532,16 +585,32 @@
             "provider": {
               "type": "string",
               "description": "Cache provider type",
-              "enum": ["", "mongodb", "azureredis", "redis", "inMemorySql", "googlebigtable"]
+              "enum": [
+                "",
+                "mongodb",
+                "azureredis",
+                "redis",
+                "inMemorySql",
+                "googlebigtable"
+              ]
             },
             "mongodb": {
               "type": "object",
               "description": "MongoDB cache provider settings",
               "additionalProperties": true,
               "properties": {
-                "connectionString": { "type": "string", "description": "MongoDB connection string" },
-                "databaseName": { "type": "string", "description": "MongoDB database name" },
-                "collectionName": { "type": "string", "description": "MongoDB collection name" }
+                "connectionString": {
+                  "type": "string",
+                  "description": "MongoDB connection string"
+                },
+                "databaseName": {
+                  "type": "string",
+                  "description": "MongoDB database name"
+                },
+                "collectionName": {
+                  "type": "string",
+                  "description": "MongoDB collection name"
+                }
               }
             },
             "redis": {
@@ -552,14 +621,20 @@
                 "type": {
                   "type": "string",
                   "description": "Redis deployment type: internal (chart-managed) or external (BYO)",
-                  "enum": ["internal", "external"]
+                  "enum": [
+                    "internal",
+                    "external"
+                  ]
                 },
                 "redisSettings": {
                   "type": "object",
                   "description": "Redis connection settings",
                   "additionalProperties": true,
                   "properties": {
-                    "connectionString": { "type": "string", "description": "Redis connection string (required if type=external)" }
+                    "connectionString": {
+                      "type": "string",
+                      "description": "Redis connection string (required if type=external)"
+                    }
                   }
                 }
               }
@@ -569,10 +644,22 @@
               "description": "In-memory SQL cache provider settings",
               "additionalProperties": true,
               "properties": {
-                "server_host": { "type": "string", "description": "Cache database server host" },
-                "database_name": { "type": "string", "description": "Cache database name" },
-                "username": { "type": "string", "description": "Cache database username" },
-                "password": { "type": "string", "description": "Cache database password" }
+                "server_host": {
+                  "type": "string",
+                  "description": "Cache database server host"
+                },
+                "database_name": {
+                  "type": "string",
+                  "description": "Cache database name"
+                },
+                "username": {
+                  "type": "string",
+                  "description": "Cache database username"
+                },
+                "password": {
+                  "type": "string",
+                  "description": "Cache database password"
+                }
               }
             },
             "googlebigtable": {
@@ -580,8 +667,14 @@
               "description": "Google Bigtable cache provider settings",
               "additionalProperties": true,
               "properties": {
-                "projectId": { "type": "string", "description": "Google Cloud project ID" },
-                "instanceId": { "type": "string", "description": "Bigtable instance ID" }
+                "projectId": {
+                  "type": "string",
+                  "description": "Google Cloud project ID"
+                },
+                "instanceId": {
+                  "type": "string",
+                  "description": "Bigtable instance ID"
+                }
               }
             }
           }
@@ -598,19 +691,46 @@
             "provider": {
               "type": "string",
               "description": "Queue provider type",
-              "enum": ["", "amazonsqs", "azureservicebus", "googlepubsub", "azureeventhubs", "rabbitmq", "azurestorage", "amazonmsk"]
+              "enum": [
+                "",
+                "amazonsqs",
+                "azureservicebus",
+                "googlepubsub",
+                "azureeventhubs",
+                "rabbitmq",
+                "azurestorage",
+                "amazonmsk"
+              ]
             },
             "queueNames": {
               "type": "object",
               "description": "Queue name configuration for each message type",
               "additionalProperties": true,
               "properties": {
-                "formQueuePath": { "type": "string", "description": "Web form submission queue name" },
-                "eventsQueuePath": { "type": "string", "description": "Web events queue name" },
-                "cacheOutputQueuePath": { "type": "string", "description": "Cache data output queue name" },
-                "recommendationsQueuePath": { "type": "string", "description": "Recommendations queue name" },
-                "listenerQueuePath": { "type": "string", "description": "Queue listener queue name" },
-                "callbackServiceQueuePath": { "type": "string", "description": "Callback API queue name" }
+                "formQueuePath": {
+                  "type": "string",
+                  "description": "Web form submission queue name"
+                },
+                "eventsQueuePath": {
+                  "type": "string",
+                  "description": "Web events queue name"
+                },
+                "cacheOutputQueuePath": {
+                  "type": "string",
+                  "description": "Cache data output queue name"
+                },
+                "recommendationsQueuePath": {
+                  "type": "string",
+                  "description": "Recommendations queue name"
+                },
+                "listenerQueuePath": {
+                  "type": "string",
+                  "description": "Queue listener queue name"
+                },
+                "callbackServiceQueuePath": {
+                  "type": "string",
+                  "description": "Callback API queue name"
+                }
               }
             },
             "amazonsqs": {
@@ -618,7 +738,10 @@
               "description": "Amazon SQS queue provider settings",
               "additionalProperties": true,
               "properties": {
-                "credentialsType": { "type": "string", "description": "SQS credentials type" }
+                "credentialsType": {
+                  "type": "string",
+                  "description": "SQS credentials type"
+                }
               }
             },
             "azureservicebus": {
@@ -626,7 +749,10 @@
               "description": "Azure Service Bus queue provider settings",
               "additionalProperties": true,
               "properties": {
-                "connectionstring": { "type": "string", "description": "Azure Service Bus connection string" }
+                "connectionstring": {
+                  "type": "string",
+                  "description": "Azure Service Bus connection string"
+                }
               }
             },
             "azurestorage": {
@@ -634,9 +760,18 @@
               "description": "Azure Storage queue provider settings",
               "additionalProperties": true,
               "properties": {
-                "connectionString": { "type": "string", "description": "Azure Storage connection string" },
-                "storageAccountName": { "type": "string", "description": "Azure Storage account name" },
-                "useAzureIdentityAuthentication": { "type": "boolean", "description": "Use Azure Identity for authentication" }
+                "connectionString": {
+                  "type": "string",
+                  "description": "Azure Storage connection string"
+                },
+                "storageAccountName": {
+                  "type": "string",
+                  "description": "Azure Storage account name"
+                },
+                "useAzureIdentityAuthentication": {
+                  "type": "boolean",
+                  "description": "Use Azure Identity for authentication"
+                }
               }
             },
             "googlepubsub": {
@@ -644,7 +779,10 @@
               "description": "Google Pub/Sub queue provider settings",
               "additionalProperties": true,
               "properties": {
-                "projectId": { "type": "string", "description": "Google Cloud project ID" }
+                "projectId": {
+                  "type": "string",
+                  "description": "Google Cloud project ID"
+                }
               }
             },
             "azureeventhubs": {
@@ -652,10 +790,25 @@
               "description": "Azure Event Hubs queue provider settings",
               "additionalProperties": true,
               "properties": {
-                "connectionstring": { "type": "string", "description": "Azure Event Hubs connection string" },
-                "eventHubName": { "type": "string", "description": "Event Hub name" },
-                "NamespaceName": { "type": "string", "description": "Event Hubs namespace name" },
-                "PartitionIds": { "type": "array", "description": "Partition IDs", "items": { "type": "string" } }
+                "connectionstring": {
+                  "type": "string",
+                  "description": "Azure Event Hubs connection string"
+                },
+                "eventHubName": {
+                  "type": "string",
+                  "description": "Event Hub name"
+                },
+                "NamespaceName": {
+                  "type": "string",
+                  "description": "Event Hubs namespace name"
+                },
+                "PartitionIds": {
+                  "type": "array",
+                  "description": "Partition IDs",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             },
             "rabbitmq": {
@@ -666,7 +819,10 @@
                 "type": {
                   "type": "string",
                   "description": "RabbitMQ deployment type: internal (chart-managed) or external (BYO)",
-                  "enum": ["internal", "external"]
+                  "enum": [
+                    "internal",
+                    "external"
+                  ]
                 }
               }
             },
@@ -675,10 +831,22 @@
               "description": "Amazon MSK queue provider settings",
               "additionalProperties": true,
               "properties": {
-                "region": { "type": "string", "description": "AWS region" },
-                "accessKeyId": { "type": "string", "description": "AWS IAM access key" },
-                "secretAccessKey": { "type": "string", "description": "AWS IAM secret access key" },
-                "bootstrapServers": { "type": "string", "description": "MSK bootstrap servers" }
+                "region": {
+                  "type": "string",
+                  "description": "AWS region"
+                },
+                "accessKeyId": {
+                  "type": "string",
+                  "description": "AWS IAM access key"
+                },
+                "secretAccessKey": {
+                  "type": "string",
+                  "description": "AWS IAM secret access key"
+                },
+                "bootstrapServers": {
+                  "type": "string",
+                  "description": "MSK bootstrap servers"
+                }
               }
             }
           }
@@ -688,8 +856,18 @@
           "description": "Custom Realtime plugins configuration",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable custom realtime plugins" },
-            "list": { "type": "array", "description": "List of custom plugin configurations", "items": { "type": "object", "additionalProperties": true } }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable custom realtime plugins"
+            },
+            "list": {
+              "type": "array",
+              "description": "List of custom plugin configurations",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
           }
         },
         "resources": {
@@ -704,7 +882,7 @@
     },
     "callbackapi": {
       "type": "object",
-      "description": "Callback API service configuration — handles callback channel processing (e.g., SendGrid)",
+      "description": "Callback API service configuration \u2014 handles callback channel processing (e.g., SendGrid)",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -725,7 +903,10 @@
           "description": "Multi-tenancy configuration for per-client instances",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable multi-tenancy mode" }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable multi-tenancy mode"
+            }
           }
         },
         "instances": {
@@ -735,8 +916,15 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "name": { "type": "string", "description": "Tenant instance name" },
-              "replicas": { "type": "integer", "description": "Replica count for this tenant", "minimum": 0 }
+              "name": {
+                "type": "string",
+                "description": "Tenant instance name"
+              },
+              "replicas": {
+                "type": "integer",
+                "description": "Replica count for this tenant",
+                "minimum": 0
+              }
             }
           }
         },
@@ -752,7 +940,7 @@
     },
     "executionservice": {
       "type": "object",
-      "description": "Execution Service configuration — handles selection rule execution and job processing",
+      "description": "Execution Service configuration \u2014 handles selection rule execution and job processing",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -773,11 +961,18 @@
           "description": "Internal cache for execution state",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable internal cache" },
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable internal cache"
+            },
             "provider": {
               "type": "string",
               "description": "Cache provider type",
-              "enum": ["default", "filesystem", "azureblob"]
+              "enum": [
+                "default",
+                "filesystem",
+                "azureblob"
+              ]
             },
             "redisSettings": {
               "type": "object",
@@ -787,9 +982,15 @@
                 "type": {
                   "type": "string",
                   "description": "Redis deployment type: internal (chart-managed) or external (BYO)",
-                  "enum": ["internal", "external"]
+                  "enum": [
+                    "internal",
+                    "external"
+                  ]
                 },
-                "connectionString": { "type": "string", "description": "Redis connection string (required if type=external)" }
+                "connectionString": {
+                  "type": "string",
+                  "description": "Redis connection string (required if type=external)"
+                }
               }
             },
             "azureStorageSettings": {
@@ -797,10 +998,22 @@
               "description": "Azure Blob storage settings (when provider=azureblob)",
               "additionalProperties": true,
               "properties": {
-                "accountName": { "type": "string", "description": "Azure Storage account name" },
-                "containerName": { "type": "string", "description": "Azure Blob container name" },
-                "connectionString": { "type": "string", "description": "Azure Storage connection string" },
-                "useCloudIdentity": { "type": "boolean", "description": "Use cloud identity for authentication" }
+                "accountName": {
+                  "type": "string",
+                  "description": "Azure Storage account name"
+                },
+                "containerName": {
+                  "type": "string",
+                  "description": "Azure Blob container name"
+                },
+                "connectionString": {
+                  "type": "string",
+                  "description": "Azure Storage connection string"
+                },
+                "useCloudIdentity": {
+                  "type": "boolean",
+                  "description": "Use cloud identity for authentication"
+                }
               }
             }
           }
@@ -817,7 +1030,7 @@
     },
     "interactionapi": {
       "type": "object",
-      "description": "Interaction API service configuration — main API for client/UI interactions",
+      "description": "Interaction API service configuration \u2014 main API for client/UI interactions",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -845,7 +1058,7 @@
     },
     "integrationapi": {
       "type": "object",
-      "description": "Integration API service configuration — handles external system integrations and Smart Activation communication",
+      "description": "Integration API service configuration \u2014 handles external system integrations and Smart Activation communication",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -881,7 +1094,7 @@
     },
     "nodemanager": {
       "type": "object",
-      "description": "Node Manager service configuration — manages cluster node operations",
+      "description": "Node Manager service configuration \u2014 manages cluster node operations",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -909,7 +1122,7 @@
     },
     "deploymentapi": {
       "type": "object",
-      "description": "Deployment API service configuration — manages tenant provisioning and database upgrades",
+      "description": "Deployment API service configuration \u2014 manages tenant provisioning and database upgrades",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -926,9 +1139,18 @@
           "description": "Template tenant configuration for new tenant creation",
           "additionalProperties": true,
           "properties": {
-            "useTemplateFiles": { "type": "boolean", "description": "Use exported tenant template files" },
-            "templateTenantFilesPath": { "type": "string", "description": "Path to template tenant files" },
-            "volumeClaimName": { "type": "string", "description": "Volume claim name for template files" }
+            "useTemplateFiles": {
+              "type": "boolean",
+              "description": "Use exported tenant template files"
+            },
+            "templateTenantFilesPath": {
+              "type": "string",
+              "description": "Path to template tenant files"
+            },
+            "volumeClaimName": {
+              "type": "string",
+              "description": "Volume claim name for template files"
+            }
           }
         },
         "resources": {
@@ -939,7 +1161,7 @@
     },
     "queuereader": {
       "type": "object",
-      "description": "Queue Reader service configuration — processes messages from the realtime queue",
+      "description": "Queue Reader service configuration \u2014 processes messages from the realtime queue",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -965,14 +1187,27 @@
               "description": "Internal cache configuration for queue reader",
               "additionalProperties": true,
               "properties": {
-                "provider": { "type": "string", "description": "Cache provider (e.g., redis)" },
-                "type": { "type": "string", "description": "Deployment type: internal or external", "enum": ["internal", "external"] },
+                "provider": {
+                  "type": "string",
+                  "description": "Cache provider (e.g., redis)"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Deployment type: internal or external",
+                  "enum": [
+                    "internal",
+                    "external"
+                  ]
+                },
                 "redisSettings": {
                   "type": "object",
                   "description": "Redis settings",
                   "additionalProperties": true,
                   "properties": {
-                    "connectionString": { "type": "string", "description": "Redis connection string (required if type=external)" }
+                    "connectionString": {
+                      "type": "string",
+                      "description": "Redis connection string (required if type=external)"
+                    }
                   }
                 }
               }
@@ -982,16 +1217,35 @@
               "description": "Distributed queue configuration",
               "additionalProperties": true,
               "properties": {
-                "provider": { "type": "string", "description": "Queue provider (e.g., rabbitmq)" },
-                "type": { "type": "string", "description": "Deployment type: internal or external", "enum": ["internal", "external"] },
+                "provider": {
+                  "type": "string",
+                  "description": "Queue provider (e.g., rabbitmq)"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Deployment type: internal or external",
+                  "enum": [
+                    "internal",
+                    "external"
+                  ]
+                },
                 "rabbitmqSettings": {
                   "type": "object",
                   "description": "RabbitMQ settings for distributed queue",
                   "additionalProperties": true,
                   "properties": {
-                    "hostname": { "type": "string", "description": "RabbitMQ hostname" },
-                    "username": { "type": "string", "description": "RabbitMQ username" },
-                    "password": { "type": "string", "description": "RabbitMQ password" }
+                    "hostname": {
+                      "type": "string",
+                      "description": "RabbitMQ hostname"
+                    },
+                    "username": {
+                      "type": "string",
+                      "description": "RabbitMQ username"
+                    },
+                    "password": {
+                      "type": "string",
+                      "description": "RabbitMQ password"
+                    }
                   }
                 }
               }
@@ -999,14 +1253,18 @@
             "tenantIds": {
               "type": "array",
               "description": "RPI client IDs (GUIDs) for this queue reader cluster",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
         "tenantIds": {
           "type": "array",
-          "description": "RPI client IDs (GUIDs) — alternative top-level placement",
-          "items": { "type": "string" }
+          "description": "RPI client IDs (GUIDs) \u2014 alternative top-level placement",
+          "items": {
+            "type": "string"
+          }
         },
         "errorQueuePath": {
           "type": "string",
@@ -1052,12 +1310,34 @@
           "description": "Redis settings for Rebrandly caching",
           "additionalProperties": true,
           "properties": {
-            "type": { "type": "string", "description": "Redis deployment type: internal or external", "enum": ["internal", "external"] },
-            "hostname": { "type": "string", "description": "Redis hostname (if type=external)" },
-            "username": { "type": "string", "description": "Redis username" },
-            "password": { "type": "string", "description": "Redis password" },
-            "useAzureCredentials": { "type": "boolean", "description": "Use Azure credentials for Redis" },
-            "port": { "type": "integer", "description": "Redis port" }
+            "type": {
+              "type": "string",
+              "description": "Redis deployment type: internal or external",
+              "enum": [
+                "internal",
+                "external"
+              ]
+            },
+            "hostname": {
+              "type": "string",
+              "description": "Redis hostname (if type=external)"
+            },
+            "username": {
+              "type": "string",
+              "description": "Redis username"
+            },
+            "password": {
+              "type": "string",
+              "description": "Redis password"
+            },
+            "useAzureCredentials": {
+              "type": "boolean",
+              "description": "Use Azure credentials for Redis"
+            },
+            "port": {
+              "type": "integer",
+              "description": "Redis port"
+            }
           }
         },
         "resources": {
@@ -1076,7 +1356,10 @@
           "description": ".NET diagnostic tools settings",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable .NET diagnostic tools" }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable .NET diagnostic tools"
+            }
           }
         },
         "copytoAzureBlob": {
@@ -1084,13 +1367,34 @@
           "description": "Copy diagnostics to Azure Blob Storage",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable copying to Azure Blob" },
-            "accountName": { "type": "string", "description": "Azure Storage account name" },
-            "accessKey": { "type": "string", "description": "Azure Storage access key" },
-            "containerName": { "type": "string", "description": "Azure Blob container name" },
-            "blobServiceEndpoint": { "type": "string", "description": "Azure Blob service endpoint URL" },
-            "enableCdn": { "type": "boolean", "description": "Enable CDN for blob access" },
-            "UseDataLakeStorageGen2": { "type": "boolean", "description": "Use Azure Data Lake Storage Gen2" }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable copying to Azure Blob"
+            },
+            "accountName": {
+              "type": "string",
+              "description": "Azure Storage account name"
+            },
+            "accessKey": {
+              "type": "string",
+              "description": "Azure Storage access key"
+            },
+            "containerName": {
+              "type": "string",
+              "description": "Azure Blob container name"
+            },
+            "blobServiceEndpoint": {
+              "type": "string",
+              "description": "Azure Blob service endpoint URL"
+            },
+            "enableCdn": {
+              "type": "boolean",
+              "description": "Enable CDN for blob access"
+            },
+            "UseDataLakeStorageGen2": {
+              "type": "boolean",
+              "description": "Use Azure Data Lake Storage Gen2"
+            }
           }
         },
         "copytoSftp": {
@@ -1098,11 +1402,26 @@
           "description": "Copy diagnostics to SFTP server",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable copying to SFTP" },
-            "sftpHost": { "type": "string", "description": "SFTP server hostname" },
-            "sftpUsername": { "type": "string", "description": "SFTP username" },
-            "sftpPassword": { "type": "string", "description": "SFTP password" },
-            "sftpPort": { "type": "string", "description": "SFTP port" }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable copying to SFTP"
+            },
+            "sftpHost": {
+              "type": "string",
+              "description": "SFTP server hostname"
+            },
+            "sftpUsername": {
+              "type": "string",
+              "description": "SFTP username"
+            },
+            "sftpPassword": {
+              "type": "string",
+              "description": "SFTP password"
+            },
+            "sftpPort": {
+              "type": "string",
+              "description": "SFTP port"
+            }
           }
         }
       }
@@ -1142,7 +1461,11 @@
         "name": {
           "type": "string",
           "description": "OpenID provider name",
-          "enum": ["keycloak", "Keycloak", "Okta"]
+          "enum": [
+            "keycloak",
+            "Keycloak",
+            "Okta"
+          ]
         },
         "authorizationHost": {
           "type": "string",
@@ -1179,7 +1502,9 @@
         "customScopes": {
           "type": "array",
           "description": "Custom OAuth scopes to request",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "supportsUserManagement": {
           "type": "boolean",
@@ -1245,12 +1570,18 @@
         "mode": {
           "type": "string",
           "description": "Ingress mode: public (internet-facing) or private (internal only)",
-          "enum": ["public", "private"]
+          "enum": [
+            "public",
+            "private"
+          ]
         },
         "certificateSource": {
           "type": "string",
           "description": "TLS certificate source: kubernetes (K8s Secret) or acm (AWS Certificate Manager)",
-          "enum": ["kubernetes", "acm"]
+          "enum": [
+            "kubernetes",
+            "acm"
+          ]
         },
         "tls": {
           "type": "array",
@@ -1259,8 +1590,17 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "secretName": { "type": "string", "description": "Kubernetes TLS secret name" },
-              "hosts": { "type": "array", "description": "Hostnames for this TLS certificate", "items": { "type": "string" } }
+              "secretName": {
+                "type": "string",
+                "description": "Kubernetes TLS secret name"
+              },
+              "hosts": {
+                "type": "array",
+                "description": "Hostnames for this TLS certificate",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           }
         },
@@ -1286,24 +1626,51 @@
               "description": "Azure Private Link settings",
               "additionalProperties": true,
               "properties": {
-                "enabled": { "type": "boolean", "description": "Enable Azure Private Link" }
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable Azure Private Link"
+                }
               }
             }
           }
         },
         "hosts": {
           "type": "object",
-          "description": "Service hostnames — subdomains are prepended to domain; values with a dot are used as FQDNs",
+          "description": "Service hostnames \u2014 subdomains are prepended to domain; values with a dot are used as FQDNs",
           "additionalProperties": true,
           "properties": {
-            "config": { "type": "string", "description": "Deployment API hostname or subdomain" },
-            "client": { "type": "string", "description": "Interaction API hostname or subdomain" },
-            "integration": { "type": "string", "description": "Integration API hostname or subdomain" },
-            "realtime": { "type": "string", "description": "Realtime API hostname or subdomain" },
-            "callbackapi": { "type": "string", "description": "Callback API hostname or subdomain (or FQDN)" },
-            "queuereader": { "type": "string", "description": "Queue Reader hostname or subdomain" },
-            "rabbitmqconsole": { "type": "string", "description": "RabbitMQ console hostname or subdomain" },
-            "smartactivation": { "type": "string", "description": "Smart Activation hostname or subdomain" }
+            "config": {
+              "type": "string",
+              "description": "Deployment API hostname or subdomain"
+            },
+            "client": {
+              "type": "string",
+              "description": "Interaction API hostname or subdomain"
+            },
+            "integration": {
+              "type": "string",
+              "description": "Integration API hostname or subdomain"
+            },
+            "realtime": {
+              "type": "string",
+              "description": "Realtime API hostname or subdomain"
+            },
+            "callbackapi": {
+              "type": "string",
+              "description": "Callback API hostname or subdomain (or FQDN)"
+            },
+            "queuereader": {
+              "type": "string",
+              "description": "Queue Reader hostname or subdomain"
+            },
+            "rabbitmqconsole": {
+              "type": "string",
+              "description": "RabbitMQ console hostname or subdomain"
+            },
+            "smartactivation": {
+              "type": "string",
+              "description": "Smart Activation hostname or subdomain"
+            }
           }
         },
         "annotations": {
@@ -1340,7 +1707,9 @@
         "provider": {
           "type": "string",
           "description": "Service mesh provider",
-          "enum": ["linkerd"]
+          "enum": [
+            "linkerd"
+          ]
         },
         "servers": {
           "type": "array",
@@ -1349,10 +1718,23 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "name": { "type": "string", "description": "Server name" },
-              "podSelector": { "type": "object", "description": "Pod label selector", "additionalProperties": true },
-              "port": { "type": "integer", "description": "Service port" },
-              "proxyProtocol": { "type": "string", "description": "Proxy protocol (e.g., HTTP/1)" }
+              "name": {
+                "type": "string",
+                "description": "Server name"
+              },
+              "podSelector": {
+                "type": "object",
+                "description": "Pod label selector",
+                "additionalProperties": true
+              },
+              "port": {
+                "type": "integer",
+                "description": "Service port"
+              },
+              "proxyProtocol": {
+                "type": "string",
+                "description": "Proxy protocol (e.g., HTTP/1)"
+              }
             }
           }
         }
@@ -1418,11 +1800,26 @@
           "description": "Natural language AI settings (OpenAI / Azure OpenAI)",
           "additionalProperties": true,
           "properties": {
-            "ApiKey": { "type": "string", "description": "OpenAI API key" },
-            "ApiBase": { "type": "string", "description": "OpenAI API base URL" },
-            "ApiVersion": { "type": "string", "description": "OpenAI API version" },
-            "ChatGptEngine": { "type": "string", "description": "ChatGPT model engine name" },
-            "ChatGptTemp": { "type": "number", "description": "ChatGPT temperature setting" }
+            "ApiKey": {
+              "type": "string",
+              "description": "OpenAI API key"
+            },
+            "ApiBase": {
+              "type": "string",
+              "description": "OpenAI API base URL"
+            },
+            "ApiVersion": {
+              "type": "string",
+              "description": "OpenAI API version"
+            },
+            "ChatGptEngine": {
+              "type": "string",
+              "description": "ChatGPT model engine name"
+            },
+            "ChatGptTemp": {
+              "type": "number",
+              "description": "ChatGPT temperature setting"
+            }
           }
         },
         "cognitiveSearch": {
@@ -1430,10 +1827,22 @@
           "description": "Azure Cognitive Search settings",
           "additionalProperties": true,
           "properties": {
-            "SearchEndpoint": { "type": "string", "description": "Cognitive Search endpoint URL" },
-            "SearchKey": { "type": "string", "description": "Cognitive Search API key" },
-            "VectorSearchProfile": { "type": "string", "description": "Vector search profile name" },
-            "VectorSearchConfig": { "type": "string", "description": "Vector search configuration name" }
+            "SearchEndpoint": {
+              "type": "string",
+              "description": "Cognitive Search endpoint URL"
+            },
+            "SearchKey": {
+              "type": "string",
+              "description": "Cognitive Search API key"
+            },
+            "VectorSearchProfile": {
+              "type": "string",
+              "description": "Vector search profile name"
+            },
+            "VectorSearchConfig": {
+              "type": "string",
+              "description": "Vector search configuration name"
+            }
           }
         },
         "modelStorage": {
@@ -1441,11 +1850,26 @@
           "description": "Model storage settings",
           "additionalProperties": true,
           "properties": {
-            "ConnectionString": { "type": "string", "description": "Azure Storage connection string for models" },
-            "EmbeddingsModel": { "type": "string", "description": "Embeddings model name" },
-            "ModelDimensions": { "type": "integer", "description": "Model embedding dimensions" },
-            "ContainerName": { "type": "string", "description": "Blob container name for models" },
-            "BlobFolder": { "type": "string", "description": "Blob folder name for models" }
+            "ConnectionString": {
+              "type": "string",
+              "description": "Azure Storage connection string for models"
+            },
+            "EmbeddingsModel": {
+              "type": "string",
+              "description": "Embeddings model name"
+            },
+            "ModelDimensions": {
+              "type": "integer",
+              "description": "Model embedding dimensions"
+            },
+            "ContainerName": {
+              "type": "string",
+              "description": "Blob container name for models"
+            },
+            "BlobFolder": {
+              "type": "string",
+              "description": "Blob folder name for models"
+            }
           }
         }
       }
@@ -1547,10 +1971,22 @@
           "description": "Sigma Computing reporting integration",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable Sigma reporting integration" },
-            "api_url": { "type": "string", "description": "Sigma API URL" },
-            "client_id": { "type": "string", "description": "Sigma client ID" },
-            "client_secret": { "type": "string", "description": "Sigma client secret" }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable Sigma reporting integration"
+            },
+            "api_url": {
+              "type": "string",
+              "description": "Sigma API URL"
+            },
+            "client_id": {
+              "type": "string",
+              "description": "Sigma client ID"
+            },
+            "client_secret": {
+              "type": "string",
+              "description": "Sigma client secret"
+            }
           }
         }
       }
@@ -1575,8 +2011,14 @@
               "description": "Operational database for Smart Activation",
               "additionalProperties": true,
               "properties": {
-                "name": { "type": "string", "description": "Database name" },
-                "connection_string": { "type": "string", "description": "MongoDB connection string" }
+                "name": {
+                  "type": "string",
+                  "description": "Database name"
+                },
+                "connection_string": {
+                  "type": "string",
+                  "description": "MongoDB connection string"
+                }
               }
             }
           }
@@ -1758,25 +2200,52 @@
           "description": "Automatic tenant creation configuration",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable automatic tenant creation" },
-            "name": { "type": "string", "description": "Tenant name" },
-            "existingSecret": { "type": "string", "description": "Existing secret for DW credentials" },
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable automatic tenant creation"
+            },
+            "name": {
+              "type": "string",
+              "description": "Tenant name"
+            },
+            "existingSecret": {
+              "type": "string",
+              "description": "Existing secret for DW credentials"
+            },
             "dataWarehouse": {
               "type": "object",
               "description": "Data warehouse configuration for the tenant",
               "additionalProperties": true,
               "properties": {
-                "provider": { "type": "string", "description": "Data warehouse provider (e.g., SQLServer)" },
-                "server": { "type": "string", "description": "DW server hostname" },
-                "database": { "type": "string", "description": "DW database name" },
-                "username": { "type": "string", "description": "DW username" },
-                "password": { "type": "string", "description": "DW password" }
+                "provider": {
+                  "type": "string",
+                  "description": "Data warehouse provider (e.g., SQLServer)"
+                },
+                "server": {
+                  "type": "string",
+                  "description": "DW server hostname"
+                },
+                "database": {
+                  "type": "string",
+                  "description": "DW database name"
+                },
+                "username": {
+                  "type": "string",
+                  "description": "DW username"
+                },
+                "password": {
+                  "type": "string",
+                  "description": "DW password"
+                }
               }
             }
           }
         },
         "waitTimeout": {
-          "type": ["integer", "string"],
+          "type": [
+            "integer",
+            "string"
+          ],
           "description": "Timeout in seconds to wait for services to be ready"
         },
         "backoffLimit": {
@@ -1797,13 +2266,16 @@
         "mode": {
           "type": "string",
           "description": "Preflight mode: test (runs with helm test) or preInstall (blocks install on failure)",
-          "enum": ["test", "preInstall"]
+          "enum": [
+            "test",
+            "preInstall"
+          ]
         }
       }
     },
     "helmcopilot": {
       "type": "object",
-      "description": "Helm Copilot MCP server — AI-powered assistant for configuring and troubleshooting RPI",
+      "description": "Helm Copilot MCP server \u2014 AI-powered assistant for configuring and troubleshooting RPI",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -1814,7 +2286,7 @@
     },
     "databaseUpgrade": {
       "type": "object",
-      "description": "Automatic database upgrade job — calls the upgrade endpoint after an image tag change",
+      "description": "Automatic database upgrade job \u2014 calls the upgrade endpoint after an image tag change",
       "additionalProperties": true,
       "properties": {
         "enabled": {
@@ -1826,8 +2298,14 @@
           "description": "Email notification settings for upgrade completion",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable upgrade notification emails" },
-            "recipientEmail": { "type": "string", "description": "Recipient email for upgrade notifications" }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable upgrade notification emails"
+            },
+            "recipientEmail": {
+              "type": "string",
+              "description": "Recipient email for upgrade notifications"
+            }
           }
         }
       }
@@ -1848,12 +2326,34 @@
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "name": { "type": "string", "description": "Smoke test deployment name" },
-              "type": { "type": "string", "description": "Test type: pvc or csiSecret", "enum": ["pvc", "csiSecret"] },
-              "claimName": { "type": "string", "description": "PVC claim name (for pvc type)" },
-              "mountPath": { "type": "string", "description": "Mount path in the test pod" },
-              "serviceAccountName": { "type": "string", "description": "Service account name for the test pod" },
-              "image": { "type": "string", "description": "Container image for the test pod" }
+              "name": {
+                "type": "string",
+                "description": "Smoke test deployment name"
+              },
+              "type": {
+                "type": "string",
+                "description": "Test type: pvc or csiSecret",
+                "enum": [
+                  "pvc",
+                  "csiSecret"
+                ]
+              },
+              "claimName": {
+                "type": "string",
+                "description": "PVC claim name (for pvc type)"
+              },
+              "mountPath": {
+                "type": "string",
+                "description": "Mount path in the test pod"
+              },
+              "serviceAccountName": {
+                "type": "string",
+                "description": "Service account name for the test pod"
+              },
+              "image": {
+                "type": "string",
+                "description": "Container image for the test pod"
+              }
             }
           }
         }
@@ -1898,12 +2398,25 @@
           "description": "Dynamic volume provisioning settings",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Enable dynamic volume provisioning (disable to use existingClaim)" },
-            "storage": { "type": "string", "description": "Storage size (e.g., 100Gi)" },
-            "storageClassName": { "type": "string", "description": "Storage class name" }
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable dynamic volume provisioning (disable to use existingClaim)"
+            },
+            "storage": {
+              "type": "string",
+              "description": "Storage size (e.g., 100Gi)"
+            },
+            "storageClassName": {
+              "type": "string",
+              "description": "Storage class name"
+            }
           }
         }
       }
+    },
+    "resources": {
+      "$ref": "#/definitions/resources",
+      "description": "Global resource defaults applied to all services. Per-service overrides take priority."
     }
   },
   "allOf": [
@@ -1912,23 +2425,35 @@
         "properties": {
           "secretsManagement": {
             "properties": {
-              "provider": { "const": "sdk" }
+              "provider": {
+                "const": "sdk"
+              }
             },
-            "required": ["provider"]
+            "required": [
+              "provider"
+            ]
           }
         },
-        "required": ["secretsManagement"]
+        "required": [
+          "secretsManagement"
+        ]
       },
       "then": {
         "properties": {
           "cloudIdentity": {
             "properties": {
-              "enabled": { "const": true }
+              "enabled": {
+                "const": true
+              }
             },
-            "required": ["enabled"]
+            "required": [
+              "enabled"
+            ]
           }
         },
-        "required": ["cloudIdentity"]
+        "required": [
+          "cloudIdentity"
+        ]
       }
     },
     {
@@ -1936,23 +2461,35 @@
         "properties": {
           "secretsManagement": {
             "properties": {
-              "provider": { "const": "csi" }
+              "provider": {
+                "const": "csi"
+              }
             },
-            "required": ["provider"]
+            "required": [
+              "provider"
+            ]
           }
         },
-        "required": ["secretsManagement"]
+        "required": [
+          "secretsManagement"
+        ]
       },
       "then": {
         "properties": {
           "cloudIdentity": {
             "properties": {
-              "enabled": { "const": true }
+              "enabled": {
+                "const": true
+              }
             },
-            "required": ["enabled"]
+            "required": [
+              "enabled"
+            ]
           }
         },
-        "required": ["cloudIdentity"]
+        "required": [
+          "cloudIdentity"
+        ]
       }
     },
     {
@@ -1960,17 +2497,25 @@
         "properties": {
           "ingress": {
             "properties": {
-              "mode": { "const": "private" }
+              "mode": {
+                "const": "private"
+              }
             },
-            "required": ["mode"]
+            "required": [
+              "mode"
+            ]
           }
         },
-        "required": ["ingress"]
+        "required": [
+          "ingress"
+        ]
       },
       "then": {
         "properties": {
           "ingress": {
-            "required": ["subnetName"]
+            "required": [
+              "subnetName"
+            ]
           }
         }
       }
@@ -1980,17 +2525,25 @@
         "properties": {
           "ingress": {
             "properties": {
-              "certificateSource": { "const": "acm" }
+              "certificateSource": {
+                "const": "acm"
+              }
             },
-            "required": ["certificateSource"]
+            "required": [
+              "certificateSource"
+            ]
           }
         },
-        "required": ["ingress"]
+        "required": [
+          "ingress"
+        ]
       },
       "then": {
         "properties": {
           "ingress": {
-            "required": ["certificateArn"]
+            "required": [
+              "certificateArn"
+            ]
           }
         }
       }
@@ -2007,8 +2560,14 @@
           "description": "Resource requests (guaranteed allocation)",
           "additionalProperties": true,
           "properties": {
-            "cpu": { "type": "string", "description": "CPU request (e.g., '500m', '1')" },
-            "memory": { "type": "string", "description": "Memory request (e.g., '512Mi', '1Gi')" }
+            "cpu": {
+              "type": "string",
+              "description": "CPU request (e.g., '500m', '1')"
+            },
+            "memory": {
+              "type": "string",
+              "description": "Memory request (e.g., '512Mi', '1Gi')"
+            }
           }
         },
         "limits": {
@@ -2016,8 +2575,14 @@
           "description": "Resource limits (maximum allocation)",
           "additionalProperties": true,
           "properties": {
-            "cpu": { "type": "string", "description": "CPU limit (e.g., '1', '2')" },
-            "memory": { "type": "string", "description": "Memory limit (e.g., '1Gi', '3Gi')" }
+            "cpu": {
+              "type": "string",
+              "description": "CPU limit (e.g., '1', '2')"
+            },
+            "memory": {
+              "type": "string",
+              "description": "Memory limit (e.g., '1Gi', '3Gi')"
+            }
           }
         }
       }

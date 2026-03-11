@@ -18,22 +18,6 @@ data:
 
     {{- $dw := .Values.databases.datawarehouse | default dict -}}
 
-    {{- with ($dw.redshift | default dict) }}
-    {{- if (.enabled | default false) }}
-    {{- range .connections }}
-    {{ .name }}=Amazon Redshift DSN 64=Amazon Redshift (x64)
-    Description=Amazon Redshift ODBC Driver for {{ .name }}
-    Driver=/app/odbc-lib/redshift/lib/libamazonredshiftodbc64.so
-    Server={{ .server }}
-    Port={{ .port }}
-    Database={{ .database }}
-    UID={{ .username }}
-    PWD={{ .password }}
-    locale=en-US
-    {{- end }}
-    {{- end }}
-    {{- end }}
-
     {{- with ($dw.bigquery | default dict) }}
     {{- if (.enabled | default false) }}
     {{- range .connections }}

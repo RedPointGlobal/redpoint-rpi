@@ -129,17 +129,7 @@ spec:
       {{- end }}
       terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
       serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        fsGroup: {{ $secCtx.fsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-        supplementalGroups:
-          {{- with $secCtx.supplementalGroups }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
-      {{- end }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -161,17 +151,7 @@ spec:
       containers:
       - name: {{ $name }}
         image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
-        {{- if $secCtx.enabled }}
-        securityContext:
-          privileged: {{ $secCtx.privileged }}
-          allowPrivilegeEscalation: {{ $secCtx.allowPrivilegeEscalation }}
-          readOnlyRootFilesystem: {{ $secCtx.readOnlyRootFilesystem }}
-          capabilities:
-            drop:
-            {{- range $secCtx.capabilities.drop }}
-              - {{ . }}
-            {{- end }}
-        {{- end }}
+        {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
         {{- if $liveness.enabled }}
         livenessProbe:
           httpGet:

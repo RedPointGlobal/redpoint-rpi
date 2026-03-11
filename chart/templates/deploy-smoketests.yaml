@@ -37,8 +37,7 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
-        container.apparmor.security.beta.kubernetes.io/secrets: runtime/default
+      annotations: {}
       labels:
         app.kubernetes.io/name: {{ $name }}
         {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
@@ -50,17 +49,7 @@ spec:
       {{- with .serviceAccountName }}
       serviceAccountName: {{ . | quote }}
       {{- end }}
-      {{- if $secCtx.enabled }}
-      securityContext:
-        runAsUser: {{ $secCtx.runAsUser }}
-        runAsGroup: {{ $secCtx.runAsGroup }}
-        fsGroup: {{ $secCtx.fsGroup }}
-        runAsNonRoot: {{ $secCtx.runAsNonRoot }}
-        {{- with $secCtx.supplementalGroups }}
-        supplementalGroups:
-          {{- toYaml . | nindent 10 }}
-        {{- end }}
-      {{- end }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       {{- if .nodeSelector }}
       nodeSelector:
         {{- toYaml .nodeSelector | nindent 8 }}
@@ -82,6 +71,8 @@ spec:
           {{- if $secCtx.enabled }}
           securityContext:
             allowPrivilegeEscalation: false
+            appArmorProfile:
+              type: RuntimeDefault
           {{- end }}
           {{- if .command }}
           command:

@@ -57,9 +57,10 @@ while getopts "o:a:fh" opt; do
       echo "    redpoint_ai       OpenAI and Azure Cognitive Search"
       echo "    storage           PVC and CSI storage volumes"
       echo "    helm_copilot      AI assistant for chart configuration"
-      echo "    data_warehouse    Snowflake, Redshift, or BigQuery"
+      echo "    data_warehouse    Snowflake or BigQuery"
       echo "    extra_envs        Debug and plugin environment variables"
     echo "    secrets_management Configure secrets provider, CSI classes, SDK vault"
+    echo "    node_scheduling   Node selector and tolerations for dedicated nodes"
       echo ""
       echo "  Examples:"
       echo "    bash interactioncli.sh                        # Interactive setup"
@@ -73,17 +74,9 @@ while getopts "o:a:fh" opt; do
 done
 
 # --- Colors & Symbols ---
-if [ -t 1 ] && command -v tput &> /dev/null && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
-  BOLD=$(tput bold)
-  CYAN=$(tput setaf 6)
-  GREEN=$(tput setaf 2)
-  YELLOW=$(tput setaf 3)
-  RED=$(tput setaf 1)
-  DIM=$(tput dim)
-  RESET=$(tput sgr0)
-else
-  BOLD="" CYAN="" GREEN="" YELLOW="" RED="" DIM="" RESET=""
-fi
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/lib/common.sh"
+YAML_HELPER="${SCRIPT_DIR}/lib/yaml_helpers.py"
 
 ICON_CHECK="${GREEN}✔${RESET}"
 ICON_WARN="${YELLOW}⚠${RESET}"
@@ -333,11 +326,6 @@ if [ "$FILE_MODE" = "true" ]; then
 
   # --- Feature: Data Warehouse (from top-level data_warehouse section) ---
   _CFG[provider]="$_dw_provider"
-  _CFG[conn_name]=$(cfg '.data_warehouse.redshift.connection_name' 'rsh-tenant1')
-  _CFG[rs_server]=$(cfg '.data_warehouse.redshift.host' '')
-  _CFG[rs_database]=$(cfg '.data_warehouse.redshift.database' '')
-  _CFG[rs_username]=$(cfg '.data_warehouse.redshift.username' '')
-  _CFG[rs_password]=$(cfg '.data_warehouse.redshift.password' '')
   _CFG[sf_configmap]=$(cfg '.data_warehouse.snowflake.configmap_name' '')
   _CFG[sf_keyname]=$(cfg '.data_warehouse.snowflake.key_name' '')
   _CFG[bq_name]=$(cfg '.data_warehouse.bigquery.connection_name' '')
@@ -527,11 +515,22 @@ append_under_key() {
       $0 ~ "^" key ":" { found=1; print; next }
       found && !inserted {
         if (/^$/) { blanks++; next }
-        if (/^[^ #]/) {
+        if (/^#/) {
+          # Unindented comment = next section heading — insert before it
+          print content
+          print ""
+          inserted=1
+          for (i=0; i<blanks; i++) print ""
+          blanks=0
+          print; next
+        }
+        if (/^[^ ]/) {
           # Reached a new top-level key — insert content, then blank line, then this line
           print content
           print ""
-          inserted=1; blanks=0
+          inserted=1
+          for (i=0; i<blanks; i++) print ""
+          blanks=0
           print; next
         }
         # Still inside the block — flush any buffered blank lines
@@ -554,7 +553,7 @@ append_under_key() {
 # Append a datawarehouse block under an existing databases: key, or create both.
 # Usage: append_dw_block <file> <dw_content> <heading>
 #   dw_content should be indented at 2 spaces (the datawarehouse: level), e.g.:
-#     "  datawarehouse:\n    redshift:\n      enabled: true"
+#     "  datawarehouse:\n    snowflake:\n      enabled: true"
 append_dw_block() {
   local file=$1 dw_content=$2 heading=$3
   if grep -q "^databases:" "$file" 2>/dev/null; then
@@ -562,8 +561,8 @@ append_dw_block() {
     local tmp_file="${file}.tmp.$$"
     awk -v content="$dw_content" -v heading="$heading" '
       /^databases:/ { in_db=1; print; next }
-      in_db && /^[^ #]/ {
-        # Reached a new top-level key — insert DW content before it
+      in_db && /^[^ #]/ && !/^$/ {
+        # Reached next top-level key — flush buffered lines, insert DW before them
         if (heading != "") {
           print "# ----------------------------------------------------------"
           print "#  " heading
@@ -571,11 +570,19 @@ append_dw_block() {
         }
         print content
         print ""
+        # Print any buffered blank/comment lines that were between the block and here
+        for (k=1; k<=buf_n; k++) print buf[k]
+        buf_n=0
         in_db=0
       }
+      in_db && (/^$/ || /^#/) {
+        # Buffer blank lines and comments — they might belong to the next section
+        buf[++buf_n]=$0
+        next
+      }
+      in_db { buf_n=0 }
       { print }
       END {
-        # databases: was the last block in the file
         if (in_db) {
           if (heading != "") {
             print "# ----------------------------------------------------------"
@@ -583,6 +590,7 @@ append_dw_block() {
             print "# ----------------------------------------------------------"
           }
           print content
+          for (k=1; k<=buf_n; k++) print buf[k]
         }
       }
     ' "$file" > "$tmp_file" && mv "$tmp_file" "$file"
@@ -746,6 +754,56 @@ BLOCK
   echo "  ${ICON_CHECK} Added customMetrics to ${file}"
 }
 
+add_node_scheduling() {
+  local file=$1
+
+  echo ""
+  echo "  ${DIM}Node scheduling controls which nodes RPI pods are placed on.${RESET}"
+  echo "  ${DIM}  nodeSelector — schedule pods only on nodes with a matching label${RESET}"
+  echo "  ${DIM}  tolerations  — allow pods to run on tainted (dedicated) nodes${RESET}"
+  echo ""
+
+  local action
+  if has_block "$file" "nodeSelector" || has_block "$file" "tolerations"; then
+    echo "  ${DIM}Node scheduling already exists in overrides.${RESET}"
+    prompt_choice action "What to configure" "replace|skip" "replace"
+    if [ "$action" = "skip" ]; then return 0; fi
+    remove_block "$file" "nodeSelector"
+    remove_block "$file" "tolerations"
+    echo "  ${ICON_CHECK} Removed existing nodeSelector/tolerations"
+  fi
+
+  local ns_key ns_value
+  prompt ns_key "Node label key" "app"
+  prompt ns_value "Node label value" "redpoint-rpi"
+
+  append_block "$file" "$(cat <<BLOCK
+nodeSelector:
+  enabled: true
+  key: ${ns_key}
+  value: ${ns_value}
+BLOCK
+)" "Node Scheduling"
+  echo "  ${ICON_CHECK} Added nodeSelector (${ns_key}=${ns_value}) to ${file}"
+
+  local add_tolerations=""
+  prompt_yesno add_tolerations "Add a matching toleration so pods can run on tainted nodes?" "y"
+  if [ "$add_tolerations" = "true" ]; then
+    local tol_effect
+    prompt_choice tol_effect "Taint effect" "NoSchedule|NoExecute|PreferNoSchedule" "NoSchedule"
+    append_block "$file" "$(cat <<BLOCK
+tolerations:
+  enabled: true
+  effect: ${tol_effect}
+  key: ${ns_key}
+  operator: Equal
+  value: ${ns_value}
+BLOCK
+)" ""
+    echo "  ${ICON_CHECK} Added toleration (${tol_effect}, ${ns_key}=${ns_value}) to ${file}"
+  fi
+}
+
 add_service_mesh() {
   local file=$1
 
@@ -775,28 +833,7 @@ add_service_mesh() {
   if has_block "$file" "serviceMesh"; then
     if grep -q "servers:" "$file" 2>/dev/null; then
       # Append to existing servers list
-      python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-entries = sys.argv[2]
-# Find the last '    - name:' line under servers:
-in_servers = False
-last_entry_end = -1
-for i, l in enumerate(lines):
-    if 'servers:' in l and not l.strip().startswith('#'):
-        in_servers = True
-        continue
-    if in_servers:
-        stripped = l.rstrip()
-        if not stripped:
-            break
-        if not stripped.startswith(' '):
-            break
-        last_entry_end = i
-insert_at = last_entry_end + 1 if last_entry_end >= 0 else len(lines)
-lines.insert(insert_at, entries.lstrip('\n') + '\n')
-open(sys.argv[1], 'w').writelines(lines)
-" "$file" "$servers"
+      python3 "$YAML_HELPER" append_to_list "$file" "servers:" "$(echo "$servers" | sed '/^$/d')"
     else
       # serviceMesh exists but no servers: yet — append it
       append_under_key "$file" "serviceMesh" "  servers:${servers}" ""
@@ -1052,50 +1089,11 @@ add_storage() {
 
     if has_block "$file" "persistentVolumeClaims"; then
       # Append new PVC entry under existing persistentVolumeClaims block
-      python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-entry = sys.argv[2]
-# Find persistentVolumeClaims: line
-in_pvc = False
-last_line = -1
-for i, l in enumerate(lines):
-    if 'persistentVolumeClaims:' in l and not l.strip().startswith('#'):
-        in_pvc = True
-        continue
-    if in_pvc:
-        stripped = l.rstrip()
-        # Stop at blank line or non-indented content
-        if not stripped:
-            break
-        if not stripped.startswith(' '):
-            break
-        # Stop at sibling key at 2-space indent (e.g., persistentVolumes:)
-        indent = len(l) - len(l.lstrip())
-        if indent <= 2 and ':' in stripped and not stripped.startswith('#'):
-            break
-        last_line = i
-insert_at = last_line + 1 if last_line >= 0 else len(lines)
-lines.insert(insert_at, entry + '\n')
-open(sys.argv[1], 'w').writelines(lines)
-" "$file" "$pvc_content"
+      python3 "$YAML_HELPER" append_to_list "$file" "persistentVolumeClaims:" "$pvc_content"
       echo "  ${ICON_CHECK} Added PVC '${pvc_name}' to existing storage in ${file}"
     elif has_block "$file" "storage"; then
       # storage: exists but no persistentVolumeClaims yet
-      python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-entry = sys.argv[2]
-idx = next(i for i, l in enumerate(lines) if l.startswith('storage:'))
-end = len(lines)
-for j in range(idx + 1, len(lines)):
-    if lines[j][0:1] not in (' ', '#', ''):
-        end = j
-        break
-insert = '  persistentVolumeClaims:\n' + entry + '\n'
-lines.insert(end, insert)
-open(sys.argv[1], 'w').writelines(lines)
-" "$file" "$pvc_content"
+      python3 "$YAML_HELPER" create_section "$file" "storage:" "$(printf '  persistentVolumeClaims:\n%s' "$pvc_content")"
       echo "  ${ICON_CHECK} Added PVC storage to ${file}"
     else
       append_block "$file" "$(cat <<BLOCK
@@ -1239,48 +1237,10 @@ BLOCK
 
     if has_block "$file" "persistentVolumes"; then
       # Append new entry to existing persistentVolumes list
-      python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-comment = sys.argv[2]
-entry = sys.argv[3]
-# Find last '    - name:' line under persistentVolumes to locate end of list
-last_entry_end = -1
-in_pv = False
-for i, l in enumerate(lines):
-    if 'persistentVolumes:' in l and not l.strip().startswith('#'):
-        in_pv = True
-    elif in_pv:
-        stripped = l.rstrip()
-        # A top-level key or a new sibling key at 2-space indent ends the block
-        if stripped and not stripped.startswith('#') and not stripped.startswith(' '):
-            break
-        if stripped and not stripped.startswith('#') and len(stripped) - len(stripped.lstrip()) <= 2 and ':' in stripped:
-            break
-        last_entry_end = i
-# Insert after the last line of the existing list
-insert_at = last_entry_end + 1
-new_lines = '    ' + comment + '\n' + entry + '\n'
-lines.insert(insert_at, new_lines)
-open(sys.argv[1], 'w').writelines(lines)
-" "$file" "$pv_comment" "$pv_entry"
+      python3 "$YAML_HELPER" append_to_list "$file" "persistentVolumes:" "$(printf '    %s\n%s' "$pv_comment" "$pv_entry")"
     elif has_block "$file" "storage"; then
       # storage: exists but no persistentVolumes yet — append the section
-      python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-comment = sys.argv[2]
-entry = sys.argv[3]
-idx = next(i for i, l in enumerate(lines) if l.startswith('storage:'))
-end = len(lines)
-for j in range(idx + 1, len(lines)):
-    if lines[j][0:1] not in (' ', '#', ''):
-        end = j
-        break
-insert = '  persistentVolumes:\n    ' + comment + '\n' + entry + '\n'
-lines.insert(end, insert)
-open(sys.argv[1], 'w').writelines(lines)
-" "$file" "$pv_comment" "$pv_entry"
+      python3 "$YAML_HELPER" create_section "$file" "storage:" "$(printf '  persistentVolumes:\n    %s\n%s' "$pv_comment" "$pv_entry")"
     else
       # No storage: block at all — create from scratch
       append_block "$file" "$(printf 'storage:\n  persistentVolumes:\n    %s\n%s' "$pv_comment" "$pv_entry")" "Storage Configuration"
@@ -1401,42 +1361,7 @@ ${classes_yaml}"
 
       if grep -q "secretProviderClasses:" "$file" 2>/dev/null; then
         # Append to existing list
-        python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-entry = sys.argv[2]
-in_list = False
-last_entry = -1
-for i, l in enumerate(lines):
-    if 'secretProviderClasses:' in l and not l.strip().startswith('#'):
-        in_list = True
-        continue
-    if in_list:
-        stripped = l.rstrip()
-        if not stripped:
-            # blank line — could be end or just spacing in entry
-            # peek ahead to see if next non-blank line is still indented
-            for j in range(i+1, len(lines)):
-                nxt = lines[j].rstrip()
-                if nxt:
-                    if nxt.startswith('      ') or nxt.startswith('    -'):
-                        break  # still in list
-                    else:
-                        in_list = False
-                    break
-            if not in_list:
-                break
-            continue
-        if not stripped.startswith(' '):
-            break
-        indent = len(l) - len(l.lstrip())
-        if indent < 4 and ':' in stripped and not stripped.startswith('#'):
-            break
-        last_entry = i
-insert_at = last_entry + 1 if last_entry >= 0 else len(lines)
-lines.insert(insert_at, entry + '\n')
-open(sys.argv[1], 'w').writelines(lines)
-" "$file" "$classes_yaml"
+        python3 "$YAML_HELPER" append_to_list "$file" "secretProviderClasses:" "$classes_yaml"
       else
         # No secretProviderClasses yet — add under secretsManagement.csi
         if grep -q "csi:" "$file" 2>/dev/null; then
@@ -1458,14 +1383,7 @@ ${classes_yaml}" ""
       local class_names
       class_names=$(grep -A1 'secretProviderClasses:' "$file" | grep -v 'secretProviderClasses:' | head -20 | sed 's/.*- name: //' | tr -d ' ')
       if [ -z "$class_names" ]; then
-        class_names=$(python3 -c "
-import re, sys
-lines = open(sys.argv[1]).readlines()
-for l in lines:
-    m = re.match(r'^\s+- name:\s*(.+)', l)
-    if m:
-        print(m.group(1).strip())
-" "$file" 2>/dev/null)
+        class_names=$(python3 "$YAML_HELPER" extract_names "$file" "name" 2>/dev/null)
       fi
       if [ -z "$class_names" ]; then
         echo "  ${RED}No SecretProviderClass entries found in ${file}${RESET}"
@@ -1503,47 +1421,7 @@ for l in lines:
 "
         done
         if [ -n "$new_objects" ]; then
-          python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-target = sys.argv[2]
-new_entries = sys.argv[3]
-
-# Find the target class, then its 'objects:' key, then insert after last entry
-in_target = False
-in_objects = False
-insert_at = -1
-for i, l in enumerate(lines):
-    stripped = l.strip()
-    if '- name: ' + target in l or '- name: \"' + target + '\"' in l:
-        in_target = True
-        continue
-    if in_target:
-        # Next class starts — stop
-        if stripped.startswith('- name:'):
-            break
-        if stripped == 'objects:':
-            in_objects = True
-            continue
-        if in_objects:
-            if stripped.startswith('- objectName:'):
-                insert_at = i
-                # scan ahead past this entry's continuation lines
-                for j in range(i+1, len(lines)):
-                    jstripped = lines[j].strip()
-                    if not jstripped or jstripped.startswith('- ') or not lines[j].startswith('            '):
-                        break
-                    insert_at = j
-            elif stripped and not stripped.startswith('#') and not lines[i].startswith('            '):
-                in_objects = False
-
-if insert_at >= 0:
-    lines.insert(insert_at + 1, new_entries)
-    open(sys.argv[1], 'w').writelines(lines)
-    print('OK')
-else:
-    print('NOT_FOUND')
-" "$file" "$target_class" "$new_objects"
+          python3 "$YAML_HELPER" insert_in_nested "$file" "$target_class" "objects:" "$new_objects"
           echo "  ${ICON_CHECK} Added objects to '${target_class}'"
         fi
       fi
@@ -1563,49 +1441,7 @@ else:
 "
         done
         if [ -n "$new_data" ]; then
-          python3 -c "
-import sys
-lines = open(sys.argv[1]).readlines()
-target = sys.argv[2]
-new_entries = sys.argv[3]
-
-in_target = False
-in_secret_objects = False
-in_data = False
-insert_at = -1
-for i, l in enumerate(lines):
-    stripped = l.strip()
-    if '- name: ' + target in l or '- name: \"' + target + '\"' in l:
-        in_target = True
-        continue
-    if in_target:
-        if stripped.startswith('- name:'):
-            break
-        if stripped == 'secretObjects:':
-            in_secret_objects = True
-            continue
-        if in_secret_objects and stripped == 'data:':
-            in_data = True
-            continue
-        if in_data:
-            if stripped.startswith('- key:'):
-                insert_at = i
-                for j in range(i+1, len(lines)):
-                    jstripped = lines[j].strip()
-                    if not jstripped or jstripped.startswith('- ') or not lines[j].startswith('                '):
-                        break
-                    insert_at = j
-            elif stripped and not stripped.startswith('#') and not lines[i].startswith('              '):
-                in_data = False
-                in_secret_objects = False
-
-if insert_at >= 0:
-    lines.insert(insert_at + 1, new_entries)
-    open(sys.argv[1], 'w').writelines(lines)
-    print('OK')
-else:
-    print('NOT_FOUND')
-" "$file" "$target_class" "$new_data"
+          python3 "$YAML_HELPER" insert_in_nested "$file" "$target_class" "data:" "$new_data"
           echo "  ${ICON_CHECK} Added secret data mappings to '${target_class}'"
         fi
       fi
@@ -1761,34 +1597,9 @@ add_data_warehouse() {
   echo "  ${DIM}Connect RPI to an external data warehouse for audience output and analytics.${RESET}"
   echo ""
   local provider
-  prompt_choice provider "Data warehouse provider" "snowflake|redshift|bigquery" "snowflake"
+  prompt_choice provider "Data warehouse provider" "snowflake|bigquery" "snowflake"
 
   case "$provider" in
-    redshift)
-      echo ""
-      echo "  ${BOLD}Amazon Redshift${RESET}"
-      local conn_name rs_server rs_database rs_username rs_password
-      prompt conn_name "Connection name" "rsh-tenant1"
-      prompt rs_server "Redshift cluster endpoint" ""
-      prompt rs_database "Database name" ""
-      prompt rs_username "Username" ""
-      prompt_secret rs_password "Password"
-      append_dw_block "$file" "$(cat <<BLOCK
-  datawarehouse:
-    redshift:
-      enabled: true
-      connections:
-        - name: ${conn_name}
-          server: ${rs_server}
-          port: 5439
-          database: ${rs_database}
-          username: ${rs_username}
-          password: ${rs_password}
-BLOCK
-)" "Data Warehouse — Amazon Redshift"
-      echo "  ${ICON_CHECK} Added Redshift data warehouse to ${file}"
-      ;;
-
     snowflake)
       echo ""
       echo "  ${BOLD}Snowflake${RESET}"
@@ -1913,9 +1724,10 @@ show_feature_menu() {
   echo "    ${CYAN}10${RESET}) redpoint_ai       — AI-powered content generation (OpenAI + Cognitive Search)"
   echo "    ${CYAN}11${RESET}) storage           — Persistent volumes for file-based processing and caching"
   echo "    ${CYAN}12${RESET}) helm_copilot      — AI assistant for chart configuration and troubleshooting"
-  echo "    ${CYAN}13${RESET}) data_warehouse    — Connect to Snowflake, Redshift, or BigQuery"
+  echo "    ${CYAN}13${RESET}) data_warehouse    — Connect to Snowflake or BigQuery"
   echo "    ${CYAN}14${RESET}) extra_envs        — Debug and plugin environment variables"
   echo "    ${CYAN}15${RESET}) secrets_management — Configure secrets provider, CSI classes, SDK vault settings"
+  echo "    ${CYAN}16${RESET}) node_scheduling    — Node selector and tolerations for dedicated nodes"
   echo ""
   local choice
   read -rp "  Enter feature number or name: " choice
@@ -1935,6 +1747,7 @@ show_feature_menu() {
     13|data_warehouse)     ADD_FEATURE="data_warehouse" ;;
     14|extra_envs)         ADD_FEATURE="extra_envs" ;;
     15|secrets_management) ADD_FEATURE="secrets_management" ;;
+    16|node_scheduling)    ADD_FEATURE="node_scheduling" ;;
     *) echo "  ${RED}Unknown feature: ${choice}${RESET}"; exit 1 ;;
   esac
 }
@@ -1957,6 +1770,7 @@ run_add_feature() {
     data_warehouse)   add_data_warehouse "$file" ;;
     extra_envs)         add_extra_envs "$file" ;;
     secrets_management) add_secrets_management "$file" ;;
+    node_scheduling)    add_node_scheduling "$file" ;;
     *) echo "  ${RED}Unknown feature: ${feature}${RESET}"; exit 1 ;;
   esac
 }
@@ -2065,33 +1879,13 @@ DW_BLOCK=""
 if [ "$MODE" = "standard" ]; then
   section "Data Warehouse"
   echo "  ${DIM}Connect RPI to an external data warehouse for audience output and analytics.${RESET}"
-  prompt_yesno DW_ENABLED "Configure a data warehouse (Snowflake, Redshift, BigQuery)?" "n"
+  prompt_yesno DW_ENABLED "Configure a data warehouse (Snowflake, BigQuery)?" "n"
 
   if [ "$DW_ENABLED" = "true" ]; then
     echo ""
-    prompt_choice DW_PROVIDER "Data warehouse provider" "snowflake|redshift|bigquery" "snowflake"
+    prompt_choice DW_PROVIDER "Data warehouse provider" "snowflake|bigquery" "snowflake"
 
     case "$DW_PROVIDER" in
-      redshift)
-        echo ""
-        echo "  ${BOLD}Amazon Redshift${RESET}"
-        local_dw_conn="" local_dw_server="" local_dw_database="" local_dw_user="" local_dw_pass=""
-        prompt local_dw_conn "Connection name" "rsh-tenant1"
-        prompt local_dw_server "Redshift cluster endpoint" ""
-        prompt local_dw_database "Database name" ""
-        prompt local_dw_user "Username" ""
-        prompt_secret local_dw_pass "Password"
-        DW_BLOCK="  datawarehouse:
-    redshift:
-      enabled: true
-      connections:
-        - name: ${local_dw_conn}
-          server: ${local_dw_server}
-          port: 5439
-          database: ${local_dw_database}
-          username: ${local_dw_user}
-          password: ${local_dw_pass}"
-        ;;
       snowflake)
         echo ""
         echo "  ${BOLD}Snowflake${RESET}"
@@ -2261,9 +2055,7 @@ if [ "$REALTIME_ENABLED" = "true" ]; then
   RT_REDIS_CACHE_PASSWORD=$(gen_password)
   QS_REDIS_PASSWORD=$(gen_password)
   QS_RABBITMQ_PASSWORD=$(gen_password)
-  # Generate a short unique ID for queue name isolation
-  QUEUE_UID=$(head -c 3 /dev/urandom | od -An -tx1 | tr -d ' \n')
-  QUEUE_PREFIX="${HOST_PREFIX}_${QUEUE_UID}_"
+  QUEUE_PREFIX="${HOST_PREFIX}-"
 fi
 
 # ============================================================
@@ -2591,7 +2383,7 @@ fi
 # ============================================================
 # Optional features — prompt during initial setup
 # ============================================================
-FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests helm_copilot extra_envs secrets_management"
+FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests helm_copilot extra_envs secrets_management node_scheduling"
 SELECTED_FEATURES=""
 
 if [ "$FILE_MODE" = "true" ]; then
@@ -2627,6 +2419,7 @@ else
       helm_copilot)     label="Interaction Copilot — AI assistant for chart configuration and troubleshooting" ;;
       extra_envs)         label="Extra Envs — debug and plugin environment variables for execution service" ;;
       secrets_management) label="Secrets Management — configure secrets provider, CSI classes, SDK vault settings" ;;
+      node_scheduling)    label="Node Scheduling — node selector and tolerations for dedicated nodes" ;;
       *) label="$feat" ;;
     esac
     yn=""
@@ -2674,6 +2467,7 @@ for feat in $SELECTED_FEATURES; do
     helm_copilot)     add_helm_copilot "$OUTPUT_FILE" ;;
     extra_envs)       add_extra_envs "$OUTPUT_FILE" ;;
     secrets_management) add_secrets_management "$OUTPUT_FILE" ;;
+    node_scheduling)    add_node_scheduling "$OUTPUT_FILE" ;;
   esac
 done
 
@@ -2701,43 +2495,152 @@ cat > "$PREREQS_FILE" << 'PREREQS_HEADER'
 # ============================================================
 set -euo pipefail
 
+# --- Colors & Symbols ---
+if [ -t 1 ] && command -v tput &> /dev/null && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
+  BOLD=$(tput bold); CYAN=$(tput setaf 6); GREEN=$(tput setaf 2)
+  YELLOW=$(tput setaf 3); RED=$(tput setaf 1); DIM=$(tput dim); RESET=$(tput sgr0)
+else
+  BOLD="" CYAN="" GREEN="" YELLOW="" RED="" DIM="" RESET=""
+fi
+OK="${GREEN}✔${RESET}"; FAIL="${RED}✘${RESET}"; WARN="${YELLOW}⚠${RESET}"
+STEP=0; PASS=0; ERRORS=0
+
+step() { STEP=$((STEP + 1)); echo ""; echo "${CYAN}${BOLD}[$STEP]${RESET} ${BOLD}$1${RESET}"; }
+ok()   { PASS=$((PASS + 1)); echo "  ${OK} $1"; }
+err()  { ERRORS=$((ERRORS + 1)); echo "  ${FAIL} $1"; }
+skip() { echo "  ${WARN} $1 ${DIM}(skipped)${RESET}"; }
+line() { echo "${DIM}$(printf '%.0s─' {1..60})${RESET}"; }
+
+echo ""
+echo "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo "${BOLD}  Redpoint RPI — Prerequisite Setup${RESET}"
+echo "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+echo ""
+echo "  ${DIM}This script creates the Kubernetes resources required"
+echo "  before running helm install / helm upgrade.${RESET}"
+
 PREREQS_HEADER
 
-cat >> "$PREREQS_FILE" << PREREQS_BODY
-NAMESPACE="${NAMESPACE}"
+cat >> "$PREREQS_FILE" << 'PREREQS_BODY'
+DEFAULT_NS="redpoint-rpi"
+read -rp "  Kubernetes namespace ${DIM}[${DEFAULT_NS}]${RESET}: " NAMESPACE
+NAMESPACE="${NAMESPACE:-$DEFAULT_NS}"
 
-echo "Creating namespace..."
-kubectl create namespace "\${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+# ----------------------------------------------------------
+# Step 1: Namespace
+# ----------------------------------------------------------
+step "Create namespace: ${NAMESPACE}"
+if kubectl get namespace "${NAMESPACE}" &>/dev/null; then
+  skip "Namespace ${NAMESPACE} already exists"
+else
+  if kubectl create namespace "${NAMESPACE}"; then
+    ok "Namespace ${NAMESPACE} created"
+  else
+    err "Failed to create namespace ${NAMESPACE}"
+  fi
+fi
 
+# ----------------------------------------------------------
+# Step 2: Image pull secret
+# ----------------------------------------------------------
+step "Create image pull secret"
+echo "  ${DIM}Credentials are provided by Redpoint Support.${RESET}"
+if kubectl get secret redpoint-rpi -n "${NAMESPACE}" &>/dev/null; then
+  local_update=""
+  read -rp "  ${WARN} Secret ${BOLD}redpoint-rpi${RESET} already exists. Update it? (y/N): " local_update
+  if [ "${local_update}" != "y" ] && [ "${local_update}" != "Y" ]; then
+    skip "Image pull secret unchanged"
+  else
+    read -rp "  Docker username: " DOCKER_USER
+    read -rsp "  Docker password: " DOCKER_PASS; echo ""
+    if kubectl create secret docker-registry redpoint-rpi \
+      --namespace "${NAMESPACE}" \
+      --docker-server=__DOCKER_SERVER__ \
+      --docker-username="${DOCKER_USER}" \
+      --docker-password="${DOCKER_PASS}" \
+      --dry-run=client -o yaml | kubectl apply -f -; then
+      ok "Image pull secret updated"
+    else
+      err "Failed to update image pull secret"
+    fi
+  fi
+else
+  read -rp "  Docker username: " DOCKER_USER
+  read -rsp "  Docker password: " DOCKER_PASS; echo ""
+  if kubectl create secret docker-registry redpoint-rpi \
+    --namespace "${NAMESPACE}" \
+    --docker-server=__DOCKER_SERVER__ \
+    --docker-username="${DOCKER_USER}" \
+    --docker-password="${DOCKER_PASS}" \
+    --dry-run=client -o yaml | kubectl apply -f -; then
+    ok "Image pull secret created"
+  else
+    err "Failed to create image pull secret"
+  fi
+fi
+
+# ----------------------------------------------------------
+# Step 3: TLS secret
+# ----------------------------------------------------------
+step "Create TLS secret for ingress"
+echo "  ${DIM}Provide the paths to your TLS certificate and private key.${RESET}"
+read -rp "  Path to TLS certificate (.crt): " CERT_PATH
+read -rp "  Path to TLS private key  (.key): " KEY_PATH
+
+if [ ! -f "${CERT_PATH}" ]; then
+  err "Certificate file not found: ${CERT_PATH}"
+elif [ ! -f "${KEY_PATH}" ]; then
+  err "Key file not found: ${KEY_PATH}"
+else
+  if kubectl create secret tls ingress-tls \
+    --namespace "${NAMESPACE}" \
+    --cert="${CERT_PATH}" \
+    --key="${KEY_PATH}" \
+    --dry-run=client -o yaml | kubectl apply -f -; then
+    ok "TLS secret created"
+  else
+    err "Failed to create TLS secret"
+  fi
+fi
+
+# ----------------------------------------------------------
+# Step 4: RPI application secrets
+# ----------------------------------------------------------
+step "Apply RPI application secrets"
+if [ ! -f "__SECRETS_FILE__" ]; then
+  err "Secrets file not found: __SECRETS_FILE__"
+  echo "  ${DIM}Generate it with the Interaction CLI or create it manually.${RESET}"
+else
+  if kubectl apply -f __SECRETS_FILE__ --namespace "${NAMESPACE}"; then
+    ok "Secrets applied from __SECRETS_FILE__"
+  else
+    err "Failed to apply secrets"
+  fi
+fi
+
+# ----------------------------------------------------------
+# Summary
+# ----------------------------------------------------------
 echo ""
-echo "Creating image pull secret..."
-echo "  You will need credentials from Redpoint Support."
-read -rp "Docker username: " DOCKER_USER
-read -rsp "Docker password: " DOCKER_PASS; echo ""
-kubectl create secret docker-registry redpoint-rpi \\
-  --namespace "\${NAMESPACE}" \\
-  --docker-server=${DEFAULT_REGISTRY%%/docker*} \\
-  --docker-username="\${DOCKER_USER}" \\
-  --docker-password="\${DOCKER_PASS}" \\
-  --dry-run=client -o yaml | kubectl apply -f -
-
+line
 echo ""
-echo "Creating TLS secret..."
-read -rp "Path to TLS certificate (.crt): " CERT_PATH
-read -rp "Path to TLS private key (.key): " KEY_PATH
-kubectl create secret tls ingress-tls \\
-  --namespace "\${NAMESPACE}" \\
-  --cert="\${CERT_PATH}" \\
-  --key="\${KEY_PATH}" \\
-  --dry-run=client -o yaml | kubectl apply -f -
-
+if [ "${ERRORS}" -eq 0 ]; then
+  echo "  ${GREEN}${BOLD}All ${STEP} steps completed successfully.${RESET}"
+  echo ""
+  echo "  ${DIM}Next: deploy RPI with Helm${RESET}"
+  echo "  ${BOLD}helm install rpi ./chart -f __OUTPUT_FILE__ -n ${NAMESPACE}${RESET}"
+else
+  echo "  ${YELLOW}${BOLD}${PASS} passed, ${ERRORS} failed out of ${STEP} steps.${RESET}"
+  echo "  ${DIM}Fix the errors above and re-run this script.${RESET}"
+fi
 echo ""
-echo "Applying RPI secrets..."
-kubectl apply -f ${SECRETS_FILE}
-
-echo ""
-echo "Prerequisites created successfully."
 PREREQS_BODY
+
+# Inject baked-in values (registry, file paths) into the generated script
+DOCKER_SERVER="${DEFAULT_REGISTRY%%/docker*}"
+sed -i "s|__DOCKER_SERVER__|${DOCKER_SERVER}|g" "$PREREQS_FILE"
+sed -i "s|__SECRETS_FILE__|${SECRETS_FILE}|g" "$PREREQS_FILE"
+sed -i "s|__OUTPUT_FILE__|${OUTPUT_FILE}|g" "$PREREQS_FILE"
 
 chmod +x "$PREREQS_FILE"
 

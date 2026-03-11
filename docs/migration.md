@@ -222,10 +222,29 @@ If you prefer to build your overrides manually instead of using the CLI, here ar
 | `<service>.customAnnotations` | `<service>.podAnnotations` | Renamed |
 | `<service>.serviceAccount.enabled` | `cloudIdentity.serviceAccount.mode` | Centralized (shared/per-service/both) |
 | `<service>.resources.enabled` | *(removed)* | Always applied |
+| `<service>.resources` (per-service defaults) | `resources` (global) | Global defaults apply to all services; override per-service in your overrides file |
 | `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` | Shortened |
 | `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` | Shortened |
 | `queuereader.realtimeConfiguration.distributedCache` | `queuereader.realtimeConfiguration.internalCache` | Renamed |
 | `executionservice.internalCache.type` | `executionservice.internalCache.redisSettings.type` | Restructured |
+| `databases.datawarehouse.redshift` | *(removed)* | See Redshift breaking change below |
+
+### Redshift Data Warehouse — Breaking Change
+
+The Redshift connector has been updated in v7.7 to replace the ODBC driver with the **Npgsql library** for improved performance and reliability. This is a breaking change for existing v7.6 deployments using Redshift.
+
+**What changed:**
+- The ODBC-based Redshift configuration (`databases.datawarehouse.redshift`) has been removed from the Helm chart
+- Redshift connections are now configured directly within the RPI client interface using an Npgsql connection string
+- The `cm-odbc.yaml` ConfigMap no longer generates Redshift DSN entries
+
+**Action required for existing Redshift users:**
+1. Remove any `databases.datawarehouse.redshift` configuration from your overrides file
+2. After deploying v7.7, configure your Redshift connection in the RPI client interface using a connection string in the following format:
+
+```
+Host=<hostname>;Database=<database>;Port=5439;User Id=<username>;Password=<password>;SslMode=Require;Trust Server Certificate=true
+```
 
 **Now set directly under the top-level key** (only needed if you customized these in v7.6):
 
