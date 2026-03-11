@@ -591,13 +591,6 @@ ingress:
     queuereader: rpi-queuereader
     rabbitmqconsole: rpi-rabbitmq-console
     smartactivation: rpi-smartActivation
-    helmcopilot: rpi-helmcopilot
-
-# ==========================
-# Helm Copilot (MCP Server)
-# ==========================
-helmcopilot:
-  enabled: false
 
 # ==========================
 # Network Policy

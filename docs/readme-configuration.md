@@ -13,7 +13,7 @@ bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature
 bash deploy/cli/interactioncli.sh -a menu          # interactive feature picker
 ```
 
-Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `helm_copilot`, `secrets_management`, `node_scheduling`.
+Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `secrets_management`, `node_scheduling`.
 
 For the complete list of every key, see [values-reference.yaml](values-reference.yaml).
 

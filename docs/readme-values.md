@@ -52,7 +52,6 @@ After the base configuration, the CLI prompts for optional features:
 | `custom_metrics` | Expose Prometheus /metrics endpoints for monitoring |
 | `service_mesh` | Enable Linkerd mTLS and traffic policies |
 | `smoke_tests` | Validate PVC mounts and CSI drivers post-deploy |
-| `helm_copilot` | AI assistant for chart configuration and troubleshooting |
 | `extra_envs` | Debug and plugin environment variables |
 | `data_warehouse` | Connect to Snowflake or BigQuery |
 | `secrets_management` | Configure secrets provider, CSI classes, SDK vault settings |

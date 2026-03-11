@@ -172,9 +172,6 @@ features:
   # Validates PVC mounts and CSI drivers post-deploy.
   # smoke_tests: true
 
-  # --- Helm Copilot ---
-  # AI assistant for chart configuration and troubleshooting.
-  # helm_copilot: true
 
   # --- Extra Envs ---
   # Debug and plugin environment variables (all disabled by default).

@@ -2273,18 +2273,7 @@
         }
       }
     },
-    "helmcopilot": {
-      "type": "object",
-      "description": "Helm Copilot MCP server \u2014 AI-powered assistant for configuring and troubleshooting RPI",
-      "additionalProperties": true,
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Deploy the Helm Copilot MCP server"
-        }
-      }
-    },
-    "databaseUpgrade": {
+"databaseUpgrade": {
       "type": "object",
       "description": "Automatic database upgrade job \u2014 calls the upgrade endpoint after an image tag change",
       "additionalProperties": true,

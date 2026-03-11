@@ -56,7 +56,6 @@ while getopts "o:a:fh" opt; do
       echo "    smtp              Email delivery configuration"
       echo "    redpoint_ai       OpenAI and Azure Cognitive Search"
       echo "    storage           PVC and CSI storage volumes"
-      echo "    helm_copilot      AI assistant for chart configuration"
       echo "    data_warehouse    Snowflake or BigQuery"
       echo "    extra_envs        Debug and plugin environment variables"
     echo "    secrets_management Configure secrets provider, CSI classes, SDK vault"
@@ -1249,19 +1248,6 @@ BLOCK
   fi
 }
 
-add_helm_copilot() {
-  local file=$1
-  check_replace_block "$file" "helmcopilot" "Helm Copilot" || return 0
-  append_block "$file" "$(cat <<'BLOCK'
-helmcopilot:
-  enabled: true
-BLOCK
-)" "Interaction Copilot (MCP Server)"
-  echo "  ${ICON_CHECK} Added Interaction Copilot to ${file}"
-  echo "  ${DIM}  AI-powered assistant for configuring and troubleshooting RPI.${RESET}"
-  echo "  ${DIM}  Connect via: claude mcp add rpi-helm --transport http https://<helmcopilot-host>/mcp${RESET}"
-}
-
 add_secrets_management() {
   local file=$1
 
@@ -1723,11 +1709,10 @@ show_feature_menu() {
   echo "    ${CYAN}9${RESET})  smtp              — Send transactional emails from RPI workflows"
   echo "    ${CYAN}10${RESET}) redpoint_ai       — AI-powered content generation (OpenAI + Cognitive Search)"
   echo "    ${CYAN}11${RESET}) storage           — Persistent volumes for file-based processing and caching"
-  echo "    ${CYAN}12${RESET}) helm_copilot      — AI assistant for chart configuration and troubleshooting"
-  echo "    ${CYAN}13${RESET}) data_warehouse    — Connect to Snowflake or BigQuery"
-  echo "    ${CYAN}14${RESET}) extra_envs        — Debug and plugin environment variables"
-  echo "    ${CYAN}15${RESET}) secrets_management — Configure secrets provider, CSI classes, SDK vault settings"
-  echo "    ${CYAN}16${RESET}) node_scheduling    — Node selector and tolerations for dedicated nodes"
+  echo "    ${CYAN}12${RESET}) data_warehouse    — Connect to Snowflake or BigQuery"
+  echo "    ${CYAN}13${RESET}) extra_envs        — Debug and plugin environment variables"
+  echo "    ${CYAN}14${RESET}) secrets_management — Configure secrets provider, CSI classes, SDK vault settings"
+  echo "    ${CYAN}15${RESET}) node_scheduling    — Node selector and tolerations for dedicated nodes"
   echo ""
   local choice
   read -rp "  Enter feature number or name: " choice
@@ -1743,11 +1728,10 @@ show_feature_menu() {
     9|smtp)                ADD_FEATURE="smtp" ;;
     10|redpoint_ai)        ADD_FEATURE="redpoint_ai" ;;
     11|storage)            ADD_FEATURE="storage" ;;
-    12|helm_copilot)       ADD_FEATURE="helm_copilot" ;;
-    13|data_warehouse)     ADD_FEATURE="data_warehouse" ;;
-    14|extra_envs)         ADD_FEATURE="extra_envs" ;;
-    15|secrets_management) ADD_FEATURE="secrets_management" ;;
-    16|node_scheduling)    ADD_FEATURE="node_scheduling" ;;
+    12|data_warehouse)     ADD_FEATURE="data_warehouse" ;;
+    13|extra_envs)         ADD_FEATURE="extra_envs" ;;
+    14|secrets_management) ADD_FEATURE="secrets_management" ;;
+    15|node_scheduling)    ADD_FEATURE="node_scheduling" ;;
     *) echo "  ${RED}Unknown feature: ${choice}${RESET}"; exit 1 ;;
   esac
 }
@@ -1766,7 +1750,6 @@ run_add_feature() {
     smtp)             add_smtp "$file" ;;
     redpoint_ai)      add_redpoint_ai "$file" ;;
     storage)          add_storage "$file" ;;
-    helm_copilot)     add_helm_copilot "$file" ;;
     data_warehouse)   add_data_warehouse "$file" ;;
     extra_envs)         add_extra_envs "$file" ;;
     secrets_management) add_secrets_management "$file" ;;
@@ -2383,7 +2366,7 @@ fi
 # ============================================================
 # Optional features — prompt during initial setup
 # ============================================================
-FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests helm_copilot extra_envs secrets_management node_scheduling"
+FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests extra_envs secrets_management node_scheduling"
 SELECTED_FEATURES=""
 
 if [ "$FILE_MODE" = "true" ]; then
@@ -2416,7 +2399,6 @@ else
       custom_metrics)   label="Custom Metrics — expose Prometheus /metrics endpoints for monitoring" ;;
       service_mesh)     label="Service Mesh — enable Linkerd mTLS and traffic policies" ;;
       smoke_tests)      label="Smoke Tests — validate PVC mounts and CSI drivers post-deploy" ;;
-      helm_copilot)     label="Interaction Copilot — AI assistant for chart configuration and troubleshooting" ;;
       extra_envs)         label="Extra Envs — debug and plugin environment variables for execution service" ;;
       secrets_management) label="Secrets Management — configure secrets provider, CSI classes, SDK vault settings" ;;
       node_scheduling)    label="Node Scheduling — node selector and tolerations for dedicated nodes" ;;
@@ -2464,7 +2446,6 @@ for feat in $SELECTED_FEATURES; do
     custom_metrics)   add_custom_metrics "$OUTPUT_FILE" ;;
     service_mesh)     add_service_mesh "$OUTPUT_FILE" ;;
     smoke_tests)      add_smoke_tests "$OUTPUT_FILE" ;;
-    helm_copilot)     add_helm_copilot "$OUTPUT_FILE" ;;
     extra_envs)       add_extra_envs "$OUTPUT_FILE" ;;
     secrets_management) add_secrets_management "$OUTPUT_FILE" ;;
     node_scheduling)    add_node_scheduling "$OUTPUT_FILE" ;;

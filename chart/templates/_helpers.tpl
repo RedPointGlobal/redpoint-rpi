@@ -441,12 +441,6 @@ nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
-{{- define "rpi.merged.helmcopilot" -}}
-{{- $d := fromYaml (include "rpi.defaults.helmcopilot" .) -}}
-{{- $u := .Values.helmcopilot | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
 {{/*
 Resolve a host entry to an FQDN.
 If the host value contains a dot, it is treated as a FQDN and returned as-is.
