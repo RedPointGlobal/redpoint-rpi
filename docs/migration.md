@@ -5,7 +5,7 @@
 
 This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you're deploying RPI for the first time, see the [Greenfield Installation](greenfield.md) guide instead.
 
-> **Not ready to upgrade?** The `release/v7.6` branch remains available on GitHub for critical fixes. You are not required to upgrade immediately — stay on v7.6 as long as needed.
+> **Not ready to upgrade?** The `release/v7.6` branch remains available on GitHub for critical fixes. You can stay on v7.6 as long as needed.
 
 ---
 
@@ -19,6 +19,20 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 | 3,000+ lines to manage | 50–100 lines typical |
 | Upgrades require diffing the entire file | Upgrades apply new defaults automatically |
 | No escape hatch for hidden internals | Any internal default can be overridden directly under its top-level key |
+
+---
+
+## Breaking Changes
+
+### Redshift Data Warehouse
+
+Redshift now uses the Npgsql library instead of the ODBC driver. The `databases.datawarehouse.redshift` config block has been removed from the chart. Redshift connections are configured in the RPI client interface using a connection string:
+
+```
+Host=<hostname>;Database=<database>;Port=5439;User Id=<username>;Password=<password>;SslMode=Require;Trust Server Certificate=true
+```
+
+If you have Redshift in your overrides file, remove the `databases.datawarehouse.redshift` block before upgrading. After deploying v7.7, add your connection string through the client interface.
 
 ---
 
@@ -57,7 +71,7 @@ git push origin main
 
 You have two options: use the **Interaction Copilot** for automatic migration, or use the **Interaction CLI** to build a new overrides file interactively.
 
-**Option A — Automatic migration with Interaction Copilot (recommended)**
+**Option A: Automatic migration with Interaction Copilot (recommended)**
 
 If you have the [Interaction Copilot](readme-mcp.md) connected, ask it to migrate your v7.6 values file:
 
@@ -65,9 +79,9 @@ If you have the [Interaction Copilot](readme-mcp.md) connected, ask it to migrat
 
 The Copilot analyzes your file, identifies customizations vs defaults, remaps renamed keys, and produces a minimal v7.7 overrides file. It warns about breaking changes like `secretsManagement` relocation and `ingress.className` default changes.
 
-**Option B — Interactive CLI**
+**Option B: Interactive CLI**
 
-Run the Interaction CLI with your existing v7.6 values at hand (database host, credentials, ingress domain, cache/queue providers). The CLI generates a v7.7-compatible overrides file — no manual diffing or key translation required:
+Run the Interaction CLI with your existing v7.6 values at hand (database host, credentials, ingress domain, cache/queue providers). The CLI generates a v7.7-compatible overrides file without manual diffing or key translation:
 
 ```bash
 bash deploy/cli/interactioncli.sh
@@ -137,7 +151,7 @@ Commit your `overrides.yaml` to the repo and sync. See the [GitOps Guide](readme
 
 After the v7.7 containers are running, the operational databases need a schema upgrade.
 
-**Option A — Automatic (recommended):**
+**Option A: Automatic (recommended)**
 
 ```bash
 bash deploy/cli/interactioncli.sh -a database_upgrade
@@ -146,7 +160,7 @@ helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
 
 The chart creates a Job that waits for the Deployment API to become ready, then runs the upgrade automatically.
 
-**Option B — Manual:**
+**Option B: Manual**
 
 ```bash
 DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
@@ -185,13 +199,13 @@ If you added custom template files to your v7.6 `chart/templates/` directory (e.
 
 > "Analyze my v7.6 templates at /path/to/chart/templates for migration to v7.7"
 
-The Copilot compares your templates against the stock v7.6 versions, identifies every custom file and every modification, and provides specific guidance for each — including diffs and advice on which changes can now be expressed as values instead of template edits.
+The Copilot compares your templates against the stock v7.6 versions, identifies every custom file and every modification, and provides specific guidance for each, including diffs and advice on which changes can now be expressed as values instead of template edits.
 
 **Without the Copilot:**
 
 1. Copy custom template files (files not in the stock v7.6 chart) to the v7.7 `chart/templates/` directory. Review for compatibility with v7.7 values paths.
 2. For modified stock templates, diff your version against the [stock v7.6 templates](https://github.com/RedPointGlobal/redpoint-rpi/tree/release/v7.6/redpoint-rpi/templates) and apply your changes to the v7.7 versions.
-3. Many v7.6 template-level customizations (probes, resources, labels, annotations, security context) can now be set directly through values — check values first before editing templates.
+3. Many v7.6 template-level customizations (probes, resources, labels, annotations, security context) can now be set directly through values, so check values first before editing templates.
 
 ---
 
@@ -227,24 +241,7 @@ If you prefer to build your overrides manually instead of using the CLI, here ar
 | `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` | Shortened |
 | `queuereader.realtimeConfiguration.distributedCache` | `queuereader.realtimeConfiguration.internalCache` | Renamed |
 | `executionservice.internalCache.type` | `executionservice.internalCache.redisSettings.type` | Restructured |
-| `databases.datawarehouse.redshift` | *(removed)* | See Redshift breaking change below |
-
-### Redshift Data Warehouse — Breaking Change
-
-The Redshift connector has been updated in v7.7 to replace the ODBC driver with the **Npgsql library** for improved performance and reliability. This is a breaking change for existing v7.6 deployments using Redshift.
-
-**What changed:**
-- The ODBC-based Redshift configuration (`databases.datawarehouse.redshift`) has been removed from the Helm chart
-- Redshift connections are now configured directly within the RPI client interface using an Npgsql connection string
-- The `cm-odbc.yaml` ConfigMap no longer generates Redshift DSN entries
-
-**Action required for existing Redshift users:**
-1. Remove any `databases.datawarehouse.redshift` configuration from your overrides file
-2. After deploying v7.7, configure your Redshift connection in the RPI client interface using a connection string in the following format:
-
-```
-Host=<hostname>;Database=<database>;Port=5439;User Id=<username>;Password=<password>;SslMode=Require;Trust Server Certificate=true
-```
+| `databases.datawarehouse.redshift` | *(removed)* | See [Breaking Changes](#breaking-changes) |
 
 **Now set directly under the top-level key** (only needed if you customized these in v7.6):
 

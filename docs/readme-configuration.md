@@ -5,8 +5,8 @@
 
 After completing either the [Greenfield](greenfield.md) or [Migration](migration.md) guide, configure the optional features below. The Interaction CLI supports two workflows:
 
-- **During initial setup** — the CLI offers each feature after generating your base config, so you can include everything in one pass.
-- **After deployment** — add features to an existing overrides file at any time:
+- **During initial setup:** the CLI offers each feature after generating your base config, so you can include everything in one pass.
+- **After deployment:** add features to an existing overrides file at any time:
 
 ```bash
 bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature
@@ -42,7 +42,7 @@ For the complete list of every key, see [values-reference.yaml](values-reference
 
 ## Cloud Identity
 
-Enables RPI to authenticate with cloud services using platform-native identity federation — no static credentials required. The Interaction CLI configures this automatically based on your platform.
+Enables RPI to authenticate with cloud services using platform-native identity federation, removing the need for static credentials. The Interaction CLI configures this automatically based on your platform.
 
 ### Azure (Workload Identity)
 
@@ -110,7 +110,7 @@ secretsManagement:
     secretName: redpoint-rpi-secrets
 ```
 
-The chart does not create the Secret — that is the administrator's responsibility. This keeps sensitive values out of Helm release metadata and version control. Apply the Secret before running `helm install` or `helm upgrade`.
+The chart does not create the Secret. That is the administrator's responsibility. This keeps sensitive values out of Helm release metadata and version control. Apply the Secret before running `helm install` or `helm upgrade`.
 
 ### SDK (Cloud Vault)
 
@@ -169,7 +169,7 @@ secretsManagement:
 
 ### Managing CSI Classes with the CLI
 
-The CLI supports incremental updates — you don't need to rebuild the entire block each time.
+The CLI supports incremental updates. You don't need to rebuild the entire block each time.
 
 | CLI action | What it does |
 |:-----------|:-------------|
@@ -186,7 +186,7 @@ bash deploy/cli/interactioncli.sh -a secrets_management
 # Follow prompts for name, provider, vault parameters, objects, and secret mappings
 ```
 
-**Updating an existing class — adding vault objects:**
+**Updating an existing class (adding vault objects):**
 
 ```bash
 bash deploy/cli/interactioncli.sh -a secrets_management
@@ -209,7 +209,7 @@ This appends new entries to the class's `objects:` list:
             objectType: secret
 ```
 
-**Updating an existing class — adding secret data mappings:**
+**Updating an existing class (adding secret data mappings):**
 
 ```bash
 bash deploy/cli/interactioncli.sh -a secrets_management
@@ -604,8 +604,8 @@ Each smoke test pod mounts the specified volume and runs a basic read/write chec
 
 SSO via Azure AD. Requires registering two applications in the Azure Portal:
 
-1. **Interaction Client** — The SPA (single-page application) that users log into
-2. **Interaction API** — The backend API that validates tokens
+1. **Interaction Client:** The SPA (single-page application) that users log into
+2. **Interaction API:** The backend API that validates tokens
 
 ```yaml
 MicrosoftEntraID:
@@ -635,7 +635,7 @@ When using the embedded Keycloak (`cdp-keycloak`), the chart deploys a Keycloak 
 
 ## Demo Mode
 
-Deploys embedded MSSQL and MongoDB containers for dev/eval — **not for production**. No external database setup required.
+Deploys embedded MSSQL and MongoDB containers for dev/eval. **Not for production.** No external database setup required.
 
 ```yaml
 global:
@@ -685,7 +685,7 @@ When `UseCredentials: true`, the SMTP password is read from the Kubernetes Secre
 
 ## Overriding Internal Defaults
 
-Every internal default — probes, security contexts, logging, ports, rollout strategies, thread pools — can be overridden directly under the matching top-level key without forking the chart.
+Every internal default (probes, security contexts, logging, ports, rollout strategies, thread pools) can be overridden directly under the matching top-level key without forking the chart.
 
 ```yaml
 interactionapi:

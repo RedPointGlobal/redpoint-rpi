@@ -167,7 +167,7 @@ curl -X POST \
   }'
 ```
 
-Check status with `curl "https://$DEPLOYMENT_SERVICE_URL/api/deployment/status"` — wait for `"Status": "LastRunComplete"`.
+Check status with `curl "https://$DEPLOYMENT_SERVICE_URL/api/deployment/status"`. Wait for `"Status": "LastRunComplete"`.
 
 ### Add Your First Tenant
 
@@ -211,8 +211,8 @@ curl -X POST \
 
 The Interaction CLI offers optional features (SMTP, storage, Redpoint AI, etc.) in two ways:
 
-1. **During initial setup** — after generating your base config, the CLI walks through each available feature and lets you include it in one go.
-2. **After deployment** — add features to an existing overrides file at any time:
+1. **During initial setup:** after generating your base config, the CLI walks through each available feature and lets you include it in one go.
+2. **After deployment:** add features to an existing overrides file at any time:
 
 ```bash
 bash deploy/cli/interactioncli.sh -a redpoint_ai    # add a specific feature

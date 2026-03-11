@@ -5,14 +5,14 @@
 
 ## What is GitOps?
 
-GitOps is an operational model where your entire deployment state — application configuration, infrastructure, and release versions — is declared in Git. Instead of running `helm upgrade` manually, a GitOps controller watches your repository and automatically reconciles the cluster to match what's committed.
+GitOps is an operational model where your entire deployment state (application configuration, infrastructure, and release versions) is declared in Git. Instead of running `helm upgrade` manually, a GitOps controller watches your repository and automatically reconciles the cluster to match what's committed.
 
 **Benefits for RPI deployments:**
 
-- **Audit trail** — every change is a Git commit with author, timestamp, and diff
-- **Rollback** — revert a deployment by reverting a commit
-- **Consistency** — dev, staging, and production all deploy the same way
-- **Self-healing** — if someone manually changes a resource in the cluster, the controller reverts it
+- **Audit trail:** every change is a Git commit with author, timestamp, and diff
+- **Rollback:** revert a deployment by reverting a commit
+- **Consistency:** dev, staging, and production all deploy the same way
+- **Self-healing:** if someone manually changes a resource in the cluster, the controller reverts it
 
 ## What is ArgoCD?
 
@@ -26,7 +26,7 @@ ArgoCD needs read access to the Git repository containing the Helm chart. You ha
 
 ### Option 1: Use the public repository directly
 
-Point ArgoCD to the public GitHub repository. This is the simplest setup — ArgoCD pulls the chart on each sync.
+Point ArgoCD to the public GitHub repository. This is the simplest setup. ArgoCD pulls the chart on each sync.
 
 ```yaml
 source:
@@ -39,9 +39,9 @@ source:
 
 Fork or mirror the RPI repository into your organization's internal Git server (GitHub Enterprise, GitLab, Bitbucket, Azure DevOps, etc.). This gives you:
 
-- **No external dependency** — syncs work even if GitHub is unreachable
-- **Change control** — review upstream updates before they reach your clusters
-- **Network compliance** — ArgoCD never reaches outside your network
+- **No external dependency:** syncs work even if GitHub is unreachable
+- **Change control:** review upstream updates before they reach your clusters
+- **Network compliance:** ArgoCD never reaches outside your network
 
 To set this up:
 
@@ -94,7 +94,7 @@ redpoint-rpi/               (this repo)
 
 ## Single-Environment Application
 
-The simplest setup — one ArgoCD Application per environment.
+The simplest setup: one ArgoCD Application per environment.
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1

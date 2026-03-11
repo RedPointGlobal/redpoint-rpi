@@ -54,7 +54,7 @@ Before starting, ensure you have:
 ## Repository Structure
 
 ```
-# DO NOT EDIT — managed by Redpoint
+# DO NOT EDIT - managed by Redpoint
 redpoint-rpi/
 ├── chart/                        
 │   ├── Chart.yaml
@@ -64,10 +64,10 @@ redpoint-rpi/
 │       ├── _helpers.tpl          # Merge helpers (do not edit)
 │       └── deploy-*.yaml         # Resource templates (do not edit)
 
-# YOUR TOOLS — use these
+# YOUR TOOLS - use these
 ├── deploy/                       
-│   ├── cli/interactioncli.sh     # Interaction CLI — generates overrides & secrets
-│   ├── cli/deploy.sh            # Deploy wrapper — helm install/upgrade with live progress
+│   ├── cli/interactioncli.sh     # Interaction CLI: generates overrides & secrets
+│   ├── cli/deploy.sh            # Deploy wrapper: helm install/upgrade with live progress
 │   ├── terraform/modules/        # IaC modules (Azure, AWS, GCP)
 │   └── values/                   # Example overrides (copy, don't edit in place)
 │       ├── azure/azure.yaml      # Azure example
@@ -104,8 +104,8 @@ After install or upgrade, run `helm test rpi -n redpoint-rpi` to verify all serv
 
 ## AI-Assisted Operations
 
-- **`values.schema.json`** — IDE autocomplete and Helm-native validation. Bundled with the chart, no setup required.
-- **Interaction Helm Copilot** — AI-powered assistant that validates configs, generates overrides, renders templates, and diagnoses issues via [MCP](https://modelcontextprotocol.io).
+- **`values.schema.json`**: IDE autocomplete and Helm-native validation. Bundled with the chart, no setup required.
+- **Interaction Helm Copilot**: AI-powered assistant that validates configs, generates overrides, renders templates, and diagnoses issues via [MCP](https://modelcontextprotocol.io).
 
 See the [Interaction Helm Copilot Guide](docs/readme-mcp.md) for setup.
 
@@ -125,4 +125,4 @@ Visit the [RPI Documentation Site](https://docs.redpointglobal.com/rpi/) for in-
 
 For RPI application issues, contact [support@redpointglobal.com](mailto:support@redpointglobal.com).
 
-> **Scope of Support:** Redpoint supports RPI application issues. Kubernetes infrastructure, networking, and external system configuration fall outside our support scope — consult your IT infrastructure team or relevant technical forums for those.
+> **Scope of Support:** Redpoint supports RPI application issues. Kubernetes infrastructure, networking, and external system configuration fall outside our support scope. Consult your IT infrastructure team or relevant technical forums for those.

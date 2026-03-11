@@ -5,7 +5,7 @@
 
 ## Overview
 
-The Terraform modules in `deploy/terraform/modules/` provision cloud infrastructure and generate a valid Helm overrides file from the provisioned resource outputs. This gives you a single `terraform apply` that creates everything needed for RPI — database, identity, secrets store, and a ready-to-use values file.
+The Terraform modules in `deploy/terraform/modules/` provision cloud infrastructure and generate a valid Helm overrides file from the provisioned resource outputs. This gives you a single `terraform apply` that creates everything needed for RPI: database, identity, secrets store, and a ready-to-use values file.
 
 ## Available Modules
 
@@ -73,14 +73,14 @@ module "rpi" {
 
 Each module creates:
 
-1. **Identity** — A cloud identity (Managed Identity / IAM Role / GCP Service Account) configured for Kubernetes workload identity federation
-2. **Database** — An operational database (Azure SQL / RDS SQL Server / Cloud SQL) with two databases: `Pulse` and `Pulse_Logging`
-3. **Secrets** (optional) — A cloud secrets store (Key Vault / Secrets Manager / Secret Manager) when `enable_keyvault` / `enable_secrets_manager` / `enable_secret_manager` is set
-4. **Helm Values** — A generated `rpi-values.yaml` file with all connection details populated from Terraform outputs
+1. **Identity:** A cloud identity (Managed Identity / IAM Role / GCP Service Account) configured for Kubernetes workload identity federation
+2. **Database:** An operational database (Azure SQL / RDS SQL Server / Cloud SQL) with two databases: `Pulse` and `Pulse_Logging`
+3. **Secrets** (optional): A cloud secrets store (Key Vault / Secrets Manager / Secret Manager) when `enable_keyvault` / `enable_secrets_manager` / `enable_secret_manager` is set
+4. **Helm Values:** A generated `rpi-values.yaml` file with all connection details populated from Terraform outputs
 
 ## Generated Values File
 
-The generated file is minimal — it contains only the values derived from provisioned resources. You can extend it by merging with additional overrides:
+The generated file is minimal. It contains only the values derived from provisioned resources. You can extend it by merging with additional overrides:
 
 ```hcl
 resource "helm_release" "rpi" {

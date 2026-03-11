@@ -20,9 +20,9 @@
 
 Before enabling Smart Activation, ensure you have:
 
-- **Container Registry** — Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download the RPI Smart Activation images.
-- **Activation License** — Open a [Support](mailto:support@redpointglobal.com) ticket to obtain the RPI Smart Activation license key.
-- **Integration API Service Account** — Create a service account within RPI that Smart Activation uses to communicate with the Integration API. The account must be a member of these RPI groups:
+- **Container Registry:** Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download the RPI Smart Activation images.
+- **Activation License:** Open a [Support](mailto:support@redpointglobal.com) ticket to obtain the RPI Smart Activation license key.
+- **Integration API Service Account:** Create a service account within RPI that Smart Activation uses to communicate with the Integration API. The account must be a member of these RPI groups:
   - `Everyone`
   - `IntegrationAPI`
   - `Cluster Administrators`
@@ -183,4 +183,4 @@ Visit the [RPI Documentation Site]("https://docs.redpointglobal.com/rpi/") for i
 
 For RPI application issues, contact [support@redpointglobal.com](mailto:support@redpointglobal.com).
 
-> **Scope of Support:** Redpoint supports RPI application issues. Kubernetes infrastructure, networking, and external system configuration fall outside our support scope — consult your IT infrastructure team or relevant technical forums for those.
+> **Scope of Support:** Redpoint supports RPI application issues. Kubernetes infrastructure, networking, and external system configuration fall outside our support scope. Consult your IT infrastructure team or relevant technical forums for those.

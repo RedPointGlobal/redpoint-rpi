@@ -76,7 +76,7 @@ Once connected, ask your AI assistant questions like these:
 
 > "Validate my values file at deploy/values/azure/azure.yaml"
 
-Checks your configuration against the schema and RPI-specific rules. Returns errors with fix suggestions — catches typos, missing fields, placeholder values, and invalid provider combinations.
+Checks your configuration against the schema and RPI-specific rules. Returns errors with fix suggestions. Catches typos, missing fields, placeholder values, and invalid provider combinations.
 
 ### Generate an overrides file
 
@@ -130,4 +130,4 @@ See the [Migration Guide](migration.md) for details.
 
 ## IDE Autocomplete
 
-The chart also includes `values.schema.json` which provides autocomplete in any YAML-aware editor (VS Code, IntelliJ, etc.) and automatic validation during `helm install` and `helm upgrade`. This works out of the box — no setup required.
+The chart also includes `values.schema.json` which provides autocomplete in any YAML-aware editor (VS Code, IntelliJ, etc.) and automatic validation during `helm install` and `helm upgrade`. This works out of the box with no setup required.
