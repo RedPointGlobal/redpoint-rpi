@@ -40,7 +40,22 @@ claude mcp add rpi-helm --transport http https://redpoint-rpi-helm.redpointcdp.c
 
 Configure HTTP transport pointing to `https://redpoint-rpi-helm.redpointcdp.com/mcp`.
 
-## What You Can Do
+## Available Tools
+
+The Copilot exposes the following MCP tools to your AI client:
+
+| Tool | Description |
+|------|-------------|
+| `rpi_validate` | Validates a values file against the chart schema and RPI-specific rules |
+| `rpi_generate` | Generates an overrides file for a given platform, identity provider, and feature set |
+| `rpi_explain` | Explains what a setting controls, its valid values, defaults, and related keys |
+| `rpi_template` | Renders Helm templates with a given values file and returns the Kubernetes manifests |
+| `rpi_status` | Shows deployment health, pod status, and recent events from the cluster |
+| `rpi_troubleshoot` | Diagnoses issues using pod logs, events, secrets, and ingress configuration |
+| `rpi_docs_search` | Searches the official RPI product documentation by keyword |
+| `rpi_docs_fetch` | Fetches a specific page from the RPI documentation site |
+
+## Usage Examples
 
 Once connected, ask your AI assistant questions like these:
 
