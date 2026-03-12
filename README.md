@@ -9,20 +9,14 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ## Choose Your Path
 
-| | New Installation | Upgrading from v7.6 |
-|:---|:---|:---|
-| **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
-| **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
-| **Databases** | Created from scratch | Existing databases are reused |
-| **Values.yaml** | Generate with the `Interaction CLI` | Run the `Interaction CLI` with your existing values, then `--add` features as needed |
+| | New Installation | Upgrading from v7.6 | AI-Assisted |
+|:---|:---|:---|:---|
+| **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) | [Helm Copilot](docs/readme-mcp.md) |
+| **When to use** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure | Any scenario. Validates configs, generates overrides, diagnoses issues, and answers questions in plain English |
+| **Databases** | Created from scratch | Existing databases are reused | Generates the correct database configuration for your platform |
+| **Values.yaml** | Generate with the `Interaction CLI` | Run the `Interaction CLI` with your existing values, then `--add` features as needed | Generate or validate with the Copilot, or use alongside the CLI |
 
----
-<p align="left">
-  <a href="docs/readme-configuration.md"><strong>Configuration</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-values.md"><strong>Values Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-argocd.md"><strong>GitOps Guide</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="docs/readme-mcp.md"><strong>MCP Guide</strong></a>
-</p>
+After completing either guide, see the **[Configuration Reference](docs/readme-configuration.md)** for optional features.
 
 ---
 
@@ -92,30 +86,19 @@ redpoint-rpi/
 
 ---
 
-## Configuration
+## Additional Guides
 
-After completing either the [Greenfield](docs/greenfield.md) or [Migration](docs/migration.md) guide, see the **[Configuration Reference](docs/readme-configuration.md)** for optional features including cloud identity, secrets management, storage, Realtime API, autoscaling, service mesh, SSO, and more.
+| Guide | Description |
+|:------|:------------|
+| [Configuration Reference](docs/readme-configuration.md) | Optional features: cloud identity, secrets management, storage, Realtime API, autoscaling, service mesh, SSO, and more |
+| [Values Guide](docs/readme-values.md) | How the two-tier values system works, and how to customize defaults via the `advanced:` block |
+| [GitOps Guide](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |
+| [Terraform Guide](docs/readme-terraform.md) | Infrastructure-as-code modules for Azure, AWS, and GCP |
+| [values-reference.yaml](docs/values-reference.yaml) | Complete reference of every available key |
 
-Use the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) to generate your base overrides, then add features on demand with `bash deploy/cli/interactioncli.sh -a <feature>`. For the complete list of every key, see [values-reference.yaml](docs/values-reference.yaml).
+Use the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) to generate your base overrides, then add features on demand with `bash deploy/cli/interactioncli.sh -a <feature>`.
 
 After install or upgrade, run `helm test rpi -n redpoint-rpi` to verify all services are healthy.
-
----
-
-## AI-Assisted Operations
-
-- **`values.schema.json`**: IDE autocomplete and Helm-native validation. Bundled with the chart, no setup required.
-- **Interaction Helm Copilot**: AI-powered assistant that validates configs, generates overrides, renders templates, and diagnoses issues via [MCP](https://modelcontextprotocol.io).
-
-See the [Interaction Helm Copilot Guide](docs/readme-mcp.md) for setup.
-
----
-
-## Customizing This Helm Chart
-
-The chart uses a **two-tier values system**: a small overrides file with your customizations, and internal defaults managed by the chart. See [readme-values.md](docs/readme-values.md) for details.
-
-Every internal default (probes, security contexts, logging, ports, rollout strategies, thread pools) can be overridden via the `advanced:` block without forking the chart. See [docs/values-reference.yaml](docs/values-reference.yaml) for every available key.
 
 ## RPI Documentation
 
