@@ -27,7 +27,9 @@ Then launch it:
 claude
 ```
 
-On first run, you'll be prompted to sign in with your Anthropic account. Follow the on-screen instructions to authenticate. See the [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for more details.
+On first run, you'll be prompted to sign in with your Anthropic account. If you don't have one, you can [sign up for a free account at claude.ai](https://claude.ai/signup). Follow the on-screen instructions to authenticate. See the [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for more details.
+
+> **Note:** The Helm Copilot currently supports Claude Code only. Support for additional MCP clients (Claude Desktop, Cursor, Windsurf, etc.) is planned for a future release.
 
 ## Connect the Copilot
 
