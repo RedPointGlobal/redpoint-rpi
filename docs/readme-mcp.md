@@ -12,33 +12,38 @@ It also searches the official [RPI documentation](https://docs.redpointglobal.co
 ## Prerequisites
 
 - An MCP-compatible AI client (Claude Code, Claude Desktop, Cursor, Windsurf, etc.)
+- [Node.js](https://nodejs.org/) (required for Claude Desktop only)
 
 ## Setup
 
-The Copilot is hosted by Redpoint as a public MCP endpoint. No deployment or cluster resources required.
+The Copilot is hosted by Redpoint as a public MCP endpoint. There is nothing to install, deploy, or run in your cluster. Just point your AI client to the endpoint below.
 
-**Claude Code:**
+**Claude Code (CLI):**
 
 ```bash
-claude mcp add rpi-helm --transport http https://redpoint-rpi-helm.redpointcdp.com/mcp
+claude mcp add rpi-helm --transport http https://helmcopilot.redpointcdp.com/mcp
 ```
 
-**Claude Desktop** (`claude_desktop_config.json`):
+**Claude Desktop:**
+
+Add the following to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "rpi-helm": {
-      "type": "http",
-      "url": "https://redpoint-rpi-helm.redpointcdp.com/mcp"
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://helmcopilot.redpointcdp.com/mcp"]
     }
   }
 }
 ```
 
+> **Note:** Claude Desktop does not yet support HTTP transport natively, so we use [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) to bridge the connection. This requires Node.js to be installed.
+
 **Other MCP Clients (Cursor, Windsurf, etc.):**
 
-Configure HTTP transport pointing to `https://redpoint-rpi-helm.redpointcdp.com/mcp`.
+If the client supports HTTP transport, point it to `https://helmcopilot.redpointcdp.com/mcp`. Otherwise, use the `npx mcp-remote` approach shown above.
 
 ## Available Tools
 
@@ -54,6 +59,8 @@ The Copilot exposes the following MCP tools to your AI client:
 | `rpi_troubleshoot` | Diagnoses issues using pod logs, events, secrets, and ingress configuration |
 | `rpi_docs_search` | Searches the official RPI product documentation by keyword |
 | `rpi_docs_fetch` | Fetches a specific page from the RPI documentation site |
+| `rpi_migrate` | Migrates a v7.6 values file to v7.7 format |
+| `rpi_migrate_templates` | Analyzes a v7.6 templates directory for customizations to carry forward |
 
 ## Usage Examples
 
