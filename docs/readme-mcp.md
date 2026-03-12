@@ -160,13 +160,13 @@ Searches the official RPI product documentation and returns relevant content.
 
 Analyzes your existing configuration, remaps renamed keys, and generates a v7.7 overrides file. See the [Migration Guide](migration.md) for details.
 
-**Values only** — use when you have not modified any Helm template files:
+**Values only** (use when you have not modified any Helm template files):
 
 > "Migrate my v7.6 values file at /path/to/values.yaml to v7.7"
 >
 > "What changed between v7.6 and v7.7?"
 
-**Values and templates** — use when you have added or modified Helm template files:
+**Values and templates** (use when you have added or modified Helm template files):
 
 > "Analyze my v7.6 templates at /path/to/templates for migration to v7.7"
 
