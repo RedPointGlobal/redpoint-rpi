@@ -22,6 +22,125 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 
 ---
 
+## v7.6 Pain Points Addressed in v7.7
+
+### Custom container images and private registries
+
+**v7.6 problem:** Each service had its own image path (`global.deployment.images.interactionapi`, `global.deployment.images.realtimeapi`, etc.), requiring changes to every `images:` entry when deploying from a private registry like ECR. Some customers also needed to edit individual deploy templates to match their registry's naming convention.
+
+**v7.7 solution:** All services now share a single repository and tag:
+
+```yaml
+global:
+  deployment:
+    images:
+      repository: 123456789.dkr.ecr.us-east-1.amazonaws.com/redpoint
+      tag: "7.7.20260220.1524"
+```
+
+The chart constructs each image as `{repository}/{service-name}:{tag}` automatically. No template edits required, regardless of registry provider.
+
+### Service account per deployment file
+
+**v7.6 problem:** Each deploy template created its own ServiceAccount and used the deployment name as the service account name. Customers using a single shared service account (common on EKS with IRSA) had to edit every deploy file to replace `serviceAccountName: {{ $name }}` with their shared SA name.
+
+**v7.7 solution:** The `cloudIdentity.serviceAccount.mode` field controls this centrally:
+
+```yaml
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    mode: shared              # shared | per-service | both
+    name: sa-redpoint-rpi     # any name you want
+```
+
+| Mode | Behavior |
+|:-----|:---------|
+| `shared` | All pods use the single SA specified in `name`. No per-service SAs are created. |
+| `per-service` | Each service gets its own SA (e.g., `rpi-realtimeapi`, `rpi-interactionapi`). This is the default. |
+| `both` | Per-service SAs are created, plus a shared SA exists for services that need it. |
+
+No template edits required for any mode.
+
+### Credentials in values.yaml
+
+**v7.6 problem:** Database passwords, API keys, and other credentials had to live in `values.yaml` or be passed via `--set` flags, which made security teams uncomfortable. There was no built-in way to pull secrets from an external vault.
+
+**v7.7 solution:** The new top-level `secretsManagement` section supports three modes:
+
+| Mode | How it works | Credentials in values.yaml? |
+|:-----|:-------------|:----------------------------|
+| `kubernetes` (default) | Chart creates a K8s Secret from your values | Yes (or pre-create the secret yourself) |
+| `sdk` | Apps read directly from your cloud vault at runtime | No |
+| `csi` | CSI Secret Store driver syncs vault secrets to a K8s Secret | No |
+
+**To eliminate credentials from your values file entirely**, use `sdk` or `csi`:
+
+<details>
+<summary><strong>Example: AWS Secrets Manager with IRSA (sdk mode)</strong></summary>
+
+```yaml
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    mode: shared
+    name: redpoint-rpi
+  amazon:
+    roleArn: arn:aws:iam::123456789:role/redpoint-rpi-irsa
+    region: us-east-1
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    amazon:
+      secretTagKey: redpoint-rpi
+```
+
+RPI services use IRSA to authenticate to AWS, then read secrets at runtime from Secrets Manager using the tag key for discovery. No database passwords, API keys, or connection strings appear anywhere in your Helm values.
+
+</details>
+
+<details>
+<summary><strong>Example: Azure Key Vault with Workload Identity (sdk mode)</strong></summary>
+
+```yaml
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    mode: shared
+    name: redpoint-rpi
+  azure:
+    managedIdentityClientId: <your-client-id>
+    tenantId: <your-tenant-id>
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+```
+
+</details>
+
+<details>
+<summary><strong>Example: Pre-created Kubernetes Secret (no credentials in values)</strong></summary>
+
+If you prefer to manage K8s secrets yourself (via Sealed Secrets, External Secrets Operator, or manual creation), disable auto-creation and point the chart to your existing secret:
+
+```yaml
+secretsManagement:
+  provider: kubernetes
+  kubernetes:
+    autoCreateSecrets: false
+    secretName: my-existing-rpi-secret
+```
+
+The chart references your secret by name without creating or modifying it. You are responsible for ensuring it contains the required keys. See [values-reference.yaml](values-reference.yaml) for the full list of secret keys.
+
+</details>
+
+---
+
 ## Breaking Changes
 
 ### Redshift Data Warehouse
