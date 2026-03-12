@@ -45,6 +45,12 @@ This only needs to be done once. The `--scope user` flag saves the server global
 claude mcp list
 ```
 
+You should see the Copilot listed with a connected status:
+
+```
+rpi-helm: https://helmcopilot.redpointcdp.com/mcp (HTTP) - ✓ Connected
+```
+
 ## Available Tools
 
 The Copilot exposes the following tools:
