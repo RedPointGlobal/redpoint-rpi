@@ -11,22 +11,42 @@ It also searches the official [RPI documentation](https://docs.redpointglobal.co
 
 ## Prerequisites
 
-- An MCP-compatible AI client (Claude Code, Claude Desktop, Cursor, Windsurf, etc.)
-- [Node.js](https://nodejs.org/) (required for Claude Desktop only)
+- [Node.js](https://nodejs.org/) v18 or later
 
-## Setup
+## Install Claude Code
 
-The Copilot is hosted by Redpoint as a public MCP endpoint. There is nothing to install, deploy, or run in your cluster. Just point your AI client to the endpoint below.
+Claude Code is a CLI tool from Anthropic that runs in your terminal. Install it with npm:
 
-**Claude Code (CLI):**
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Then launch it:
+
+```bash
+claude
+```
+
+On first run, you'll be prompted to sign in with your Anthropic account. Follow the on-screen instructions to authenticate. See the [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for more details.
+
+## Connect the Copilot
+
+The Copilot is hosted by Redpoint as a public MCP endpoint. There is nothing to deploy or run in your cluster. Just run:
 
 ```bash
 claude mcp add rpi-helm --transport http https://helmcopilot.redpointcdp.com/mcp
 ```
 
-**Claude Desktop:**
+That's it. Start a new conversation and the Copilot tools are available immediately.
 
-Add the following to your `claude_desktop_config.json`:
+<details>
+<summary>Alternative clients (Claude Desktop, Cursor, Windsurf)</summary>
+
+These clients require [Node.js](https://nodejs.org/) and use [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) to bridge the connection since they do not yet support HTTP transport natively.
+
+**macOS / Linux:**
+
+Add to your client's MCP config (`claude_desktop_config.json`, Cursor Settings > MCP, etc.):
 
 ```json
 {
@@ -39,11 +59,27 @@ Add the following to your `claude_desktop_config.json`:
 }
 ```
 
-> **Note:** Claude Desktop does not yet support HTTP transport natively, so we use [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) to bridge the connection. This requires Node.js to be installed.
+**Windows:**
 
-**Other MCP Clients (Cursor, Windsurf, etc.):**
+On Windows, GUI apps cannot resolve `npx` from the system PATH. Use the full path to `npx.cmd`:
 
-If the client supports HTTP transport, point it to `https://helmcopilot.redpointcdp.com/mcp`. Otherwise, use the `npx mcp-remote` approach shown above.
+```json
+{
+  "mcpServers": {
+    "rpi-helm": {
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
+      "args": ["-y", "mcp-remote", "https://helmcopilot.redpointcdp.com/mcp"],
+      "env": {
+        "PATH": "C:\\Program Files\\nodejs;%PATH%"
+      }
+    }
+  }
+}
+```
+
+> **Tip:** Run `(Get-Command npx).Source` in PowerShell to find your Node.js install path if it differs from the default.
+
+</details>
 
 ## Available Tools
 
