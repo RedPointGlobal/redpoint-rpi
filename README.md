@@ -14,7 +14,7 @@ This chart deploys RPI on Kubernetes using Helm.
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) |
 | **Environment** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure |
 | **Databases** | Created from scratch | Existing databases are reused |
-| **Values.yaml** | Generate with the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) | Run the [Interaction CLI](docs/greenfield.md#2-quick-start-with-the-interaction-cli) with your existing values, then `--add` features as needed |
+| **Values.yaml** | Generate with the `Interaction CLI` | Run the `Interaction CLI` with your existing values, then `--add` features as needed |
 
 ---
 <p align="left">
