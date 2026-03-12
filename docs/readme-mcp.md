@@ -70,63 +70,105 @@ The Copilot exposes the following tools:
 
 ## Usage Examples
 
-Once connected, ask questions like these:
+Once connected, just ask questions in plain English. Here are examples organized by what you're trying to do.
 
-### Validate a values file
+### Validate Configuration
 
-> "Validate my values file at deploy/values/azure/azure.yaml"
+Checks your values file against the chart schema and RPI-specific rules. Returns errors with fix suggestions.
 
-Checks your configuration against the schema and RPI-specific rules. Returns errors with fix suggestions. Catches typos, missing fields, placeholder values, and invalid provider combinations.
+> "Validate my values file at /path/to/values.yaml"
+>
+> "Check my RPI config for errors"
+>
+> "Is my values file valid for a production deployment?"
 
-### Generate an overrides file
-
-> "Generate an RPI overrides file for AWS with IRSA and MongoDB cache"
+### Generate Overrides
 
 Produces a ready-to-use YAML overrides file tailored to your platform, identity provider, and optional features.
 
-### Explain a setting
+> "Generate an RPI overrides file for AWS with IRSA and MongoDB cache"
+>
+> "Generate a values file for Azure with managed identity and Redis cache"
+>
+> "Generate an overrides file for GCP with Workload Identity and Bigtable cache"
+>
+> "Generate a minimal dev config for AWS with in-memory cache"
+>
+> "Generate an overrides file with Smart Activation and Realtime API enabled"
+
+### Explain Settings
+
+Returns what a setting controls, its valid values, defaults, and related settings you may need to configure.
 
 > "What does realtimeapi.cacheProvider.provider do?"
+>
+> "Explain cloudIdentity.enabled"
+>
+> "What are the valid values for secretsManagement.provider?"
+>
+> "What does smartActivation.enabled control?"
+>
+> "Explain global.deployment.platform"
 
-Returns what the setting controls, valid values, defaults, and related settings you may also need to configure.
-
-### Render templates
-
-> "Render the realtimeapi deployment template with my values file"
+### Render Templates
 
 Runs `helm template` and returns the rendered Kubernetes manifests so you can inspect what will be deployed.
 
-### Check deployment health
+> "Render the realtimeapi deployment template with my values file"
+>
+> "Show me what Kubernetes manifests my values file will produce"
+>
+> "Render the ingress template using my values at /path/to/values.yaml"
 
-> "What's the status of my RPI deployment in the redpoint-rpi namespace?"
+### Check Deployment Health
 
 Shows pod health, service endpoints, and recent events from your cluster.
 
-### Troubleshoot issues
+> "What's the status of my RPI deployment in the redpoint-rpi namespace?"
+>
+> "Are all RPI pods healthy?"
+>
+> "Show me the current state of my RPI deployment"
+
+### Troubleshoot Issues
+
+Analyzes pod logs, events, secrets, and ingress configuration to diagnose issues and suggest fixes.
 
 > "Why are my RPI pods crash-looping?"
+>
+> "The Realtime API isn't responding, help me diagnose"
+>
+> "My RPI deployment is stuck in pending, what's wrong?"
+>
+> "Help me troubleshoot ingress issues in the redpoint-rpi namespace"
 
-Analyzes pod logs, events, secrets, and ingress configuration to diagnose the issue and suggest specific fixes.
+### Search Documentation
 
-### Migrate from v7.6 to v7.7 (simple)
-
-> "Migrate my v7.6 values file at /path/to/values.yaml to v7.7"
-
-Analyzes your existing v7.6 values configuration, identifies customizations vs defaults, remaps renamed keys, and generates a minimal v7.7 overrides file. Warns about breaking changes that need manual attention. Use this when you have not modified any Helm template files.
-
-### Migrate from v7.6 to v7.7 (advanced)
-
-> "Analyze my v7.6 templates at /path/to/chart/templates for migration to v7.7"
-
-Compares your v7.6 template files against the stock v7.6 templates to find custom files you added and stock templates you modified. For modified files, shows a diff and provides guidance on how to carry the changes forward to v7.7. Use this when you have added or modified Helm template files beyond just values.yaml.
-
-See the [Migration Guide](migration.md) for details.
-
-### Search RPI product documentation
+Searches the official RPI product documentation and returns relevant content.
 
 > "How do I configure MongoDB as a realtime cache provider?"
-
+>
 > "What are the supported queue providers in RPI?"
+>
+> "How do I set up Smart Activation?"
+>
+> "What channels does RPI support?"
+>
+> "How do I configure audience selection rules?"
+
+### Migrate from v7.6 to v7.7
+
+Analyzes your existing configuration, remaps renamed keys, and generates a v7.7 overrides file. See the [Migration Guide](migration.md) for details.
+
+**Values only** — use when you have not modified any Helm template files:
+
+> "Migrate my v7.6 values file at /path/to/values.yaml to v7.7"
+>
+> "What changed between v7.6 and v7.7?"
+
+**Values and templates** — use when you have added or modified Helm template files:
+
+> "Analyze my v7.6 templates at /path/to/templates for migration to v7.7"
 
 ## IDE Autocomplete
 
