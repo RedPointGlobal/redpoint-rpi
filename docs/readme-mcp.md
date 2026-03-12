@@ -72,7 +72,8 @@ The Copilot exposes the following tools:
 
 Once connected, just ask questions in plain English. Here are examples organized by what you're trying to do.
 
-### Validate Configuration
+<details>
+<summary><strong>Validate Configuration</strong></summary>
 
 Checks your values file against the chart schema and RPI-specific rules. Returns errors with fix suggestions.
 
@@ -82,7 +83,10 @@ Checks your values file against the chart schema and RPI-specific rules. Returns
 >
 > "Is my values file valid for a production deployment?"
 
-### Generate Overrides
+</details>
+
+<details>
+<summary><strong>Generate Overrides</strong></summary>
 
 Produces a ready-to-use YAML overrides file tailored to your platform, identity provider, and optional features.
 
@@ -96,7 +100,10 @@ Produces a ready-to-use YAML overrides file tailored to your platform, identity 
 >
 > "Generate an overrides file with Smart Activation and Realtime API enabled"
 
-### Explain Settings
+</details>
+
+<details>
+<summary><strong>Explain Settings</strong></summary>
 
 Returns what a setting controls, its valid values, defaults, and related settings you may need to configure.
 
@@ -110,7 +117,10 @@ Returns what a setting controls, its valid values, defaults, and related setting
 >
 > "Explain global.deployment.platform"
 
-### Render Templates
+</details>
+
+<details>
+<summary><strong>Render Templates</strong></summary>
 
 Runs `helm template` and returns the rendered Kubernetes manifests so you can inspect what will be deployed.
 
@@ -120,7 +130,10 @@ Runs `helm template` and returns the rendered Kubernetes manifests so you can in
 >
 > "Render the ingress template using my values at /path/to/values.yaml"
 
-### Check Deployment Health
+</details>
+
+<details>
+<summary><strong>Check Deployment Health</strong></summary>
 
 Shows pod health, service endpoints, and recent events from your cluster.
 
@@ -130,7 +143,10 @@ Shows pod health, service endpoints, and recent events from your cluster.
 >
 > "Show me the current state of my RPI deployment"
 
-### Troubleshoot Issues
+</details>
+
+<details>
+<summary><strong>Troubleshoot Issues</strong></summary>
 
 Analyzes pod logs, events, secrets, and ingress configuration to diagnose issues and suggest fixes.
 
@@ -142,7 +158,10 @@ Analyzes pod logs, events, secrets, and ingress configuration to diagnose issues
 >
 > "Help me troubleshoot ingress issues in the redpoint-rpi namespace"
 
-### Search Documentation
+</details>
+
+<details>
+<summary><strong>Search Documentation</strong></summary>
 
 Searches the official RPI product documentation and returns relevant content.
 
@@ -156,7 +175,10 @@ Searches the official RPI product documentation and returns relevant content.
 >
 > "How do I configure audience selection rules?"
 
-### Migrate from v7.6 to v7.7
+</details>
+
+<details>
+<summary><strong>Migrate from v7.6 to v7.7</strong></summary>
 
 Analyzes your existing configuration, remaps renamed keys, and generates a v7.7 overrides file. See the [Migration Guide](migration.md) for details.
 
@@ -169,6 +191,8 @@ Analyzes your existing configuration, remaps renamed keys, and generates a v7.7 
 **Values and templates** (use when you have added or modified Helm template files):
 
 > "Analyze my v7.6 templates at /path/to/templates for migration to v7.7"
+
+</details>
 
 ## IDE Autocomplete
 
