@@ -5,7 +5,7 @@
 
 ## Overview
 
-The **Interaction Helm Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to your AI client and lets you validate configurations, generate overrides, explain settings, and diagnose issues in plain English.
+The **Interaction Helm Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and lets you validate configurations, generate overrides, explain settings, and diagnose issues in plain English.
 
 It also searches the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content covering features, administration, external configuration, channels, realtime decisions, and more.
 
@@ -39,51 +39,9 @@ claude mcp add rpi-helm --transport http https://helmcopilot.redpointcdp.com/mcp
 
 That's it. Start a new conversation and the Copilot tools are available immediately.
 
-<details>
-<summary>Alternative clients (Claude Desktop, Cursor, Windsurf)</summary>
-
-These clients require [Node.js](https://nodejs.org/) and use [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) to bridge the connection since they do not yet support HTTP transport natively.
-
-**macOS / Linux:**
-
-Add to your client's MCP config (`claude_desktop_config.json`, Cursor Settings > MCP, etc.):
-
-```json
-{
-  "mcpServers": {
-    "rpi-helm": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://helmcopilot.redpointcdp.com/mcp"]
-    }
-  }
-}
-```
-
-**Windows:**
-
-On Windows, GUI apps cannot resolve `npx` from the system PATH. Use the full path to `npx.cmd`:
-
-```json
-{
-  "mcpServers": {
-    "rpi-helm": {
-      "command": "C:\\Program Files\\nodejs\\npx.cmd",
-      "args": ["-y", "mcp-remote", "https://helmcopilot.redpointcdp.com/mcp"],
-      "env": {
-        "PATH": "C:\\Program Files\\nodejs;%PATH%"
-      }
-    }
-  }
-}
-```
-
-> **Tip:** Run `(Get-Command npx).Source` in PowerShell to find your Node.js install path if it differs from the default.
-
-</details>
-
 ## Available Tools
 
-The Copilot exposes the following MCP tools to your AI client:
+The Copilot exposes the following tools:
 
 | Tool | Description |
 |------|-------------|
@@ -100,7 +58,7 @@ The Copilot exposes the following MCP tools to your AI client:
 
 ## Usage Examples
 
-Once connected, ask your AI assistant questions like these:
+Once connected, ask questions like these:
 
 ### Validate a values file
 
