@@ -5,7 +5,7 @@
 
 ## Overview
 
-The **Interaction Helm Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), it connects to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and lets you validate configurations, generate overrides, explain settings, and diagnose issues in plain English.
+The **Interaction Helm Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the Model Context Protocol (MCP), it connects to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and lets you validate configurations, generate overrides, explain settings, and diagnose issues in plain English.
 
 It also searches the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content covering features, administration, external configuration, channels, realtime decisions, and more.
 
