@@ -36,10 +36,14 @@ On first run, you'll be prompted to sign in with your Anthropic account. If you 
 The Copilot is hosted by Redpoint as a public MCP endpoint. There is nothing to deploy or run in your cluster. Just run:
 
 ```bash
-claude mcp add rpi-helm --transport http https://helmcopilot.redpointcdp.com/mcp
+claude mcp add rpi-helm --transport http https://helmcopilot.redpointcdp.com/mcp --scope user
 ```
 
-That's it. Start a new conversation and the Copilot tools are available immediately.
+This only needs to be done once. The `--scope user` flag saves the server globally so it's available in every project and every future conversation. You can verify it's registered by running:
+
+```bash
+claude mcp list
+```
 
 ## Available Tools
 
