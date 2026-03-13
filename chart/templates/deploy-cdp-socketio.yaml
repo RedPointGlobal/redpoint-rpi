@@ -128,15 +128,7 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
       {{- include "rpi.pod.securityContext" (dict "sc" $cfg.securityContext "noSupplementalGroups" true) | nindent 6 }}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: {{ $name }}
-                topologyKey: kubernetes.io/hostname
+      {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -146,7 +138,7 @@ spec:
               app.kubernetes.io/name: {{ $name }}
       containers:
       - name: {{ $name }}
-        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         {{- if $cfg.resources.enabled }}
         resources:

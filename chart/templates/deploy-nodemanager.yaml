@@ -156,15 +156,7 @@ spec:
       terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
       serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: {{ $name }}
-                topologyKey: kubernetes.io/hostname
+      {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
       {{- if $topo.enabled }}
       topologySpreadConstraints:
         - maxSkew: {{ $topo.maxSkew }}
@@ -262,6 +254,7 @@ spec:
         {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
         {{- if eq .Values.global.deployment.platform "azure" }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         - name: GOOGLE_APPLICATION_CREDENTIALS
@@ -333,7 +326,7 @@ spec:
         - name: RPI__NLP__Model__BlobFolder
           value: {{ .Values.redpointAI.modelStorage.BlobFolder | quote }}
         {{- end }}
-        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         name: {{ $name }}
         {{- if $liveness.enabled }}
@@ -439,10 +432,11 @@ spec:
           - name: realtimeplugins
             mountPath: {{ .Values.storage.persistentVolumeClaims.Plugins.mountPath }}
           {{- end }}
-          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }} 
+          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
           - name: rpdmuploaddirectory
             mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
           {{- end }}
+          {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
       volumes:
         - name: tempstore
           emptyDir: {}
@@ -485,6 +479,7 @@ spec:
           persistentVolumeClaim:
             claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
+        {{- include "rpi.customCACerts.volume" . | nindent 8 }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

@@ -139,6 +139,93 @@ The chart references your secret by name without creating or modifying it. You a
 
 </details>
 
+### Flat container registries (per-service image overrides)
+
+**v7.6 problem:** Some registries (especially AWS ECR) use a flat structure where all images live in a single repository with different tags, rather than separate repositories per service. The v7.6 chart had no way to express this without editing every deploy template.
+
+**v7.7 solution:** The `global.deployment.images.overrides` map lets you override the image for any service. When set, the value is used verbatim instead of the default `{repository}/{service-name}:{tag}` construction:
+
+```yaml
+global:
+  deployment:
+    images:
+      repository: 123456789.dkr.ecr.us-east-1.amazonaws.com/redpoint
+      tag: "7.7.20260220.1524"
+      overrides:
+        rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524
+        rpi-realtimeapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:realtimeapi-7.7.20260220.1524
+```
+
+Services without an override continue to use the default pattern. You can override one service or all of them.
+
+### Custom CA certificates
+
+**v7.6 problem:** Connecting to databases or internal services that use private/internal certificate authorities required manually editing deploy templates to add volume mounts and environment variables for the CA bundle.
+
+**v7.7 solution:** The `customCACerts` section mounts a ConfigMap or Secret containing your CA certificates into all core service pods:
+
+```yaml
+customCACerts:
+  enabled: true
+  source: configMap           # configMap | secret
+  name: my-internal-ca        # name of the ConfigMap or Secret
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem     # optional: sets SSL_CERT_FILE env var
+```
+
+Create the ConfigMap from your CA bundle, then reference it in your overrides. The chart handles the volume mount, volume definition, and optional `SSL_CERT_FILE` environment variable automatically.
+
+### Ingress annotations passthrough
+
+**v7.6 problem:** The chart rendered only nginx-specific annotations. Customers using AWS ALB, Traefik, or other ingress controllers had to edit the ingress template to add their controller-specific annotations (scheme, target type, SSL policy, etc.).
+
+**v7.7 solution:** Set `ingress.annotations` in your overrides to pass any annotations to the ingress resources. When set, your annotations replace the nginx defaults entirely:
+
+```yaml
+ingress:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123456789:certificate/abc123
+```
+
+No template edits required for any ingress controller.
+
+### Controllable pod anti-affinity
+
+**v7.6 problem:** Pod anti-affinity was hardcoded in every deploy template as soft (preferred) spreading by hostname. Customers who needed hard (required) anti-affinity for compliance, or wanted to disable it entirely for dev/test environments, had to edit every template.
+
+**v7.7 solution:** The `podAntiAffinity` section controls anti-affinity for all services from a single place:
+
+```yaml
+podAntiAffinity:
+  enabled: true               # set to false to disable entirely
+  type: required              # preferred (soft) | required (hard)
+  weight: 100                 # weight for preferred (1-100, ignored for required)
+  topologyKey: kubernetes.io/hostname
+```
+
+| Setting | Effect |
+|:--------|:-------|
+| `type: preferred` | Pods prefer different nodes but can co-locate if necessary (default) |
+| `type: required` | Pods are guaranteed to land on different nodes; scheduling fails if not possible |
+| `enabled: false` | No anti-affinity rules; the scheduler places pods freely |
+
+---
+
+### Advanced deployment mode
+
+For deployments that need fine-grained control over images, certificates, ingress, and scheduling, set `mode: advanced`:
+
+```yaml
+global:
+  deployment:
+    mode: advanced
+```
+
+The `advanced` mode signals that your deployment uses enterprise features like per-service image overrides, custom CA certificates, and hard anti-affinity. All of these settings work in any mode, but `advanced` serves as a clear indicator that this is a customized deployment.
+
 ---
 
 ## Breaking Changes

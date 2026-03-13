@@ -12,8 +12,10 @@
 # ==========================
 global:
   deployment:
-    # Deployment mode: standard (default) or demo
-    # Demo mode deploys embedded MSSQL + MongoDB containers
+    # Deployment mode: standard | advanced | demo
+    # standard: production defaults, single repository/tag for all images
+    # advanced: enables per-service image overrides, custom CA certs, controllable anti-affinity
+    # demo: deploys embedded MSSQL + MongoDB containers
     mode: standard
     # Cloud environment: azure, amazon, google, selfhosted
     platform: amazon
@@ -28,6 +30,12 @@ global:
         name: redpoint-rpi
       # Utility image for jobs (upgrade, post-install, smoke tests)
       net_utils: busybox:1.37
+      # Per-service image overrides (advanced mode)
+      # When set, the value is used verbatim instead of {repository}/{service-name}:{tag}.
+      # Useful for flat registries (e.g., ECR with all images in a single repo).
+      # overrides:
+      #   rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524
+      #   rpi-realtimeapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:realtimeapi-7.7.20260220.1524
     # Optional: set the pod's timezone (e.g., "America/New_York"); leave empty to use default UTC
     podTimezone: "" #
 
@@ -42,6 +50,31 @@ resources:
     memory: 256Mi
   limits:
     memory: 3Gi
+
+# ==========================
+# Pod Anti-Affinity
+# ==========================
+# Controls pod anti-affinity for all services.
+# Default: soft (preferred) anti-affinity spreading pods across nodes.
+# Set type to "required" for hard anti-affinity, or enabled to false to disable.
+podAntiAffinity:
+  enabled: true
+  type: preferred               # preferred | required
+  weight: 100                   # weight for preferred (1-100, ignored for required)
+  topologyKey: kubernetes.io/hostname
+
+# ==========================
+# Custom CA Certificates
+# ==========================
+# Mount a ConfigMap or Secret containing custom CA certificates into all pods.
+# Useful when connecting to databases or services using internal/private CAs.
+customCACerts:
+  enabled: false
+  source: configMap             # configMap | secret
+  name: ""                      # name of the ConfigMap or Secret
+  mountPath: /usr/local/share/ca-certificates/custom
+  # Optional: set SSL_CERT_FILE env var to a specific file in the mount
+  # certFile: ""                # e.g., "internal-ca.pem"
 
 # ==========================
 # Operational Database

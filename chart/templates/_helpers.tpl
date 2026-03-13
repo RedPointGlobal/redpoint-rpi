@@ -683,3 +683,86 @@ Usage: {{- include "rpi.platform.dbProviderEnvvar" . | nindent 10 }}
   value: "SelfHosted"
 {{- end }}
 {{- end -}}
+
+{{/*
+Resolve the container image for a service.
+Uses a per-service override if set under global.deployment.images.overrides.<name>,
+otherwise constructs {repository}/{name}:{tag}.
+Usage: {{ include "rpi.image" (dict "root" . "name" $name) }}
+*/}}
+{{- define "rpi.image" -}}
+{{- $overrides := .root.Values.global.deployment.images.overrides | default dict -}}
+{{- if hasKey $overrides .name -}}
+{{ index $overrides .name }}
+{{- else -}}
+{{ .root.Values.global.deployment.images.repository }}/{{ .name }}:{{ .root.Values.global.deployment.images.tag }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Pod anti-affinity block. Renders the full affinity: stanza.
+Usage: {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
+*/}}
+{{- define "rpi.podAntiAffinity" -}}
+{{- $aa := .root.Values.podAntiAffinity | default dict -}}
+{{- $enabled := ternary $aa.enabled true (hasKey $aa "enabled") -}}
+{{- if $enabled }}
+affinity:
+  podAntiAffinity:
+    {{- if eq ($aa.type | default "preferred") "required" }}
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: {{ .name }}
+        topologyKey: {{ $aa.topologyKey | default "kubernetes.io/hostname" }}
+    {{- else }}
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: {{ $aa.weight | default 100 }}
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ .name }}
+          topologyKey: {{ $aa.topologyKey | default "kubernetes.io/hostname" }}
+    {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Custom CA certificate volume mount.
+Usage: {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
+*/}}
+{{- define "rpi.customCACerts.volumeMount" -}}
+{{- if and .Values.customCACerts .Values.customCACerts.enabled .Values.customCACerts.name }}
+- name: custom-ca-certs
+  mountPath: {{ .Values.customCACerts.mountPath | default "/usr/local/share/ca-certificates/custom" }}
+  readOnly: true
+{{- end }}
+{{- end -}}
+
+{{/*
+Custom CA certificate volume definition.
+Usage: {{- include "rpi.customCACerts.volume" . | nindent 8 }}
+*/}}
+{{- define "rpi.customCACerts.volume" -}}
+{{- if and .Values.customCACerts .Values.customCACerts.enabled .Values.customCACerts.name }}
+- name: custom-ca-certs
+  {{- if eq (.Values.customCACerts.source | default "configMap") "secret" }}
+  secret:
+    secretName: {{ .Values.customCACerts.name }}
+  {{- else }}
+  configMap:
+    name: {{ .Values.customCACerts.name }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Custom CA certificate env var (SSL_CERT_FILE).
+Usage: {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
+*/}}
+{{- define "rpi.customCACerts.envVar" -}}
+{{- if and .Values.customCACerts .Values.customCACerts.enabled .Values.customCACerts.certFile }}
+- name: SSL_CERT_FILE
+  value: "{{ .Values.customCACerts.mountPath | default "/usr/local/share/ca-certificates/custom" }}/{{ .Values.customCACerts.certFile }}"
+{{- end }}
+{{- end -}}

@@ -44,7 +44,7 @@ spec:
       {{- end }}
       containers:
       - name: {{ $name }}
-        image: {{ .Values.global.deployment.images.repository }}/{{ $name }}:{{ .Values.global.deployment.images.tag }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         volumeMounts:
         - name: tempdata

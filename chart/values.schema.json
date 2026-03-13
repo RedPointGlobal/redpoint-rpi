@@ -35,9 +35,10 @@
           "properties": {
             "mode": {
               "type": "string",
-              "description": "Deployment mode: standard (default) or demo. Demo mode deploys embedded MSSQL + MongoDB containers.",
+              "description": "Deployment mode: standard (production defaults), advanced (per-service image overrides, custom CA certs, controllable anti-affinity), or demo (embedded MSSQL + MongoDB containers).",
               "enum": [
                 "standard",
+                "advanced",
                 "demo"
               ],
               "default": "standard"
@@ -88,6 +89,13 @@
                       "type": "string",
                       "description": "Name of the Kubernetes image pull secret"
                     }
+                  }
+                },
+                "overrides": {
+                  "type": "object",
+                  "description": "Per-service image overrides. When set, the value is used verbatim instead of {repository}/{service-name}:{tag}. Useful for flat registries (e.g., ECR with all images in a single repo).",
+                  "additionalProperties": {
+                    "type": "string"
                   }
                 }
               }
@@ -2406,6 +2414,67 @@
     "resources": {
       "$ref": "#/definitions/resources",
       "description": "Global resource defaults applied to all services. Per-service overrides take priority."
+    },
+    "podAntiAffinity": {
+      "type": "object",
+      "description": "Pod anti-affinity settings applied to all services",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable pod anti-affinity",
+          "default": true
+        },
+        "type": {
+          "type": "string",
+          "description": "Anti-affinity type: preferred (soft) or required (hard)",
+          "enum": ["preferred", "required"],
+          "default": "preferred"
+        },
+        "weight": {
+          "type": "integer",
+          "description": "Weight for preferred anti-affinity (1-100, ignored for required)",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 100
+        },
+        "topologyKey": {
+          "type": "string",
+          "description": "Topology key for anti-affinity spreading",
+          "default": "kubernetes.io/hostname"
+        }
+      }
+    },
+    "customCACerts": {
+      "type": "object",
+      "description": "Mount custom CA certificates into all pods",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable custom CA certificate mounting",
+          "default": false
+        },
+        "source": {
+          "type": "string",
+          "description": "Source type for CA certificates",
+          "enum": ["configMap", "secret"],
+          "default": "configMap"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the ConfigMap or Secret containing CA certificates"
+        },
+        "mountPath": {
+          "type": "string",
+          "description": "Mount path for CA certificates inside the container",
+          "default": "/usr/local/share/ca-certificates/custom"
+        },
+        "certFile": {
+          "type": "string",
+          "description": "Optional: specific CA bundle filename. When set, SSL_CERT_FILE env var is set to mountPath/certFile"
+        }
+      }
     }
   },
   "allOf": [
