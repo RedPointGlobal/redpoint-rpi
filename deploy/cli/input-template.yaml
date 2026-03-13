@@ -25,7 +25,7 @@
 # Platform & Mode (required)
 # ----------------------------------------------------------
 platform: azure                # azure | amazon | google | selfhosted
-mode: standard                 # standard | demo
+mode: standard                 # standard | advanced | demo
 image_tag: "7.7.20260220.1524"
 namespace: redpoint-rpi
 
@@ -227,3 +227,67 @@ features:
   #   nlp_api_key: ""                           # OpenAI API key
   #   search_key: ""                            # Cognitive Search key
   #   blob_connection_string: ""                # Blob storage connection string
+
+  # --- Common Annotations ---
+  # Adds annotations to all generated Kubernetes resources.
+  # Optionally override per resource type (ServiceAccount, Service).
+  # common_annotations:
+  #   annotations:
+  #     org/team: platform
+  #     org/cost-center: "12345"
+  #   service_account_annotations:                # Extra annotations for ServiceAccounts only
+  #     eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/my-role
+  #   service_annotations:                        # Extra annotations for Services only
+  #     service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+
+  # --- Custom CA Certificates ---
+  # Mounts a custom CA certificate bundle into all .NET services.
+  # custom_ca_certs:
+  #   source: configMap                           # configMap | secret
+  #   name: my-ca-bundle                          # Name of the ConfigMap or Secret
+  #   mount_path: /etc/ssl/certs/custom           # Mount path inside the container
+  #   cert_file: ca-bundle.crt                    # Key name in the ConfigMap/Secret
+
+  # --- Image Overrides ---
+  # Override container images for specific services (private registry, air-gapped).
+  # image_overrides:
+  #   interactionapi: myregistry.example.com/rpi/interactionapi:7.7.0
+  #   realtimeapi: myregistry.example.com/rpi/realtimeapi:7.7.0
+  #   executionservice: myregistry.example.com/rpi/executionservice:7.7.0
+
+  # --- Pod Anti-Affinity ---
+  # Spread pods across nodes or zones.
+  # pod_anti_affinity:
+  #   type: preferred                             # preferred | required | disabled
+  #   topology_key: kubernetes.io/hostname        # Node label key for spreading
+  #   weight: 100                                 # 1-100, only for preferred
+
+  # --- Node Provisioning (Karpenter) ---
+  # Generates a Karpenter NodePool for dedicated RPI nodes.
+  # node_provisioning:
+  #   node_pool_name: redpoint-nodepool
+  #   node_class_group: karpenter.k8s.aws         # karpenter.k8s.aws | karpenter.azure.com
+  #   node_class_kind: EC2NodeClass               # EC2NodeClass | AKSNodeClass
+  #   node_class_name: default
+  #   instance_families: "m7i,m6i,m5"             # Comma-separated instance families
+  #   instance_sizes: "xlarge,2xlarge,4xlarge"     # Comma-separated instance sizes
+  #   architectures: "amd64"                      # amd64 | arm64 | amd64,arm64
+  #   capacity_types: "on-demand"                 # on-demand | spot | on-demand,spot
+  #   taints:                                     # Taints to apply to provisioned nodes
+  #     - key: redpoint.com/dedicated
+  #       value: rpi
+  #       effect: NoSchedule
+  #   cpu_limit: "64"                             # Max aggregate CPU across all nodes
+  #   memory_limit: "256Gi"                       # Max aggregate memory across all nodes
+
+  # --- Storage Class ---
+  # Generates a StorageClass for CSI-backed persistent storage (e.g., EFS, Filestore).
+  # storage_class:
+  #   name: efs-sc
+  #   provisioner: efs.csi.aws.com
+  #   reclaim_policy: Retain                      # Retain | Delete
+  #   mount_options: "tls"                        # Comma-separated mount options
+  #   parameters:                                 # Provisioner-specific parameters
+  #     provisioningMode: efs-ap
+  #     fileSystemId: fs-0123456789abcdef0
+  #     directoryPerms: "700"

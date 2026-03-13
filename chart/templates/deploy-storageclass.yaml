@@ -1,0 +1,26 @@
+{{- if .Values.storage.storageClass.enabled }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storage.storageClass.name }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" .Values.storage.storageClass.name "component" "storage") | nindent 4 }}
+  {{- $ann := include "rpi.mergedAnnotations" (dict "root" . "type" "default") | trim }}
+  {{- if $ann }}
+  annotations:
+    {{- $ann | nindent 4 }}
+  {{- end }}
+provisioner: {{ .Values.storage.storageClass.provisioner }}
+reclaimPolicy: {{ .Values.storage.storageClass.reclaimPolicy | default "Delete" }}
+volumeBindingMode: {{ .Values.storage.storageClass.volumeBindingMode | default "Immediate" }}
+{{- with .Values.storage.storageClass.mountOptions }}
+mountOptions:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.storage.storageClass.parameters }}
+parameters:
+  {{- range $k, $v := . }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}

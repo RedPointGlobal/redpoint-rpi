@@ -425,6 +425,39 @@
       "description": "Storage configuration for persistent volume claims and volumes",
       "additionalProperties": true,
       "properties": {
+        "storageClass": {
+          "type": "object",
+          "description": "Optional StorageClass for CSI-backed storage (EFS, Azure File, etc.)",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Create a StorageClass resource",
+              "default": false
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the StorageClass"
+            },
+            "provisioner": {
+              "type": "string",
+              "description": "CSI provisioner (e.g., efs.csi.aws.com)"
+            },
+            "reclaimPolicy": {
+              "type": "string",
+              "description": "Reclaim policy",
+              "enum": ["Delete", "Retain"],
+              "default": "Delete"
+            },
+            "parameters": {
+              "type": "object",
+              "description": "Provisioner-specific parameters",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
         "persistentVolumeClaims": {
           "type": "object",
           "description": "Persistent volume claim configurations",
@@ -2442,6 +2475,50 @@
           "type": "string",
           "description": "Topology key for anti-affinity spreading",
           "default": "kubernetes.io/hostname"
+        }
+      }
+    },
+    "commonAnnotations": {
+      "type": "object",
+      "description": "Annotations applied to all resource types (ServiceAccounts, Services, Deployments, Pods)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "serviceAccountAnnotations": {
+      "type": "object",
+      "description": "Additional annotations for ServiceAccounts (merged with commonAnnotations)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "serviceAnnotations": {
+      "type": "object",
+      "description": "Additional annotations for Services (merged with commonAnnotations)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "nodeProvisioning": {
+      "type": "object",
+      "description": "Node provisioning for dedicated RPI nodes (Karpenter NodePool)",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable node provisioning",
+          "default": false
+        },
+        "provider": {
+          "type": "string",
+          "description": "Node provisioner",
+          "enum": ["karpenter"],
+          "default": "karpenter"
+        },
+        "karpenter": {
+          "type": "object",
+          "description": "Karpenter NodePool configuration",
+          "additionalProperties": true
         }
       }
     },

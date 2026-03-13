@@ -8,6 +8,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "cache") | nindent 4 }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
+  {{- if $saAnnotations }}
+  annotations:
+    {{- $saAnnotations | nindent 4 }}
+  {{- end }}
 {{- end }}
 
 ---
@@ -60,6 +65,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "cache") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
 spec:
   clusterIP: None
   selector:

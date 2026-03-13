@@ -23,10 +23,16 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- $annotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
-  {{- if $annotations }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
+  {{- if or $saAnnotations $ciAnnotations }}
   annotations:
-    {{- $annotations | nindent 4 }}
+    {{- if $saAnnotations }}
+    {{- $saAnnotations | nindent 4 }}
+    {{- end }}
+    {{- if $ciAnnotations }}
+    {{- $ciAnnotations | nindent 4 }}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}
@@ -59,6 +65,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "worker") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
 spec:
   ports:
   - name: http
@@ -79,6 +90,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "worker") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
 spec:
   ports:
   - name: http
@@ -137,8 +153,11 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" . | trim) }}{{- . | nindent 8 }}{{- end }}
-      {{- if or .Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) }}
+      {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) }}
       annotations:
+        {{- with .Values.commonAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -157,7 +176,7 @@ spec:
       - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
       terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
-      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
       {{- if $topo.enabled }}

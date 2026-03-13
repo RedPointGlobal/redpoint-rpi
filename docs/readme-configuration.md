@@ -88,6 +88,23 @@ cloudIdentity:
     serviceAccountEmail: rpi-sa@my-project.iam.gserviceaccount.com
 ```
 
+### Per-service ServiceAccount override
+
+Any service can override its ServiceAccount by setting `serviceAccountName` in its config block. This is particularly useful in `both` mode, where every service gets its own per-service SA and the shared SA is also created but not used by default. To assign the shared SA to a specific service while the others keep their own:
+
+```yaml
+cloudIdentity:
+  serviceAccount:
+    mode: both
+    name: redpoint-rpi
+
+realtimeapi:
+  serviceAccountName: redpoint-rpi      # use the shared SA
+# all other services keep their per-service SAs (rpi-interactionapi, rpi-executionservice, etc.)
+```
+
+The resolution priority is: per-service `serviceAccountName` override first, then mode-based resolution. This works in any mode, not just `both`.
+
 ---
 
 ## Secrets Management

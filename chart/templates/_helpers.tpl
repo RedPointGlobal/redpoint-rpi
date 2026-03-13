@@ -615,20 +615,25 @@ Usage: {{ include "rpi.secrets.secretName" . }}
 
 {{/*
 Resolve which ServiceAccount name a pod should use.
-Usage: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name) }}
+Usage: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
   - root: the top-level context (.)
   - name: the per-service SA name (e.g., "rpi-realtimeapi")
-Modes:
-  shared      -> pods use the shared SA name
-  per-service -> pods use their own SA name
-  both        -> pods use their own SA name (shared SA also exists for common resources)
+  - cfg:  the merged service config (optional)
+Priority:
+  1. Per-service override: cfg.serviceAccountName (if set)
+  2. Mode=shared: uses the shared SA name
+  3. Mode=per-service or both: uses the per-service SA name
 */}}
 {{- define "rpi.serviceAccountName" -}}
+{{- if and .cfg (hasKey .cfg "serviceAccountName") .cfg.serviceAccountName -}}
+{{ .cfg.serviceAccountName }}
+{{- else -}}
 {{- $mode := .root.Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
 {{- if eq $mode "shared" -}}
 {{ .root.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" }}
 {{- else -}}
 {{ .name }}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
@@ -765,4 +770,23 @@ Usage: {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
 - name: SSL_CERT_FILE
   value: "{{ .Values.customCACerts.mountPath | default "/usr/local/share/ca-certificates/custom" }}/{{ .Values.customCACerts.certFile }}"
 {{- end }}
+{{- end -}}
+
+{{/*
+Render merged annotations for a specific resource type.
+Usage: {{- include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") }}
+Merges commonAnnotations + type-specific overrides (serviceAccountAnnotations, serviceAnnotations).
+*/}}
+{{- define "rpi.mergedAnnotations" -}}
+{{- $common := .root.Values.commonAnnotations | default dict -}}
+{{- $extra := dict -}}
+{{- if eq .type "serviceAccount" -}}
+{{- $extra = .root.Values.serviceAccountAnnotations | default dict -}}
+{{- else if eq .type "service" -}}
+{{- $extra = .root.Values.serviceAnnotations | default dict -}}
+{{- end -}}
+{{- $merged := mustMergeOverwrite (dict) $common $extra -}}
+{{- if $merged -}}
+{{- toYaml $merged -}}
+{{- end -}}
 {{- end -}}

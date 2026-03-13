@@ -1694,6 +1694,336 @@ add_extra_envs() {
 }
 
 
+# ============================================================
+# Advanced Mode Features
+# ============================================================
+
+add_common_annotations() {
+  local file=$1
+  check_replace_block "$file" "commonAnnotations" "Common Annotations" || return 0
+
+  echo ""
+  echo "  ${DIM}Common annotations are applied to all resources: ServiceAccounts, Services,${RESET}"
+  echo "  ${DIM}Deployments, and Pods. Use for org-wide labels like cost center, support email, etc.${RESET}"
+  echo ""
+
+  local annotations=""
+  local key value
+  while true; do
+    prompt key "Annotation key (e.g., example.com/cost-center)" ""
+    [ -z "$key" ] && break
+    prompt value "Annotation value" ""
+    annotations="${annotations}  ${key}: \"${value}\"\n"
+    local more=""
+    prompt_yesno more "Add another annotation?" "n"
+    [ "$more" = "false" ] && break
+  done
+
+  if [ -z "$annotations" ]; then
+    echo "  ${DIM}No annotations entered, skipping.${RESET}"
+    return 0
+  fi
+
+  append_block "$file" "$(printf "commonAnnotations:\n${annotations}")" "Common Annotations"
+  echo "  ${ICON_CHECK} Added commonAnnotations to ${file}"
+
+  local add_sa=""
+  prompt_yesno add_sa "Add ServiceAccount-specific annotations (e.g., EKS role ARN)?" "n"
+  if [ "$add_sa" = "true" ]; then
+    local sa_annotations=""
+    while true; do
+      prompt key "ServiceAccount annotation key" ""
+      [ -z "$key" ] && break
+      prompt value "Annotation value" ""
+      sa_annotations="${sa_annotations}  ${key}: \"${value}\"\n"
+      local more=""
+      prompt_yesno more "Add another?" "n"
+      [ "$more" = "false" ] && break
+    done
+    if [ -n "$sa_annotations" ]; then
+      append_block "$file" "$(printf "serviceAccountAnnotations:\n${sa_annotations}")" ""
+      echo "  ${ICON_CHECK} Added serviceAccountAnnotations to ${file}"
+    fi
+  fi
+
+  local add_svc=""
+  prompt_yesno add_svc "Add Service-specific annotations (e.g., load balancer type)?" "n"
+  if [ "$add_svc" = "true" ]; then
+    local svc_annotations=""
+    while true; do
+      prompt key "Service annotation key" ""
+      [ -z "$key" ] && break
+      prompt value "Annotation value" ""
+      svc_annotations="${svc_annotations}  ${key}: \"${value}\"\n"
+      local more=""
+      prompt_yesno more "Add another?" "n"
+      [ "$more" = "false" ] && break
+    done
+    if [ -n "$svc_annotations" ]; then
+      append_block "$file" "$(printf "serviceAnnotations:\n${svc_annotations}")" ""
+      echo "  ${ICON_CHECK} Added serviceAnnotations to ${file}"
+    fi
+  fi
+}
+
+add_custom_ca_certs() {
+  local file=$1
+  check_replace_block "$file" "customCACerts" "Custom CA Certificates" || return 0
+
+  echo ""
+  echo "  ${DIM}Mount custom CA certificates into all service pods.${RESET}"
+  echo "  ${DIM}Useful for connecting to databases or services using internal CAs.${RESET}"
+  echo ""
+
+  local source name mount_path cert_file
+  prompt_choice source "Certificate source" "configMap|secret" "configMap"
+  prompt name "Name of the ${source}" ""
+  prompt mount_path "Mount path inside containers" "/usr/local/share/ca-certificates/custom"
+  prompt cert_file "CA bundle filename for SSL_CERT_FILE (leave empty to skip)" ""
+
+  local block="customCACerts:
+  enabled: true
+  source: ${source}
+  name: ${name}
+  mountPath: ${mount_path}"
+
+  if [ -n "$cert_file" ]; then
+    block="${block}
+  certFile: ${cert_file}"
+  fi
+
+  append_block "$file" "$block" "Custom CA Certificates"
+  echo "  ${ICON_CHECK} Added customCACerts to ${file}"
+}
+
+add_image_overrides() {
+  local file=$1
+
+  echo ""
+  echo "  ${DIM}Per-service image overrides let you use a different image reference${RESET}"
+  echo "  ${DIM}for specific services instead of the default {repository}/{name}:{tag} pattern.${RESET}"
+  echo "  ${DIM}Useful for flat registries (e.g., ECR with all images in a single repo).${RESET}"
+  echo ""
+
+  if has_block "$file" "overrides"; then
+    local replace=""
+    prompt_yesno replace "Image overrides already exist. Replace them?" "n"
+    if [ "$replace" != "true" ]; then
+      echo "  ${DIM}Skipped — keeping existing image overrides${RESET}"
+      return 0
+    fi
+  fi
+
+  local services="rpi-interactionapi rpi-deploymentapi rpi-executionservice rpi-queuereader rpi-integrationapi rpi-realtimeapi rpi-callbackapi rpi-nodemanager"
+  local overrides=""
+
+  echo "  ${DIM}Enter the full image reference for each service, or press Enter to skip (use default).${RESET}"
+  echo ""
+  for svc in $services; do
+    local img=""
+    prompt img "  ${svc}" ""
+    if [ -n "$img" ]; then
+      overrides="${overrides}      ${svc}: ${img}\n"
+    fi
+  done
+
+  if [ -z "$overrides" ]; then
+    echo "  ${DIM}No overrides entered, skipping.${RESET}"
+    return 0
+  fi
+
+  # Insert under global.deployment.images using append_under_key
+  local content
+  content=$(printf "    overrides:\n${overrides}")
+
+  if grep -q "^  *overrides:" "$file" 2>/dev/null; then
+    remove_block "$file" "overrides"
+  fi
+
+  append_under_key "$file" "global" "$(printf "  deployment:\n    images:\n      overrides:\n${overrides}")" "Per-Service Image Overrides"
+  echo "  ${ICON_CHECK} Added image overrides to ${file}"
+}
+
+add_pod_anti_affinity() {
+  local file=$1
+  check_replace_block "$file" "podAntiAffinity" "Pod Anti-Affinity" || return 0
+
+  echo ""
+  echo "  ${DIM}Pod anti-affinity controls how pods are spread across nodes.${RESET}"
+  echo "  ${DIM}  preferred — pods prefer different nodes but can co-locate if needed (default)${RESET}"
+  echo "  ${DIM}  required  — pods must land on different nodes; scheduling fails if not possible${RESET}"
+  echo "  ${DIM}  disabled  — no anti-affinity; scheduler places pods freely${RESET}"
+  echo ""
+
+  local aa_type aa_enabled weight topology_key
+  prompt_choice aa_type "Anti-affinity type" "preferred|required|disabled" "preferred"
+
+  if [ "$aa_type" = "disabled" ]; then
+    append_block "$file" "$(cat <<'BLOCK'
+podAntiAffinity:
+  enabled: false
+BLOCK
+)" "Pod Anti-Affinity"
+    echo "  ${ICON_CHECK} Disabled pod anti-affinity in ${file}"
+    return 0
+  fi
+
+  prompt topology_key "Topology key" "kubernetes.io/hostname"
+
+  local block="podAntiAffinity:
+  enabled: true
+  type: ${aa_type}
+  topologyKey: ${topology_key}"
+
+  if [ "$aa_type" = "preferred" ]; then
+    prompt weight "Weight (1-100)" "100"
+    block="${block}
+  weight: ${weight}"
+  fi
+
+  append_block "$file" "$block" "Pod Anti-Affinity"
+  echo "  ${ICON_CHECK} Added podAntiAffinity (${aa_type}) to ${file}"
+}
+
+add_node_provisioning() {
+  local file=$1
+  check_replace_block "$file" "nodeProvisioning" "Node Provisioning" || return 0
+
+  echo ""
+  echo "  ${DIM}Create a Karpenter NodePool for dedicated RPI nodes on EKS.${RESET}"
+  echo "  ${DIM}Nodes are provisioned automatically with your specified instance types and taints.${RESET}"
+  echo ""
+
+  local pool_name instance_family instance_size arch capacity_type
+  prompt pool_name "NodePool name" "redpoint-nodepool"
+  prompt instance_family "Instance family (e.g., m7i, m5)" "m7i"
+  prompt instance_size "Instance size (e.g., 4xlarge, 2xlarge)" "4xlarge"
+  prompt_choice arch "Architecture" "amd64|arm64" "amd64"
+  prompt_choice capacity_type "Capacity type" "on-demand|spot" "on-demand"
+
+  local node_class_name expire_after
+  prompt node_class_name "EC2NodeClass name" "default"
+  prompt expire_after "Node expiration (e.g., 360h)" "360h"
+
+  local add_taint=""
+  local taint_block=""
+  prompt_yesno add_taint "Add a taint to dedicate nodes to RPI?" "y"
+  if [ "$add_taint" = "true" ]; then
+    local taint_key taint_value taint_effect
+    prompt taint_key "Taint key" "workload"
+    prompt taint_value "Taint value" "redpoint-api"
+    prompt_choice taint_effect "Taint effect" "NoSchedule|NoExecute|PreferNoSchedule" "NoSchedule"
+    taint_block="
+      taints:
+        - key: ${taint_key}
+          value: ${taint_value}
+          effect: ${taint_effect}
+      labels:
+        ${taint_key}: ${taint_value}"
+  fi
+
+  local cpu_limit mem_limit
+  prompt cpu_limit "CPU limit (total cores for all nodes)" "1000"
+  prompt mem_limit "Memory limit (e.g., 1000Gi)" "1000Gi"
+
+  append_block "$file" "$(cat <<BLOCK
+nodeProvisioning:
+  enabled: true
+  provider: karpenter
+  karpenter:
+    nodePool:
+      name: ${pool_name}${taint_block}
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["${instance_family}"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["${instance_size}"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["${arch}"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["${capacity_type}"]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: ${node_class_name}
+      expireAfter: ${expire_after}
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 15m
+      limits:
+        cpu: "${cpu_limit}"
+        memory: ${mem_limit}
+BLOCK
+)" "Node Provisioning (Karpenter)"
+  echo "  ${ICON_CHECK} Added nodeProvisioning to ${file}"
+}
+
+add_storage_class() {
+  local file=$1
+  check_replace_block "$file" "storageClass" "Storage Class" || return 0
+
+  echo ""
+  echo "  ${DIM}Create a Kubernetes StorageClass for CSI-backed storage.${RESET}"
+  echo "  ${DIM}Common for EFS (AWS), Azure File, or GCE Persistent Disk.${RESET}"
+  echo ""
+
+  local sc_name provisioner reclaim_policy
+  prompt sc_name "StorageClass name" "redpoint-rpi"
+  prompt provisioner "CSI provisioner (e.g., efs.csi.aws.com)" ""
+  prompt_choice reclaim_policy "Reclaim policy" "Delete|Retain" "Delete"
+
+  local params=""
+  local add_params=""
+  prompt_yesno add_params "Add provisioner parameters?" "y"
+  if [ "$add_params" = "true" ]; then
+    while true; do
+      local pk pv
+      prompt pk "Parameter key (empty to stop)" ""
+      [ -z "$pk" ] && break
+      prompt pv "Parameter value" ""
+      params="${params}    ${pk}: \"${pv}\"\n"
+    done
+  fi
+
+  local mount_opts=""
+  local add_mounts=""
+  prompt_yesno add_mounts "Add mount options?" "n"
+  if [ "$add_mounts" = "true" ]; then
+    while true; do
+      local mo
+      prompt mo "Mount option (empty to stop)" ""
+      [ -z "$mo" ] && break
+      mount_opts="${mount_opts}    - ${mo}\n"
+    done
+  fi
+
+  local block="storage:
+  storageClass:
+    enabled: true
+    name: ${sc_name}
+    provisioner: ${provisioner}
+    reclaimPolicy: ${reclaim_policy}"
+
+  if [ -n "$mount_opts" ]; then
+    block="${block}
+    mountOptions:
+$(printf "${mount_opts}")"
+  fi
+
+  if [ -n "$params" ]; then
+    block="${block}
+    parameters:
+$(printf "${params}")"
+  fi
+
+  append_block "$file" "$block" "Storage Class"
+  echo "  ${ICON_CHECK} Added storageClass to ${file}"
+}
+
 show_feature_menu() {
   echo ""
   echo "  ${BOLD}Available features:${RESET}"
@@ -1713,6 +2043,12 @@ show_feature_menu() {
   echo "    ${CYAN}13${RESET}) extra_envs        — Debug and plugin environment variables"
   echo "    ${CYAN}14${RESET}) secrets_management — Configure secrets provider, CSI classes, SDK vault settings"
   echo "    ${CYAN}15${RESET}) node_scheduling    — Node selector and tolerations for dedicated nodes"
+  echo "    ${CYAN}16${RESET}) common_annotations — Org-wide annotations on all resources (cost center, alerts)"
+  echo "    ${CYAN}17${RESET}) custom_ca_certs    — Mount internal CA certificates into service pods"
+  echo "    ${CYAN}18${RESET}) image_overrides    — Per-service container image references (flat registries)"
+  echo "    ${CYAN}19${RESET}) pod_anti_affinity  — Control pod scheduling spread across nodes"
+  echo "    ${CYAN}20${RESET}) node_provisioning  — Karpenter NodePool for dedicated EKS nodes"
+  echo "    ${CYAN}21${RESET}) storage_class      — Create a StorageClass for CSI storage (EFS, Azure File)"
   echo ""
   local choice
   read -rp "  Enter feature number or name: " choice
@@ -1732,6 +2068,12 @@ show_feature_menu() {
     13|extra_envs)         ADD_FEATURE="extra_envs" ;;
     14|secrets_management) ADD_FEATURE="secrets_management" ;;
     15|node_scheduling)    ADD_FEATURE="node_scheduling" ;;
+    16|common_annotations) ADD_FEATURE="common_annotations" ;;
+    17|custom_ca_certs)    ADD_FEATURE="custom_ca_certs" ;;
+    18|image_overrides)    ADD_FEATURE="image_overrides" ;;
+    19|pod_anti_affinity)  ADD_FEATURE="pod_anti_affinity" ;;
+    20|node_provisioning)  ADD_FEATURE="node_provisioning" ;;
+    21|storage_class)      ADD_FEATURE="storage_class" ;;
     *) echo "  ${RED}Unknown feature: ${choice}${RESET}"; exit 1 ;;
   esac
 }
@@ -1754,6 +2096,12 @@ run_add_feature() {
     extra_envs)         add_extra_envs "$file" ;;
     secrets_management) add_secrets_management "$file" ;;
     node_scheduling)    add_node_scheduling "$file" ;;
+    common_annotations) add_common_annotations "$file" ;;
+    custom_ca_certs)    add_custom_ca_certs "$file" ;;
+    image_overrides)    add_image_overrides "$file" ;;
+    pod_anti_affinity)  add_pod_anti_affinity "$file" ;;
+    node_provisioning)  add_node_provisioning "$file" ;;
+    storage_class)      add_storage_class "$file" ;;
     *) echo "  ${RED}Unknown feature: ${feature}${RESET}"; exit 1 ;;
   esac
 }
@@ -1808,7 +2156,7 @@ fi
 # ============================================================
 section "Platform & Deployment Mode"
 prompt_choice PLATFORM "Cloud platform" "azure|amazon|google|selfhosted" "azure"
-prompt_choice MODE "Deployment mode" "standard|demo" "standard"
+prompt_choice MODE "Deployment mode" "standard|advanced|demo" "standard"
 prompt TAG "Image tag" "$DEFAULT_TAG"
 prompt NAMESPACE "Kubernetes namespace" "$DEFAULT_NAMESPACE"
 
@@ -2366,7 +2714,7 @@ fi
 # ============================================================
 # Optional features — prompt during initial setup
 # ============================================================
-FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests extra_envs secrets_management node_scheduling"
+FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests extra_envs secrets_management node_scheduling common_annotations custom_ca_certs image_overrides pod_anti_affinity node_provisioning storage_class"
 SELECTED_FEATURES=""
 
 if [ "$FILE_MODE" = "true" ]; then
@@ -2402,6 +2750,12 @@ else
       extra_envs)         label="Extra Envs — debug and plugin environment variables for execution service" ;;
       secrets_management) label="Secrets Management — configure secrets provider, CSI classes, SDK vault settings" ;;
       node_scheduling)    label="Node Scheduling — node selector and tolerations for dedicated nodes" ;;
+      common_annotations) label="Common Annotations — org-wide annotations on all resources (cost center, alerts)" ;;
+      custom_ca_certs)    label="Custom CA Certs — mount internal CA certificates into service pods" ;;
+      image_overrides)    label="Image Overrides — per-service container image references (flat registries)" ;;
+      pod_anti_affinity)  label="Pod Anti-Affinity — control pod scheduling spread across nodes" ;;
+      node_provisioning)  label="Node Provisioning — Karpenter NodePool for dedicated EKS nodes" ;;
+      storage_class)      label="Storage Class — create a StorageClass for CSI storage (EFS, Azure File)" ;;
       *) label="$feat" ;;
     esac
     yn=""
@@ -2449,6 +2803,12 @@ for feat in $SELECTED_FEATURES; do
     extra_envs)       add_extra_envs "$OUTPUT_FILE" ;;
     secrets_management) add_secrets_management "$OUTPUT_FILE" ;;
     node_scheduling)    add_node_scheduling "$OUTPUT_FILE" ;;
+    common_annotations) add_common_annotations "$OUTPUT_FILE" ;;
+    custom_ca_certs)    add_custom_ca_certs "$OUTPUT_FILE" ;;
+    image_overrides)    add_image_overrides "$OUTPUT_FILE" ;;
+    pod_anti_affinity)  add_pod_anti_affinity "$OUTPUT_FILE" ;;
+    node_provisioning)  add_node_provisioning "$OUTPUT_FILE" ;;
+    storage_class)      add_storage_class "$OUTPUT_FILE" ;;
   esac
 done
 

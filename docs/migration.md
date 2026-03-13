@@ -60,6 +60,21 @@ cloudIdentity:
 | `per-service` | Each service gets its own SA (e.g., `rpi-realtimeapi`, `rpi-interactionapi`). This is the default. |
 | `both` | Per-service SAs are created, plus a shared SA exists for services that need it. |
 
+Any individual service can override its SA by setting `serviceAccountName` in its config block. For example, in `both` mode every service gets its own per-service SA and the shared SA is also created but not used by default. To assign the shared SA to a specific service while the others keep their own:
+
+```yaml
+cloudIdentity:
+  serviceAccount:
+    mode: both
+    name: redpoint-rpi
+
+realtimeapi:
+  serviceAccountName: redpoint-rpi      # use the shared SA
+# all other services keep their per-service SAs (rpi-interactionapi, rpi-executionservice, etc.)
+```
+
+The resolution priority is: per-service `serviceAccountName` override first, then mode-based resolution.
+
 No template edits required for any mode.
 
 ### Credentials in values.yaml
@@ -214,9 +229,150 @@ podAntiAffinity:
 
 ---
 
+### Common resource annotations
+
+**v7.6 problem:** Adding org-wide annotations (cost center, support email, alert routing, EKS role ARN) required editing every deploy template. Each ServiceAccount, Service, Deployment, and Pod needed the same annotations added manually.
+
+**v7.7 solution:** The `commonAnnotations` field applies annotations to all resource types at once. Per-resource-type overrides merge with the common set:
+
+```yaml
+commonAnnotations:
+  vanguard.com/cost-center: "0975"
+  vanguard.com/support-email: "RPI2@vanguard.com"
+  vanguard.com/alert-channel: "email,pagerduty"
+
+# Merged with commonAnnotations on ServiceAccount resources only
+serviceAccountAnnotations:
+  eks.amazonaws.com/role-arn: arn:aws:iam::123456789:role/redpoint-rpi-irsa
+
+# Merged with commonAnnotations on Service resources only
+serviceAnnotations:
+  service.beta.kubernetes.io/aws-load-balancer-type: nlb
+```
+
+No template edits required. Annotations appear on every ServiceAccount, Service, Deployment, and Pod.
+
+### CSI Secrets Store (AWS Secrets Manager)
+
+**v7.6 problem:** Customers using AWS Secrets Manager via the CSI driver had to create a custom `SecretProviderClass` template and manage it outside the chart.
+
+**v7.7 solution:** The existing `secretsManagement.csi.secretProviderClasses` array now supports AWS-format objects with `jmesPath` extraction via the `objectsContent` field:
+
+```yaml
+secretsManagement:
+  provider: csi
+  csi:
+    secretName: redpoint-rpi-secrets
+    secretProviderClasses:
+      - name: redpoint-secret-class
+        provider: aws
+        objectsContent: |
+          - objectName: "arn:aws:secretsmanager:us-east-1:123456789:secret/rpi-db"
+            objectType: secretsmanager
+            jmesPath:
+              - path: username
+                objectAlias: db_username
+              - path: password
+                objectAlias: db_password
+        secretObjects:
+          - secretName: redpoint-rpi-secrets
+            type: Opaque
+            data:
+              - key: db_username
+                objectName: db_username
+              - key: db_password
+                objectName: db_password
+```
+
+The chart generates the `SecretProviderClass` resource. Use `objectsContent` for raw provider-specific YAML (AWS `jmesPath`, HashiCorp Vault paths, etc.) or `objects` for the structured format.
+
+### StorageClass for CSI-backed storage
+
+**v7.6 problem:** Customers needing a dedicated StorageClass (e.g., EFS CSI on AWS for shared file access) had to create a custom template.
+
+**v7.7 solution:** The `storage.storageClass` section creates a StorageClass directly from values:
+
+```yaml
+storage:
+  storageClass:
+    enabled: true
+    name: redpoint-rpi
+    provisioner: efs.csi.aws.com
+    mountOptions:
+      - iam
+    parameters:
+      provisioningMode: efs-ap
+      fileSystemId: fs-0123456789abcdef0
+      directoryPerms: "755"
+      uid: "10001"
+      gid: "10001"
+      basePath: /rpi
+      subPathPattern: shared-data
+      ensureUniqueDirectory: "false"
+      reuseAccessPoint: "true"
+```
+
+### Karpenter NodePool for dedicated nodes
+
+**v7.6 problem:** Customers using Karpenter for node provisioning had to create and maintain a custom `NodePool` template with instance type requirements, taints, and labels.
+
+**v7.7 solution:** The `nodeProvisioning` section generates a Karpenter `NodePool` resource:
+
+```yaml
+nodeProvisioning:
+  enabled: true
+  provider: karpenter
+  karpenter:
+    nodePool:
+      name: redpoint-nodepool
+      labels:
+        workload: redpoint-api
+      taints:
+        - key: workload
+          value: redpoint-api
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["m7i"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["4xlarge"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      expireAfter: 360h
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 15m
+      limits:
+        cpu: "1000"
+        memory: 1000Gi
+```
+
+Use this together with `nodeSelector` and `tolerations` to ensure RPI pods land on the provisioned nodes.
+
+### Ingress domain from external sources
+
+The `ingress.domain` field accepts any value, including those resolved from external sources. If your domain is managed via AWS Secrets Manager or another external system, resolve it before running Helm and pass it with `--set`:
+
+```bash
+DOMAIN=$(aws secretsmanager get-secret-value --secret-id my-domain-secret --query SecretString --output text)
+helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
+```
+
+---
+
 ### Advanced deployment mode
 
-For deployments that need fine-grained control over images, certificates, ingress, and scheduling, set `mode: advanced`:
+For deployments that need fine-grained control over images, certificates, ingress, annotations, storage, and node provisioning, set `mode: advanced`:
 
 ```yaml
 global:
@@ -224,7 +380,7 @@ global:
     mode: advanced
 ```
 
-The `advanced` mode signals that your deployment uses enterprise features like per-service image overrides, custom CA certificates, and hard anti-affinity. All of these settings work in any mode, but `advanced` serves as a clear indicator that this is a customized deployment.
+The `advanced` mode signals that your deployment uses enterprise features like per-service image overrides, custom CA certificates, common resource annotations, CSI secrets, StorageClasses, and Karpenter NodePools. All of these settings work in any mode, but `advanced` serves as a clear indicator that this is a customized deployment.
 
 ---
 

@@ -77,6 +77,21 @@ customCACerts:
   # certFile: ""                # e.g., "internal-ca.pem"
 
 # ==========================
+# Common Annotations
+# ==========================
+# Annotations applied to all resource types: ServiceAccounts, Services, Deployments, and Pods.
+# Use this for org-wide annotations (cost center, support email, alert routing, etc.).
+commonAnnotations: {}
+# commonAnnotations:
+#   vanguard.com/cost-center: "0975"
+#   vanguard.com/support-email: "RPI2@vanguard.com"
+#   vanguard.com/alert-channel: "email,pagerduty"
+
+# Per-resource-type overrides (merged with commonAnnotations)
+serviceAccountAnnotations: {}
+serviceAnnotations: {}
+
+# ==========================
 # Operational Database
 # ==========================
 databases:
@@ -149,6 +164,7 @@ cloudIdentity:
   #   shared      -> one shared SA used by all services (simplest)
   #   per-service -> each service creates its own SA (for per-service IAM roles)
   #   both        -> shared SA + per-service SAs (shared for common resources, per-service for identity)
+  # Individual services can override by setting serviceAccountName in their config block.
   serviceAccount:
     mode: per-service
     name: redpoint-rpi
@@ -259,11 +275,55 @@ secretsManagement:
       objects:
         - objectName: "V7-ConnectionString-Operations"
           objectType: secret
+    # ----------------------------------------------------
+    # Example: AWS Secrets Manager with jmesPath extraction
+    # ----------------------------------------------------
+    # - name: redpoint-secret-class
+    #   provider: aws
+    #   objectsContent: |
+    #     - objectName: "arn:aws:secretsmanager:us-east-1:123456789:secret/rpi-db-creds"
+    #       objectType: secretsmanager
+    #       jmesPath:
+    #         - path: username
+    #           objectAlias: db_username
+    #         - path: password
+    #           objectAlias: db_password
+    #   secretObjects:
+    #     - secretName: redpoint-rpi-secrets
+    #       type: Opaque
+    #       data:
+    #         - key: db_username
+    #           objectName: db_username
+    #         - key: db_password
+    #           objectName: db_password
 
 # ==========================
 # Storage
 # ==========================
 storage:
+  # Optional: create a StorageClass (e.g., EFS CSI on AWS, Azure File, GCE PD)
+  storageClass:
+    enabled: false
+    name: redpoint-rpi
+    provisioner: ""             # e.g., efs.csi.aws.com
+    reclaimPolicy: Delete       # Delete | Retain
+    volumeBindingMode: Immediate
+    mountOptions: []
+    # mountOptions:
+    #   - iam
+    parameters: {}
+    # Example: AWS EFS
+    # parameters:
+    #   provisioningMode: efs-ap
+    #   fileSystemId: fs-0123456789abcdef0
+    #   directoryPerms: "755"
+    #   uid: "10001"
+    #   gid: "10001"
+    #   basePath: /rpi
+    #   subPathPattern: shared-data
+    #   ensureUniqueDirectory: "false"
+    #   reuseAccessPoint: "true"
+
   persistentVolumeClaims:
     FileOutputDirectory:
       enabled: false
@@ -666,6 +726,57 @@ tolerations:
   key: app
   operator: Equal
   value: redpoint-rpi
+
+# ==========================
+# Node Provisioning
+# ==========================
+# Optional: create a Karpenter NodePool for dedicated RPI nodes.
+# Useful on EKS when you want RPI pods on specific instance types with taints.
+nodeProvisioning:
+  enabled: false
+  provider: karpenter           # karpenter
+  karpenter:
+    nodePool:
+      name: redpoint-nodepool
+      labels: {}
+      # labels:
+      #   workload: redpoint-api
+      taints: []
+      # taints:
+      #   - key: workload
+      #     value: redpoint-api
+      #     effect: NoSchedule
+      startupTaints: []
+      # startupTaints:
+      #   - key: efs.csi.aws.com/agent-not-ready
+      #     value: "true"
+      #     effect: NoSchedule
+      requirements: []
+      # requirements:
+      #   - key: karpenter.k8s.aws/instance-family
+      #     operator: In
+      #     values: ["m7i"]
+      #   - key: karpenter.k8s.aws/instance-size
+      #     operator: In
+      #     values: ["4xlarge"]
+      #   - key: kubernetes.io/arch
+      #     operator: In
+      #     values: ["amd64"]
+      #   - key: karpenter.sh/capacity-type
+      #     operator: In
+      #     values: ["on-demand"]
+      expireAfter: 360h
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 15m
+      limits:
+        cpu: "1000"
+        memory: 1000Gi
+      weight: 10
 
 # ==========================
 # Redpoint AI
