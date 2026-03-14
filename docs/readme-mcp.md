@@ -1,19 +1,28 @@
 ![redpoint_logo](../chart/images/redpoint.png)
-# Interaction Helm Copilot
+# Interaction Helm Assistant
 
 [< Back to main README](../README.md)
 
 ## Overview
 
-The **Interaction Helm Copilot** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. Built on the Model Context Protocol (MCP), it connects to [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and lets you validate configurations, generate overrides, explain settings, and diagnose issues in plain English.
+The **Interaction Helm Assistant** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. It provides two ways to interact with the same set of tools:
 
-It also searches the official [RPI documentation](https://docs.redpointglobal.com/rpi) and returns relevant content covering features, administration, external configuration, channels, realtime decisions, and more.
+- **MCP (Claude Code / Claude Desktop):** Connect via the Model Context Protocol for a terminal-based AI experience powered by Claude.
+- **Web UI:** A browser-based interface with form-based tools, file management, and an AI chat assistant.
 
-## Prerequisites
+Both interfaces access the same underlying tools and search the official [RPI documentation](https://docs.redpointglobal.com/rpi) for content covering features, administration, external configuration, channels, realtime decisions, and more.
+
+---
+
+## Option A: MCP (Claude Code)
+
+Use this option if you have Claude Code or another MCP-compatible client (Claude Desktop, Cursor, Windsurf, etc.).
+
+### Prerequisites
 
 - [Node.js](https://nodejs.org/) v18 or later
 
-## Install Claude Code
+### Install Claude Code
 
 Claude Code is a CLI tool from Anthropic that runs in your terminal. Install it with npm:
 
@@ -29,14 +38,12 @@ claude
 
 On first run, you'll be prompted to sign in with your Anthropic account. If you don't have one, you can [sign up for a free account at claude.ai](https://claude.ai/signup). Follow the on-screen instructions to authenticate. See the [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for more details.
 
-> **Note:** The Helm Copilot currently supports Claude Code only. Support for additional MCP clients (Claude Desktop, Cursor, Windsurf, etc.) is planned for a future release.
+### Connect the Assistant
 
-## Connect the Copilot
-
-The Copilot is hosted by Redpoint as a public MCP endpoint. There is nothing to deploy or run in your cluster. Just run:
+The Assistant is hosted by Redpoint as a public MCP endpoint. There is nothing to deploy or run in your cluster. Just run:
 
 ```bash
-claude mcp add rpi-helm --transport http https://helmcopilot.redpointcdp.com/mcp --scope user
+claude mcp add rpi-helm --transport http https://rpi-helm-assistant.redpointcdp.com/mcp --scope user
 ```
 
 This only needs to be done once. The `--scope user` flag saves the server globally so it's available in every project and every future conversation. You can verify it's registered by running:
@@ -45,15 +52,59 @@ This only needs to be done once. The `--scope user` flag saves the server global
 claude mcp list
 ```
 
-You should see the Copilot listed with a connected status:
+You should see the Assistant listed with a connected status:
 
 ```
-rpi-helm: https://helmcopilot.redpointcdp.com/mcp (HTTP) - ✓ Connected
+rpi-helm: https://rpi-helm-assistant.redpointcdp.com/mcp (HTTP) - ✓ Connected
 ```
+
+For Claude Desktop, add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "rpi-helm": {
+      "type": "http",
+      "url": "https://rpi-helm-assistant.redpointcdp.com/mcp"
+    }
+  }
+}
+```
+
+---
+
+## Option B: Web UI
+
+Use this option for a browser-based experience with forms, file uploads/downloads, and AI chat. No MCP client required.
+
+### Features
+
+The Web UI includes six tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **AI Chat** | Natural language assistant. Ask questions, generate configs, and troubleshoot in plain English. |
+| **Generate** | Form-based overrides builder. Select your platform, mode, and features from dropdowns and checkboxes. Download the generated YAML. |
+| **Validate** | Upload or paste a values file. See color-coded results (errors, warnings, info) with fix suggestions. |
+| **Migrate** | Upload a v7.6 values file and get a v7.7 overrides file with a summary of detected customizations. |
+| **Explain** | Look up any values.yaml key path to see its type, description, defaults, and usage context. |
+| **Docs** | Search the official RPI documentation and browse results inline. |
+
+### Access
+
+The Web UI is hosted by Redpoint. Navigate to:
+
+```
+https://rpi-helm-assistant.redpointcdp.com
+```
+
+No installation, API keys, or setup required.
+
+---
 
 ## Available Tools
 
-The Copilot exposes the following tools:
+Both the MCP server and the Web UI expose the same set of tools:
 
 | Tool | Description |
 |------|-------------|
@@ -68,9 +119,11 @@ The Copilot exposes the following tools:
 | `rpi_migrate` | Migrates a v7.6 values file to v7.7 format |
 | `rpi_migrate_templates` | Analyzes a v7.6 templates directory for customizations to carry forward |
 
+---
+
 ## Usage Examples
 
-Once connected, just ask questions in plain English. Here are examples organized by what you're trying to do.
+In Claude Code or the Web UI's AI Chat tab, just ask questions in plain English. In the Web UI's form tabs, use the structured inputs directly. Here are examples organized by what you're trying to do.
 
 <details>
 <summary><strong>Validate Configuration</strong></summary>
@@ -193,6 +246,8 @@ Analyzes your existing configuration, remaps renamed keys, and generates a v7.7 
 > "Analyze my v7.6 templates at /path/to/templates for migration to v7.7"
 
 </details>
+
+---
 
 ## IDE Autocomplete
 

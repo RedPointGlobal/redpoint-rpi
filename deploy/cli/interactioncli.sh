@@ -30,6 +30,38 @@ ADD_MODE=false
 ADD_FEATURE=""
 FILE_MODE=false
 INPUT_FILE="inputs.yaml"
+
+# --- Handle positional commands (status, troubleshoot, secrets, deploy) ---
+# These run before getopts since they are standalone commands, not flags.
+if [ "${1:-}" = "status" ] || [ "${1:-}" = "troubleshoot" ] || \
+   [ "${1:-}" = "secrets" ] || [ "${1:-}" = "deploy" ]; then
+  CLI_COMMAND="$1"
+  shift
+  # Parse command-specific flags
+  CLI_NAMESPACE="${DEFAULT_NAMESPACE}"
+  CLI_SYMPTOM=""
+  CLI_OVERRIDES=""
+  CLI_SECRETS_OUT="secrets.yaml"
+  CLI_CHART="./chart"
+  CLI_DRY_RUN=false
+  while getopts "n:f:o:c:-:" _cmd_opt 2>/dev/null; do
+    case "$_cmd_opt" in
+      n) CLI_NAMESPACE="$OPTARG" ;;
+      f) CLI_OVERRIDES="$OPTARG" ;;
+      o) CLI_SECRETS_OUT="$OPTARG" ;;
+      c) CLI_CHART="$OPTARG" ;;
+      -)
+        case "$OPTARG" in
+          dry-run) CLI_DRY_RUN=true ;;
+        esac ;;
+      *) ;;
+    esac
+  done
+  shift $((OPTIND - 1))
+  # Remaining positional arg is symptom (for troubleshoot)
+  CLI_SYMPTOM="${1:-}"
+fi
+
 while getopts "o:a:fh" opt; do
   case $opt in
     o) OUTPUT_FILE="$OPTARG" ;;
@@ -37,6 +69,10 @@ while getopts "o:a:fh" opt; do
     f) FILE_MODE=true ;;
     h)
       echo "Usage: $0 [-o output-file] [-a feature] [-f]"
+      echo "       $0 secrets -f <overrides> [-o secrets.yaml] [-n namespace]"
+      echo "       $0 deploy -f <overrides> [-n namespace] [-c chart-path] [--dry-run]"
+      echo "       $0 status [-n namespace]"
+      echo "       $0 troubleshoot [-n namespace] [symptom]"
       echo ""
       echo "  No flags       Full interactive setup"
       echo "  -f             File-driven setup — reads values from inputs.yaml"
@@ -44,28 +80,42 @@ while getopts "o:a:fh" opt; do
       echo "  -a menu        Show interactive feature menu"
       echo "  -o <file>      Output file path (default: overrides.yaml)"
       echo ""
-      echo "  Available features:"
-      echo "    database_upgrade  Automatic database schema upgrades"
-      echo "    queue_reader      Queue Listener and Realtime queue processing"
-      echo "    autoscaling       HPA or KEDA autoscaling for services"
-      echo "    custom_metrics    Prometheus /metrics endpoints"
-      echo "    service_mesh      Linkerd Server CRDs"
-      echo "    smoke_tests       PVC and CSI mount validation"
-      echo "    entra_id          Microsoft Entra ID (Azure AD) SSO"
-      echo "    oidc              OpenID Connect (Keycloak, Okta, etc.)"
-      echo "    smtp              Email delivery configuration"
-      echo "    redpoint_ai       OpenAI and Azure Cognitive Search"
-      echo "    storage           PVC and CSI storage volumes"
-      echo "    data_warehouse    Snowflake or BigQuery"
-      echo "    extra_envs        Debug and plugin environment variables"
-    echo "    secrets_management Configure secrets provider, CSI classes, SDK vault"
-    echo "    node_scheduling   Node selector and tolerations for dedicated nodes"
+      echo "  Commands:"
+      echo "    secrets          Generate secrets.yaml from an overrides file"
+      echo "    deploy           Deploy RPI (prereqs + helm install/upgrade)"
+      echo "    status           Show RPI pod, service, and ingress status"
+      echo "    troubleshoot     Diagnose common deployment issues"
+      echo ""
+      echo "    Options for secrets:"
+      echo "      -f <file>        Overrides file to read configuration from (required)"
+      echo "      -o <file>        Output secrets file (default: secrets.yaml)"
+      echo "      -n <namespace>   Kubernetes namespace (default: ${DEFAULT_NAMESPACE})"
+      echo ""
+      echo "    Options for deploy:"
+      echo "      -f <file>        Overrides file (required)"
+      echo "      -n <namespace>   Kubernetes namespace (default: ${DEFAULT_NAMESPACE})"
+      echo "      -c <path>        Chart path (default: ./chart)"
+      echo "      --dry-run        Render templates without deploying"
+      echo ""
+      echo "    Options for status/troubleshoot:"
+      echo "      -n <namespace>   Kubernetes namespace (default: ${DEFAULT_NAMESPACE})"
+      echo "      [symptom]        Troubleshoot hint: crashloop, pending, imagepull"
+      echo ""
+      echo "  Available features (-a):"
+      echo "    database_upgrade  queue_reader  autoscaling  custom_metrics  service_mesh"
+      echo "    smoke_tests  entra_id  oidc  smtp  redpoint_ai  storage  data_warehouse"
+      echo "    extra_envs  secrets_management  node_scheduling  common_annotations"
+      echo "    custom_ca_certs  image_overrides  pod_anti_affinity  node_provisioning"
+      echo "    storage_class"
       echo ""
       echo "  Examples:"
-      echo "    bash interactioncli.sh                        # Interactive setup"
-      echo "    bash interactioncli.sh -f                     # File-driven (reads inputs.yaml)"
-      echo "    bash interactioncli.sh -a redpoint_ai         # Add a feature"
-      echo "    bash interactioncli.sh -a menu                # Feature menu"
+      echo "    bash interactioncli.sh                           # Interactive setup"
+      echo "    bash interactioncli.sh secrets -f overrides.yaml # Generate secrets"
+      echo "    bash interactioncli.sh deploy -f overrides.yaml  # Deploy to cluster"
+      echo "    bash interactioncli.sh deploy -f overrides.yaml --dry-run"
+      echo "    bash interactioncli.sh status -n my-namespace    # Cluster status"
+      echo "    bash interactioncli.sh troubleshoot crashloop    # Diagnose crashes"
+      echo "    bash interactioncli.sh -a redpoint_ai            # Add a feature"
       exit 0
       ;;
     *) echo "Unknown option: -$opt" >&2; exit 1 ;;
@@ -1285,7 +1335,8 @@ add_secrets_management() {
       if [ "$provider" = "sdk" ]; then
         local sdk_platform
         sdk_platform=$(grep -A2 'platform:' "$file" 2>/dev/null | grep 'platform:' | head -1 | sed 's/.*platform: *//' | tr -d ' "'"'"'')
-        if [ "$sdk_platform" = "azure" ] || [ -z "$sdk_platform" ]; then
+        [ -z "$sdk_platform" ] && sdk_platform="azure"
+        if [ "$sdk_platform" = "azure" ]; then
           local vault_uri reload_interval use_ad_token
           echo ""
           echo "  ${BOLD}Azure SDK Settings${RESET}"
@@ -1298,6 +1349,24 @@ add_secrets_management() {
       vaultUri: ${vault_uri}
       configurationReloadIntervalSeconds: ${reload_interval}
       useADTokenForDatabaseConnection: ${use_ad_token}"
+        elif [ "$sdk_platform" = "amazon" ]; then
+          local secret_tag_key
+          echo ""
+          echo "  ${BOLD}AWS SDK Settings${RESET}"
+          prompt secret_tag_key "Secret tag key (leave empty to read all secrets)" ""
+          block="${block}
+  sdk:
+    amazon:
+      secretTagKey: ${secret_tag_key}"
+        elif [ "$sdk_platform" = "google" ]; then
+          local gcp_project_id
+          echo ""
+          echo "  ${BOLD}Google SDK Settings${RESET}"
+          prompt gcp_project_id "GCP project ID" ""
+          block="${block}
+  sdk:
+    google:
+      projectId: ${gcp_project_id}"
         fi
       elif [ "$provider" = "csi" ]; then
         block="${block}
@@ -1323,7 +1392,8 @@ ${classes_yaml}"
     add_sdk_settings)
       local sdk_platform
       sdk_platform=$(grep -A2 'platform:' "$file" 2>/dev/null | grep 'platform:' | head -1 | sed 's/.*platform: *//' | tr -d ' "'"'"'')
-      if [ "$sdk_platform" = "azure" ] || [ -z "$sdk_platform" ]; then
+      [ -z "$sdk_platform" ] && sdk_platform="azure"
+      if [ "$sdk_platform" = "azure" ]; then
         local vault_uri reload_interval use_ad_token
         echo ""
         echo "  ${BOLD}Azure SDK Settings${RESET}"
@@ -1336,8 +1406,24 @@ ${classes_yaml}"
       configurationReloadIntervalSeconds: ${reload_interval}
       useADTokenForDatabaseConnection: ${use_ad_token}" ""
         echo "  ${ICON_CHECK} Added SDK Azure settings to secretsManagement in ${file}"
-      else
-        echo "  ${YELLOW}SDK settings are currently only supported for Azure.${RESET}"
+      elif [ "$sdk_platform" = "amazon" ]; then
+        local secret_tag_key
+        echo ""
+        echo "  ${BOLD}AWS SDK Settings${RESET}"
+        prompt secret_tag_key "Secret tag key (leave empty to read all secrets)" ""
+        append_under_key "$file" "secretsManagement" "  sdk:
+    amazon:
+      secretTagKey: ${secret_tag_key}" ""
+        echo "  ${ICON_CHECK} Added SDK Amazon settings to secretsManagement in ${file}"
+      elif [ "$sdk_platform" = "google" ]; then
+        local gcp_project_id
+        echo ""
+        echo "  ${BOLD}Google SDK Settings${RESET}"
+        prompt gcp_project_id "GCP project ID" ""
+        append_under_key "$file" "secretsManagement" "  sdk:
+    google:
+      projectId: ${gcp_project_id}" ""
+        echo "  ${ICON_CHECK} Added SDK Google settings to secretsManagement in ${file}"
       fi
       ;;
 
@@ -2077,6 +2163,603 @@ show_feature_menu() {
     *) echo "  ${RED}Unknown feature: ${choice}${RESET}"; exit 1 ;;
   esac
 }
+
+# ============================================================
+# Cluster Status
+# ============================================================
+
+cli_status() {
+  local ns=$1
+  echo ""
+  echo "${CYAN}${BOLD}━━━ RPI Cluster Status ━━━${RESET}"
+  echo "  Namespace: ${BOLD}${ns}${RESET}"
+  echo ""
+
+  # Check kubectl
+  if ! command -v kubectl &>/dev/null; then
+    echo "  ${RED}kubectl not found. Install kubectl and configure cluster access.${RESET}"
+    exit 1
+  fi
+
+  if ! kubectl cluster-info &>/dev/null 2>&1; then
+    echo "  ${RED}No Kubernetes cluster is reachable.${RESET}"
+    echo "  Run 'kubectl cluster-info' to verify connectivity."
+    exit 1
+  fi
+
+  # Pods
+  echo "${CYAN}${BOLD}  Pods${RESET}"
+  local pods_output
+  pods_output=$(kubectl get pods -n "$ns" -o wide 2>&1) || true
+  if echo "$pods_output" | grep -q "No resources found"; then
+    echo "  ${YELLOW}No pods found in namespace ${ns}${RESET}"
+  else
+    # Count statuses
+    local total running pending failed
+    total=$(echo "$pods_output" | tail -n +2 | wc -l | tr -d ' ')
+    running=$(echo "$pods_output" | tail -n +2 | awk '$3 == "Running"' | wc -l | tr -d ' ')
+    pending=$(echo "$pods_output" | tail -n +2 | awk '$3 == "Pending"' | wc -l | tr -d ' ')
+    failed=$(echo "$pods_output" | tail -n +2 | awk '$3 == "CrashLoopBackOff" || $3 == "Error" || $3 == "Failed"' | wc -l | tr -d ' ')
+    local other=$((total - running - pending - failed))
+
+    echo "  Total: ${BOLD}${total}${RESET}  |  ${GREEN}Running: ${running}${RESET}  |  ${YELLOW}Pending: ${pending}${RESET}  |  ${RED}Failed: ${failed}${RESET}  |  Other: ${other}"
+    echo ""
+    echo "$pods_output" | head -1
+    echo "$pods_output" | tail -n +2 | while IFS= read -r line; do
+      local status
+      status=$(echo "$line" | awk '{print $3}')
+      case "$status" in
+        Running)          echo "  ${GREEN}${line}${RESET}" ;;
+        Pending)          echo "  ${YELLOW}${line}${RESET}" ;;
+        CrashLoopBackOff|Error|Failed) echo "  ${RED}${line}${RESET}" ;;
+        *)                echo "  ${line}" ;;
+      esac
+    done
+  fi
+
+  echo ""
+
+  # Services
+  echo "${CYAN}${BOLD}  Services${RESET}"
+  kubectl get services -n "$ns" 2>&1 | head -30 || echo "  ${DIM}Could not list services${RESET}"
+  echo ""
+
+  # Ingress
+  echo "${CYAN}${BOLD}  Ingress${RESET}"
+  local ingress_output
+  ingress_output=$(kubectl get ingress -n "$ns" 2>&1) || true
+  if echo "$ingress_output" | grep -q "No resources found"; then
+    echo "  ${DIM}No Ingress resources found${RESET}"
+  else
+    echo "$ingress_output" | head -20
+  fi
+
+  echo ""
+}
+
+# ============================================================
+# Cluster Troubleshoot
+# ============================================================
+
+cli_troubleshoot() {
+  local ns=$1 symptom=${2:-}
+  echo ""
+  echo "${CYAN}${BOLD}━━━ RPI Troubleshoot ━━━${RESET}"
+  echo "  Namespace: ${BOLD}${ns}${RESET}"
+  if [ -n "$symptom" ]; then
+    echo "  Symptom:   ${BOLD}${symptom}${RESET}"
+  fi
+  echo ""
+
+  # Check kubectl
+  if ! command -v kubectl &>/dev/null; then
+    echo "  ${RED}kubectl not found. Install kubectl and configure cluster access.${RESET}"
+    exit 1
+  fi
+
+  if ! kubectl cluster-info &>/dev/null 2>&1; then
+    echo "  ${RED}No Kubernetes cluster is reachable.${RESET}"
+    echo "  ${DIM}Run 'kubectl cluster-info' to verify connectivity.${RESET}"
+    echo "  ${DIM}Check KUBECONFIG env var and cluster access.${RESET}"
+    exit 1
+  fi
+
+  local findings=0
+
+  # Get pods once
+  local pods_output
+  pods_output=$(kubectl get pods -n "$ns" 2>&1) || true
+
+  if echo "$pods_output" | grep -q "No resources found"; then
+    echo "  ${YELLOW}[warning] No pods found in namespace ${ns}${RESET}"
+    echo "  ${DIM}  Fix: Verify the Helm release is installed: helm list -n ${ns}${RESET}"
+    findings=$((findings + 1))
+  else
+    # CrashLoopBackOff / Error
+    _ts_check_crashloop() {
+      local pod_name
+      echo "$pods_output" | tail -n +2 | while IFS= read -r line; do
+        if echo "$line" | grep -qE "CrashLoopBackOff|Error|Failed"; then
+          pod_name=$(echo "$line" | awk '{print $1}')
+          echo ""
+          echo "  ${RED}[critical] Pod ${pod_name} is in CrashLoopBackOff${RESET}"
+          local logs
+          logs=$(kubectl logs "$pod_name" --tail=30 -n "$ns" 2>&1) || logs="(could not retrieve logs)"
+          echo "  ${DIM}Last 30 log lines:${RESET}"
+          echo "$logs" | sed 's/^/    /'
+          echo ""
+          echo "  ${DIM}  Fix: Check for configuration errors (missing env vars, bad connection strings).${RESET}"
+          echo "  ${DIM}  Try: kubectl logs ${pod_name} --previous -n ${ns}${RESET}"
+        fi
+      done
+    }
+
+    # Pending pods
+    _ts_check_pending() {
+      local pod_name
+      echo "$pods_output" | tail -n +2 | while IFS= read -r line; do
+        if echo "$line" | grep -q "Pending"; then
+          pod_name=$(echo "$line" | awk '{print $1}')
+          echo ""
+          echo "  ${YELLOW}[warning] Pod ${pod_name} is Pending${RESET}"
+          local desc events
+          desc=$(kubectl describe pod "$pod_name" -n "$ns" 2>&1) || desc=""
+          events=$(echo "$desc" | sed -n '/^Events:/,$p' | head -20)
+          if [ -n "$events" ]; then
+            echo "$events" | sed 's/^/    /'
+          fi
+          echo ""
+          echo "  ${DIM}  Fix: Common causes: insufficient CPU/memory, unbound PVCs, image pull errors, node affinity constraints.${RESET}"
+        fi
+      done
+    }
+
+    # Image pull errors
+    _ts_check_imagepull() {
+      local pod_name
+      echo "$pods_output" | tail -n +2 | while IFS= read -r line; do
+        if echo "$line" | grep -qE "ImagePullBackOff|ErrImagePull"; then
+          pod_name=$(echo "$line" | awk '{print $1}')
+          echo ""
+          echo "  ${RED}[critical] Pod ${pod_name} cannot pull its container image${RESET}"
+          echo "  ${DIM}  Fix: Verify global.deployment.images.repository and tag are correct.${RESET}"
+          echo "  ${DIM}  Ensure the imagePullSecret exists and has valid credentials.${RESET}"
+        fi
+      done
+    }
+
+    # Run checks based on symptom or all
+    case "${symptom}" in
+      crashloop)
+        _ts_check_crashloop
+        ;;
+      pending)
+        _ts_check_pending
+        ;;
+      imagepull)
+        _ts_check_imagepull
+        ;;
+      *)
+        # General: run all checks
+        if echo "$pods_output" | grep -qE "CrashLoopBackOff|Error|Failed"; then
+          _ts_check_crashloop
+          findings=$((findings + 1))
+        fi
+        if echo "$pods_output" | grep -q "Pending"; then
+          _ts_check_pending
+          findings=$((findings + 1))
+        fi
+        if echo "$pods_output" | grep -qE "ImagePullBackOff|ErrImagePull"; then
+          _ts_check_imagepull
+          findings=$((findings + 1))
+        fi
+        ;;
+    esac
+  fi
+
+  # Check secrets
+  echo ""
+  echo "${CYAN}${BOLD}  Secrets Check${RESET}"
+  local secrets_output
+  secrets_output=$(kubectl get secrets -n "$ns" -o name 2>&1) || secrets_output=""
+  if echo "$secrets_output" | grep -q "redpoint-rpi"; then
+    echo "  ${GREEN}✔ Found redpoint-rpi secret${RESET}"
+  else
+    echo "  ${YELLOW}[warning] No secret matching 'redpoint-rpi' found${RESET}"
+    echo "  ${DIM}  Fix: Ensure secretsManagement is configured correctly and secrets are created.${RESET}"
+    findings=$((findings + 1))
+  fi
+
+  # Check ingress
+  echo ""
+  echo "${CYAN}${BOLD}  Ingress Check${RESET}"
+  local ingress_output
+  ingress_output=$(kubectl get ingress -n "$ns" 2>&1) || ingress_output=""
+  if echo "$ingress_output" | grep -q "No resources found"; then
+    echo "  ${DIM}[info] No Ingress resources found. External access may not be configured.${RESET}"
+  else
+    echo "  ${GREEN}✔ Ingress resources found${RESET}"
+    echo "$ingress_output" | head -10 | sed 's/^/    /'
+  fi
+
+  # Recent events
+  echo ""
+  echo "${CYAN}${BOLD}  Recent Events${RESET}"
+  local events_output
+  events_output=$(kubectl get events -n "$ns" --sort-by='.lastTimestamp' 2>&1 | tail -15) || events_output=""
+  if [ -n "$events_output" ] && ! echo "$events_output" | grep -q "No resources found"; then
+    echo "$events_output" | sed 's/^/    /'
+  else
+    echo "  ${DIM}No recent events${RESET}"
+  fi
+
+  echo ""
+  if [ "$findings" -eq 0 ]; then
+    echo "  ${GREEN}✔ No issues detected. All checks passed.${RESET}"
+  fi
+  echo ""
+}
+
+# ============================================================
+# Secrets command: read overrides, prompt for credentials, write secrets.yaml
+# ============================================================
+read_val() {
+  python3 -c "
+import sys, yaml
+d = yaml.safe_load(open(sys.argv[1]))
+keys = sys.argv[2].split('.')
+v = d
+for k in keys:
+    v = (v or {}).get(k) if isinstance(v, dict) else None
+print(v if v is not None else '')" "$1" "$2"
+}
+
+cli_secrets() {
+  local overrides="$1" output="$2" namespace="$3"
+
+  if [ -z "$overrides" ]; then
+    echo "${RED}Error: -f <overrides-file> is required.${RESET}" >&2
+    echo "Usage: $0 secrets -f overrides.yaml [-o secrets.yaml] [-n namespace]" >&2
+    exit 1
+  fi
+  if [ ! -f "$overrides" ]; then
+    echo "${RED}Error: File not found: ${overrides}${RESET}" >&2; exit 1
+  fi
+
+  # Check python3 + PyYAML (auto-install if missing)
+  if ! command -v python3 &>/dev/null; then
+    echo "${RED}Error: python3 is required.${RESET}" >&2; exit 1
+  fi
+  if ! python3 -c "import yaml" 2>/dev/null; then
+    echo "  Installing PyYAML..."
+    python3 -m pip install pyyaml --quiet 2>/dev/null || python3 -m pip install pyyaml --quiet --user 2>/dev/null
+    if ! python3 -c "import yaml" 2>/dev/null; then
+      echo "${RED}Error: Failed to install PyYAML. Install manually: pip3 install pyyaml${RESET}" >&2; exit 1
+    fi
+  fi
+
+  echo ""
+  echo "${CYAN}${BOLD}Interaction CLI — Secrets Generator${RESET}"
+  echo "${DIM}Reading configuration from: ${overrides}${RESET}"
+  echo ""
+
+  # Read configuration from overrides
+  local mode db_provider secrets_provider rt_enabled rt_cache_provider rt_queue_provider
+  mode=$(read_val "$overrides" "global.deployment.mode")
+  mode="${mode:-standard}"
+  db_provider=$(read_val "$overrides" "databases.operational.provider")
+  db_provider="${db_provider:-sqlserver}"
+  secrets_provider=$(read_val "$overrides" "secretsManagement.provider")
+  secrets_provider="${secrets_provider:-kubernetes}"
+  rt_enabled=$(read_val "$overrides" "realtimeapi.enabled")
+  rt_enabled="${rt_enabled:-false}"
+  rt_cache_provider=$(read_val "$overrides" "realtimeapi.cacheProvider.provider")
+  rt_cache_provider="${rt_cache_provider:-mongodb}"
+  rt_queue_provider=$(read_val "$overrides" "realtimeapi.queueProvider.provider")
+  rt_queue_provider="${rt_queue_provider:-rabbitmq}"
+
+  # Pre-fill database values from overrides if present
+  local db_host db_user db_pulse db_logging
+  db_host=$(read_val "$overrides" "databases.operational.server_host")
+  db_user=$(read_val "$overrides" "databases.operational.server_username")
+  db_pulse=$(read_val "$overrides" "databases.operational.pulse_database_name")
+  db_pulse="${db_pulse:-Pulse}"
+  db_logging=$(read_val "$overrides" "databases.operational.pulse_logging_database_name")
+  db_logging="${db_logging:-PulseLogging}"
+
+  # Skip secrets entirely for SDK mode (secrets come from vault)
+  if [ "$secrets_provider" = "sdk" ]; then
+    echo "  ${YELLOW}Secrets provider is 'sdk'. Secrets are managed in your cloud vault.${RESET}"
+    echo "  ${DIM}No secrets.yaml needed. Ensure your vault contains the required keys.${RESET}"
+    echo ""
+    echo "  Required vault keys:"
+    echo "    - ConnectionString_Operations_Database"
+    echo "    - ConnectionString_Logging_Database"
+    if [ "$rt_enabled" = "true" ] || [ "$rt_enabled" = "True" ]; then
+      echo "    - RealtimeAPI_Auth_Token"
+      echo "    - RealtimeAPI_MongoCache_ConnectionString (or cache-specific key)"
+    fi
+    echo ""
+    exit 0
+  fi
+
+  # Show detected configuration
+  echo "  ${BOLD}Detected configuration:${RESET}"
+  echo "    Mode:             ${mode}"
+  echo "    Database:         ${db_provider}"
+  echo "    Secrets provider: ${secrets_provider}"
+  echo "    Realtime API:     ${rt_enabled}"
+  if [ "$rt_enabled" = "true" ] || [ "$rt_enabled" = "True" ]; then
+    echo "    Cache provider:   ${rt_cache_provider}"
+    echo "    Queue provider:   ${rt_queue_provider}"
+  fi
+  echo ""
+
+  # Initialize the secrets file
+  cat > "$output" << SECRETS_HEADER
+# ============================================================
+# RPI Kubernetes Secret — Generated by Interaction CLI
+# $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+# ============================================================
+# Apply BEFORE helm install:
+#   kubectl apply -f ${output} -n ${namespace}
+#
+# WARNING: This file contains sensitive values.
+#          Do NOT commit this file to version control.
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${SECRET_NAME}
+  namespace: ${namespace}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+stringData:
+SECRETS_HEADER
+
+  # --- Database credentials ---
+  if [ "$mode" != "demo" ]; then
+    echo "  ${BOLD}Database credentials${RESET}"
+    if [ -z "$db_host" ]; then
+      read -rp "    Server host: " db_host
+    else
+      echo "    Server host: ${DIM}${db_host}${RESET} (from overrides)"
+    fi
+    if [ -z "$db_user" ]; then
+      read -rp "    Username: " db_user
+    else
+      echo "    Username: ${DIM}${db_user}${RESET} (from overrides)"
+    fi
+
+    local db_pass=""
+    read -rsp "    Password: " db_pass
+    echo ""
+    echo ""
+
+    # Build connection strings
+    local ops_conn="" log_conn=""
+    case "$db_provider" in
+      sqlserver)
+        ops_conn="Server=tcp:${db_host},1433;Database=${db_pulse};User ID=${db_user};Password=${db_pass};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+        log_conn="Server=tcp:${db_host},1433;Database=${db_logging};User ID=${db_user};Password=${db_pass};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+        ;;
+      postgresql)
+        ops_conn="PostgreSQL:Server=${db_host};Database=${db_pulse};User Id=${db_user};Password=${db_pass};"
+        log_conn="PostgreSQL:Server=${db_host};Database=${db_logging};User Id=${db_user};Password=${db_pass};"
+        ;;
+      sqlserveronvm)
+        ops_conn="Server=${db_host},1433;Database=${db_pulse};uid=${db_user};pwd=${db_pass};ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=True;TrustServerCertificate=True;"
+        log_conn="Server=${db_host},1433;Database=${db_logging};uid=${db_user};pwd=${db_pass};ConnectRetryCount=12;ConnectRetryInterval=10;Encrypt=True;TrustServerCertificate=True;"
+        ;;
+    esac
+
+    cat >> "$output" << SECRETS_DB
+  # -- Operational Database --
+  ConnectionString_Operations_Database: "${ops_conn}"
+  ConnectionString_Logging_Database: "${log_conn}"
+  Operations_Database_Server_Password: "${db_pass}"
+  Operations_Database_ServerHost: "${db_host}"
+  Operations_Database_Server_Username: "${db_user}"
+  Operations_Database_Pulse_Database_Name: "${db_pulse}"
+  Operations_Database_Pulse_Logging_Database_Name: "${db_logging}"
+SECRETS_DB
+  fi
+
+  # --- Realtime API secrets ---
+  if [ "$rt_enabled" = "true" ] || [ "$rt_enabled" = "True" ]; then
+    local rt_auth_token rt_rabbitmq_pass rt_redis_pass qs_redis_pass qs_rabbitmq_pass
+    rt_auth_token=$(gen_password)
+    rt_rabbitmq_pass=$(gen_password)
+    rt_redis_pass=$(gen_password)
+    qs_redis_pass=$(gen_password)
+    qs_rabbitmq_pass=$(gen_password)
+
+    cat >> "$output" << SECRETS_RT
+  # -- Realtime API --
+  RealtimeAPI_Auth_Token: "${rt_auth_token}"
+SECRETS_RT
+
+    # Cache connection string
+    if [ "$rt_cache_provider" = "mongodb" ] || [ "$rt_cache_provider" = "redis" ] || \
+       [ "$rt_cache_provider" = "azureredis" ] || [ "$rt_cache_provider" = "inMemorySql" ]; then
+      echo "  ${BOLD}Realtime cache connection${RESET}"
+      local rt_cache_conn=""
+      read -rsp "    ${rt_cache_provider} connection string: " rt_cache_conn
+      echo ""
+
+      if [ -n "$rt_cache_conn" ]; then
+        local cache_key=""
+        case "$rt_cache_provider" in
+          mongodb)     cache_key="RealtimeAPI_MongoCache_ConnectionString" ;;
+          redis|azureredis) cache_key="RealtimeAPI_RedisCache_ConnectionString" ;;
+          inMemorySql) cache_key="RealtimeAPI_inMemorySql_ConnectionString" ;;
+        esac
+        echo "  ${cache_key}: \"${rt_cache_conn}\"" >> "$output"
+      fi
+    fi
+
+    # Queue connection string (if azure)
+    if [ "$rt_queue_provider" = "azureservicebus" ] || [ "$rt_queue_provider" = "azureeventhubs" ]; then
+      echo "  ${BOLD}Realtime queue connection${RESET}"
+      local rt_queue_conn=""
+      read -rsp "    ${rt_queue_provider} connection string: " rt_queue_conn
+      echo ""
+
+      if [ -n "$rt_queue_conn" ]; then
+        local queue_key=""
+        case "$rt_queue_provider" in
+          azureservicebus) queue_key="RealtimeAPI_ServiceBus_ConnectionString" ;;
+          azureeventhubs)  queue_key="RealtimeAPI_EventHubs_ConnectionString" ;;
+        esac
+        echo "  ${queue_key}: \"${rt_queue_conn}\"" >> "$output"
+      fi
+    fi
+
+    # Auto-generated internal passwords
+    cat >> "$output" << SECRETS_AUTO
+  RealtimeAPI_RabbitMQ_Password: "${rt_rabbitmq_pass}"
+  RealtimeAPI_RedisCache_Password: "${rt_redis_pass}"
+  QueueService_RedisCache_Password: "${qs_redis_pass}"
+  QueueService_internalCache_ConnectionString: "rpi-queuereader-cache:6379,password=${qs_redis_pass},abortConnect=False"
+  QueueService_RabbitMQ_Password: "${qs_rabbitmq_pass}"
+SECRETS_AUTO
+    echo ""
+  fi
+
+  echo "  ${GREEN}✔ Secrets written to: ${output}${RESET}"
+  echo ""
+  echo "  Apply with:"
+  echo "    ${DIM}kubectl apply -f ${output} -n ${namespace}${RESET}"
+  echo ""
+}
+
+# ============================================================
+# Deploy command: pre-flight checks + helm install/upgrade
+# ============================================================
+cli_deploy() {
+  local overrides="$1" namespace="$2" chart="$3" dry_run="$4"
+
+  if [ -z "$overrides" ]; then
+    echo "${RED}Error: -f <overrides-file> is required.${RESET}" >&2
+    echo "Usage: $0 deploy -f overrides.yaml [-n namespace] [-c chart-path] [--dry-run]" >&2
+    exit 1
+  fi
+  if [ ! -f "$overrides" ]; then
+    echo "${RED}Error: File not found: ${overrides}${RESET}" >&2; exit 1
+  fi
+
+  echo ""
+  echo "${CYAN}${BOLD}Interaction CLI — Deploy${RESET}"
+  echo ""
+
+  # Pre-flight checks
+  echo "  ${BOLD}Pre-flight checks${RESET}"
+
+  if ! command -v kubectl &>/dev/null; then
+    echo "  ${RED}✘ kubectl not found. Install kubectl first.${RESET}"; exit 1
+  fi
+  echo "  ${GREEN}✔${RESET} kubectl found"
+
+  if ! command -v helm &>/dev/null; then
+    echo "  ${RED}✘ helm not found. Install Helm first.${RESET}"; exit 1
+  fi
+  echo "  ${GREEN}✔${RESET} helm found"
+
+  if ! kubectl cluster-info &>/dev/null 2>&1; then
+    echo "  ${RED}✘ Cannot reach Kubernetes cluster. Check your kubeconfig.${RESET}"; exit 1
+  fi
+  echo "  ${GREEN}✔${RESET} Cluster reachable"
+
+  if [ ! -d "$chart" ]; then
+    echo "  ${RED}✘ Chart not found at: ${chart}${RESET}"
+    echo "  ${DIM}Provide the chart path with -c, or clone it into ./chart${RESET}"
+    exit 1
+  fi
+  echo "  ${GREEN}✔${RESET} Chart found at ${chart}"
+  echo ""
+
+  # Create namespace if needed
+  if ! kubectl get namespace "$namespace" &>/dev/null 2>&1; then
+    echo "  Creating namespace: ${namespace}"
+    kubectl create namespace "$namespace"
+    echo "  ${GREEN}✔${RESET} Namespace created"
+  else
+    echo "  ${GREEN}✔${RESET} Namespace exists: ${namespace}"
+  fi
+
+  # Apply secrets if secrets.yaml exists alongside overrides
+  local overrides_dir
+  overrides_dir="$(dirname "$overrides")"
+  local secrets_file="${overrides_dir}/secrets.yaml"
+  if [ -f "$secrets_file" ]; then
+    echo "  Applying secrets from: ${secrets_file}"
+    kubectl apply -f "$secrets_file" -n "$namespace"
+    echo "  ${GREEN}✔${RESET} Secrets applied"
+  fi
+
+  # Check image pull secret
+  if python3 -c "import yaml" 2>/dev/null; then
+    local pull_secret_enabled
+    pull_secret_enabled=$(read_val "$overrides" "global.deployment.images.imagePullSecret.enabled")
+    if [ "$pull_secret_enabled" = "true" ] || [ "$pull_secret_enabled" = "True" ]; then
+      local pull_secret_name
+      pull_secret_name=$(read_val "$overrides" "global.deployment.images.imagePullSecret.name")
+      pull_secret_name="${pull_secret_name:-rpi-docker-registry}"
+      if ! kubectl get secret "$pull_secret_name" -n "$namespace" &>/dev/null 2>&1; then
+        echo ""
+        echo "  ${YELLOW}Image pull secret '${pull_secret_name}' not found in namespace.${RESET}"
+        echo "  ${BOLD}Registry credentials${RESET}"
+        local reg_server reg_user reg_pass
+        read -rp "    Registry server: " reg_server
+        read -rp "    Username: " reg_user
+        read -rsp "    Password: " reg_pass
+        echo ""
+        kubectl create secret docker-registry "$pull_secret_name" \
+          --namespace "$namespace" \
+          --docker-server="$reg_server" \
+          --docker-username="$reg_user" \
+          --docker-password="$reg_pass"
+        echo "  ${GREEN}✔${RESET} Image pull secret created"
+      else
+        echo "  ${GREEN}✔${RESET} Image pull secret exists"
+      fi
+    fi
+  fi
+
+  echo ""
+
+  # Dry-run mode: render templates
+  if [ "$dry_run" = "true" ]; then
+    echo "  ${CYAN}${BOLD}Dry run: rendering templates${RESET}"
+    echo ""
+    helm template rpi "$chart" -f "$overrides" -n "$namespace"
+    exit 0
+  fi
+
+  # Delegate to deploy.sh for helm install/upgrade + rollout monitoring
+  local deploy_script="${SCRIPT_DIR}/deploy.sh"
+  if [ ! -f "$deploy_script" ]; then
+    echo "  ${RED}✘ deploy.sh not found at: ${deploy_script}${RESET}"; exit 1
+  fi
+
+  bash "$deploy_script" -f "$overrides" -n "$namespace" -c "$chart"
+}
+
+# --- Handle CLI commands ---
+if [ "${CLI_COMMAND:-}" = "status" ]; then
+  cli_status "$CLI_NAMESPACE"
+  exit 0
+elif [ "${CLI_COMMAND:-}" = "troubleshoot" ]; then
+  cli_troubleshoot "$CLI_NAMESPACE" "$CLI_SYMPTOM"
+  exit 0
+elif [ "${CLI_COMMAND:-}" = "secrets" ]; then
+  cli_secrets "$CLI_OVERRIDES" "$CLI_SECRETS_OUT" "$CLI_NAMESPACE"
+  exit 0
+elif [ "${CLI_COMMAND:-}" = "deploy" ]; then
+  cli_deploy "$CLI_OVERRIDES" "$CLI_NAMESPACE" "$CLI_CHART" "$CLI_DRY_RUN"
+  exit 0
+fi
 
 run_add_feature() {
   local file=$1 feature=$2

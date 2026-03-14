@@ -431,31 +431,33 @@ git push origin main
 
 ### 2. Generate Your v7.7 Overrides
 
-You have two options: use the **Interaction Copilot** for automatic migration, or use the **Interaction CLI** to build a new overrides file interactively.
+You have three options for producing a v7.7 overrides file from your existing v7.6 configuration.
 
-**Option A: Automatic migration with Interaction Copilot (recommended)**
+**Option A: Web UI Migrate tab (recommended)**
 
-If you have the [Interaction Copilot](readme-mcp.md) connected, ask it to migrate your v7.6 values file:
+Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com):
+
+1. Go to the **Migrate** tab
+2. Upload your v7.6 `values.yaml`
+3. Download the generated v7.7 overrides file
+
+The tool analyzes your file, identifies customizations vs defaults, remaps renamed keys, and produces a minimal v7.7 overrides file. It warns about breaking changes like `secretsManagement` relocation and `ingress.className` default changes.
+
+**Option B: Automatic migration with Interaction Helm Assistant**
+
+If you have the [Interaction Helm Assistant](readme-mcp.md) connected to your IDE, ask it to migrate your v7.6 values file:
 
 > "Migrate my v7.6 values file at /path/to/my-values.yaml to v7.7"
 
-The Copilot analyzes your file, identifies customizations vs defaults, remaps renamed keys, and produces a minimal v7.7 overrides file. It warns about breaking changes like `secretsManagement` relocation and `ingress.className` default changes.
+The Assistant uses the same migration engine as the Web UI and can answer follow-up questions about the changes.
 
-**Option B: Interactive CLI**
+**Option C: Interactive CLI**
 
 Run the Interaction CLI with your existing v7.6 values at hand (database host, credentials, ingress domain, cache/queue providers). The CLI generates a v7.7-compatible overrides file without manual diffing or key translation:
 
 ```bash
 bash deploy/cli/interactioncli.sh
 ```
-
-The CLI produces three files:
-
-| File | Purpose |
-|:-----|:--------|
-| `overrides.yaml` | Helm values overrides in v7.7 format |
-| `secrets.yaml` | Kubernetes Secret manifest with all required keys |
-| `prereqs.sh` | kubectl commands for namespace, image pull, TLS, and secrets |
 
 > **Tip:** Have your v7.6 `values.yaml` open so you can copy values directly into the CLI prompts.
 
@@ -466,12 +468,24 @@ bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
 bash deploy/cli/interactioncli.sh -a redpoint_ai     # add a specific feature
 ```
 
-### 3. Upgrade
+### 3. Generate Secrets and Upgrade
 
-Apply prerequisites (if secrets or namespace changed), then upgrade:
+If you used the Web UI or Assistant to generate your overrides, generate secrets from the overrides file:
 
 ```bash
-bash prereqs.sh
+bash deploy/cli/interactioncli.sh secrets -f overrides.yaml
+```
+
+Then deploy using the CLI `deploy` command, which handles namespace creation, secrets application, and Helm upgrade with live rollout monitoring:
+
+```bash
+bash deploy/cli/interactioncli.sh deploy -f overrides.yaml
+```
+
+Or deploy manually:
+
+```bash
+kubectl apply -f secrets.yaml -n redpoint-rpi
 helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
 ```
 
@@ -517,7 +531,7 @@ After the v7.7 containers are running, the operational databases need a schema u
 
 ```bash
 bash deploy/cli/interactioncli.sh -a database_upgrade
-helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
+bash deploy/cli/interactioncli.sh deploy -f overrides.yaml
 ```
 
 The chart creates a Job that waits for the Deployment API to become ready, then runs the upgrade automatically.
@@ -557,13 +571,13 @@ helm upgrade rpi ./chart -f my-old-values.yaml -n redpoint-rpi
 
 If you added custom template files to your v7.6 `chart/templates/` directory (e.g., CronJobs, NetworkPolicies, custom ConfigMaps) or modified any of the stock templates (e.g., added sidecars, init containers, extra env vars), these changes need to be carried forward manually.
 
-**With Interaction Copilot:**
+**With Interaction Helm Assistant:**
 
 > "Analyze my v7.6 templates at /path/to/chart/templates for migration to v7.7"
 
-The Copilot compares your templates against the stock v7.6 versions, identifies every custom file and every modification, and provides specific guidance for each, including diffs and advice on which changes can now be expressed as values instead of template edits.
+The Assistant compares your templates against the stock v7.6 versions, identifies every custom file and every modification, and provides specific guidance for each, including diffs and advice on which changes can now be expressed as values instead of template edits.
 
-**Without the Copilot:**
+**Without the Assistant:**
 
 1. Copy custom template files (files not in the stock v7.6 chart) to the v7.7 `chart/templates/` directory. Review for compatibility with v7.7 values paths.
 2. For modified stock templates, diff your version against the [stock v7.6 templates](https://github.com/RedPointGlobal/redpoint-rpi/tree/release/v7.6/redpoint-rpi/templates) and apply your changes to the v7.7 versions.
@@ -573,7 +587,11 @@ The Copilot compares your templates against the stock v7.6 versions, identifies 
 
 ## Troubleshooting
 
-If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Re-run the CLI to regenerate your overrides, or check the reference below.
+If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use the CLI `troubleshoot` command for quick diagnosis, re-run the migration in the Web UI, or check the reference below.
+
+```bash
+bash deploy/cli/interactioncli.sh troubleshoot -n redpoint-rpi
+```
 
 If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. See [values-reference.yaml](values-reference.yaml) for every available key.
 
@@ -627,4 +645,4 @@ If you prefer to build your overrides manually instead of using the CLI, here ar
 
 ## Next Steps
 
-See the [Configuration Reference](readme-configuration.md) for optional features, or use `bash deploy/cli/interactioncli.sh -a menu` to add them interactively.
+See the [Configuration Reference](readme-configuration.md) for optional features, use the Web UI [Explain tab](https://rpi-helm-assistant.redpointcdp.com) to browse configuration topics, or use `bash deploy/cli/interactioncli.sh -a menu` to add features interactively.

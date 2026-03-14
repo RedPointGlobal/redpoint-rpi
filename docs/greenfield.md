@@ -10,8 +10,8 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 ## Overview
 
 1. Clone this repository
-2. Run the Interaction CLI to generate secrets, overrides, and prerequisites
-3. Run prerequisites and deploy with Helm
+2. Generate your overrides file (Web UI or CLI)
+3. Generate secrets and deploy
 4. Validate the deployment
 5. Activate your license and install databases
 
@@ -24,44 +24,61 @@ git clone https://github.com/RedPointGlobal/redpoint-rpi.git
 cd redpoint-rpi
 ```
 
-## 2. Quick Start with the Interaction CLI
+## 2. Generate Your Overrides
 
-As a security best practice, the Kubernetes Secret containing sensitive values (database credentials, connection strings, API tokens) is created outside the chart. This keeps secrets out of version control and Helm release metadata.
+Choose one of the following to build your `overrides.yaml`.
 
-The **Interaction CLI** generates this Secret manifest for you. It prompts for your database credentials, cache and queue connection strings, and produces a ready to apply `secrets.yaml`. No manual YAML editing required.
+### Option A: Web UI (recommended)
+
+Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com). The "Start Here" page walks you through the full workflow:
+
+1. Go to the **Generate** tab, select your platform and features, and download `overrides.yaml`
+2. Download the **Interaction CLI** from the same page
+3. Continue to Step 3 below
+
+### Option B: Full interactive CLI
+
+Run the CLI with no arguments for a guided terminal experience that generates everything in one pass:
 
 ```bash
 bash deploy/cli/interactioncli.sh
 ```
 
-```
-╔══════════════════════════════════════════════╗
-║     ⚡ Redpoint Interaction CLI              ║
-║        Deployment Generator for RPI          ║
-╚══════════════════════════════════════════════╝
-
-This tool generates the files needed to deploy
-Redpoint Interaction (RPI) on Kubernetes.
-
-```
-After generation, review the files:
+This produces three files:
 
 | File | Purpose |
 |------|---------|
-| 📄 `overrides.yaml` | Helm values overrides (excludes sensitive secret values)    |
-| 🔑 `secrets.yaml`   | Kubernetes Secret manifest with all required keys           |
-| 🚀 `prereqs.sh`     | kubectl commands for namespace, image pull, and TLS secrets |
+| `overrides.yaml` | Helm values overrides (no sensitive values) |
+| `secrets.yaml`   | Kubernetes Secret manifest with all required keys |
+| `prereqs.sh`     | kubectl commands for namespace, image pull, and TLS secrets |
 
-And then deploy:
+If you used this option, skip to Step 4 (the CLI already generated secrets and prereqs).
+
+## 3. Generate Secrets and Deploy
+
+If you generated your overrides from the Web UI, you need to generate the secrets file and deploy separately.
+
+**Generate secrets** from your overrides file. The CLI reads the configuration, determines which credentials are needed, and prompts only for those:
 
 ```bash
-bash prereqs.sh
-helm install redpoint-rpi ./chart -f overrides.yaml -n redpoint-rpi
+bash deploy/cli/interactioncli.sh secrets -f overrides.yaml
 ```
 
-The `prereqs.sh` script handles namespace creation, image pull secret, TLS secret, and applies `secrets.yaml` all in one step.
+**Deploy** to your cluster. The CLI handles namespace creation, applies secrets, and runs Helm install with live rollout monitoring:
+
+```bash
+bash deploy/cli/interactioncli.sh deploy -f overrides.yaml -c ./chart
+```
+
+To preview the rendered manifests first:
+
+```bash
+bash deploy/cli/interactioncli.sh deploy -f overrides.yaml -c ./chart --dry-run
+```
 
 > **Warning:** `secrets.yaml` contains sensitive credentials. Do **not** commit it to version control. The `.gitignore` already excludes `*-secrets.yaml`.
+
+As a security best practice, the Kubernetes Secret containing sensitive values (database credentials, connection strings, API tokens) is created outside the chart. This keeps secrets out of version control and Helm release metadata.
 
 <details>
 <summary><strong>Secret Key Reference</strong>: All supported keys (click to expand)</summary>
@@ -90,9 +107,9 @@ The table below lists all keys the chart can read from the secret. The Interacti
 
 </details>
 
-Your overrides file should contain **only non-sensitive configuration** such as platform, database provider/host, cloud identity, ingress domain, realtime settings. All sensitive values (passwords, connection strings, tokens) are in the Kubernetes Secret you created in Step 2
+Your overrides file should contain **only non-sensitive configuration** such as platform, database provider/host, cloud identity, ingress domain, realtime settings. All sensitive values (passwords, connection strings, tokens) are in the Kubernetes Secret.
 
-## 3. Validate the deployment
+## 4. Validate the Deployment
 
 ```bash
 helm test rpi -n redpoint-rpi
@@ -222,10 +239,10 @@ bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
 Either way, the CLI prompts for the required values, appends the configuration block to your `overrides.yaml`, and reminds you of any secret keys to add. Then redeploy:
 
 ```bash
-helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
+bash deploy/cli/interactioncli.sh deploy -f overrides.yaml
 ```
 
-Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `secrets_management`, `node_scheduling`.
+Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `data_warehouse`, `secrets_management`, `node_scheduling`, `common_annotations`, `custom_ca_certs`, `image_overrides`, `pod_anti_affinity`, `node_provisioning`, `storage_class`.
 
 ## Next Steps
 
