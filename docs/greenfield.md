@@ -21,7 +21,7 @@ Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https:
 <details>
 <summary><strong>Step 2: Generate Secrets and Deploy</strong></summary>
 
-If you generated your overrides from the Web UI, use the CLI to generate secrets and deploy.
+With your `overrides.yaml` downloaded, use the CLI to generate secrets and deploy.
 
 **Generate secrets** from your overrides file. The CLI reads the configuration, determines which credentials are needed, and prompts only for those:
 
