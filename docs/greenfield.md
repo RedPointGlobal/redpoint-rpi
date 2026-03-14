@@ -15,37 +15,19 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 
 ---
 
-## 1. Generate Your Overrides
-
-Choose one of the following to build your `overrides.yaml`.
-
-### Option A: Web UI (recommended)
+<details>
+<summary><strong>Step 1: Generate Your Overrides</strong></summary>
 
 Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com):
 
 1. Go to the **Generate** tab, select your platform and features, and download `overrides.yaml`
 2. Download the **Interaction CLI** from the same page
-3. Continue to Step 2 below
+3. Continue to Step 2
 
-### Option B: Full interactive CLI
+</details>
 
-Download the [Interaction CLI](https://cdn.redpointglobal.com/helmchart-downloads/RPI/CLI/interactioncli.zip) and run it with no arguments for a guided terminal experience:
-
-```bash
-bash interactioncli.sh
-```
-
-This produces three files:
-
-| File | Purpose |
-|------|---------|
-| `overrides.yaml` | Helm values overrides (no sensitive values) |
-| `secrets.yaml`   | Kubernetes Secret manifest with all required keys |
-| `prereqs.sh`     | kubectl commands for namespace, image pull, and TLS secrets |
-
-If you used this option, skip to Step 3 (the CLI already generated secrets and deployed).
-
-## 2. Generate Secrets and Deploy
+<details>
+<summary><strong>Step 2: Generate Secrets and Deploy</strong></summary>
 
 If you generated your overrides from the Web UI, use the CLI to generate secrets and deploy.
 
@@ -74,8 +56,6 @@ Your overrides file should contain **only non-sensitive configuration** such as 
 <details>
 <summary><strong>Secret Key Reference</strong>: All supported keys (click to expand)</summary>
 
-The table below lists all keys the chart can read from the secret. The Interaction CLI generates the keys relevant to your platform automatically. Include additional keys only if your configuration requires them.
-
 | Key | When Required | Description |
 |-----|---------------|-------------|
 | `ConnectionString_Operations_Database` | Always | Full connection string to the Pulse database |
@@ -98,7 +78,10 @@ The table below lists all keys the chart can read from the secret. The Interacti
 
 </details>
 
-## 3. Validate the Deployment
+</details>
+
+<details>
+<summary><strong>Step 3: Validate and Retrieve Endpoints</strong></summary>
 
 Run the Helm test suite to verify all services are healthy:
 
@@ -132,9 +115,11 @@ Create DNS records mapping each hostname to the load balancer IP, then access:
 | Realtime API       | `https://<prefix>-realtimeapi.<domain>` |
 | Callback API       | `https://<prefix>-callbackapi.<domain>` |
 
-## Download Client Executable
+### Download Client Executable
 
 Download the RPI Client from the Post-release Product Updates section of the [RPI Release Notes](https://docs.redpointglobal.com/rpi/rpi-v7-6-release-notes#RPIv7.6releasenotes-Post-releaseproductupdates). Ensure the version matches your deployed RPI version.
+
+</details>
 
 ---
 
