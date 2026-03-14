@@ -2672,11 +2672,36 @@ cli_deploy() {
   echo "  ${GREEN}✔${RESET} Cluster reachable"
 
   if [ ! -d "$chart" ]; then
-    echo "  ${RED}✘ Chart not found at: ${chart}${RESET}"
-    echo "  ${DIM}Provide the chart path with -c, or clone it into ./chart${RESET}"
-    exit 1
+    echo "  ${YELLOW}Chart not found at: ${chart}${RESET}"
+    echo ""
+    echo "  The Helm chart is required to deploy RPI."
+    echo "  The CLI can clone it for you from GitHub."
+    echo ""
+    local _clone_dir _clone_confirm
+    _clone_dir="$(pwd)/redpoint-rpi"
+    read -rp "  Clone the chart repository to ${_clone_dir}? [Y/n] " _clone_confirm
+    _clone_confirm="${_clone_confirm:-Y}"
+    if [[ "$_clone_confirm" =~ ^[Yy] ]]; then
+      if ! command -v git &>/dev/null; then
+        echo "  ${RED}✘ git not found. Install git first, or clone manually.${RESET}"; exit 1
+      fi
+      echo "  Cloning repository..."
+      git clone --depth 1 --branch release/v7.7 \
+        https://github.com/RedPointGlobal/redpoint-rpi.git "$_clone_dir" 2>&1 | \
+        sed 's/^/  /'
+      chart="${_clone_dir}/chart"
+      if [ ! -d "$chart" ]; then
+        echo "  ${RED}✘ Clone succeeded but chart/ directory not found.${RESET}"; exit 1
+      fi
+      echo "  ${GREEN}✔${RESET} Chart cloned to ${chart}"
+    else
+      echo "  ${DIM}Provide the chart path with -c, or clone manually:${RESET}"
+      echo "    git clone https://github.com/RedPointGlobal/redpoint-rpi.git"
+      exit 1
+    fi
+  else
+    echo "  ${GREEN}✔${RESET} Chart found at ${chart}"
   fi
-  echo "  ${GREEN}✔${RESET} Chart found at ${chart}"
   echo ""
 
   # Create namespace if needed
