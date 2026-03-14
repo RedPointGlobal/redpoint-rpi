@@ -190,25 +190,22 @@ curl -X POST \
 
 ---
 
-## Adding Features
+## Adding Features After Deployment
 
-The Interaction CLI offers optional features (SMTP, storage, Redpoint AI, etc.) in two ways:
-
-1. **During initial setup:** after generating your base config, the CLI walks through each available feature and lets you include it in one go.
-2. **After deployment:** add features to an existing overrides file at any time:
-
-```bash
-bash interactioncli.sh -a redpoint_ai    # add a specific feature
-bash interactioncli.sh -a menu           # interactive feature picker
-```
-
-Either way, the CLI prompts for the required values, appends the configuration block to your `overrides.yaml`, and reminds you of any secret keys to add. Then redeploy:
+To add features to an existing deployment, update your `overrides.yaml` in the Web UI (or manually) and redeploy:
 
 ```bash
 bash interactioncli.sh deploy -f overrides.yaml
 ```
 
-Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `data_warehouse`, `secrets_management`, `node_scheduling`, `common_annotations`, `custom_ca_certs`, `image_overrides`, `pod_anti_affinity`, `node_provisioning`, `storage_class`.
+Alternatively, the CLI can add individual features interactively:
+
+```bash
+bash interactioncli.sh -a menu           # interactive feature picker
+bash interactioncli.sh -a redpoint_ai    # add a specific feature
+```
+
+The CLI prompts for the required values, appends the configuration block to your `overrides.yaml`, and reminds you of any secret keys to add.
 
 ## Next Steps
 
