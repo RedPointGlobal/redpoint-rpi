@@ -435,7 +435,7 @@ You have three options for producing a v7.7 overrides file from your existing v7
 
 **Option A: Web UI Migrate tab (recommended)**
 
-Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com):
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com):
 
 1. Go to the **Migrate** tab
 2. Upload your v7.6 `values.yaml`

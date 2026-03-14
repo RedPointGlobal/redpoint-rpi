@@ -18,7 +18,7 @@ You maintain a small per-environment overrides file with only the values you've 
 
 ## Generating Your Overrides
 
-Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com) to build your overrides. Select your platform, configure features, and download the YAML. See the [Greenfield Guide](greenfield.md) for the full deployment workflow.
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) to build your overrides. Select your platform, configure features, and download the YAML. See the [Greenfield Guide](greenfield.md) for the full deployment workflow.
 
 ## How Merging Works
 

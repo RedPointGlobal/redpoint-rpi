@@ -10,7 +10,7 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 <details>
 <summary><strong>Step 1: Generate Your Overrides</strong></summary>
 
-Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com):
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com):
 
 1. Go to the **Generate** tab, select your platform and features, and download `overrides.yaml`
 2. Download the **Interaction CLI** from the same page
