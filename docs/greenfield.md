@@ -7,14 +7,6 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 
 ---
 
-## Overview
-
-1. Generate your overrides file (Web UI or CLI)
-2. Generate secrets and deploy
-3. Validate the deployment and retrieve endpoints
-
----
-
 <details>
 <summary><strong>Step 1: Generate Your Overrides</strong></summary>
 
