@@ -73,22 +73,15 @@ redpoint-rpi/
 
 | Guide | Description |
 |:------|:------------|
-| [Configuration Reference](docs/readme-configuration.md) | Optional features: cloud identity, secrets management, storage, Realtime API, autoscaling, service mesh, SSO, and more |
-| [Values Guide](docs/readme-values.md) | How the two-tier values system works, and how to customize defaults via the `advanced:` block |
-| [GitOps Guide](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |
+| [Helm Assistant](docs/readme-mcp.md) | Web UI and MCP endpoint for AI-assisted configuration and troubleshooting |
+| [Configuration Reference](docs/readme-configuration.md) | Cloud identity, secrets management, storage, Realtime API, autoscaling, service mesh, SSO, and more |
+| [Values Guide](docs/readme-values.md) | How the two-tier values system works and how to customize defaults |
 | [Terraform Guide](docs/readme-terraform.md) | Infrastructure-as-code modules for Azure, AWS, and GCP |
-| [values-reference.yaml](docs/values-reference.yaml) | Complete reference of every available key |
+| [GitOps Guide](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |
 
-Use the [Web UI](https://rpi-helm-assistant.redpointcdp.com) or [Interaction CLI](docs/greenfield.md) to generate your base overrides, then add features on demand with `bash deploy/cli/interactioncli.sh -a <feature>`.
+## Resources
 
-After install or upgrade, run `helm test rpi -n redpoint-rpi` to verify all services are healthy.
-
-## RPI Documentation
-
-Visit the [RPI Documentation Site](https://docs.redpointglobal.com/rpi/) for in-depth guides and release notes.
-
-## Getting Support
-
-For RPI application issues, contact [support@redpointglobal.com](mailto:support@redpointglobal.com).
-
-> **Scope of Support:** Redpoint supports RPI application issues. Kubernetes infrastructure, networking, and external system configuration fall outside our support scope. Consult your IT infrastructure team or relevant technical forums for those.
+- [RPI Product Documentation](https://docs.redpointglobal.com/rpi/)
+- [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com)
+- [Support](mailto:support@redpointglobal.com) (RPI application issues)
+- [www.redpointglobal.com](https://www.redpointglobal.com)
