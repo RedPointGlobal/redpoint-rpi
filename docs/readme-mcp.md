@@ -120,121 +120,86 @@ Both the MCP server and the Web UI expose the same set of tools:
 
 ## Usage Examples
 
-In Claude Code or the Web UI's Chat tab, just ask questions in plain English. In the Web UI's form tabs, use the structured inputs directly. Here are examples organized by what you're trying to do.
+In Claude Code or the Web UI's Chat tab, just ask questions in plain English. In the Web UI's form tabs, use the structured inputs directly.
 
 <details>
 <summary><strong>Generate Overrides</strong></summary>
 
-Produces a ready-to-use YAML overrides file tailored to your platform, identity provider, and optional features.
+Use the Web UI Generate tab to build your overrides visually, or ask the Chat/MCP assistant:
 
-> "Generate an RPI overrides file for AWS with IRSA and MongoDB cache"
+> "Generate an RPI overrides file for Azure with MongoDB cache and Azure Service Bus"
 >
-> "Generate a values file for Azure with managed identity and Redis cache"
+> "Generate overrides for AWS with SQS queue provider and CSI secrets"
 >
-> "Generate an overrides file for GCP with Workload Identity and Bigtable cache"
->
-> "Generate a minimal dev config for AWS with in-memory cache"
->
-> "Generate an overrides file with Smart Activation and Realtime API enabled"
+> "Generate a config for GCP with Workload Identity and Pub/Sub"
 
 </details>
 
 <details>
 <summary><strong>Validate Configuration</strong></summary>
 
-Checks your values file against the chart schema and RPI-specific rules. Returns errors with fix suggestions.
+Upload your values file on the Validate tab, or ask the assistant:
 
-> "Validate my values file at /path/to/values.yaml"
+> "Validate my values file"
 >
 > "Check my RPI config for errors"
 >
-> "Is my values file valid for a production deployment?"
+> "Is my overrides file valid for a production deployment?"
 
 </details>
 
 <details>
 <summary><strong>Explain Settings</strong></summary>
 
-Returns what a setting controls, its valid values, defaults, and related settings you may need to configure.
+Browse the Explain tab tree, or ask:
 
 > "What does realtimeapi.cacheProvider.provider do?"
 >
-> "Explain cloudIdentity.enabled"
->
 > "What are the valid values for secretsManagement.provider?"
 >
-> "Explain global.deployment.platform"
+> "Explain the difference between shared and per-service service accounts"
 
 </details>
 
 <details>
-<summary><strong>Search Product Documentation</strong></summary>
+<summary><strong>Search Documentation</strong></summary>
 
-Searches the official RPI product documentation and returns relevant content.
+The assistant searches both the RPI product documentation and the chart documentation:
 
-> "What channels does RPI support?"
+> "What are the system requirements for RPI on Kubernetes?"
 >
 > "How do I configure MongoDB as a realtime cache provider?"
 >
-> "What is RPI Realtime and how does it work?"
->
-> "How do I configure SendGrid as an email provider?"
->
-> "What authentication methods does RPI support?"
-
-</details>
-
-<details>
-<summary><strong>Search Chart Documentation</strong></summary>
-
-Reads the local Helm chart documentation for deployment procedures, configuration reference, and migration guides.
-
-> "How do I do a greenfield installation on AWS?"
+> "What channels does RPI support?"
 >
 > "What changed between v7.6 and v7.7?"
 >
 > "How do I configure secrets management with Azure Key Vault?"
->
-> "What are the system requirements for RPI on Kubernetes?"
->
-> "How do I set up autoscaling for RPI services?"
 
 </details>
 
 <details>
-<summary><strong>Check Deployment Health</strong></summary>
+<summary><strong>Cluster Operations (requires cluster access)</strong></summary>
 
-Shows pod health, service endpoints, and recent events from your cluster.
+These tools require `kubectl` access to your cluster. They work when running the assistant locally or with a configured kubeconfig. On the hosted endpoint, they will report that no cluster is reachable.
 
-> "What's the status of my RPI deployment in the redpoint-rpi namespace?"
+**Check deployment health:**
+
+> "What's the status of my RPI deployment?"
 >
 > "Are all RPI pods healthy?"
->
-> "Show me the current state of my RPI deployment"
 
-</details>
-
-<details>
-<summary><strong>Troubleshoot Issues</strong></summary>
-
-Analyzes pod logs, events, secrets, and ingress configuration to diagnose issues and suggest fixes.
+**Troubleshoot issues:**
 
 > "Why are my RPI pods crash-looping?"
 >
 > "The Realtime API isn't responding, help me diagnose"
->
-> "My RPI deployment is stuck in pending, what's wrong?"
 
-</details>
+**Render templates:**
 
-<details>
-<summary><strong>Render Templates</strong></summary>
-
-Runs `helm template` and returns the rendered Kubernetes manifests so you can inspect what will be deployed.
-
-> "Render the realtimeapi deployment template with my values file"
->
 > "Show me what Kubernetes manifests my values file will produce"
+>
+> "Render the ingress template with my values"
 
 </details>
 
