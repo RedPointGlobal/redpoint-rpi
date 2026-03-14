@@ -9,39 +9,30 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 
 ## Overview
 
-1. Clone this repository
-2. Generate your overrides file (Web UI or CLI)
-3. Generate secrets and deploy
-4. Validate the deployment
-5. Activate your license and install databases
+1. Generate your overrides file (Web UI or CLI)
+2. Generate secrets and deploy
+3. Validate the deployment and retrieve endpoints
 
 ---
 
-## 1. Clone This Repository
-
-```bash
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git
-cd redpoint-rpi
-```
-
-## 2. Generate Your Overrides
+## 1. Generate Your Overrides
 
 Choose one of the following to build your `overrides.yaml`.
 
 ### Option A: Web UI (recommended)
 
-Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com). The "Start Here" page walks you through the full workflow:
+Use the **Helm Assistant Web UI** at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com):
 
 1. Go to the **Generate** tab, select your platform and features, and download `overrides.yaml`
 2. Download the **Interaction CLI** from the same page
-3. Continue to Step 3 below
+3. Continue to Step 2 below
 
 ### Option B: Full interactive CLI
 
-Run the CLI with no arguments for a guided terminal experience that generates everything in one pass:
+Download the [Interaction CLI](https://cdn.redpointglobal.com/helmchart-downloads/RPI/CLI/interactioncli.zip) and run it with no arguments for a guided terminal experience:
 
 ```bash
-bash deploy/cli/interactioncli.sh
+bash interactioncli.sh
 ```
 
 This produces three files:
@@ -52,33 +43,33 @@ This produces three files:
 | `secrets.yaml`   | Kubernetes Secret manifest with all required keys |
 | `prereqs.sh`     | kubectl commands for namespace, image pull, and TLS secrets |
 
-If you used this option, skip to Step 4 (the CLI already generated secrets and prereqs).
+If you used this option, skip to Step 3 (the CLI already generated secrets and deployed).
 
-## 3. Generate Secrets and Deploy
+## 2. Generate Secrets and Deploy
 
-If you generated your overrides from the Web UI, you need to generate the secrets file and deploy separately.
+If you generated your overrides from the Web UI, use the CLI to generate secrets and deploy.
 
 **Generate secrets** from your overrides file. The CLI reads the configuration, determines which credentials are needed, and prompts only for those:
 
 ```bash
-bash deploy/cli/interactioncli.sh secrets -f overrides.yaml
+bash interactioncli.sh secrets -f overrides.yaml
 ```
 
-**Deploy** to your cluster. The CLI handles namespace creation, applies secrets, and runs Helm install with live rollout monitoring:
+**Deploy** to your cluster. The CLI clones the chart repository automatically, applies secrets, and runs Helm install with live rollout monitoring:
 
 ```bash
-bash deploy/cli/interactioncli.sh deploy -f overrides.yaml -c ./chart
+bash interactioncli.sh deploy -f overrides.yaml
 ```
 
 To preview the rendered manifests first:
 
 ```bash
-bash deploy/cli/interactioncli.sh deploy -f overrides.yaml -c ./chart --dry-run
+bash interactioncli.sh deploy -f overrides.yaml --dry-run
 ```
 
 > **Warning:** `secrets.yaml` contains sensitive credentials. Do **not** commit it to version control. The `.gitignore` already excludes `*-secrets.yaml`.
 
-As a security best practice, the Kubernetes Secret containing sensitive values (database credentials, connection strings, API tokens) is created outside the chart. This keeps secrets out of version control and Helm release metadata.
+Your overrides file should contain **only non-sensitive configuration** such as platform, database provider/host, cloud identity, ingress domain, realtime settings. All sensitive values (passwords, connection strings, tokens) are in the Kubernetes Secret.
 
 <details>
 <summary><strong>Secret Key Reference</strong>: All supported keys (click to expand)</summary>
@@ -107,17 +98,15 @@ The table below lists all keys the chart can read from the secret. The Interacti
 
 </details>
 
-Your overrides file should contain **only non-sensitive configuration** such as platform, database provider/host, cloud identity, ingress domain, realtime settings. All sensitive values (passwords, connection strings, tokens) are in the Kubernetes Secret.
+## 3. Validate the Deployment
 
-## 4. Validate the Deployment
+Run the Helm test suite to verify all services are healthy:
 
 ```bash
 helm test rpi -n redpoint-rpi
 ```
 
----
-
-## Retrieve Client Endpoints
+### Retrieve Ingress Endpoints
 
 ```bash
 kubectl get ingress --namespace redpoint-rpi
@@ -151,7 +140,7 @@ Download the RPI Client from the Post-release Product Updates section of the [RP
 
 ## Post-Deployment: License and Database Setup
 
-###  Activate RPI License
+### Activate RPI License
 
 ```bash
 DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
@@ -166,7 +155,7 @@ curl -X POST "https://$DEPLOYMENT_SERVICE_URL/api/licensing/activatelicense" \
   }'
 ```
 
-### 2. Install Cluster Databases
+### Install Cluster Databases
 
 ```bash
 DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
@@ -232,14 +221,14 @@ The Interaction CLI offers optional features (SMTP, storage, Redpoint AI, etc.) 
 2. **After deployment:** add features to an existing overrides file at any time:
 
 ```bash
-bash deploy/cli/interactioncli.sh -a redpoint_ai    # add a specific feature
-bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
+bash interactioncli.sh -a redpoint_ai    # add a specific feature
+bash interactioncli.sh -a menu           # interactive feature picker
 ```
 
 Either way, the CLI prompts for the required values, appends the configuration block to your `overrides.yaml`, and reminds you of any secret keys to add. Then redeploy:
 
 ```bash
-bash deploy/cli/interactioncli.sh deploy -f overrides.yaml
+bash interactioncli.sh deploy -f overrides.yaml
 ```
 
 Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `data_warehouse`, `secrets_management`, `node_scheduling`, `common_annotations`, `custom_ca_certs`, `image_overrides`, `pod_anti_affinity`, `node_provisioning`, `storage_class`.

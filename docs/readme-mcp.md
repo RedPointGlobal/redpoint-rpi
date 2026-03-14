@@ -214,19 +214,46 @@ Analyzes pod logs, events, secrets, and ingress configuration to diagnose issues
 </details>
 
 <details>
-<summary><strong>Search Documentation</strong></summary>
+<summary><strong>Search Product Documentation</strong></summary>
 
 Searches the official RPI product documentation and returns relevant content.
 
-> "How do I configure MongoDB as a realtime cache provider?"
->
-> "What are the supported queue providers in RPI?"
->
-> "How do I set up Smart Activation?"
->
 > "What channels does RPI support?"
 >
-> "How do I configure audience selection rules?"
+> "How do I configure MongoDB as a realtime cache provider?"
+>
+> "What is RPI Realtime and how does it work?"
+>
+> "How do I configure SendGrid as an email provider?"
+>
+> "What authentication methods does RPI support?"
+>
+> "How do I configure SMS with Twilio?"
+>
+> "How do I set up push notifications with Firebase?"
+
+</details>
+
+<details>
+<summary><strong>Search Chart Documentation</strong></summary>
+
+Reads the local Helm chart documentation for deployment procedures, configuration reference, and migration guides.
+
+> "How do I do a greenfield installation on AWS?"
+>
+> "What changed between v7.6 and v7.7?"
+>
+> "How do I configure secrets management with Azure Key Vault?"
+>
+> "What are the system requirements for RPI on Kubernetes?"
+>
+> "How do I deploy RPI with ArgoCD?"
+>
+> "How do I enable the Realtime API in my overrides?"
+>
+> "How do I set up autoscaling for RPI services?"
+>
+> "How do I configure ingress with TLS?"
 
 </details>
 
