@@ -7,14 +7,42 @@
 
 The **Interaction Helm Assistant** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. It provides two ways to interact with the same set of tools:
 
+- **Web UI:** A browser-based interface with form-based tools, AI chat, and file management. No installation required.
 - **MCP (Claude Code / Claude Desktop):** Connect via the Model Context Protocol for a terminal-based AI experience powered by Claude.
-- **Web UI:** A browser-based interface with form-based tools, file management, and an AI chat assistant.
 
-Both interfaces access the same underlying tools and search the official [RPI documentation](https://docs.redpointglobal.com/rpi) for content covering features, administration, external configuration, channels, realtime decisions, and more.
+Both interfaces access the same underlying tools and search the official [RPI documentation](https://docs.redpointglobal.com/rpi) and the local chart documentation.
 
 ---
 
-## Option A: MCP (Claude Code)
+## Option A: Web UI
+
+Use this option for a browser-based experience with forms, file uploads/downloads, and AI chat. No MCP client required.
+
+### Access
+
+The Web UI is hosted by Redpoint. Navigate to:
+
+```
+https://rpi-helm-assistant.redpointcdp.com
+```
+
+No installation, API keys, or setup required.
+
+### Features
+
+The Web UI includes five tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **Start Here** | Overview of the deployment workflow with quick links to generate, download CLI, and deploy. |
+| **Generate** | Form-based overrides builder. Select your platform, mode, and features from dropdowns and checkboxes. Download the generated YAML. |
+| **Validate** | Upload or paste a values file. See color-coded results (errors, warnings, info) with fix suggestions. |
+| **Explain** | Browse configuration topics and values.yaml key paths to see types, descriptions, defaults, and usage context. |
+| **Chat** | Natural language assistant. Ask questions about RPI features, chart configuration, deployment, and troubleshooting in plain English. |
+
+---
+
+## Option B: MCP (Claude Code)
 
 Use this option if you have Claude Code or another MCP-compatible client (Claude Desktop, Cursor, Windsurf, etc.).
 
@@ -55,7 +83,7 @@ claude mcp list
 You should see the Assistant listed with a connected status:
 
 ```
-rpi-helm: https://rpi-helm-assistant.redpointcdp.com/mcp (HTTP) - ✓ Connected
+rpi-helm: https://rpi-helm-assistant.redpointcdp.com/mcp (HTTP) - Connected
 ```
 
 For Claude Desktop, add the following to your `claude_desktop_config.json`:
@@ -73,35 +101,6 @@ For Claude Desktop, add the following to your `claude_desktop_config.json`:
 
 ---
 
-## Option B: Web UI
-
-Use this option for a browser-based experience with forms, file uploads/downloads, and AI chat. No MCP client required.
-
-### Features
-
-The Web UI includes six tabs:
-
-| Tab | Description |
-|-----|-------------|
-| **AI Chat** | Natural language assistant. Ask questions, generate configs, and troubleshoot in plain English. |
-| **Generate** | Form-based overrides builder. Select your platform, mode, and features from dropdowns and checkboxes. Download the generated YAML. |
-| **Validate** | Upload or paste a values file. See color-coded results (errors, warnings, info) with fix suggestions. |
-| **Migrate** | Upload a v7.6 values file and get a v7.7 overrides file with a summary of detected customizations. |
-| **Explain** | Look up any values.yaml key path to see its type, description, defaults, and usage context. |
-| **Docs** | Search the official RPI documentation and browse results inline. |
-
-### Access
-
-The Web UI is hosted by Redpoint. Navigate to:
-
-```
-https://rpi-helm-assistant.redpointcdp.com
-```
-
-No installation, API keys, or setup required.
-
----
-
 ## Available Tools
 
 Both the MCP server and the Web UI expose the same set of tools:
@@ -116,27 +115,12 @@ Both the MCP server and the Web UI expose the same set of tools:
 | `rpi_troubleshoot` | Diagnoses issues using pod logs, events, secrets, and ingress configuration |
 | `rpi_docs_search` | Searches the official RPI product documentation by keyword |
 | `rpi_docs_fetch` | Fetches a specific page from the RPI documentation site |
-| `rpi_migrate` | Migrates a v7.6 values file to v7.7 format |
-| `rpi_migrate_templates` | Analyzes a v7.6 templates directory for customizations to carry forward |
 
 ---
 
 ## Usage Examples
 
-In Claude Code or the Web UI's AI Chat tab, just ask questions in plain English. In the Web UI's form tabs, use the structured inputs directly. Here are examples organized by what you're trying to do.
-
-<details>
-<summary><strong>Validate Configuration</strong></summary>
-
-Checks your values file against the chart schema and RPI-specific rules. Returns errors with fix suggestions.
-
-> "Validate my values file at /path/to/values.yaml"
->
-> "Check my RPI config for errors"
->
-> "Is my values file valid for a production deployment?"
-
-</details>
+In Claude Code or the Web UI's Chat tab, just ask questions in plain English. In the Web UI's form tabs, use the structured inputs directly. Here are examples organized by what you're trying to do.
 
 <details>
 <summary><strong>Generate Overrides</strong></summary>
@@ -156,6 +140,19 @@ Produces a ready-to-use YAML overrides file tailored to your platform, identity 
 </details>
 
 <details>
+<summary><strong>Validate Configuration</strong></summary>
+
+Checks your values file against the chart schema and RPI-specific rules. Returns errors with fix suggestions.
+
+> "Validate my values file at /path/to/values.yaml"
+>
+> "Check my RPI config for errors"
+>
+> "Is my values file valid for a production deployment?"
+
+</details>
+
+<details>
 <summary><strong>Explain Settings</strong></summary>
 
 Returns what a setting controls, its valid values, defaults, and related settings you may need to configure.
@@ -166,22 +163,41 @@ Returns what a setting controls, its valid values, defaults, and related setting
 >
 > "What are the valid values for secretsManagement.provider?"
 >
-> "What does smartActivation.enabled control?"
->
 > "Explain global.deployment.platform"
 
 </details>
 
 <details>
-<summary><strong>Render Templates</strong></summary>
+<summary><strong>Search Product Documentation</strong></summary>
 
-Runs `helm template` and returns the rendered Kubernetes manifests so you can inspect what will be deployed.
+Searches the official RPI product documentation and returns relevant content.
 
-> "Render the realtimeapi deployment template with my values file"
+> "What channels does RPI support?"
 >
-> "Show me what Kubernetes manifests my values file will produce"
+> "How do I configure MongoDB as a realtime cache provider?"
 >
-> "Render the ingress template using my values at /path/to/values.yaml"
+> "What is RPI Realtime and how does it work?"
+>
+> "How do I configure SendGrid as an email provider?"
+>
+> "What authentication methods does RPI support?"
+
+</details>
+
+<details>
+<summary><strong>Search Chart Documentation</strong></summary>
+
+Reads the local Helm chart documentation for deployment procedures, configuration reference, and migration guides.
+
+> "How do I do a greenfield installation on AWS?"
+>
+> "What changed between v7.6 and v7.7?"
+>
+> "How do I configure secrets management with Azure Key Vault?"
+>
+> "What are the system requirements for RPI on Kubernetes?"
+>
+> "How do I set up autoscaling for RPI services?"
 
 </details>
 
@@ -208,69 +224,17 @@ Analyzes pod logs, events, secrets, and ingress configuration to diagnose issues
 > "The Realtime API isn't responding, help me diagnose"
 >
 > "My RPI deployment is stuck in pending, what's wrong?"
->
-> "Help me troubleshoot ingress issues in the redpoint-rpi namespace"
 
 </details>
 
 <details>
-<summary><strong>Search Product Documentation</strong></summary>
+<summary><strong>Render Templates</strong></summary>
 
-Searches the official RPI product documentation and returns relevant content.
+Runs `helm template` and returns the rendered Kubernetes manifests so you can inspect what will be deployed.
 
-> "What channels does RPI support?"
+> "Render the realtimeapi deployment template with my values file"
 >
-> "How do I configure MongoDB as a realtime cache provider?"
->
-> "What is RPI Realtime and how does it work?"
->
-> "How do I configure SendGrid as an email provider?"
->
-> "What authentication methods does RPI support?"
->
-> "How do I configure SMS with Twilio?"
->
-> "How do I set up push notifications with Firebase?"
-
-</details>
-
-<details>
-<summary><strong>Search Chart Documentation</strong></summary>
-
-Reads the local Helm chart documentation for deployment procedures, configuration reference, and migration guides.
-
-> "How do I do a greenfield installation on AWS?"
->
-> "What changed between v7.6 and v7.7?"
->
-> "How do I configure secrets management with Azure Key Vault?"
->
-> "What are the system requirements for RPI on Kubernetes?"
->
-> "How do I deploy RPI with ArgoCD?"
->
-> "How do I enable the Realtime API in my overrides?"
->
-> "How do I set up autoscaling for RPI services?"
->
-> "How do I configure ingress with TLS?"
-
-</details>
-
-<details>
-<summary><strong>Migrate from v7.6 to v7.7</strong></summary>
-
-Analyzes your existing configuration, remaps renamed keys, and generates a v7.7 overrides file. See the [Migration Guide](migration.md) for details.
-
-**Values only** (use when you have not modified any Helm template files):
-
-> "Migrate my v7.6 values file at /path/to/values.yaml to v7.7"
->
-> "What changed between v7.6 and v7.7?"
-
-**Values and templates** (use when you have added or modified Helm template files):
-
-> "Analyze my v7.6 templates at /path/to/templates for migration to v7.7"
+> "Show me what Kubernetes manifests my values file will produce"
 
 </details>
 
