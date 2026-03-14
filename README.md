@@ -7,12 +7,6 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ![architecture](chart/images/diagram.png)
 
-## Quick Start
-
-1. **Generate overrides** using the [Web UI](https://rpi-helm-assistant.redpointcdp.com) (Generate tab) or the [Interaction CLI](docs/greenfield.md)
-2. **Generate secrets** from your overrides: `bash deploy/cli/interactioncli.sh secrets -f overrides.yaml`
-3. **Deploy** to your cluster: `bash deploy/cli/interactioncli.sh deploy -f overrides.yaml`
-
 ## Choose Your Path
 
 | | New Installation | Upgrading from v7.6 | AI-Assisted |
@@ -20,7 +14,7 @@ This chart deploys RPI on Kubernetes using Helm.
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) | [Helm Assistant](docs/readme-mcp.md) |
 | **When to use** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure | Any scenario. Validates configs, generates overrides, diagnoses issues, and answers questions in plain English |
 | **Databases** | Created from scratch | Existing databases are reused | Generates the correct database configuration for your platform |
-| **Get started** | [Web UI](https://rpi-helm-assistant.redpointcdp.com) or `bash interactioncli.sh` | [Web UI Migrate tab](https://rpi-helm-assistant.redpointcdp.com) or `bash interactioncli.sh` | Connect the [MCP endpoint](docs/readme-mcp.md) to your IDE |
+| **Get started** | [Web UI](https://rpi-helm-assistant.redpointcdp.com) or [Interaction CLI](docs/greenfield.md) | [Web UI Migrate tab](https://rpi-helm-assistant.redpointcdp.com) or [Interaction CLI](docs/greenfield.md) | [Web UI](https://rpi-helm-assistant.redpointcdp.com) or [Claude Code CLI](docs/readme-mcp.md) |
 
 After completing either guide, see the **[Configuration Reference](docs/readme-configuration.md)** for optional features.
 
