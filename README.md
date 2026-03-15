@@ -14,7 +14,6 @@ This chart deploys RPI on Kubernetes using Helm.
 | **Guide** | [Greenfield Installation](docs/greenfield.md) | [Migration Guide](docs/migration.md) | [Helm Assistant](docs/readme-mcp.md) |
 | **When to use** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure | Any scenario. Validates configs, generates overrides, diagnoses issues, and answers questions in plain English |
 | **Databases** | Created from scratch | Existing databases are reused | Generates the correct database configuration for your platform |
-| **Get started** | [Web UI](https://rpi-helm-assistant.redpointcdp.com) | [Web UI](https://rpi-helm-assistant.redpointcdp.com) | [Web UI](https://rpi-helm-assistant.redpointcdp.com) or [MCP Endpoint](docs/readme-mcp.md) |
 
 ---
 
