@@ -17,32 +17,6 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ---
 
-## Repository Structure
-
-```
-redpoint-rpi/
-├── deploy/
-│   ├── cli/
-│   │   └── interactioncli.sh     # Interaction CLI (secrets, deploy, status)
-│   ├── terraform/modules/        # IaC modules (Azure, AWS, GCP)
-│   └── values/                   # Example overrides
-│       ├── azure/azure.yaml
-│       ├── aws/amazon.yaml
-│       └── demo/demo.yaml
-├── docs/
-│   ├── greenfield.md             # New installation guide
-│   ├── migration.md              # v7.6 to v7.7 upgrade guide
-│   ├── readme-configuration.md   # Configuration reference
-│   ├── readme-values.md          # Values and overrides guide
-│   ├── readme-mcp.md             # Helm Assistant guide
-│   ├── readme-terraform.md       # Terraform guide
-│   └── values-reference.yaml     # Complete reference of all keys
-├── chart/                        # Managed by Redpoint (do not edit)
-└── README.md
-```
-
----
-
 ## Additional Guides
 
 | Guide | Description |
