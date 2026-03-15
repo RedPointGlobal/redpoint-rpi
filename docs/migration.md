@@ -150,7 +150,7 @@ secretsManagement:
     secretName: my-existing-rpi-secret
 ```
 
-The chart references your secret by name without creating or modifying it. You are responsible for ensuring it contains the required keys. See [values_reference.yaml](values_reference.yaml) for the full list of secret keys.
+The chart references your secret by name without creating or modifying it. You are responsible for ensuring it contains the required keys. Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab for the full list of secret keys.
 
 </details>
 
@@ -571,7 +571,7 @@ If services fail to start after upgrade, the most common cause is a v7.6 customi
 bash deploy/cli/interactioncli.sh troubleshoot -n redpoint-rpi
 ```
 
-If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. See [values_reference.yaml](values_reference.yaml) for every available key.
+If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key.
 
 <details>
 <summary><strong>Key renames reference</strong> (for manual overrides)</summary>
