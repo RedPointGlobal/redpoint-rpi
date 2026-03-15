@@ -58,7 +58,7 @@ The resolved realtimeapi config will have:
 
 ## Overriding Internal Defaults
 
-Every internal default can be overridden without forking the chart. Override any setting directly under the matching top-level key in your overrides file. Use the Web UI's **Explain** tab or open `docs/values-reference.yaml` for the complete reference.
+Every internal default can be overridden without forking the chart. Override any setting directly under the matching top-level key in your overrides file. Use the Web UI's **Explain** tab or open `docs/values_reference.yaml` for the complete reference.
 
 <details>
 <summary><strong>Global resource defaults</strong></summary>

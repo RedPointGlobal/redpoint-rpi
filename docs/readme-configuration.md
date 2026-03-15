@@ -15,7 +15,7 @@ bash deploy/cli/interactioncli.sh -a menu          # interactive feature picker
 
 Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `secrets_management`, `node_scheduling`.
 
-For the complete list of every key, see [values-reference.yaml](values-reference.yaml).
+For the complete list of every key, see [values_reference.yaml](values_reference.yaml).
 
 ---
 
@@ -724,7 +724,7 @@ interactionapi:
     runAsUser: 1000
 ```
 
-See [values-reference.yaml](values-reference.yaml) for every available key.
+See [values_reference.yaml](values_reference.yaml) for every available key.
 
 ---
 

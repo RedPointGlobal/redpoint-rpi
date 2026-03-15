@@ -45,4 +45,4 @@ Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) for 
 
 ## Next Steps
 
-See the **[Configuration Reference](readme-configuration.md)** for details on each feature, or [values-reference.yaml](values-reference.yaml) for every available key.
+See the **[Configuration Reference](readme-configuration.md)** for details on each feature, or [values_reference.yaml](values_reference.yaml) for every available key.
