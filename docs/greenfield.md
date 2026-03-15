@@ -3,14 +3,7 @@
 
 [< Back to main README](../README.md)
 
-Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) for a guided deployment experience. The Web UI walks you through the entire process:
-
-| Tab | What it does |
-|-----|-------------|
-| **Generate** | Select your platform, configure features step by step, and preview your overrides file in real time |
-| **Validate** | Review the generated configuration for errors or warnings, then download `overrides.yaml` |
-| **Deploy** | Download the CLI, generate secrets, deploy to your cluster, retrieve endpoints, and activate your license |
-| **Chat** | Ask questions about RPI features, configuration, or troubleshooting in plain English |
+This guide walks through deploying RPI from scratch in a new environment, meaning new cluster, new databases, new cache and queue providers.
 
 ---
 
@@ -34,6 +27,19 @@ Before starting, ensure you have:
 
 - **Redpoint Container Registry**: Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.
 - **RPI License**: Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 license activation key.
+
+---
+
+## Get Started
+
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) for a guided deployment experience. The Web UI walks you through the entire process:
+
+| Tab | What it does |
+|-----|-------------|
+| **Generate** | Select your platform, configure features step by step, and preview your overrides file in real time |
+| **Validate** | Review the generated configuration for errors or warnings, then download `overrides.yaml` |
+| **Deploy** | Download the CLI, generate secrets, deploy to your cluster, retrieve endpoints, and activate your license |
+| **Chat** | Ask questions about RPI features, configuration, or troubleshooting in plain English |
 
 ---
 

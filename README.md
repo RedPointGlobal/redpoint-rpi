@@ -17,31 +17,6 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ---
 
-## System Requirements
-
-| Component | Requirement |
-|:----------|:------------|
-| **Operational** | Microsoft SQL Server, PostgreSQL (cloud-hosted or VM deployment), with a minimum of 8 GB RAM and 200 GB disk storage. |
-| **Warehouses** | AzureSQLDatabase, AmazonRDSSQL, GoogleCloudSQL, SQLServer, Snowflake, PostgreSQL, Google BigQuery |
-| **Kubernetes** | Latest stable version from a [certified provider](https://kubernetes.io/docs/setup/production-environment/turnkey-solutions/). Minimum two nodes (8 vCPU, 32 GB RAM each). |
-
-**Example node SKUs:**
-
-| Azure | AWS | GCP |
-|-------|-----|-----|
-| D8s_v5 | m5.2xlarge | n2-standard-8 |
-
-These specs are for a modest environment. Adjust based on your production workloads.
-
-## Prerequisites
-
-Before starting, ensure you have:
-
-- **Redpoint Container Registry**: Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.
-- **RPI License**: Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 license activation key.
-- **Install** [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) for interacting with your Kubernetes cluster.
-- **Install** [Helm](https://helm.sh/docs/helm/helm_install/) and ensure you have the required permissions for your target cluster.
-
 ## Repository Structure
 
 ```
