@@ -30,15 +30,14 @@ No installation, API keys, or setup required.
 
 ### Features
 
-The Web UI includes five tabs:
+The Web UI includes four tabs:
 
 | Tab | Description |
 |-----|-------------|
-| **Start Here** | Overview of the deployment workflow with quick links to generate, download CLI, and deploy. |
-| **Generate** | Form-based overrides builder. Select your platform, mode, and features from dropdowns and checkboxes. Download the generated YAML. |
-| **Validate** | Upload or paste a values file. See color-coded results (errors, warnings, info) with fix suggestions. |
-| **Explain** | Browse configuration topics and values.yaml key paths to see types, descriptions, defaults, and usage context. |
-| **Chat** | Natural language assistant. Ask questions about RPI features, chart configuration, deployment, and troubleshooting in plain English. |
+| **Generate** | Guided overrides builder. Walk through 9 configuration steps with a live YAML preview. |
+| **Validate** | Review the generated config for errors and warnings, then download `overrides.yaml`. Also supports uploading existing files. |
+| **Deploy** | Step-by-step deployment instructions: download CLI, generate secrets, deploy, verify, retrieve endpoints, activate license. |
+| **Chat** | Natural language assistant. Ask questions about RPI features, chart configuration, deployment, and troubleshooting. |
 
 ---
 
