@@ -39,6 +39,7 @@ resource "helm_release" "rpi" {
   namespace  = "redpoint-rpi"
   values     = [file(module.rpi.helm_values_path)]
 }
+
 ```
 
 ### AWS Example
