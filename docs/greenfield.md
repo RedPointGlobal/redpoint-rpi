@@ -8,7 +8,7 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 ---
 
 <details>
-<summary><strong>Step 1: Generate Your Overrides</strong></summary>
+<summary><strong>Step 1: Generate Your Overrides</strong> (click to expand)</summary>
 
 Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com):
 
@@ -19,7 +19,7 @@ Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com):
 </details>
 
 <details>
-<summary><strong>Step 2: Generate Secrets and Deploy</strong></summary>
+<summary><strong>Step 2: Generate Secrets and Deploy</strong> (click to expand)</summary>
 
 With your `overrides.yaml` downloaded, use the CLI to generate secrets and deploy.
 
@@ -73,7 +73,7 @@ Your overrides file should contain **only non-sensitive configuration** such as 
 </details>
 
 <details>
-<summary><strong>Step 3: Validate and Retrieve Endpoints</strong></summary>
+<summary><strong>Step 3: Validate and Retrieve Endpoints</strong> (click to expand)</summary>
 
 Run the Helm test suite to verify all services are healthy:
 
