@@ -1,5 +1,5 @@
 # ============================================================
-# REDPOINT RPI — COMPLETE VALUES REFERENCE
+# REDPOINT RPI v7.7 — COMPLETE VALUES REFERENCE
 # ============================================================
 # This file documents EVERY configurable value in the chart.
 # DO NOT use this file as your values.yaml — it is for
@@ -10,33 +10,30 @@
 # the values you want to change — everything else uses the
 # chart's built-in defaults.
 #
-# Example overrides file:
-#
-#   realtimeapi:
-#     replicas: 3
-#     resources:
-#       requests:
-#         cpu: "2"
-#     logging:
-#       realtimeapi:
-#         default: Debug
-#
-#   livenessProbe:
-#     periodSeconds: 30
+# Use the Helm Assistant Web UI to generate your overrides:
+# https://rpi-helm-assistant.redpointcdp.com
 # ============================================================
 
-
 # ============================================================
-#  GLOBAL SETTINGS
+# REDPOINT INTERACTION (RPI) — User Configuration
+# ============================================================
+# Only set the values you need to customize. All internal
+# defaults (health probes, security contexts, logging levels,
+# service ports, rollout strategies, etc.) are managed by the
+# chart via _defaults.tpl.
 # ============================================================
 
+# ==========================
+# Global Settings
+# ==========================
 global:
   deployment:
-    # Deployment mode: standard | demo
-    # Demo mode deploys embedded MSSQL + MongoDB containers for dev/evaluation
+    # Deployment mode: standard | advanced | demo
+    # standard: production defaults, single repository/tag for all images
+    # advanced: enables per-service image overrides, custom CA certs, controllable anti-affinity
+    # demo: deploys embedded MSSQL + MongoDB containers
     mode: standard
-
-    # Cloud platform: azure | amazon | google | selfhosted
+    # Cloud environment: azure, amazon, google, selfhosted
     platform: amazon
 
     images:
@@ -47,23 +44,22 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
-      # Controls how Kubernetes ServiceAccounts are created:
-      #   shared      — One ServiceAccount shared by all RPI services
-      #   per-service — Each service gets its own ServiceAccount (default)
-      #   both        — Shared + per-service ServiceAccounts are created
-      # Individual services can override with serviceAccountName in their config block.
-      serviceAccount:
-        mode: per-service
-        name: redpoint-rpi
+      # Utility image for jobs (upgrade, post-install, smoke tests)
+      net_utils: busybox:1.37
+      # Per-service image overrides (advanced mode)
+      # When set, the value is used verbatim instead of {repository}/{service-name}:{tag}.
+      # Useful for flat registries (e.g., ECR with all images in a single repo).
+      # overrides:
+      #   rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524
+      #   rpi-realtimeapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:realtimeapi-7.7.20260220.1524
     # Optional: set the pod's timezone (e.g., "America/New_York"); leave empty to use default UTC
-    podTimezone: "" # 
+    podTimezone: "" #
 
-# ============================================================
-#  GLOBAL RESOURCE DEFAULTS
-# ============================================================
+# ==========================
+# Global Resource Defaults
+# ==========================
 # Applied to all services unless overridden per-service.
 # Per-service overrides (e.g. interactionapi.resources) take priority.
-
 resources:
   requests:
     cpu: 50m
@@ -71,13 +67,52 @@ resources:
   limits:
     memory: 3Gi
 
-# ============================================================
-#  OPERATIONAL DATABASE
-# ============================================================
+# ==========================
+# Pod Anti-Affinity
+# ==========================
+# Controls pod anti-affinity for all services.
+# Default: soft (preferred) anti-affinity spreading pods across nodes.
+# Set type to "required" for hard anti-affinity, or enabled to false to disable.
+podAntiAffinity:
+  enabled: true
+  type: preferred               # preferred | required
+  weight: 100                   # weight for preferred (1-100, ignored for required)
+  topologyKey: kubernetes.io/hostname
 
+# ==========================
+# Custom CA Certificates
+# ==========================
+# Mount a ConfigMap or Secret containing custom CA certificates into all pods.
+# Useful when connecting to databases or services using internal/private CAs.
+customCACerts:
+  enabled: false
+  source: configMap             # configMap | secret
+  name: ""                      # name of the ConfigMap or Secret
+  mountPath: /usr/local/share/ca-certificates/custom
+  # Optional: set SSL_CERT_FILE env var to a specific file in the mount
+  # certFile: ""                # e.g., "internal-ca.pem"
+
+# ==========================
+# Common Annotations
+# ==========================
+# Annotations applied to all resource types: ServiceAccounts, Services, Deployments, and Pods.
+# Use this for org-wide annotations (cost center, support email, alert routing, etc.).
+commonAnnotations: {}
+# commonAnnotations:
+#   vanguard.com/cost-center: "0975"
+#   vanguard.com/support-email: "RPI2@vanguard.com"
+#   vanguard.com/alert-channel: "email,pagerduty"
+
+# Per-resource-type overrides (merged with commonAnnotations)
+serviceAccountAnnotations: {}
+serviceAnnotations: {}
+
+# ==========================
+# Operational Database
+# ==========================
 databases:
   operational:
-    # Database engine: sqlserver | postgresql | sqlserveronvm
+    # Supported: sqlserver, postgresql, sqlserveronvm
     provider: sqlserver
     server_host: <my-database-server-host>
     server_username: <my-database-server-username>
@@ -86,10 +121,11 @@ databases:
     pulse_logging_database_name: <my-logging-database-name>
     encrypt: true
 
-  # --------------------------------------------------------
+  # ==========================
   # Data Warehouse Providers
-  # --------------------------------------------------------
+  # ==========================
   datawarehouse:
+
     # BigQuery
     bigquery:
       enabled: false
@@ -110,7 +146,8 @@ databases:
     # Snowflake
     snowflake:
       enabled: false
-      credentialsType: snowflake_jwt          
+      # Supported: snowflake_jwt
+      credentialsType: snowflake_jwt
       ConfigMapName: snowflake-creds
       keyName: my-snowflake-rsakey.p8
       ConfigMapFilePath: /app/snowflake-creds
@@ -128,130 +165,185 @@ databases:
           schema: my_schema_name
           authMechanism: 3
 
-# ==========================
-# Cloud Identity 
-# ==========================
+# ============================================================
+# Cloud Identity
+# ============================================================
+# Pod-to-cloud authentication. Required for sdk and csi secrets modes.
+# The authentication mechanism is derived from global.deployment.platform:
+#   azure  -> Azure Workload Identity (ServiceAccount annotation + pod label)
+#   google -> GCP Workload Identity (ServiceAccount annotation)
+#   amazon -> IRSA (ServiceAccount annotation + env vars)
+# ============================================================
 cloudIdentity:
-  enabled: true
-  # Options: workloadIdentity | IAMRole | awsAccessKeys
-  provider: workloadIdentity
-  azureSettings:
+  enabled: false
+  # ServiceAccount mode:
+  #   shared      -> one shared SA used by all services (simplest)
+  #   per-service -> each service creates its own SA (for per-service IAM roles)
+  #   both        -> shared SA + per-service SAs (shared for common resources, per-service for identity)
+  # Individual services can override by setting serviceAccountName in their config block.
+  serviceAccount:
+    mode: per-service
+    name: redpoint-rpi
+  # --- Azure Workload Identity ---
+  azure:
+    managedIdentityClientId: your-workload-identity-client-id
     tenantId: your-azure-tenant-id
-    workloadIdentity:
-      managedIdentityClientId: your-workload-identity-client-id
-  googleSettings:
-    # ConfigMap containing the service account JSON credentials file 
-    configMapName: my-google-svs-account
-    keyName: my-google-svs-account.json
-    ConfigMapFilePath: /app/google-creds
+  # --- Google Cloud Workload Identity ---
+  google:
     serviceAccountEmail: my-google-svs-account@my-project.iam.gserviceaccount.com
     projectId: your_google_project_id
-  amazonSettings:
-    accessKeyId: <my-aws-iam-access-key>
-    secretAccessKey: <my-aws-iam-secret-access-key>
+    # ConfigMap containing the service account JSON credentials file
+    configMapName: my-google-svs-account
+    keyName: my-google-svs-account.json
+    configMapFilePath: /app/google-creds
+  # --- Amazon IRSA / Access Keys ---
+  amazon:
     roleArn: arn:aws:iam::my-aws-account-id:role/my-role-name
-    webIdentityTokenFile: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
-    stsRegionalEndpoints: regional
     region: us-east-1
+    # Set to true to use static access keys instead of IRSA
+    useAccessKeys: false
+    accessKeyId: ""
+    secretAccessKey: ""
 
 # ============================================================
 #  SECRETS MANAGEMENT
 # ============================================================
+# How secrets are provided to pods:
+#   kubernetes -> Chart creates K8s Secret from values (or user pre-creates)
+#   sdk        -> App reads directly from cloud vault at runtime (requires cloudIdentity)
+#   csi        -> CSI driver syncs cloud vault to K8s Secret (requires cloudIdentity)
+# ============================================================
 secretsManagement:
-  # Provider: kubernetes | sdk | csi
+  # kubernetes | sdk | csi
   provider: kubernetes
-
   # --------------------------------------------------------
-  # Kubernetes secret configuration
+  # Kubernetes secrets (provider: kubernetes)
   # --------------------------------------------------------
   kubernetes:
-    autoCreateSecrets: false                 # Chart does not create the Secret — admin responsibility
-    secretName: redpoint-rpi-secrets         # Name of the Kubernetes Secret to mount
-
+    autoCreateSecrets: true
+    secretName: redpoint-rpi-secrets
   # --------------------------------------------------------
-  # SDK — read secrets directly from a cloud vault
-  # Requires cloudIdentity to be configured
+  # SDK - App reads from cloud vault directly (provider: sdk)
   # --------------------------------------------------------
   sdk:
     azure:
-      vaultUri: https://myvault.vault.azure.net/   # Azure Key Vault endpoint
-      configurationReloadIntervalSeconds: 30        # Interval for refreshing secrets (seconds)
-      useADTokenForDatabaseConnection: true         # Use Azure AD token for DB connections
-    # amazon:
-    #   region: us-east-1
-    #   secretName: rpi/secrets
-    # google:
-    #   projectId: my-project
-
+      vaultUri: https://myvault.vault.azure.net/
+      configurationReloadIntervalSeconds: 30
+      useADTokenForDatabaseConnection: true
+    amazon:
+      secretTagKey: ""
+    google:
+      projectId: ""
   # --------------------------------------------------------
-  # CSI — mount secrets via Secrets Store CSI Driver
+  # CSI - CSI driver syncs vault to K8s Secret (provider: csi)
+  # Pods consume secrets via secretKeyRef (same as kubernetes mode)
   # --------------------------------------------------------
   csi:
+    # The K8s secret name created by the CSI driver
+    secretName: redpoint-rpi-secrets
+    # SecretProviderClass definitions
     secretProviderClasses:
-      # --------------------------------------------------
-      # Class 1 — RPI operational secrets from Key Vault
-      # --------------------------------------------------
-      - name: redpoint-rpi-secrets
-        provider: azure
-        secretObjects:                               # Sync vault secrets → Kubernetes Secret
-          - secretName: rpi-synced-secrets
-            type: Opaque
-            data:
-              - key: ConnectionString_Operations_Database
-                objectName: V7-ConnectionString-Operations-Database
-              - key: ConnectionString_Logging_Database
-                objectName: V7-ConnectionString-LoggingDatabase
-        parameters:                                  # Azure Key Vault authentication
-          keyvaultName: my-keyvault
-          resourceGroup: my-resource-group
-          subscriptionId: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
-          clientID: "11111111-2222-3333-4444-555555555555"
-          tenantId: "66666666-7777-8888-9999-000000000000"
-          usePodIdentity: "false"
-          useVMManagedIdentity: "false"
-          useWorkloadIdentity: "true"
-          syncSecret: "true"
-          enable-secret-rotation: "true"
-        objects:                                     # Objects to fetch from Key Vault
-          - objectName: "V7-ConnectionString-Operations-Database"
-            objectType: secret
-          - objectName: "V7-ConnectionString-LoggingDatabase"
-            objectType: secret
+    # ----------------------------------------------------
+    # Example: TLS Certificate from Azure Key Vault
+    # ----------------------------------------------------
+    - name: my_secret_class_1
+      provider: azure
+      secretObjects:
+        - secretName: secret1
+          type: kubernetes.io/tls
+          data:
+            - key: tls.key
+              objectName: cert-mpulserpi-v7-providence-org
+      parameters:
+        keyvaultName: key_vault_name
+        resourceGroup: resource_group_name
+        subscriptionId: subscription_id
+        clientID: your_managed_identity_client_id
+        tenantId: azure_tenant_id
+        usePodIdentity: "false"
+        useVMManagedIdentity: "false"
+        useWorkloadIdentity: "true"
+      objects:
+        - objectName: "cert-mpulserpi-v7-providence-org"
+          objectType: secret
+    # ----------------------------------------------------
+    # Example: Database Connection String
+    # ----------------------------------------------------
+    - name: my_secret_class_2
+      provider: azure
+      secretObjects:
+        - secretName: secret2
+          type: Opaque
+          data:
+            - key: ConnectionString_Logging_Database
+              objectName: V7-ConnectionString-LoggingDatabase
+      parameters:
+        keyvaultName: key_vault_name
+        resourceGroup: resource_group_name
+        subscriptionId: subscription_id
+        clientID: your_managed_identity_client_id
+        tenantId: azure_tenant_id
+        usePodIdentity: "false"
+        useVMManagedIdentity: "false"
+        useWorkloadIdentity: "true"
+        syncSecret: "true"
+        enable-secret-rotation: "true"
+      objects:
+        - objectName: "V7-ConnectionString-Operations"
+          objectType: secret
+    # ----------------------------------------------------
+    # Example: AWS Secrets Manager with jmesPath extraction
+    # ----------------------------------------------------
+    # - name: redpoint-secret-class
+    #   provider: aws
+    #   objectsContent: |
+    #     - objectName: "arn:aws:secretsmanager:us-east-1:123456789:secret/rpi-db-creds"
+    #       objectType: secretsmanager
+    #       jmesPath:
+    #         - path: username
+    #           objectAlias: db_username
+    #         - path: password
+    #           objectAlias: db_password
+    #   secretObjects:
+    #     - secretName: redpoint-rpi-secrets
+    #       type: Opaque
+    #       data:
+    #         - key: db_username
+    #           objectName: db_username
+    #         - key: db_password
+    #           objectName: db_password
 
-      # --------------------------------------------------
-      # Class 2 — TLS certificate from Key Vault
-      # --------------------------------------------------
-      - name: cert-secretprovider
-        provider: azure
-        secretObjects:
-          - secretName: tls-cert-secret
-            type: kubernetes.io/tls
-            data:
-              - key: tls.key
-                objectName: my-tls-cert
-              - key: tls.crt
-                objectName: my-tls-cert
-        parameters:
-          keyvaultName: my-keyvault
-          resourceGroup: my-resource-group
-          subscriptionId: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
-          clientID: "11111111-2222-3333-4444-555555555555"
-          tenantId: "66666666-7777-8888-9999-000000000000"
-          usePodIdentity: "false"
-          useVMManagedIdentity: "false"
-          useWorkloadIdentity: "true"
-        objects:
-          - objectName: "my-tls-cert"
-            objectType: secret
-
-# ----------------------------------------------------------
-#  Storage Configuration
-# ----------------------------------------------------------
+# ==========================
+# Storage
+# ==========================
 storage:
+  # Optional: create a StorageClass (e.g., EFS CSI on AWS, Azure File, GCE PD)
+  storageClass:
+    enabled: false
+    name: redpoint-rpi
+    provisioner: ""             # e.g., efs.csi.aws.com
+    reclaimPolicy: Delete       # Delete | Retain
+    volumeBindingMode: Immediate
+    mountOptions: []
+    # mountOptions:
+    #   - iam
+    parameters: {}
+    # Example: AWS EFS
+    # parameters:
+    #   provisioningMode: efs-ap
+    #   fileSystemId: fs-0123456789abcdef0
+    #   directoryPerms: "755"
+    #   uid: "10001"
+    #   gid: "10001"
+    #   basePath: /rpi
+    #   subPathPattern: shared-data
+    #   ensureUniqueDirectory: "false"
+    #   reuseAccessPoint: "true"
+
   persistentVolumeClaims:
     FileOutputDirectory:
-      enabled: true
-      claimName: my-pvc-name
+      enabled: false
+      claimName: rpifileoutputdir
       mountPath: /rpifileoutputdir
     Plugins:
       enabled: false
@@ -261,83 +353,37 @@ storage:
       enabled: false
       claimName: rpdmuploaddirectory
       mountPath: /rpdmuploaddirectory
-# ----------------------------------------------------------
-#  Persistent Volumes
-# ----------------------------------------------------------
-  # Azure Blob Storage
-  persistentVolumes:  
-    # Azure File Share
-    - name: rpifileoutputdirfs  # Logical name of the PersistentVolume (PV)
-      capacity: 10Gi            # Maximum storage size allocated to this volume
-      accessModes: 
-        - ReadWriteMany         # Allows multiple pods/nodes to read and write simultaneously
-      storageClassName: azurefile-csi  # StorageClass that provisions Azure File via CSI driver
-      reclaimPolicy: Retain     # Keeps the underlying storage even after PVC is deleted
-      mountOptions:
-        - -o allow_other        # Allows other users inside the container to access the mounted volume
-        - --file-cache-timeout-in-seconds=120  # Sets file cache timeout to 120 seconds
-      csi:
-        driver: file.csi.azure.com   # Azure File CSI driver
-        # Must be unique per storage account + file share across the cluster
-         # <resourceGroup>#<storageAccount>#<fileShareName>
-        volumeHandle: "my-rgName#mysaName#myfileShareName"
-        volumeAttributes:
-          storageaccount: "mysaName"   # Azure Storage Account name (required)
-          shareName: "myfileShareName"         # Azure File Share name (required)
-          clientID: "00000000-0000-0000-0000-0000000000"  # Managed Identity Client ID used for authentication
-          # Specify if the storage account is NOT in the AKS managed resource group (MC_*)
-          resourcegroup: "CE-Platform"
-          # tenantID: $IDENTITY_TENANT only if workload identity and AKS cluster are in different Azure AD tenants
-          # subscriptionid: $SUBSCRIPTION only if storage account is in a different subscription
-          subscriptionid: "00000000-0000-0000-0000-0000000000"
-      pvc:
-        claimName: rpifileoutputdir  # Name of the PersistentVolumeClaim (PVC) that will bind to this PV
 
-#    - name: rpifileoutputdir   # Logical name of the PersistentVolume (PV)
-#      capacity: 10Gi           # Maximum storage capacity allocated to this volume
-#      accessModes:
-#        - ReadWriteMany        # Allows multiple pods/nodes to mount with read/write access
-#      storageClassName: blob-fuse  # StorageClass using Azure Blob CSI driver (BlobFuse)
-#      reclaimPolicy: Retain    # Keeps the underlying Blob container after PVC deletion
-#      mountOptions:
-#        - -o allow_other       # Allows all users in the container to access the mounted filesystem
-#        - --file-cache-timeout-in-seconds=120  # Sets local file cache timeout to 120 seconds
-#      csi:
-#        driver: blob.csi.azure.com  # Azure Blob Storage CSI driver
-#        # Must be unique per container across the cluster
-#        volumeHandle: my-rgName-mysaName-myContainerName
-#        volumeAttributes:
-#          storageAccount: mysaName  # Azure Storage Account name
-#          containerName: myContainerName  # Azure Blob container name
-#          # Managed Identity Client ID used for authentication
-#          clientID: 00000000-0000-0000-0000-0000000000
-#          resourcegroup: my-rgName
-#          # subscriptionid: if storage account is in a different subscription
-#          subscriptionid: 00000000-0000-0000-0000-0000000000
-#      pvc:
-#        claimName: pvc-blob   # Name of the PersistentVolumeClaim (PVC) that binds to this PV
-#      annotations:
-#        pv.kubernetes.io/provisioned-by: blob.csi.azure.com
-#        helm.sh/resource-policy: keep
+  # Create PV + PVC pairs (for CSI-backed storage)
+  persistentVolumes: []
+  # persistentVolumes:
+  #   - name: rpi-blob-storage
+  #     capacity: 100Gi
+  #     accessModes: [ReadWriteMany]
+  #     storageClassName: blob-fuse
+  #     reclaimPolicy: Retain
+  #     mountOptions:
+  #       - -o allow_other
+  #       - --file-cache-timeout-in-seconds=120
+  #     csi:
+  #       driver: blob.csi.azure.com
+  #       volumeHandle: unique-volume-handle
+  #       volumeAttributes:
+  #         containerName: rpi-data
+  #         storageAccount: mystorageaccount
+  #     pvc:
+  #       claimName: rpi-blob-pvc
 
-# ============================================================
-#  REALTIME API
-# ============================================================
-
+# ==========================
+# Realtime API
+# ==========================
 realtimeapi:
   enabled: true
   replicas: 1
-
-  # Per-service pod metadata (merged after customAnnotations/customLabels)
-  podAnnotations: {}
-  podLabels: {}
-
-  # RPI client identifier
   rpiClientID: 00000000-0000-0000-0000-000000000000
-
-  # Authentication mode
   authentication:
-    type: basic                           # basic | oauth
+    # Supported: basic, oauth
+    type: basic
     basic:
       standard: false
       forms: true
@@ -347,21 +393,22 @@ realtimeapi:
       databaseName: RPIRealtimeCore
       accessTokenLifetimeSeconds: 360
       refreshTokenLifetimeSeconds: 360
-
-  # CORS origins allowed
   CORSOrigins: ["*"]
 
-  # Cache provider
+  # Real-Time Cache Provider
   cacheProvider:
     enabled: true
-    provider: mongodb                     # mongodb | azureredis | redis | inMemorySql | googlebigtable
+    # Supported: mongodb, azureredis, redis, inMemorySql, googlebigtable
+    provider: ""
     mongodb:
       connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true
       databaseName: <my-realtime-cache-db>
       collectionName: <my-realtime-cache-collection>
     redis:
-      type: internal                      # internal (chart-managed) | external (BYO)
+      # internal: chart-managed Redis | external: BYO Redis
+      type: internal
       redisSettings:
+        # Required if type=external
         connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
     inMemorySql:
       server_host: <my-cache-database-server-host>
@@ -372,10 +419,11 @@ realtimeapi:
       projectId: <my-bigtable-project-id>
       instanceId: <my-bigtable-instance-id>
 
-  # Queue provider
+  # Real-Time Queue Provider
   queueProvider:
     enabled: true
-    provider: amazonsqs                   # amazonsqs | azureservicebus | googlepubsub | azureeventhubs | rabbitmq | azurestorage | amazonmsk
+    # Supported: amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq, azurestorage, amazonmsk
+    provider: ""
     queueNames:
       formQueuePath: RPIWebFormSubmission
       eventsQueuePath: RPIWebEvents
@@ -384,6 +432,7 @@ realtimeapi:
       listenerQueuePath: RPIQueueListener
       callbackServiceQueuePath: RPICallbackApiQueue
     amazonsqs:
+      # Supported: accessKey (configure keys under cloudIdentity.amazonSettings)
       credentialsType: accessKey
     azureservicebus:
       connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>
@@ -397,418 +446,170 @@ realtimeapi:
       connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>;EntityPath=<my-hub>
       eventHubName: RPIQueueListener
       NamespaceName: my_eventhub_namespace_name
-      PartitionIds: ["0"]
+      PartitionIds:
+        - "0"
     rabbitmq:
-      type: internal                      # internal (chart-managed) | external (BYO)
+      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
+      type: internal
     amazonmsk:
       region: <my-aws-region>
       accessKeyId: <my-aws-iam-access-key>
       secretAccessKey: <my-aws-iam-secret-access-key>
       bootstrapServers: <my-server1.c2.kafka.us-east-1.amazonaws.com:9198>
 
-  # Custom plugins
+  # Custom Realtime plugins (see docs/plugins.md for examples)
   customPlugins:
     enabled: false
+    # list: []
 
-  # Pod resources
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
-
-  # Horizontal pod autoscaling
   autoscaling:
-    enabled: true
+    enabled: false
 
-
-# ============================================================
-#  CALLBACK API
-# ============================================================
-
+# ==========================
+# Callback API
+# ==========================
 callbackapi:
   enabled: true
   replicas: 1
-  podAnnotations: {}
-  podLabels: {}
   channelLabel: SendGrid
-
-  # Multi-tenant instances
+  # Enable multitenancy for per-client instances
   multitenancy:
     enabled: false
   instances:
     - name: "tenant1"
       replicas: 1
-
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
+  #  - name: "client2"
+  #    replicas: 1
   autoscaling:
-    enabled: true
+    enabled: false
 
-
-# ============================================================
-#  EXECUTION SERVICE
-# ============================================================
-
+# ==========================
+# Execution Service
+# ==========================
 executionservice:
   enabled: true
   replicas: 1
-  podAnnotations: {}
-  podLabels: {}
   enableRPIAuthentication: true
-
   # Internal cache for execution state
   internalCache:
     enabled: true
-    provider: filesystem                  # default | filesystem | azureblob
+    # Supported: default, filesystem, azureblob
+    provider: filesystem
+    # Redis settings (when provider=default or for state caching)
     redisSettings:
-      type: internal                      # internal (chart-managed) | external (BYO)
+      # internal: chart-managed Redis | external: BYO Redis
+      type: internal
+      # Required if type=external
       connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
+    # Azure Blob settings (when provider=azureblob)
     azureStorageSettings:
       accountName: my_storage_account_name
       containerName: rpi
       connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net
       useCloudIdentity: false
-
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
     enabled: false
-    # type: hpa                           # hpa | keda
+    # Supported: hpa, keda (KEDA is recommended for execution service)
+    # type: hpa
 
-
-# ============================================================
-#  INTERACTION API
-# ============================================================
-
+# ==========================
+# Interaction API
+# ==========================
 interactionapi:
   enabled: true
   replicas: 1
-  podAnnotations: {}
-  podLabels: {}
   enableRPIAuthentication: true
-
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
-
-# ============================================================
-#  INTEGRATION API
-# ============================================================
-
+# ==========================
+# Integration API
+# ==========================
 integrationapi:
   enabled: true
   replicas: 1
-  podAnnotations: {}
-  podLabels: {}
   enableRPIAuthentication: true
-
-  # Credentials (required for Smart Activation)
+  # Credentials (required if Smart Activation is enabled)
   username: admin@noemail.com
   password: my_Super_Strong_Pwd
-
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
-
-# ============================================================
-#  NODE MANAGER
-# ============================================================
-
+# ==========================
+# Node Manager
+# ==========================
 nodemanager:
   enabled: true
   replicas: 1
-  podAnnotations: {}
-  podLabels: {}
   enableRPIAuthentication: true
-
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
   autoscaling:
-    enabled: true
+    enabled: false
 
-
-# ============================================================
-#  DEPLOYMENT API
-# ============================================================
-
+# ==========================
+# Deployment API
+# ==========================
 deploymentapi:
   enabled: true
   replicas: 1
-  podAnnotations: {}
-  podLabels: {}
-
+  # Use exported tenant template files for new tenant creation
   templateTenant:
     useTemplateFiles: false
     templateTenantFilesPath: "/tmp/templatetenantfiles"
     volumeClaimName: templatetenantfiles
 
-  resources:
-    requests:
-      cpu: 500m
-      memory: 1Gi
-    limits:
-      memory: 1Gi
-
-
-# ============================================================
-#  SMOKE TESTS
-# ============================================================
-# Lightweight validation pods that verify storage mounts and CSI
-# secret mounts are working. Enable during initial setup or after
-# infrastructure changes, then disable once verified.
-#
-# Two types:
-#   pvc       — Mounts a PersistentVolumeClaim and writes a test file
-#   csiSecret — Mounts a CSI SecretProviderClass volume and sleeps
-
-smokeTests:
-  enabled: false
-  deployments:
-    # PVC mount test — writes a test file every 30s to verify write access
-    - name: blob
-      type: pvc
-      claimName: rpifileoutputdir
-      mountPath: /mnt/rpifileoutputdir
-      # image: custom-image:tag        # Optional: override default net_utils image
-      # serviceAccountName: my-sa      # Optional: for workload identity
-      # resources:                     # Optional: override defaults
-      #   requests:
-      #     cpu: 50m
-      #     memory: 64Mi
-      #   limits:
-      #     cpu: 200m
-      #     memory: 128Mi
-
-    - name: fileshare
-      type: pvc
-      claimName: pvc-fs
-      mountPath: /mnt/fileshare
-
-    # CSI secret mount test — mounts SecretProviderClass volume
-    - name: kv-secrets
-      type: csiSecret
-      secretProviderClass: rpi-secrets
-      mountPath: /mnt/secrets
-
-    - name: kv-cert
-      type: csiSecret
-      secretProviderClass: cert-secretprovider
-      mountPath: /mnt/certs
-
-
-# ============================================================
-#  POST-INSTALL AUTOMATION
-# ============================================================
-# Automates the three post-deployment API calls:
-#   1. License activation
-#   2. Cluster database install
-#   3. Tenant creation (optional)
-# Runs as a Helm post-install hook and ArgoCD PostSync hook.
-# Idempotent — skips steps that are already complete.
-postInstall:
-  enabled: false
-
-  # Use a pre-created K8s Secret instead of inline values.
-  # Required keys: activation-key, admin-password, admin-username, admin-email
-  # existingSecret: ""
-
-  # License activation
-  activationKey: ""
-  systemName: ""
-
-  # Initial admin user
-  adminUsername: "coreuser"
-  adminPassword: ""
-  adminEmail: ""
-
-  # Tenant creation (optional — runs after cluster DB install)
-  tenant:
-    enabled: false
-    name: ""
-    # existingSecret: ""  # Keys: dw-server, dw-database, dw-username, dw-password
-    dataWarehouse:
-      provider: SQLServer
-      server: ""
-      database: ""
-      username: ""
-      password: ""
-
-  # API call timeout (seconds)
-  waitTimeout: 360
-
-  # Kubernetes Job settings
-  backoffLimit: 3
-
-  # Override connection details if deploymentapi uses a non-default name:
-  # deploymentapiHost: rpi-deploymentapi
-  # deploymentapiPort: "80"
-  # maxReadyWaitSeconds: "600"
-  # pollIntervalSeconds: "15"
-
-  # Job container resources:
-  # resources:
-  #   requests:
-  #     cpu: 50m
-  #     memory: 64Mi
-  #   limits:
-  #     cpu: 200m
-  #     memory: 128Mi
-
-# ============================================================
-#  PRE-FLIGHT VALIDATION
-# ============================================================
-# Runtime validation job that checks your configuration before
-# or after deployment. Catches DNS, connectivity, and config
-# issues that can't be detected at template render time.
-preflight:
-  enabled: false
-  # test        -> runs with `helm test rpi` (post-install validation)
-  # preInstall  -> runs as pre-install/pre-upgrade hook (blocks deploy on failure)
-  mode: test
-
-# ============================================================
-#  DATABASE UPGRADE JOB
-# ============================================================
-# Automatically calls the deployment API upgrade endpoint after
-# an image tag change. The Job name includes the sanitized tag,
-# so Helm creates a new Job only when the tag changes.
-# The upgrade endpoint is idempotent — safe to run multiple times.
-databaseUpgrade:
-  # Set to true to enable automatic database upgrades on tag changes
-  enabled: true
-  notification:
-    enabled: true
-    recipientEmail: admin@example.com
-
-  # Override connection details if deploymentapi uses a non-default
-  # service name or port:
-  # deploymentapiHost: rpi-deploymentapi
-  # deploymentapiPort: "80"
-
-  # Override endpoint paths (rarely needed):
-  # healthPath: /health/ready
-  # upgradePath: /api/deployment/upgrade
-
-  # Timeout for the upgrade API call (seconds)
-  # waitTimeoutSeconds: "360"
-
-  # Max time to wait for deploymentapi to become healthy (seconds)
-  # maxReadyWaitSeconds: "600"
-
-  # Polling interval when waiting for readiness (seconds)
-  # pollIntervalSeconds: "15"
-
-  # Kubernetes Job settings:
-  # backoffLimit: 3                  # Retry attempts on failure
-  # ttlSecondsAfterFinished: 3600   # Auto-cleanup after 1 hour
-  # activeDeadlineSeconds: 900      # Max total Job runtime
-
-  # Job container resources:
-  # resources:
-  #   requests:
-  #     cpu: 50m
-  #     memory: 64Mi
-  #   limits:
-  #     cpu: 200m
-  #     memory: 128Mi
-
-
-# ============================================================
-#  QUEUE READER
-# ============================================================
-
+# ==========================
+# Queue Reader
+# ==========================
 queuereader:
   enabled: true
   replicas: 1
-  podAnnotations: {}
-  podLabels: {}
-  nonActiveQueuePath: listenerQueueNonActive
-  listenerQueueNonActiveTTLDays: 14
-  errorQueuePath: listenerQueueError
   realtimeConfiguration:
+    # Enable distributed processing for high-volume transactions
     isDistributed: false
     internalCache:
-      provider: redis                     # redis
-      type: internal                      # internal (chart-managed) | external (BYO)
+      provider: redis
+      # internal: chart-managed Redis | external: BYO Redis
+      type: internal
       redisSettings:
+        # Required if type=external
         connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
     distributedQueue:
-      provider: rabbitmq                  # rabbitmq
-      type: internal                      # internal (chart-managed) | external (BYO)
+      provider: rabbitmq
+      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
+      type: internal
       rabbitmqSettings:
         hostname: "rpi-queuereader-rabbitmq"
         username: redpointrpi
         password: my_Super_Strong_Pwd
+    # RPI client IDs for this cluster
     tenantIds:
       - 00000000-0000-0000-0000-000000000000
-
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
+  errorQueuePath: listenerQueueError 
+  nonActiveQueuePath: listenerQueueNonActive
   autoscaling:
-    enabled: true
+    enabled: false
 
-
-# ============================================================
-#  REBRANDLY (URL SHORTENER)
-# ============================================================
-
+# ==========================
+# Rebrandly (URL Shortener)
+# ==========================
 rebrandly:
   enabled: false
-  podAnnotations: {}
-  podLabels: {}
   apiKey: my_rebrandly_api_key
   autoCreateSecrets: true
   secretName: rpi-rebrandly
   redisSettings:
-    type: internal                        # internal (chart-managed) | external (BYO)
+    # internal: chart-managed Redis | external: BYO Redis
+    type: internal
+    # External Redis settings (if type=external)
     hostname: rpi-rebrandly-cache
     username: my_redis_username
     password: my_redis_password
     useAzureCredentials: false
     port: 6379
 
-  resources:
-    requests:
-      cpu: 50m
-      memory: 256Mi
-    limits:
-      memory: 4Gi
-
-
-# ============================================================
-#  DIAGNOSTICS MODE
-# ============================================================
-
+# ==========================
+# Diagnostics Mode
+# ==========================
 diagnosticsMode:
   copytoAzureBlob:
     enabled: false
@@ -825,20 +626,22 @@ diagnosticsMode:
     sftpPassword: <your-sftp-password>
     sftpPort: "22"
 
-
-# ============================================================
-#  AUTHENTICATION
-# ============================================================
-
+# ==========================
+# Microsoft Entra ID Authentication
+# ==========================
 MicrosoftEntraID:
   enabled: false
   interaction_client_id: 00000000-0000-0000-0000-000000000000
   interaction_api_id: 00000000-0000-0000-0000-000000000000
   tenant_id: 00000000-0000-0000-0000-000000000000
 
+# ==========================
+# OpenID Connect Providers
+# ==========================
 OpenIdProviders:
   enabled: false
-  name: Keycloak                          # Keycloak | Okta
+  # Supported: keycloak, Okta
+  name: Keycloak
   authorizationHost: https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0
   clientID: 00000000-0000-0000-0000-000000000000
   audience: api://00000000-0000-0000-0000-000000000000
@@ -851,6 +654,9 @@ OpenIdProviders:
     - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
   supportsUserManagement: false
 
+# ==========================
+# SMTP Settings
+# ==========================
 SMTPSettings:
   SMTP_SenderAddress: noreply-rpi@example.com
   SMTP_SenderName: "Redpoint Global"
@@ -861,14 +667,13 @@ SMTPSettings:
   SMTP_Username: your_smtp_server_username
   SMTP_Password: your_smtp_server_password
 
-
 # ============================================================
 #  INGRESS
 # ============================================================
 
 ingress:
   controller:
-    enabled: true                         # false if supplying your own controller
+    enabled: false
   mode: public                            # public | private
   certificateSource: kubernetes           # kubernetes | acm
   # TLS entries (rendered when certificateSource=kubernetes)
@@ -896,41 +701,36 @@ ingress:
     rabbitmqconsole: rpi-rabbitmq-console
     smartactivation: rpi-smartActivation
 
-
-# ============================================================
-#  NETWORK POLICY
-# ============================================================
-
+# ==========================
+# Network Policy
+# ==========================
 networkPolicy:
   enabled: false
 
-
-# ============================================================
-#  SERVICE MESH
-# ============================================================
-
+# ==========================
+# Service Mesh
+# ==========================
 serviceMesh:
   enabled: false
-  provider: linkerd                      # Supported: linkerd
+  # Supported: linkerd
+  provider: linkerd
   # Linkerd Server CRDs for L7 traffic policy
+  servers: []
   # servers:
   #   - name: realtimeapi
   #     podSelector:
   #       app.kubernetes.io/name: rpi-realtimeapi
-  #     port: 8080                       # Default: 8080
-  #     proxyProtocol: HTTP/1            # Default: HTTP/1
+  #     port: 8080
+  #     proxyProtocol: HTTP/1
   #   - name: executionservice
   #     podSelector:
   #       app.kubernetes.io/name: rpi-executionservice
   #     port: 8080
   #     proxyProtocol: HTTP/1
-  servers: []
 
-
-# ============================================================
-#  NODE SCHEDULING
-# ============================================================
-
+# ==========================
+# Node Scheduling
+# ==========================
 nodeSelector:
   enabled: false
   key: app
@@ -943,11 +743,60 @@ tolerations:
   operator: Equal
   value: redpoint-rpi
 
+# ==========================
+# Node Provisioning
+# ==========================
+# Optional: create a Karpenter NodePool for dedicated RPI nodes.
+# Useful on EKS when you want RPI pods on specific instance types with taints.
+nodeProvisioning:
+  enabled: false
+  provider: karpenter           # karpenter
+  karpenter:
+    nodePool:
+      name: redpoint-nodepool
+      labels: {}
+      # labels:
+      #   workload: redpoint-api
+      taints: []
+      # taints:
+      #   - key: workload
+      #     value: redpoint-api
+      #     effect: NoSchedule
+      startupTaints: []
+      # startupTaints:
+      #   - key: efs.csi.aws.com/agent-not-ready
+      #     value: "true"
+      #     effect: NoSchedule
+      requirements: []
+      # requirements:
+      #   - key: karpenter.k8s.aws/instance-family
+      #     operator: In
+      #     values: ["m7i"]
+      #   - key: karpenter.k8s.aws/instance-size
+      #     operator: In
+      #     values: ["4xlarge"]
+      #   - key: kubernetes.io/arch
+      #     operator: In
+      #     values: ["amd64"]
+      #   - key: karpenter.sh/capacity-type
+      #     operator: In
+      #     values: ["on-demand"]
+      expireAfter: 360h
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      disruption:
+        consolidationPolicy: WhenEmpty
+        consolidateAfter: 15m
+      limits:
+        cpu: "1000"
+        memory: 1000Gi
+      weight: 10
 
-# ============================================================
-#  REDPOINT AI
-# ============================================================
-
+# ==========================
+# Redpoint AI
+# ==========================
 redpointAI:
   enabled: false
   naturalLanguage:
@@ -968,27 +817,21 @@ redpointAI:
     ContainerName: my_blob_container_name
     BlobFolder: my_blob_container_folder_name
 
-
-# ============================================================
-#  SMART ACTIVATION
-# ============================================================
-
+# ==========================
+# Smart Activation
+# ==========================
 smartActivation:
   enabled: false
   autoCreateSecrets: true
   secretName: rpi-smartactivation
 
+# Auth Service (Smart Activation)
 authservice:
   replicas: 1
   default_username: admin@noemail.com
   default_password: my_Super_Strong_Pwd
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
+# Keycloak (Smart Activation)
 keycloak:
   replicas: 1
   hostname: keycloak
@@ -998,13 +841,8 @@ keycloak:
   realm_name: redpoint-mercury
   realm_client_id: rpi-service
   realm_client_secret: <my-realm-client-secret>
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
+# Reporting Service
 reportingservice:
   sigma:
     enabled: false
@@ -1012,1005 +850,96 @@ reportingservice:
     client_id: 48dd1982ab835ff53177e9cbd7fb5608b1db8c56491a040f2f0843a3bfc6b440
     client_secret: my_sigma_client_secret
 
+# Init Service (Smart Activation)
 initservice:
   replicas: 1
   database:
     operational:
       name: smart_activation_db
       connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
+# Message Queue (Smart Activation)
 messageq:
   replicas: 1
   username: redpointrpi
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
+# Maintenance Service (Smart Activation)
 maintenanceservice:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
+# Services API (Smart Activation)
 servicesapi:
   replicas: 1
   sso_enabled: true
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
+# Socket.io (Smart Activation)
 socketio:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
+# UI Service (Smart Activation)
 uiservice:
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 3Gi
-    limits:
-      memory: 3Gi
 
+# CDP Cache (Smart Activation)
 cdpcache:
   enabled: true
   replicas: 1
-  resources:
-    requests:
-      cpu: 500m
-      memory: 2Gi
-    limits:
-      memory: 2Gi
 
-
-# ============================================================
-#  CUSTOM LABELS AND ANNOTATIONS
-# ============================================================
-
+# ==========================
+# Custom Labels and Annotations
+# ==========================
+# customLabels:
+#   environment: "prod"
+#   team: "marketing"
 customLabels: {}
+
+# customAnnotations:
+#   my-custom-annotation: "my-value"
 customAnnotations: {}
 
+# ==========================
+# Custom Metrics
+# ==========================
+# Enable Prometheus scrape annotations on all RPI service pods.
+# When enabled, each pod gets prometheus.io/scrape, /port, and /path annotations.
+customMetrics:
+  enabled: false
 
-# ============================================================
-#  INTERNAL DEFAULTS
-# ============================================================
-# The settings below are managed by the chart and rarely need
-# changing. Override any of them by setting the key directly
-# in your overrides file under the matching top-level key.
-#
-# Only set what you need to change. Unset keys keep their
-# default values shown below.
-# ============================================================
+# ==========================
+# Post-Install Automation
+# ==========================
+# Automates license activation, cluster DB install, and optional tenant creation.
+# Runs as a Helm post-install hook (and ArgoCD PostSync).
+postInstall:
+  enabled: false
+  # Use an existing K8s secret instead of inline values
+  # Keys: activation-key, admin-password, admin-username, admin-email
+  # existingSecret: ""
+  activationKey: ""
+  systemName: ""
+  adminUsername: "coreuser"
+  adminPassword: ""
+  adminEmail: ""
+  tenant:
+    enabled: false
+    name: ""
+    # existingSecret: ""  # Keys: dw-server, dw-database, dw-username, dw-password
+    dataWarehouse:
+      provider: SQLServer
+      server: ""
+      database: ""
+      username: ""
+      password: ""
+  waitTimeout: 360
+  backoffLimit: 3
 
-  # ----------------------------------------------------------
-  #  Operational Database Defaults
-  # ----------------------------------------------------------
-  # databases:
-  #   operational:
-  #     databaseSchema: dbo                     # SQL Server schema name
-  #     encrypt: true                           # Encrypt database connections
-  #     dateTimeSource: OperatingSystem          # OperatingSystem | Database
-
-  # ----------------------------------------------------------
-  #  Security Context (shared by .NET core services)
-  # ----------------------------------------------------------
-  # securityContext:
-  #   enabled: true
-  #   runAsUser: 7777
-  #   runAsGroup: 7777
-  #   fsGroup: 7777
-  #   runAsNonRoot: true
-  #   readOnlyRootFilesystem: true
-  #   privileged: false
-  #   allowPrivilegeEscalation: false
-  #   capabilities:
-  #     drop: ["ALL"]
-  #   supplementalGroups: [1000, 4000, 5000]
-
-  # ----------------------------------------------------------
-  #  Health Probes (shared by all services)
-  # ----------------------------------------------------------
-  # livenessProbe:
-  #   enabled: true
-  #   initialDelaySeconds: 60
-  #   periodSeconds: 15
-  #   timeoutSeconds: 3
-  #   failureThreshold: 3
-  #   successThreshold: 1
-  #
-  # readinessProbe:
-  #   enabled: true
-  #   initialDelaySeconds: 20
-  #   periodSeconds: 10
-  #   timeoutSeconds: 2
-  #   failureThreshold: 3
-  #   successThreshold: 1
-  #
-  # startupProbe:
-  #   enabled: true
-  #   initialDelaySeconds: 10
-  #   periodSeconds: 10
-  #   timeoutSeconds: 2
-  #   failureThreshold: 35
-  #   successThreshold: 1
-
-  # ----------------------------------------------------------
-  #  Topology Spread Constraints
-  # ----------------------------------------------------------
-  # topologySpreadConstraints:
-  #   enabled: true
-  #   maxSkew: 1
-  #   topologyKey: kubernetes.io/hostname
-  #   whenUnsatisfiable: ScheduleAnyway
-
-  # ----------------------------------------------------------
-  #  Ingress Internals
-  # ----------------------------------------------------------
-  # ingress:
-  #   className: nginx-redpoint-rpi # defaults to release namespace
-  #   internalImageOverride:
-  #     enabled: false
-  #     image: registry.k8s.io/ingress-nginx/controller:v1.14.3@sha256:82917be97c0939f6ada1717bb39aa7e66c229d6cfb10dcfc8f1bd42f9efe0f81
-  #   service:
-  #     port: 80
-  #   annotations:
-  #     nginx.ingress.kubernetes.io/proxy-body-size: 4096m
-  #     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-  #     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-  #     nginx.ingress.kubernetes.io/enable-access-log: "true"
-  #     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-  #     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-
-  # ----------------------------------------------------------
-  #  Network Policy
-  # ----------------------------------------------------------
-  # networkPolicy:
-  #   allowDNS: true
-
-  # ----------------------------------------------------------
-  #  Diagnostics Mode Internals
-  # ----------------------------------------------------------
-  # diagnosticsMode:
-  #   dotNetTools:
-  #     enabled: false
-  #     useGcDump: false
-  #     useCounters: false
-  #     path: /app/dotnet-tools
-  #     extractionBaseDir: /tmp
-  #   netutils:
-  #     enabled: false
-  #     securityContext:
-  #       runAsNonRoot: true
-  #       runAsUser: 7777
-  #       runAsGroup: 7777
-  #       readOnlyRootFilesystem: true
-  #       allowPrivilegeEscalation: false
-  #       privileged: false
-  #       capabilities:
-  #         drop: ["ALL"]
-  #         add: ["NET_ADMIN", "NET_RAW"]
-
-  # ----------------------------------------------------------
-  #  Realtime API
-  # ----------------------------------------------------------
-  # realtimeapi:
-  #   multitenant: false
-  #   name: rpi-realtimeapi
-  #   type: deployment                          # deployment | rollout (Argo)
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   enableHelpPages: true
-  #   enableEventListening: true
-  #   realtimeProcessingEnabled: true
-  #   ThresholdBetweenSiteVisitsMinutes: 120
-  #   ThresholdBetweenPageVisitsMinutes: 1
-  #   CacheWebFormData: false
-  #   decisionCacheDuration: 60
-  #   enableAuditMetricsInHeaders: true
-  #   cacheOutputQueueEnabled: true
-  #   RealtimeServerCookieEnabled: false
-  #   RealtimeServerCookieName: rg-visitor
-  #   RealtimeServerCookieExpires: 60
-  #   RealtimeServerCookieDomain: ""
-  #   RealtimeServerCookieHttpOnly: false
-  #   CacheOutputCollectIPAddress: true
-  #   HashVisitorID: false
-  #   EventListeningLocalCacheDuration: 60
-  #   dataMaps:
-  #     visitorProfile:
-  #       DaysToPersist: 365
-  #       CompressData: true
-  #     visitorHistory:
-  #       DaysToPersist: 365
-  #       CompressData: true
-  #     nonVisitorData:
-  #       DaysToPersist: 365
-  #       CompressData: true
-  #     productRecommendation:
-  #       DaysToPersist: 365
-  #       CompressData: true
-  #     offerHistory:
-  #       DaysToPersist: 365
-  #       CompressData: true
-  #     messageHistory:
-  #       DaysToPersist: 365
-  #       CompressData: true
-  #   idValidation:
-  #     enableVisitorIDValidation: true
-  #     visitorID:
-  #       minimumLength: 1
-  #       maximumLength: 36
-  #       enableLetters: true
-  #       enableNumbers: true
-  #       permittedCharacters: ["-", "_", "/", ".", "@", "#", "&", "?"]
-  #     enableDeviceIDValidation: true
-  #     deviceID:
-  #       minimumLength: 1
-  #       maximumLength: 36
-  #       enableLetters: true
-  #       enableNumbers: true
-  #       permittedCharacters: ["-", "_", "/", ".", "@", "#", "&", "?"]
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: true
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     realtimeagent:
-  #       default: Error
-  #       database: Error
-  #       rpiTrace: Error
-  #       rpiError: Error
-  #       console: Error
-  #     realtimeapi:
-  #       default: Error
-  #       endpoint: Error
-  #       shared: Error
-  #       plugins: Error
-  #       other: Error
-  #       console: Error
-  #   autoscaling:
-  #     type: hpa
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   resources:
-  #     enabled: true
-  #   queueProvider:
-  #     amazonsqs:
-  #       visibilityTimeout: "301"
-  #     azurestorage:
-  #       sendVisibilityTimeout: 1
-  #       receiveVisibilityTimeout: 1
-  #     azureeventhubs:
-  #       SendMessageBatchSize: 200
-  #       ReceiveMessageBatchSize: 200
-  #     amazonmsk:
-  #       Acks: None
-  #       CompressionType: Snappy
-  #       MaxRetryAttempt: 10
-  #       BatchSize: "1000000"
-  #       LingerTime: 0
-  #       UseAwsMsk: "True"
-  #     rabbitmq:
-  #       rabbitmqSettings:
-  #         hostname: "rpi-realtimeapi-rabbitmq"
-  #         username: redpointrpi
-  #         virtualhost: /
-  #         resources:
-  #           enabled: true
-  #           requests: { cpu: 100m, memory: 256Mi }
-  #           limits: { cpu: 1, memory: 1Gi }
-  #         volumeClaimTemplates:
-  #           enabled: true
-  #           storage: 100Gi
-  #           storageClassName: ""        # optional — use specific StorageClass
-  #           accessModes: ReadWriteOnce
-  #         existingClaim: ""             # set to use a pre-existing PVC (skips volumeClaimTemplates)
-  #         podDisruptionBudget:
-  #           enabled: false
-  #           minAvailable: 1
-  #   cacheProvider:
-  #     redis:
-  #       redisSettings:
-  #         resources:
-  #           enabled: true
-  #           requests: { cpu: 100m, memory: 256Mi }
-  #           limits: { memory: 3Gi }
-  #         volumeClaimTemplates:
-  #           enabled: true
-  #           storage: 50Gi
-  #           storageClassName: ""        # optional — use specific StorageClass
-  #           accessModes: ReadWriteOnce
-  #         existingClaim: ""             # set to use a pre-existing PVC (skips volumeClaimTemplates)
-  #         podDisruptionBudget:
-  #           enabled: false
-  #           minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  Callback API
-  # ----------------------------------------------------------
-  # callbackapi:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: true
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     database: Error
-  #     rpiTrace: Error
-  #     rpiError: Error
-  #     Console: Error
-  #   autoscaling:
-  #     type: hpa
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   resources:
-  #     enabled: true
-
-  # ----------------------------------------------------------
-  #  Execution Service
-  # ----------------------------------------------------------
-  # executionservice:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: false
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     database: Error
-  #     rpiTrace: Error
-  #     rpiError: Error
-  #     Console: Error
-  #   autoscaling:
-  #     type: hpa                               # hpa | keda
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #     kedaScaledObject:                       # Only used when type=keda
-  #       serverAddress: ""
-  #       useTriggerAuthentication: true
-  #       authenticationRef: rpi-executionservice
-  #       identityId: ""
-  #       metricName: execution_max_thread_count
-  #       query: ""
-  #       threshold: "80"
-  #       pollingInterval: 30
-  #       minReplicaCount: 2
-  #       maxReplicaCount: 10
-  #       fallback:
-  #         failureThreshold: 3
-  #         replicas: 2
-  #       behavior:
-  #         scaleUp:
-  #           stabilizationWindowSeconds: 300
-  #           policies: { type: Percent, value: 100, periodSeconds: 60 }
-  #         scaleDown:
-  #           stabilizationWindowSeconds: 300
-  #           policies: { type: Percent, value: 50, periodSeconds: 60 }
-  #       terminationGracePeriodSeconds: 120
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   resources:
-  #     enabled: true
-  #   jobExecution:
-  #     internalAddress: ""
-  #     auditTaskEvents: true
-  #     maxThreadsPerExecutionService: 100
-  #     executionShutdownWaitForActivity: "00:08:00"
-  #     overrideCustomSQLReservedWords: false
-  #     maxSmartAssetInstancesForOfferCodes: "100000"
-  #     rpdmOApiPrefixUri: /v1/
-  #     rpdmOApiRequestTimeout: "200"
-  #     taskTimeout: 60
-  #     triggerCheckCriteriaInterval: 60
-  #     triggersMaxDaysInactive: 180
-  #     defaultMaintenanceModeBufferTime: "00:05:00"
-  #     luxScisendRequestCount: 5
-  #     workflowPrioritization:
-  #       enabled: true
-  #       maxConcurrentWorkflowActivities: 100
-  #       maximumQueueTime: "24:00:00"
-  #   internalCache:
-  #     backupToOpsDBInterval: "00:00:20"
-  #     maxNumberRetries: "100"
-  #     maxRetryDelay: "00:01:00"
-  #     failOnPrimaryDataLoss: true
-  #     failOnCacheConnectionError: true
-  #     redisSettings:
-  #       replicas: 1
-  #       resources:
-  #         enabled: true
-  #         requests: { cpu: 100m, memory: 256Mi }
-  #         limits: { memory: 3Gi }
-  #       volumeClaimTemplates:
-  #         enabled: true
-  #         storage: 100Gi
-  #         storageClassName: ""          # optional — use specific StorageClass
-  #         accessModes: ReadWriteOnce
-  #       existingClaim: ""               # set to use a pre-existing PVC (skips volumeClaimTemplates)
-  #       podDisruptionBudget:
-  #         enabled: false
-  #         minAvailable: 1
-  #     seedService:
-  #       memoryCacheSize: "10"
-  #       maxNumberRetries: "100"
-  #       maxRetryDelay: "00:01:00"
-  #     memoryCacheSize: "10"
-  #     maxNumberRetries: "100"
-  #     maxRetryDelay: "00:01:00"
-  #   extraEnvs:                                # Optional debug environment variables
-  #     - name: Plugins__LuxSci__IsSandboxMode
-  #       enabled: false
-  #       value: "true"
-  #     - name: Plugins__SendGrid__EnableSandBoxMode
-  #       enabled: false
-  #       value: "true"
-  #     - name: Plugins__Twilio__DisableSendSMSCampaign
-  #       enabled: false
-  #       value: "true"
-  #     - name: LC_ALL
-  #       enabled: false
-  #       value: "en_US.UTF-8"
-
-  # ----------------------------------------------------------
-  #  Interaction API
-  # ----------------------------------------------------------
-  # interactionapi:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   authMetaHttpEnabled: true
-  #   enableSwagger: true
-  #   allowSavingLoginDetails: true
-  #   alwaysShowClientsAtLogin: true
-  #   useExternalUserManagement: false
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: false
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     database: Error
-  #     rpiTrace: Error
-  #     rpiError: Error
-  #     Console: Error
-  #   autoscaling:
-  #     type: hpa
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   resources:
-  #     enabled: true
-
-  # ----------------------------------------------------------
-  #  Integration API
-  # ----------------------------------------------------------
-  # integrationapi:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   enableSwagger: true
-  #   authMetaHttpEnabled: false
-  #   read_timeout: "300000"                    # ms
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: true
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     database: Error
-  #     rpiTrace: Error
-  #     rpiError: Error
-  #     Console: Error
-  #   autoscaling:
-  #     type: hpa
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   resources:
-  #     enabled: true
-
-  # ----------------------------------------------------------
-  #  Node Manager
-  # ----------------------------------------------------------
-  # nodemanager:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: false
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     database: Error
-  #     rpiTrace: Error
-  #     rpiError: Error
-  #     Console: Error
-  #   autoscaling:
-  #     type: hpa
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   resources:
-  #     enabled: true
-
-  # ----------------------------------------------------------
-  #  Deployment API
-  # ----------------------------------------------------------
-  # deploymentapi:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: false
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     database: Error
-  #     rpiTrace: Error
-  #     rpiError: Error
-  #     Console: Error
-  #   resources:
-  #     enabled: true
-
-  # ----------------------------------------------------------
-  #  Queue Reader
-  # ----------------------------------------------------------
-  # queuereader:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   isFormProcessingEnabled: true
-  #   isEventProcessingEnabled: true
-  #   isCacheProcessingEnabled: true
-  #   queueListenerEnabled: true
-  #   isCallbackServiceProcessingEnabled: true
-  #   nonActiveQueuePath: listenerQueueNonActive
-  #   listenerQueueNonActiveTTLDays: 14
-  #   errorQueuePath: listenerQueueError
-  #   listenerQueueErrorTTLDays: 14
-  #   threadPoolSize: 10
-  #   timeoutMinutes: 60
-  #   maxBatchSize: 50
-  #   useMessageLocks: true
-  #  partitionHandler:
-  #    partitionLockDuration: "00:02:00"
-  #    offsetPositionTTL: "23:59:59"
-  #   deduplicationCacheTTL: "01:00:00"
-  #  seedService:
-  #    memoryCacheSize: "10"
-  #    maxNumberRetries: "100"
-  #    maxRetryDelay: "00:01:00"
-  #   realtimeConfiguration:
-  #     internalCache:
-  #       redisSettings:
-  #         replicas: 1
-  #         resources:
-  #           enabled: true
-  #           requests: { cpu: 100m, memory: 256Mi }
-  #           limits: { memory: 3Gi }
-  #         volumeClaimTemplates:
-  #           enabled: true
-  #           storage: 100Gi
-  #           storageClassName: ""        # optional — use specific StorageClass
-  #           accessModes: ReadWriteOnce
-  #         existingClaim: ""             # set to use a pre-existing PVC (skips volumeClaimTemplates)
-  #         podDisruptionBudget:
-  #           enabled: false
-  #           minAvailable: 1
-  #     internalQueues:
-  #       rabbitmqSettings:
-  #         virtualhost: /
-  #         hostname: rpi-realtimeapi-rabbitmq
-  #         username: realtimeapi
-  #         resources:
-  #           enabled: true
-  #           requests: { cpu: 100m, memory: 256Mi }
-  #           limits: { memory: 3Gi }
-  #         volumeClaimTemplates:
-  #           enabled: true
-  #           storage: 100Gi
-  #           storageClassName: ""        # optional — use specific StorageClass
-  #           accessModes: ReadWriteOnce
-  #         existingClaim: ""             # set to use a pre-existing PVC (skips volumeClaimTemplates)
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: true
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     database: Error
-  #     rpiTrace: Error
-  #     rpiError: Error
-  #     Console: Error
-  #   autoscaling:
-  #     type: hpa
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   resources:
-  #     enabled: true
-
-  # ----------------------------------------------------------
-  #  Rebrandly
-  # ----------------------------------------------------------
-  # rebrandly:
-  #   baseUrl: https://api.rebrandly.com
-  #   enterpriseBaseUrl: https://enterprise-api.rebrandly.com
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   replicas: 1
-  #   serviceAccount:
-  #     enabled: true
-  #   redisSettings:
-  #     resources:
-  #       requests: { cpu: 50m, memory: 256Mi }
-  #       limits: { memory: 3Gi, cpu: 3000m }
-  #     volumeClaimTemplates:
-  #       enabled: true
-  #       storage: 50Gi
-  #       storageClassName: ""            # optional — use specific StorageClass
-  #       accessModes: ReadWriteOnce
-  #     existingClaim: ""                 # set to use a pre-existing PVC (skips volumeClaimTemplates)
-  #   service:
-  #     port: 80
-  #   customMetrics:
-  #     enabled: false
-  #     prometheus_scrape: false
-  #   terminationGracePeriodSeconds: 120
-  #   logging:
-  #     default: Error
-  #     aspNetCore: Error
-  #   resources:
-  #     enabled: true
-
-  # ----------------------------------------------------------
-  #  Auth Service (Smart Activation)
-  # ----------------------------------------------------------
-  # authservice:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   logging:
-  #     verbosity: DEBUG
-  #   autoscaling:
-  #     enabled: false
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   terminationGracePeriodSeconds: 120
-  #   resources:
-  #     enabled: true
-  #     java_opts: "-Xmx1536m"
-  #   rollingUpdate:
-  #     maxUnavailable: "25%"
-  #     maxSurge: "25%"
-  #     progressDeadlineSeconds: 600
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  Keycloak (Smart Activation)
-  # ----------------------------------------------------------
-  # keycloak:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   autoscaling:
-  #     enabled: false
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   resources:
-  #     enabled: true
-  #   rollingUpdate:
-  #     maxUnavailable: "25%"
-  #     maxSurge: "25%"
-  #     progressDeadlineSeconds: 600
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  Init Service (Smart Activation)
-  # ----------------------------------------------------------
-  # initservice:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   resources:
-  #     enabled: true
-  #     java_opts: "-Xmx2150m"
-  #   logging:
-  #     verbosity: DEBUG
-  #   rollingUpdate:
-  #     maxUnavailable: "25%"
-  #     maxSurge: "25%"
-  #     progressDeadlineSeconds: 600
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  Message Queue (Smart Activation)
-  # ----------------------------------------------------------
-  # messageq:
-  #   type: StatefulSet
-  #   port: 5672
-  #   serviceAccount:
-  #     enabled: true
-  #   resources:
-  #     enabled: true
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   volumeClaimTemplates:
-  #     enabled: true
-  #     storage: 100Gi
-  #     storageClassName: ""              # optional — use specific StorageClass
-  #     accessModes: ReadWriteOnce
-  #   existingClaim: ""                   # set to use a pre-existing PVC (skips volumeClaimTemplates)
-
-  # ----------------------------------------------------------
-  #  Database Upgrade Job
-  # ----------------------------------------------------------
-  # databaseUpgrade:
-  #   deploymentapiHost: rpi-deploymentapi
-  #   deploymentapiPort: "80"
-  #   healthPath: /health/ready
-  #   upgradePath: /api/deployment/upgrade
-  #   waitTimeoutSeconds: "360"
-  #   maxReadyWaitSeconds: "600"
-  #   pollIntervalSeconds: "15"
-  #   backoffLimit: 3
-  #   ttlSecondsAfterFinished: 3600
-  #   activeDeadlineSeconds: 900
-  #   resources:
-  #     requests:
-  #       cpu: 50m
-  #       memory: 64Mi
-  #     limits:
-  #       cpu: 200m
-  #       memory: 128Mi
-
-  # ----------------------------------------------------------
-  #  Maintenance Service (Smart Activation)
-  # ----------------------------------------------------------
-  # maintenanceservice:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   port: 80
-  #   resources:
-  #     enabled: true
-  #     java_opts: "-Xmx1536m"
-  #   logging:
-  #     verbosity: DEBUG
-  #   rollingUpdate:
-  #     maxUnavailable: "25%"
-  #     maxSurge: "25%"
-  #     progressDeadlineSeconds: 600
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  Services API (Smart Activation)
-  # ----------------------------------------------------------
-  # servicesapi:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   resources:
-  #     enabled: true
-  #     java_opts: "-Xmx2150m"
-  #   logging:
-  #     verbosity: DEBUG
-  #   autoscaling:
-  #     enabled: false
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  Socket.io (Smart Activation)
-  # ----------------------------------------------------------
-  # socketio:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   keycloak_realm: "redpoint-mercury"
-  #   service:
-  #     port: 80
-  #   resources:
-  #     enabled: true
-  #     java_opts: "-Xmx1536m"
-  #   logging:
-  #     verbosity: DEBUG
-  #   autoscaling:
-  #     enabled: false
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  UI Service (Smart Activation)
-  # ----------------------------------------------------------
-  # uiservice:
-  #   type: deployment                          # deployment | rollout
-  #   rollout:
-  #     autoPromotionEnabled: true
-  #     revisionHistoryLimit: 3
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 80
-  #   resources:
-  #     enabled: true
-  #     java_opts: "-Xmx2150m"
-  #   logging:
-  #     verbosity: DEBUG
-  #   autoscaling:
-  #     enabled: false
-  #     minReplicas: 2
-  #     maxReplicas: 5
-  #     targetCPUUtilizationPercentage: 80
-  #     targetMemoryUtilizationPercentage: 80
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-
-  # ----------------------------------------------------------
-  #  CDP Cache (Smart Activation)
-  # ----------------------------------------------------------
-  # cdpcache:
-  #   type: StatefulSet
-  #   serviceAccount:
-  #     enabled: true
-  #   service:
-  #     port: 6379
-  #   resources:
-  #     enabled: true
-  #   podDisruptionBudget:
-  #     enabled: false
-  #     minAvailable: 1
-  #   volumeClaimTemplates:
-  #     enabled: true
-  #     storage: 100Gi
-  #     storageClassName: ""              # optional — use specific StorageClass
-  #     accessModes: ReadWriteOnce
-  #   existingClaim: ""                   # set to use a pre-existing PVC (skips volumeClaimTemplates)
+# ==========================
+# Pre-flight Validation
+# ==========================
+# Validates configuration before deployment:
+#   DNS resolution, DB connectivity, cloud identity, secrets management.
+# mode: test     -> runs with `helm test rpi`
+# mode: preInstall -> blocks install on failure
+preflight:
+  enabled: false
+  mode: test

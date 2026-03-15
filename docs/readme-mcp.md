@@ -30,13 +30,14 @@ No installation, API keys, or setup required.
 
 ### Features
 
-The Web UI includes four tabs:
+The Web UI includes five tabs:
 
 | Tab | Description |
 |-----|-------------|
 | **Generate** | Guided overrides builder. Walk through 9 configuration steps with a live YAML preview. |
 | **Validate** | Review the generated config for errors and warnings, then download `overrides.yaml`. Also supports uploading existing files. |
 | **Deploy** | Step-by-step deployment instructions: download CLI, generate secrets, deploy, verify, retrieve endpoints, activate license. |
+| **Reference** | Searchable browser for every configurable key in the Helm chart with types, defaults, and descriptions. |
 | **Chat** | Natural language assistant. Ask questions about RPI features, chart configuration, deployment, and troubleshooting. |
 
 ---
@@ -150,7 +151,7 @@ Upload your values file on the Validate tab, or ask the assistant:
 <details>
 <summary><strong>Explain Settings</strong></summary>
 
-Browse the Explain tab tree, or ask:
+Browse the Reference tab or ask the Chat assistant:
 
 > "What does realtimeapi.cacheProvider.provider do?"
 >

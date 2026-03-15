@@ -431,42 +431,28 @@ git push origin main
 
 ### 2. Generate Your v7.7 Overrides
 
-You have three options for producing a v7.7 overrides file from your existing v7.6 configuration.
+The recommended approach is to generate a fresh v7.7 overrides file using the Web UI, then carry over your environment-specific values from v7.6.
 
-**Option A: Web UI Migrate tab (recommended)**
+**Step 1: Generate a fresh v7.7 overrides file**
 
 Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com):
 
-1. Go to the **Migrate** tab
-2. Upload your v7.6 `values.yaml`
-3. Download the generated v7.7 overrides file
+1. Open the **Generate** tab
+2. Select your platform and walk through the 9 configuration steps
+3. Use your v7.6 values as reference to fill in the fields (database host, identity settings, ingress domain, cache/queue providers, etc.)
+4. Download the generated `overrides.yaml` from the **Validate** tab
 
-The tool analyzes your file, identifies customizations vs defaults, remaps renamed keys, and produces a minimal v7.7 overrides file. It warns about breaking changes like `secretsManagement` relocation and `ingress.className` default changes.
+This produces a clean v7.7 overrides file with only the keys you need, using the correct v7.7 key structure.
 
-**Option B: Automatic migration with Interaction Helm Assistant**
+**Step 2: Review what changed**
 
-If you have the [Interaction Helm Assistant](readme-mcp.md) connected to your IDE, ask it to migrate your v7.6 values file:
+Use the **Chat** tab to ask "What changed between v7.6 and v7.7?" for a summary of key renames, removed features, and new defaults. The key renames table in Section 1 above has the full mapping.
 
-> "Migrate my v7.6 values file at /path/to/my-values.yaml to v7.7"
+**Step 3: Verify your configuration**
 
-The Assistant uses the same migration engine as the Web UI and can answer follow-up questions about the changes.
+The **Validate** tab automatically checks your generated overrides for errors, placeholder values, and misconfigurations before you download.
 
-**Option C: Interactive CLI**
-
-Run the Interaction CLI with your existing v7.6 values at hand (database host, credentials, ingress domain, cache/queue providers). The CLI generates a v7.7-compatible overrides file without manual diffing or key translation:
-
-```bash
-bash deploy/cli/interactioncli.sh
-```
-
-> **Tip:** Have your v7.6 `values.yaml` open so you can copy values directly into the CLI prompts.
-
-For optional features (SMTP, content generation, autoscaling, service mesh, etc.), add them after:
-
-```bash
-bash deploy/cli/interactioncli.sh -a menu           # interactive feature picker
-bash deploy/cli/interactioncli.sh -a redpoint_ai     # add a specific feature
-```
+> **Important:** Do not attempt to reuse your v7.6 `values.yaml` directly. The v7.7 chart uses a different key structure, and many settings that were previously in the values file are now chart-managed defaults. A fresh overrides file is typically 50-100 lines instead of 2,600+.
 
 ### 3. Generate Secrets and Upgrade
 
@@ -645,4 +631,4 @@ If you prefer to build your overrides manually instead of using the CLI, here ar
 
 ## Next Steps
 
-See the [Configuration Reference](readme-configuration.md) for optional features, use the Web UI [Explain tab](https://rpi-helm-assistant.redpointcdp.com) to browse configuration topics, or use `bash deploy/cli/interactioncli.sh -a menu` to add features interactively.
+See the [Configuration Reference](readme-configuration.md) for optional features, or use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) Reference and Chat tabs to browse configuration and ask questions.

@@ -39,6 +39,7 @@ Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) for 
 | **Generate** | Select your platform, configure features step by step, and preview your overrides file in real time |
 | **Validate** | Review the generated configuration for errors or warnings, then download `overrides.yaml` |
 | **Deploy** | Download the CLI, generate secrets, deploy to your cluster, retrieve endpoints, and activate your license |
+| **Reference** | Search and browse every configurable key in the Helm chart |
 | **Chat** | Ask questions about RPI features, configuration, or troubleshooting in plain English |
 
 ---
