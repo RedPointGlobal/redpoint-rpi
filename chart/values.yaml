@@ -12,10 +12,9 @@
 # ==========================
 global:
   deployment:
-    # Deployment mode: standard | advanced | demo
-    # standard: production defaults, single repository/tag for all images
-    # advanced: enables per-service image overrides, custom CA certs, controllable anti-affinity
-    # demo: deploys embedded MSSQL + MongoDB containers
+    # Deployment mode: standard | demo
+    # standard: production deployment
+    # demo: deploys embedded MSSQL + MongoDB containers for local dev/evaluation
     mode: standard
     # Cloud environment: azure, amazon, google, selfhosted
     platform: amazon
@@ -30,7 +29,7 @@ global:
         name: redpoint-rpi
       # Utility image for jobs (upgrade, post-install, smoke tests)
       net_utils: busybox:1.37
-      # Per-service image overrides (advanced mode)
+      # Per-service image overrides
       # When set, the value is used verbatim instead of {repository}/{service-name}:{tag}.
       # Useful for flat registries (e.g., ECR with all images in a single repo).
       # overrides:
@@ -83,9 +82,9 @@ customCACerts:
 # Use this for org-wide annotations (cost center, support email, alert routing, etc.).
 commonAnnotations: {}
 # commonAnnotations:
-#   vanguard.com/cost-center: "0975"
-#   vanguard.com/support-email: "RPI2@vanguard.com"
-#   vanguard.com/alert-channel: "email,pagerduty"
+#   myorg.com/cost-center: "1234"
+#   myorg.com/support-email: "team@example.com"
+#   myorg.com/alert-channel: "email,pagerduty"
 
 # Per-resource-type overrides (merged with commonAnnotations)
 serviceAccountAnnotations: {}
@@ -237,7 +236,7 @@ secretsManagement:
           type: kubernetes.io/tls
           data:
             - key: tls.key
-              objectName: cert-mpulserpi-v7-providence-org
+              objectName: my-tls-certificate
       parameters:
         keyvaultName: key_vault_name
         resourceGroup: resource_group_name
@@ -248,7 +247,7 @@ secretsManagement:
         useVMManagedIdentity: "false"
         useWorkloadIdentity: "true"
       objects:
-        - objectName: "cert-mpulserpi-v7-providence-org"
+        - objectName: "my-tls-certificate"
           objectType: secret
     # ----------------------------------------------------
     # Example: Database Connection String

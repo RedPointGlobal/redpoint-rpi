@@ -35,10 +35,9 @@
           "properties": {
             "mode": {
               "type": "string",
-              "description": "Deployment mode: standard (production defaults), advanced (per-service image overrides, custom CA certs, controllable anti-affinity), or demo (embedded MSSQL + MongoDB containers).",
+              "description": "Deployment mode: standard (production deployment) or demo (embedded MSSQL + MongoDB for local dev/evaluation).",
               "enum": [
                 "standard",
-                "advanced",
                 "demo"
               ],
               "default": "standard"

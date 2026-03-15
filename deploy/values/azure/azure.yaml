@@ -137,15 +137,15 @@ ingress:
   tls:
     - secretName: ingress-tls
 #      hosts:
-#        - rpi-interactionapi.prod2wu2.cloud.providence.org
-#        - rpi-deploymentapi.prod2wu2.cloud.providence.org
-#        - rpi-integrationapi.prod2wu2.cloud.providence.org
-#        - rpi-realtimeapi.prod2wu2.cloud.providence.org
-#        - rpi-callbackapi.prod2wu2.cloud.providence.org
-#        - rpi-queuereader.prod2wu2.cloud.providence.org
+#        - rpi-interactionapi.example.com
+#        - rpi-deploymentapi.example.com
+#        - rpi-integrationapi.example.com
+#        - rpi-realtimeapi.example.com
+#        - rpi-callbackapi.example.com
+#        - rpi-queuereader.example.com
 #    - secretName: certsecrets             
 #      hosts:
-#        - mpulserpi-prod-v7.providence.org
+#        - rpi-custom.example.com
   domain: example.com
   subnetName: my-subnet-name  # required if mode=private
   # required if certificateSource=acm
@@ -564,7 +564,7 @@ smokeTests:
       serviceAccountName: redpoint-rpi
       containerName: secrets
       volumeName: secrets-store01-inline
-      image: artifactory.wu2.cloud.providence.org/container-images-local/k8s/csi-secret-reader:v1.0
+      image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
       command: ["/bin/sh", "-c", "--"]
       args: ["while true; do sleep 30; done;"]
       nodeSelector:
@@ -577,7 +577,7 @@ smokeTests:
       serviceAccountName: redpoint-rpi
       containerName: secrets
       volumeName: secrets-store01-cert
-      image: artifactory.wu2.cloud.providence.org/container-images-local/k8s/csi-secret-reader:v1.0
+      image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
       command: ["/bin/sh", "-c", "--"]
       args: ["while true; do sleep 30; done;"]
       nodeSelector:

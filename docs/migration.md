@@ -237,9 +237,9 @@ podAntiAffinity:
 
 ```yaml
 commonAnnotations:
-  vanguard.com/cost-center: "0975"
-  vanguard.com/support-email: "RPI2@vanguard.com"
-  vanguard.com/alert-channel: "email,pagerduty"
+  myorg.com/cost-center: "1234"
+  myorg.com/support-email: "team@example.com"
+  myorg.com/alert-channel: "email,pagerduty"
 
 # Merged with commonAnnotations on ServiceAccount resources only
 serviceAccountAnnotations:
@@ -370,17 +370,9 @@ helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
 
 ---
 
-### Advanced deployment mode
+### Enterprise features
 
-For deployments that need fine-grained control over images, certificates, ingress, annotations, storage, and node provisioning, set `mode: advanced`:
-
-```yaml
-global:
-  deployment:
-    mode: advanced
-```
-
-The `advanced` mode signals that your deployment uses enterprise features like per-service image overrides, custom CA certificates, common resource annotations, CSI secrets, StorageClasses, and Karpenter NodePools. All of these settings work in any mode, but `advanced` serves as a clear indicator that this is a customized deployment.
+Features like per-service image overrides, custom CA certificates, common annotations, CSI secrets, StorageClasses, and Karpenter NodePools are all available in `standard` mode. Simply add the relevant sections to your overrides file. No special mode is required.
 
 ---
 
