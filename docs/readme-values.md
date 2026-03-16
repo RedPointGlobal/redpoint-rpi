@@ -175,4 +175,4 @@ realtimeapi:
 
 - [Greenfield Installation](greenfield.md) for new deployments
 - [Migration Guide](migration.md) for upgrading from v7.6 to v7.7
-- [Configuration Reference](readme-configuration.md) for all optional features
+- [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key

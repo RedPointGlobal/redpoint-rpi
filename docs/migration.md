@@ -537,4 +537,4 @@ If you customized probes, logging levels, security contexts, or other internal s
 
 ## Next Steps
 
-See the [Configuration Reference](readme-configuration.md) for optional features, or use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) Reference and Chat tabs to browse configuration and ask questions.
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** and **Chat** tabs to browse configuration and ask questions.

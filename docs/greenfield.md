@@ -46,4 +46,4 @@ Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) for 
 
 ## Next Steps
 
-See the **[Configuration Reference](readme-configuration.md)** for details on each feature, or use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key.
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key, or ask the **Chat** for help with specific features.
