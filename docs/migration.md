@@ -22,13 +22,13 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 
 ---
 
-## v7.6 Pain Points Addressed in v7.7
+## What's New in v7.7
 
 ### Custom container images and private registries
 
-**v7.6 problem:** Each service had its own image path (`global.deployment.images.interactionapi`, `global.deployment.images.realtimeapi`, etc.), requiring changes to every `images:` entry when deploying from a private registry like ECR. Some customers also needed to edit individual deploy templates to match their registry's naming convention.
+**Before:** Each service had its own image path (`global.deployment.images.interactionapi`, `global.deployment.images.realtimeapi`, etc.), requiring changes to every `images:` entry when deploying from a private registry like ECR. Some customers also needed to edit individual deploy templates to match their registry's naming convention.
 
-**v7.7 solution:** All services now share a single repository and tag:
+**Now:** All services now share a single repository and tag:
 
 ```yaml
 global:
@@ -42,9 +42,9 @@ The chart constructs each image as `{repository}/{service-name}:{tag}` automatic
 
 ### Service account per deployment file
 
-**v7.6 problem:** Each deploy template created its own ServiceAccount and used the deployment name as the service account name. Customers using a single shared service account (common on EKS with IRSA) had to edit every deploy file to replace `serviceAccountName: {{ $name }}` with their shared SA name.
+**Before:** Each deploy template created its own ServiceAccount and used the deployment name as the service account name. Customers using a single shared service account (common on EKS with IRSA) had to edit every deploy file to replace `serviceAccountName: {{ $name }}` with their shared SA name.
 
-**v7.7 solution:** The `cloudIdentity.serviceAccount.mode` field controls this centrally:
+**Now:** The `cloudIdentity.serviceAccount.mode` field controls this centrally:
 
 ```yaml
 cloudIdentity:
@@ -79,9 +79,9 @@ No template edits required for any mode.
 
 ### Credentials in values.yaml
 
-**v7.6 problem:** Database passwords, API keys, and other credentials had to live in `values.yaml` or be passed via `--set` flags, which made security teams uncomfortable. There was no built-in way to pull secrets from an external vault.
+**Before:** Database passwords, API keys, and other credentials had to live in `values.yaml` or be passed via `--set` flags, which made security teams uncomfortable. There was no built-in way to pull secrets from an external vault.
 
-**v7.7 solution:** The new top-level `secretsManagement` section supports three modes:
+**Now:** The new top-level `secretsManagement` section supports three modes:
 
 | Mode | How it works | Credentials in values.yaml? |
 |:-----|:-------------|:----------------------------|
@@ -156,9 +156,9 @@ The chart references your secret by name without creating or modifying it. You a
 
 ### Flat container registries (per-service image overrides)
 
-**v7.6 problem:** Some registries (especially AWS ECR) use a flat structure where all images live in a single repository with different tags, rather than separate repositories per service. The v7.6 chart had no way to express this without editing every deploy template.
+**Before:** Some registries (especially AWS ECR) use a flat structure where all images live in a single repository with different tags, rather than separate repositories per service. The v7.6 chart had no way to express this without editing every deploy template.
 
-**v7.7 solution:** The `global.deployment.images.overrides` map lets you override the image for any service. When set, the value is used verbatim instead of the default `{repository}/{service-name}:{tag}` construction:
+**Now:** The `global.deployment.images.overrides` map lets you override the image for any service. When set, the value is used verbatim instead of the default `{repository}/{service-name}:{tag}` construction:
 
 ```yaml
 global:
@@ -175,9 +175,9 @@ Services without an override continue to use the default pattern. You can overri
 
 ### Custom CA certificates
 
-**v7.6 problem:** Connecting to databases or internal services that use private/internal certificate authorities required manually editing deploy templates to add volume mounts and environment variables for the CA bundle.
+**Before:** Connecting to databases or internal services that use private/internal certificate authorities required manually editing deploy templates to add volume mounts and environment variables for the CA bundle.
 
-**v7.7 solution:** The `customCACerts` section mounts a ConfigMap or Secret containing your CA certificates into all core service pods:
+**Now:** The `customCACerts` section mounts a ConfigMap or Secret containing your CA certificates into all core service pods:
 
 ```yaml
 customCACerts:
@@ -192,9 +192,9 @@ Create the ConfigMap from your CA bundle, then reference it in your overrides. T
 
 ### Ingress annotations passthrough
 
-**v7.6 problem:** The chart rendered only nginx-specific annotations. Customers using AWS ALB, Traefik, or other ingress controllers had to edit the ingress template to add their controller-specific annotations (scheme, target type, SSL policy, etc.).
+**Before:** The chart rendered only nginx-specific annotations. Customers using AWS ALB, Traefik, or other ingress controllers had to edit the ingress template to add their controller-specific annotations (scheme, target type, SSL policy, etc.).
 
-**v7.7 solution:** Set `ingress.annotations` in your overrides to pass any annotations to the ingress resources. When set, your annotations replace the nginx defaults entirely:
+**Now:** Set `ingress.annotations` in your overrides to pass any annotations to the ingress resources. When set, your annotations replace the nginx defaults entirely:
 
 ```yaml
 ingress:
@@ -209,9 +209,9 @@ No template edits required for any ingress controller.
 
 ### Controllable pod anti-affinity
 
-**v7.6 problem:** Pod anti-affinity was hardcoded in every deploy template as soft (preferred) spreading by hostname. Customers who needed hard (required) anti-affinity for compliance, or wanted to disable it entirely for dev/test environments, had to edit every template.
+**Before:** Pod anti-affinity was hardcoded in every deploy template as soft (preferred) spreading by hostname. Customers who needed hard (required) anti-affinity for compliance, or wanted to disable it entirely for dev/test environments, had to edit every template.
 
-**v7.7 solution:** The `podAntiAffinity` section controls anti-affinity for all services from a single place:
+**Now:** The `podAntiAffinity` section controls anti-affinity for all services from a single place:
 
 ```yaml
 podAntiAffinity:
@@ -231,9 +231,9 @@ podAntiAffinity:
 
 ### Common resource annotations
 
-**v7.6 problem:** Adding org-wide annotations (cost center, support email, alert routing, EKS role ARN) required editing every deploy template. Each ServiceAccount, Service, Deployment, and Pod needed the same annotations added manually.
+**Before:** Adding org-wide annotations (cost center, support email, alert routing, EKS role ARN) required editing every deploy template. Each ServiceAccount, Service, Deployment, and Pod needed the same annotations added manually.
 
-**v7.7 solution:** The `commonAnnotations` field applies annotations to all resource types at once. Per-resource-type overrides merge with the common set:
+**Now:** The `commonAnnotations` field applies annotations to all resource types at once. Per-resource-type overrides merge with the common set:
 
 ```yaml
 commonAnnotations:
@@ -254,9 +254,9 @@ No template edits required. Annotations appear on every ServiceAccount, Service,
 
 ### CSI Secrets Store (AWS Secrets Manager)
 
-**v7.6 problem:** Customers using AWS Secrets Manager via the CSI driver had to create a custom `SecretProviderClass` template and manage it outside the chart.
+**Before:** Customers using AWS Secrets Manager via the CSI driver had to create a custom `SecretProviderClass` template and manage it outside the chart.
 
-**v7.7 solution:** The existing `secretsManagement.csi.secretProviderClasses` array now supports AWS-format objects with `jmesPath` extraction via the `objectsContent` field:
+**Now:** The existing `secretsManagement.csi.secretProviderClasses` array now supports AWS-format objects with `jmesPath` extraction via the `objectsContent` field:
 
 ```yaml
 secretsManagement:
@@ -288,9 +288,9 @@ The chart generates the `SecretProviderClass` resource. Use `objectsContent` for
 
 ### StorageClass for CSI-backed storage
 
-**v7.6 problem:** Customers needing a dedicated StorageClass (e.g., EFS CSI on AWS for shared file access) had to create a custom template.
+**Before:** Customers needing a dedicated StorageClass (e.g., EFS CSI on AWS for shared file access) had to create a custom template.
 
-**v7.7 solution:** The `storage.storageClass` section creates a StorageClass directly from values:
+**Now:** The `storage.storageClass` section creates a StorageClass directly from values:
 
 ```yaml
 storage:
@@ -314,9 +314,9 @@ storage:
 
 ### Karpenter NodePool for dedicated nodes
 
-**v7.6 problem:** Customers using Karpenter for node provisioning had to create and maintain a custom `NodePool` template with instance type requirements, taints, and labels.
+**Before:** Customers using Karpenter for node provisioning had to create and maintain a custom `NodePool` template with instance type requirements, taints, and labels.
 
-**v7.7 solution:** The `nodeProvisioning` section generates a Karpenter `NodePool` resource:
+**Now:** The `nodeProvisioning` section generates a Karpenter `NodePool` resource:
 
 ```yaml
 nodeProvisioning:
