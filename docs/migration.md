@@ -10,7 +10,7 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 ---
 
 <details>
-<summary><strong>What Changed in v7.7</strong></summary>
+<summary><h3>What Changed in v7.7</h3></summary>
 
 The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to a **small user-facing override** file. Internal defaults (health probes, security contexts, logging, ports, rollout strategies, etc.) are now managed by the chart automatically.
 
@@ -25,7 +25,7 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 </details>
 
 <details>
-<summary><strong>What's New in v7.7</strong></summary>
+<summary><h3>What's New in v7.7</h3></summary>
 
 ### Custom container images and private registries
 
@@ -385,7 +385,7 @@ Features like per-service image overrides, custom CA certificates, common annota
 </details>
 
 <details>
-<summary><strong>Breaking Changes</strong></summary>
+<summary><h3>Breaking Changes</h3></summary>
 
 ### Redshift Data Warehouse
 
@@ -401,7 +401,7 @@ If you have Redshift in your overrides file, remove the `databases.datawarehouse
 </details>
 
 <details>
-<summary><strong>Migration Steps</strong></summary>
+<summary><h3>Migration Steps</h3></summary>
 
 ### 1. Generate Your v7.7 Overrides
 
@@ -463,9 +463,8 @@ Commit your `overrides.yaml` to the repo and sync. See the [GitOps Guide](readme
 
 </details>
 
----
-
-## Post-Upgrade: Database Schema Migration
+<details>
+<summary><h3>Post-Upgrade: Database Schema Migration</h3></summary>
 
 After the v7.7 containers are running, the operational databases need a schema upgrade.
 
@@ -490,9 +489,11 @@ curl -X 'GET' \
 
 Wait for `"Status": "LastRunComplete"` in the response.
 
----
 
-## Rollback
+</details>
+
+<details>
+<summary><h3>Rollback</h3></summary>
 
 ```bash
 helm rollback rpi -n redpoint-rpi
@@ -507,7 +508,8 @@ helm upgrade rpi ./chart -f my-old-values.yaml -n redpoint-rpi
 
 > **Note:** Database schema changes are **not** automatically rolled back. Contact [Redpoint Support](mailto:support@redpointglobal.com) if you need to revert database changes.
 
----
+
+</details>
 
 ## Template Customizations
 
@@ -527,7 +529,8 @@ The Assistant compares your templates against the stock v7.6 versions, identifie
 
 ---
 
-## Troubleshooting
+<details>
+<summary><h3>Troubleshooting</h3></summary>
 
 If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use the CLI `troubleshoot` command for quick diagnosis, re-run the migration in the Web UI, or check the reference below.
 
@@ -580,6 +583,9 @@ If you prefer to build your overrides manually instead of using the CLI, here ar
 | `queuereader.threadPoolSize` / `.maxBatchSize` / etc. | `queuereader.threadPoolSize` / `queuereader.maxBatchSize` / etc. |
 | `executionservice.jobExecution.*` | `executionservice.jobExecution.*` |
 | `realtimeapi.dataMaps.*` / `.idValidation.*` / `.customPlugins.*` | `realtimeapi.dataMaps.*` / `realtimeapi.idValidation.*` / etc. |
+
+</details>
+
 
 </details>
 
