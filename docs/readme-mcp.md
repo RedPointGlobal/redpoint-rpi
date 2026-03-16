@@ -30,14 +30,15 @@ No installation, API keys, or setup required.
 
 ### Features
 
-The Web UI includes five tabs:
+The Web UI includes six tabs:
 
 | Tab | Description |
 |-----|-------------|
 | **Generate** | Guided overrides builder. Walk through 9 configuration steps with a live YAML preview. |
 | **Validate** | Review the generated config for errors and warnings, then download `overrides.yaml`. Also supports uploading existing files. |
 | **Deploy** | Step-by-step deployment instructions: download CLI, generate secrets, deploy, verify, retrieve endpoints, activate license. |
-| **Reference** | Searchable browser for every configurable key in the Helm chart with types, defaults, and descriptions. |
+| **Automate** | Generate Terraform modules and CI/CD pipeline files (GitHub Actions, Azure DevOps, GitLab CI) from your overrides. |
+| **Reference** | Searchable browser for every configurable key in the Helm chart with defaults. |
 | **Chat** | Natural language assistant. Ask questions about RPI features, chart configuration, deployment, and troubleshooting. |
 
 ---

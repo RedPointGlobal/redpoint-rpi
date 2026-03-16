@@ -2716,23 +2716,53 @@ SECRETS_TLS
   fi
 
   # --- Snowflake ConfigMap ---
-  local sf_enabled sf_configmap sf_keyname
+  local sf_enabled sf_configmap
   sf_enabled=$(read_val "$overrides" "databases.datawarehouse.snowflake.enabled")
   sf_configmap=$(read_val "$overrides" "databases.datawarehouse.snowflake.ConfigMapName")
-  sf_keyname=$(read_val "$overrides" "databases.datawarehouse.snowflake.keyName")
 
   if [ "$sf_enabled" = "true" ] || [ "$sf_enabled" = "True" ]; then
     sf_configmap="${sf_configmap:-snowflake-creds}"
-    sf_keyname="${sf_keyname:-my-snowflake-rsakey.p8}"
-    echo "  ${BOLD}Snowflake RSA key (ConfigMap: ${sf_configmap})${RESET}"
-    local sf_key_path
-    read -rp "    Path to RSA private key file (${sf_keyname}) [skip]: " sf_key_path
-    echo ""
 
-    if [ -n "$sf_key_path" ] && [ -f "$sf_key_path" ]; then
-      local sf_key_content
-      sf_key_content=$(cat "$sf_key_path")
-      cat >> "$output" << SECRETS_SF
+    # Read key names from overrides (supports multiple tenants)
+    local sf_key_names
+    sf_key_names=$(python3 -c "
+import sys, yaml
+d = yaml.safe_load(open(sys.argv[1]))
+sf = (d.get('databases') or {}).get('datawarehouse', {}).get('snowflake', {})
+keys = sf.get('keys', [])
+if not keys and sf.get('keyName'):
+    keys = [{'keyName': sf['keyName']}]
+if not keys:
+    keys = [{'keyName': 'my-snowflake-rsakey.p8'}]
+for k in keys:
+    print(k['keyName'])
+" "$overrides" 2>/dev/null)
+
+    echo "  ${BOLD}Snowflake RSA keys (ConfigMap: ${sf_configmap})${RESET}"
+
+    local sf_has_keys=false
+    local sf_data_block=""
+
+    while IFS= read -r sf_keyname; do
+      [ -z "$sf_keyname" ] && continue
+      local sf_key_path
+      read -rp "    Path to ${sf_keyname} [skip]: " sf_key_path
+
+      if [ -n "$sf_key_path" ] && [ -f "$sf_key_path" ]; then
+        local sf_key_content
+        sf_key_content=$(cat "$sf_key_path")
+        sf_data_block="${sf_data_block}  ${sf_keyname}: |
+$(echo "$sf_key_content" | sed 's/^/    /')
+"
+        sf_has_keys=true
+        echo "    ${GREEN}✔ ${sf_keyname} added${RESET}"
+      else
+        echo "    ${YELLOW}Skipped ${sf_keyname}${RESET}"
+      fi
+    done <<< "$sf_key_names"
+
+    if [ "$sf_has_keys" = "true" ]; then
+      cat >> "$output" << SECRETS_SF_HEADER
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -2740,12 +2770,11 @@ metadata:
   name: ${sf_configmap}
   namespace: ${namespace}
 data:
-  ${sf_keyname}: |
-$(echo "$sf_key_content" | sed 's/^/    /')
-SECRETS_SF
+SECRETS_SF_HEADER
+      echo "$sf_data_block" >> "$output"
       echo "  ${GREEN}✔ Snowflake ConfigMap added${RESET}"
     else
-      echo "  ${YELLOW}Skipped Snowflake. Provide the RSA key file path, or create the ConfigMap manually.${RESET}"
+      echo "  ${YELLOW}No key files provided. Create the ConfigMap manually.${RESET}"
     fi
     echo ""
   fi

@@ -379,6 +379,35 @@ helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
 
 ### Enterprise features
 
+### Multi-tenant Snowflake support
+
+**Before:** The chart supported a single Snowflake private key file, which meant multi-tenant deployments where each tenant connects to a different Snowflake database with its own credentials required workarounds.
+
+**Now:** The `keys` array supports multiple private key files in a single ConfigMap. Each tenant's connection string references its own key file:
+
+```yaml
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      ConfigMapName: snowflake-creds
+      ConfigMapFilePath: /app/snowflake-creds
+      keys:
+        - keyName: tenant1-private-key.p8
+        - keyName: tenant2-private-key.p8
+```
+
+All key files are stored in one ConfigMap and mounted to `/app/snowflake-creds/`. Each tenant's connection string in the RPI client uses:
+
+```
+Host=<host>;Account=<account>;User=<user>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/tenant1-private-key.p8;Db=<database>;
+```
+
+The RPI Helm CLI prompts for each key file when generating secrets.
+
+---
+
 Features like per-service image overrides, custom CA certificates, common annotations, CSI secrets, StorageClasses, and Karpenter NodePools are all available in `standard` mode. Simply add the relevant sections to your overrides file. No special mode is required.
 
 

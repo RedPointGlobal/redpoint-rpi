@@ -13,7 +13,7 @@
 # ============================================================
 
 # ==========================================================
-#  GLOBAL SETTINGS
+#  GLOBAL
 # ==========================================================
 
 global:
@@ -31,7 +31,7 @@ global:
     podTimezone: ''
 
 # ==========================================================
-#  GLOBAL RESOURCE DEFAULTS
+#  RESOURCES
 # ==========================================================
 
 resources:
@@ -42,7 +42,7 @@ resources:
     memory: 3Gi
 
 # ==========================================================
-#  POD ANTI-AFFINITY
+#  PODANTIAFFINITY
 # ==========================================================
 
 podAntiAffinity:
@@ -52,7 +52,7 @@ podAntiAffinity:
   topologyKey: kubernetes.io/hostname
 
 # ==========================================================
-#  CUSTOM CA CERTIFICATES
+#  CUSTOMCACERTS
 # ==========================================================
 
 customCACerts:
@@ -62,19 +62,19 @@ customCACerts:
   mountPath: /usr/local/share/ca-certificates/custom
 
 # ==========================================================
-#  COMMON ANNOTATIONS
+#  COMMONANNOTATIONS
 # ==========================================================
 
 commonAnnotations: {}
 
 # ==========================================================
-#  SERVICE ACCOUNT ANNOTATIONS
+#  SERVICEACCOUNTANNOTATIONS
 # ==========================================================
 
 serviceAccountAnnotations: {}
 
 # ==========================================================
-#  SERVICE ANNOTATIONS
+#  SERVICEANNOTATIONS
 # ==========================================================
 
 serviceAnnotations: {}
@@ -191,8 +191,9 @@ databases:
       enabled: false
       credentialsType: snowflake_jwt
       ConfigMapName: snowflake-creds
-      keyName: my-snowflake-rsakey.p8
       ConfigMapFilePath: /app/snowflake-creds
+      keys:
+      - keyName: my-snowflake-rsakey.p8
     databricks:
       enabled: false
       connections:
@@ -206,7 +207,7 @@ databases:
         authMechanism: 3
 
 # ==========================================================
-#  CLOUD IDENTITY
+#  CLOUDIDENTITY
 # ==========================================================
 
 cloudIdentity:
@@ -231,7 +232,7 @@ cloudIdentity:
     secretAccessKey: ''
 
 # ==========================================================
-#  SECRETS MANAGEMENT
+#  SECRETSMANAGEMENT
 # ==========================================================
 
 secretsManagement:
@@ -323,7 +324,7 @@ storage:
   persistentVolumes: []
 
 # ==========================================================
-#  REALTIME API
+#  REALTIMEAPI
 # ==========================================================
 
 realtimeapi:
@@ -553,7 +554,7 @@ realtimeapi:
     enabled: false
 
 # ==========================================================
-#  CALLBACK API
+#  CALLBACKAPI
 # ==========================================================
 
 callbackapi:
@@ -599,7 +600,7 @@ callbackapi:
     replicas: 1
 
 # ==========================================================
-#  EXECUTION SERVICE
+#  EXECUTIONSERVICE
 # ==========================================================
 
 executionservice:
@@ -757,7 +758,7 @@ executionservice:
   replicas: 1
 
 # ==========================================================
-#  INTERACTION API
+#  INTERACTIONAPI
 # ==========================================================
 
 interactionapi:
@@ -806,7 +807,7 @@ interactionapi:
   replicas: 1
 
 # ==========================================================
-#  INTEGRATION API
+#  INTEGRATIONAPI
 # ==========================================================
 
 integrationapi:
@@ -852,7 +853,7 @@ integrationapi:
   password: my_Super_Strong_Pwd
 
 # ==========================================================
-#  NODE MANAGER
+#  NODEMANAGER
 # ==========================================================
 
 nodemanager:
@@ -893,7 +894,7 @@ nodemanager:
   replicas: 1
 
 # ==========================================================
-#  DEPLOYMENT API
+#  DEPLOYMENTAPI
 # ==========================================================
 
 deploymentapi:
@@ -927,7 +928,7 @@ deploymentapi:
     volumeClaimName: templatetenantfiles
 
 # ==========================================================
-#  QUEUE READER
+#  QUEUEREADER
 # ==========================================================
 
 queuereader:
@@ -1040,7 +1041,7 @@ queuereader:
   replicas: 1
 
 # ==========================================================
-#  REBRANDLY (URL SHORTENER)
+#  REBRANDLY
 # ==========================================================
 
 rebrandly:
@@ -1092,7 +1093,7 @@ rebrandly:
   secretName: rpi-rebrandly
 
 # ==========================================================
-#  AUTH SERVICE (Smart Activation)
+#  AUTHSERVICE
 # ==========================================================
 
 authservice:
@@ -1143,7 +1144,7 @@ authservice:
   default_password: my_Super_Strong_Pwd
 
 # ==========================================================
-#  KEYCLOAK (Smart Activation)
+#  KEYCLOAK
 # ==========================================================
 
 keycloak:
@@ -1193,7 +1194,7 @@ keycloak:
   realm_client_secret: <my-realm-client-secret>
 
 # ==========================================================
-#  INIT SERVICE (Smart Activation)
+#  INITSERVICE
 # ==========================================================
 
 initservice:
@@ -1237,7 +1238,7 @@ initservice:
       connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
 
 # ==========================================================
-#  MESSAGE QUEUE (Smart Activation)
+#  MESSAGEQ
 # ==========================================================
 
 messageq:
@@ -1269,7 +1270,7 @@ messageq:
   username: redpointrpi
 
 # ==========================================================
-#  MAINTENANCE SERVICE (Smart Activation)
+#  MAINTENANCESERVICE
 # ==========================================================
 
 maintenanceservice:
@@ -1308,7 +1309,7 @@ maintenanceservice:
   replicas: 1
 
 # ==========================================================
-#  SERVICES API (Smart Activation)
+#  SERVICESAPI
 # ==========================================================
 
 servicesapi:
@@ -1351,7 +1352,7 @@ servicesapi:
   sso_enabled: true
 
 # ==========================================================
-#  SOCKET.IO (Smart Activation)
+#  SOCKETIO
 # ==========================================================
 
 socketio:
@@ -1394,7 +1395,7 @@ socketio:
   replicas: 1
 
 # ==========================================================
-#  UI SERVICE (Smart Activation)
+#  UISERVICE
 # ==========================================================
 
 uiservice:
@@ -1436,7 +1437,7 @@ uiservice:
   replicas: 1
 
 # ==========================================================
-#  CDP CACHE (Smart Activation)
+#  CDPCACHE
 # ==========================================================
 
 cdpcache:
@@ -1469,7 +1470,7 @@ cdpcache:
   replicas: 1
 
 # ==========================================================
-#  POST-INSTALL AUTOMATION
+#  POSTINSTALL
 # ==========================================================
 
 postInstall:
@@ -1505,7 +1506,7 @@ postInstall:
       memory: 128Mi
 
 # ==========================================================
-#  DIAGNOSTICS MODE
+#  DIAGNOSTICSMODE
 # ==========================================================
 
 diagnosticsMode:
@@ -1525,7 +1526,7 @@ diagnosticsMode:
     sftpPort: '22'
 
 # ==========================================================
-#  MICROSOFT ENTRA ID
+#  MICROSOFTENTRAID
 # ==========================================================
 
 MicrosoftEntraID:
@@ -1535,7 +1536,7 @@ MicrosoftEntraID:
   tenant_id: 00000000-0000-0000-0000-000000000000
 
 # ==========================================================
-#  OPENID CONNECT (OIDC)
+#  OPENIDPROVIDERS
 # ==========================================================
 
 OpenIdProviders:
@@ -1554,7 +1555,7 @@ OpenIdProviders:
   supportsUserManagement: false
 
 # ==========================================================
-#  SMTP SETTINGS
+#  SMTPSETTINGS
 # ==========================================================
 
 SMTPSettings:
@@ -1595,14 +1596,14 @@ ingress:
     smartactivation: rpi-smartActivation
 
 # ==========================================================
-#  NETWORK POLICY
+#  NETWORKPOLICY
 # ==========================================================
 
 networkPolicy:
   enabled: false
 
 # ==========================================================
-#  SERVICE MESH
+#  SERVICEMESH
 # ==========================================================
 
 serviceMesh:
@@ -1611,7 +1612,7 @@ serviceMesh:
   servers: []
 
 # ==========================================================
-#  NODE SELECTOR
+#  NODESELECTOR
 # ==========================================================
 
 nodeSelector:
@@ -1631,7 +1632,7 @@ tolerations:
   value: redpoint-rpi
 
 # ==========================================================
-#  NODE PROVISIONING (KARPENTER)
+#  NODEPROVISIONING
 # ==========================================================
 
 nodeProvisioning:
@@ -1658,7 +1659,7 @@ nodeProvisioning:
       weight: 10
 
 # ==========================================================
-#  REDPOINT AI
+#  REDPOINTAI
 # ==========================================================
 
 redpointAI:
@@ -1682,7 +1683,7 @@ redpointAI:
     BlobFolder: my_blob_container_folder_name
 
 # ==========================================================
-#  SMART ACTIVATION
+#  SMARTACTIVATION
 # ==========================================================
 
 smartActivation:
@@ -1691,7 +1692,7 @@ smartActivation:
   secretName: rpi-smartactivation
 
 # ==========================================================
-#  REPORTING SERVICE
+#  REPORTINGSERVICE
 # ==========================================================
 
 reportingservice:
@@ -1702,28 +1703,29 @@ reportingservice:
     client_secret: my_sigma_client_secret
 
 # ==========================================================
-#  CUSTOM LABELS
+#  CUSTOMLABELS
 # ==========================================================
 
 customLabels: {}
 
 # ==========================================================
-#  CUSTOM ANNOTATIONS
+#  CUSTOMANNOTATIONS
 # ==========================================================
 
 customAnnotations: {}
 
 # ==========================================================
-#  CUSTOM METRICS
+#  CUSTOMMETRICS
 # ==========================================================
 
 customMetrics:
   enabled: false
 
 # ==========================================================
-#  PRE-FLIGHT VALIDATION
+#  PREFLIGHT
 # ==========================================================
 
 preflight:
   enabled: false
   mode: test
+
