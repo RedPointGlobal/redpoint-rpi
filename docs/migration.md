@@ -38,7 +38,11 @@ global:
       tag: "7.7.20260220.1524"
 ```
 
-The chart constructs each image as `{repository}/{service-name}:{tag}` automatically. No template edits required, regardless of registry provider.
+The chart constructs each image as `{repository}/{service-name}:{tag}` automatically. No template edits required, regardless of registry provider. To extract the full list of images for pre-pulling or mirroring:
+
+```bash
+helm template rpi ./chart -f overrides.yaml | grep "image:" | sort -u
+```
 
 ### Service account per deployment file
 
