@@ -451,13 +451,13 @@ The **Validate** tab automatically checks your generated overrides for errors, p
 If you used the Web UI or Assistant to generate your overrides, generate secrets from the overrides file:
 
 ```bash
-bash deploy/cli/interactioncli.sh secrets -f overrides.yaml
+bash rpihelmcli/setup.sh secrets -f overrides.yaml
 ```
 
 Then deploy using the CLI `deploy` command, which handles namespace creation, secrets application, and Helm upgrade with live rollout monitoring:
 
 ```bash
-bash deploy/cli/interactioncli.sh deploy -f overrides.yaml
+bash rpihelmcli/setup.sh deploy -f overrides.yaml
 ```
 
 Or deploy manually:
@@ -508,8 +508,8 @@ After the v7.7 containers are running, the operational databases need a schema u
 **Option A: Automatic (recommended)**
 
 ```bash
-bash deploy/cli/interactioncli.sh -a database_upgrade
-bash deploy/cli/interactioncli.sh deploy -f overrides.yaml
+bash rpihelmcli/setup.sh -a database_upgrade
+bash rpihelmcli/setup.sh deploy -f overrides.yaml
 ```
 
 The chart creates a Job that waits for the Deployment API to become ready, then runs the upgrade automatically.
@@ -568,7 +568,7 @@ The Assistant compares your templates against the stock v7.6 versions, identifie
 If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use the CLI `troubleshoot` command for quick diagnosis, re-run the migration in the Web UI, or check the reference below.
 
 ```bash
-bash deploy/cli/interactioncli.sh troubleshoot -n redpoint-rpi
+bash rpihelmcli/setup.sh troubleshoot -n redpoint-rpi
 ```
 
 If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key.

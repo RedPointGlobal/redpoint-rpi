@@ -9,8 +9,8 @@ After completing either the [Greenfield](greenfield.md) or [Migration](migration
 - **After deployment:** add features to an existing overrides file at any time:
 
 ```bash
-bash deploy/cli/interactioncli.sh -a <feature>    # add a specific feature
-bash deploy/cli/interactioncli.sh -a menu          # interactive feature picker
+bash rpihelmcli/setup.sh -a <feature>    # add a specific feature
+bash rpihelmcli/setup.sh -a menu          # interactive feature picker
 ```
 
 Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `secrets_management`, `node_scheduling`.
@@ -112,7 +112,7 @@ The resolution priority is: per-service `serviceAccountName` override first, the
 Controls how RPI reads sensitive values (database passwords, connection strings, API tokens). Three providers are available. Use the Interaction CLI to configure:
 
 ```bash
-bash deploy/cli/interactioncli.sh -a secrets_management
+bash rpihelmcli/setup.sh -a secrets_management
 ```
 
 ### Kubernetes Secrets (default)
@@ -198,7 +198,7 @@ The CLI supports incremental updates. You don't need to rebuild the entire block
 **Adding a new class:**
 
 ```bash
-bash deploy/cli/interactioncli.sh -a secrets_management
+bash rpihelmcli/setup.sh -a secrets_management
 # Choose: add_csi_class
 # Follow prompts for name, provider, vault parameters, objects, and secret mappings
 ```
@@ -206,7 +206,7 @@ bash deploy/cli/interactioncli.sh -a secrets_management
 **Updating an existing class (adding vault objects):**
 
 ```bash
-bash deploy/cli/interactioncli.sh -a secrets_management
+bash rpihelmcli/setup.sh -a secrets_management
 # Choose: update_csi_class
 # Select class name (auto-selected if only one exists)
 # Choose: objects
@@ -229,7 +229,7 @@ This appends new entries to the class's `objects:` list:
 **Updating an existing class (adding secret data mappings):**
 
 ```bash
-bash deploy/cli/interactioncli.sh -a secrets_management
+bash rpihelmcli/setup.sh -a secrets_management
 # Choose: update_csi_class
 # Select class name
 # Choose: secret_data
@@ -564,7 +564,7 @@ When enabled, the chart creates Server resources for each RPI service, defining 
 Controls which nodes RPI pods are placed on. Use this to schedule workloads on dedicated node pools (e.g., nodes labeled for RPI) and tolerate their taints.
 
 ```bash
-bash deploy/cli/interactioncli.sh -a node_scheduling
+bash rpihelmcli/setup.sh -a node_scheduling
 ```
 
 ### Node Selector
