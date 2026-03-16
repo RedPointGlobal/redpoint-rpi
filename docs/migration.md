@@ -9,7 +9,8 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 
 ---
 
-## What Changed in v7.7
+<details>
+<summary><strong>What Changed in v7.7</strong></summary>
 
 The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to a **small user-facing override** file. Internal defaults (health probes, security contexts, logging, ports, rollout strategies, etc.) are now managed by the chart automatically.
 
@@ -20,9 +21,11 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 | Upgrades require diffing the entire file | Upgrades apply new defaults automatically |
 | No escape hatch for hidden internals | Any internal default can be overridden directly under its top-level key |
 
----
 
-## What's New in v7.7
+</details>
+
+<details>
+<summary><strong>What's New in v7.7</strong></summary>
 
 ### Custom container images and private registries
 
@@ -378,9 +381,11 @@ helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
 
 Features like per-service image overrides, custom CA certificates, common annotations, CSI secrets, StorageClasses, and Karpenter NodePools are all available in `standard` mode. Simply add the relevant sections to your overrides file. No special mode is required.
 
----
 
-## Breaking Changes
+</details>
+
+<details>
+<summary><strong>Breaking Changes</strong></summary>
 
 ### Redshift Data Warehouse
 
@@ -392,9 +397,11 @@ Host=<hostname>;Database=<database>;Port=5439;User Id=<username>;Password=<passw
 
 If you have Redshift in your overrides file, remove the `databases.datawarehouse.redshift` block before upgrading. After deploying v7.7, add your connection string through the client interface.
 
----
 
-## Migration Steps
+</details>
+
+<details>
+<summary><strong>Migration Steps</strong></summary>
 
 ### 1. Generate Your v7.7 Overrides
 
@@ -450,6 +457,9 @@ spec:
 ```
 
 Commit your `overrides.yaml` to the repo and sync. See the [GitOps Guide](readme-argocd.md) for details.
+
+</details>
+
 
 </details>
 
