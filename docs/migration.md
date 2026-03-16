@@ -10,7 +10,7 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 ---
 
 <details>
-<summary><h3>What Changed in v7.7</h3></summary>
+<summary><strong style="font-size:1.25em;">What Changed in v7.7</strong></summary>
 
 The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to a **small user-facing override** file. Internal defaults (health probes, security contexts, logging, ports, rollout strategies, etc.) are now managed by the chart automatically.
 
@@ -25,7 +25,7 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 </details>
 
 <details>
-<summary><h3>What's New in v7.7</h3></summary>
+<summary><strong style="font-size:1.25em;">What's New in v7.7</strong></summary>
 
 ### Custom container images and private registries
 
@@ -385,7 +385,7 @@ Features like per-service image overrides, custom CA certificates, common annota
 </details>
 
 <details>
-<summary><h3>Breaking Changes</h3></summary>
+<summary><strong style="font-size:1.25em;">Breaking Changes</strong></summary>
 
 ### Redshift Data Warehouse
 
@@ -401,7 +401,7 @@ If you have Redshift in your overrides file, remove the `databases.datawarehouse
 </details>
 
 <details>
-<summary><h3>Migration Steps</h3></summary>
+<summary><strong style="font-size:1.25em;">Migration Steps</strong></summary>
 
 ### 1. Generate Your v7.7 Overrides
 
@@ -464,7 +464,7 @@ Commit your `overrides.yaml` to the repo and sync. See the [GitOps Guide](readme
 </details>
 
 <details>
-<summary><h3>Post-Upgrade: Database Schema Migration</h3></summary>
+<summary><strong style="font-size:1.25em;">Post-Upgrade: Database Schema Migration</strong></summary>
 
 After the v7.7 containers are running, the operational databases need a schema upgrade.
 
@@ -493,7 +493,7 @@ Wait for `"Status": "LastRunComplete"` in the response.
 </details>
 
 <details>
-<summary><h3>Rollback</h3></summary>
+<summary><strong style="font-size:1.25em;">Rollback</strong></summary>
 
 ```bash
 helm rollback rpi -n redpoint-rpi
@@ -530,7 +530,7 @@ The Assistant compares your templates against the stock v7.6 versions, identifie
 ---
 
 <details>
-<summary><h3>Troubleshooting</h3></summary>
+<summary><strong style="font-size:1.25em;">Troubleshooting</strong></summary>
 
 If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use the CLI `troubleshoot` command for quick diagnosis, re-run the migration in the Web UI, or check the reference below.
 
