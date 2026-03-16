@@ -392,86 +392,36 @@ If you have Redshift in your overrides file, remove the `databases.datawarehouse
 
 ## Migration Steps
 
-### 1. Get the v7.7 Chart
+### 1. Generate Your v7.7 Overrides
 
-```bash
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git
-cd redpoint-rpi
-```
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) to generate a fresh v7.7 overrides file:
 
-If you already have a local clone:
+1. Open the **Generate** tab and select your platform
+2. Walk through the 9 configuration steps, using your v7.6 values as reference for database host, identity settings, ingress domain, cache/queue providers, etc.
+3. Review and download from the **Validate** tab
 
-```bash
-git fetch origin && git checkout main && git pull
-```
-
-<details>
-<summary><strong>Internal repo</strong> (Azure Repos, GitLab, Bitbucket)</summary>
-
-```bash
-# Add the upstream Redpoint repo (one-time setup)
-git remote add upstream https://github.com/RedPointGlobal/redpoint-rpi.git
-
-# Fetch and merge v7.7
-git fetch upstream
-git checkout main
-git merge upstream/main
-git push origin main
-```
-
-</details>
-
-### 2. Generate Your v7.7 Overrides
-
-The recommended approach is to generate a fresh v7.7 overrides file using the Web UI, then carry over your environment-specific values from v7.6.
-
-**Step 1: Generate a fresh v7.7 overrides file**
-
-Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com):
-
-1. Open the **Generate** tab
-2. Select your platform and walk through the 9 configuration steps
-3. Use your v7.6 values as reference to fill in the fields (database host, identity settings, ingress domain, cache/queue providers, etc.)
-4. Download the generated `overrides.yaml` from the **Validate** tab
-
-This produces a clean v7.7 overrides file with only the keys you need, using the correct v7.7 key structure.
-
-**Step 2: Review what changed**
-
-Use the **Chat** tab to ask "What changed between v7.6 and v7.7?" for a summary of key renames, removed features, and new defaults. The key renames table in Section 1 above has the full mapping.
-
-**Step 3: Verify your configuration**
-
-The **Validate** tab automatically checks your generated overrides for errors, placeholder values, and misconfigurations before you download.
+Use the **Chat** tab to ask "What changed between v7.6 and v7.7?" for a summary of key renames, removed features, and new defaults.
 
 > **Important:** Do not attempt to reuse your v7.6 `values.yaml` directly. The v7.7 chart uses a different key structure, and many settings that were previously in the values file are now chart-managed defaults. A fresh overrides file is typically 50-100 lines instead of 2,600+.
 
-### 3. Generate Secrets and Upgrade
+### 2. Generate Secrets and Deploy
 
-If you used the Web UI or Assistant to generate your overrides, generate secrets from the overrides file:
+Download the RPI Helm CLI from the **Deploy** tab, then:
 
 ```bash
-bash rpihelmcli secrets -f overrides.yaml
+unzip rpihelmcli.zip
+export PATH="$PWD/rpihelmcli:$PATH"
+
+rpihelmcli secrets -f overrides.yaml
+rpihelmcli deploy -f overrides.yaml
 ```
 
-Then deploy using the CLI `deploy` command, which handles namespace creation, secrets application, and Helm upgrade with live rollout monitoring:
+The deploy command clones the v7.7 chart repository automatically, applies secrets, and runs Helm upgrade with live rollout monitoring.
+
+### 3. Verify
 
 ```bash
-bash rpihelmcli deploy -f overrides.yaml
-```
-
-Or deploy manually:
-
-```bash
-kubectl apply -f secrets.yaml -n redpoint-rpi
-helm upgrade rpi ./chart -f overrides.yaml -n redpoint-rpi
-```
-
-Verify:
-
-```bash
-helm test rpi -n redpoint-rpi
-kubectl get pods -n redpoint-rpi
+rpihelmcli status -n redpoint-rpi
 ```
 
 <details>
