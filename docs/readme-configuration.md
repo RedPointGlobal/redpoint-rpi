@@ -3,14 +3,14 @@
 
 [< Back to main README](../README.md)
 
-After completing either the [Greenfield](greenfield.md) or [Migration](migration.md) guide, configure the optional features below. The Interaction CLI supports two workflows:
+After completing either the [Greenfield](greenfield.md) or [Migration](migration.md) guide, configure the optional features below. The RPI Helm CLI supports two workflows:
 
 - **During initial setup:** the CLI offers each feature after generating your base config, so you can include everything in one pass.
 - **After deployment:** add features to an existing overrides file at any time:
 
 ```bash
-bash rpihelmcli/setup.sh -a <feature>    # add a specific feature
-bash rpihelmcli/setup.sh -a menu          # interactive feature picker
+bash rpihelmcli -a <feature>    # add a specific feature
+bash rpihelmcli -a menu          # interactive feature picker
 ```
 
 Available features: `database_upgrade`, `queue_reader`, `autoscaling`, `custom_metrics`, `service_mesh`, `smoke_tests`, `entra_id`, `oidc`, `smtp`, `redpoint_ai`, `storage`, `secrets_management`, `node_scheduling`.
@@ -42,7 +42,7 @@ For the complete list of every key, use the [Helm Assistant Web UI](https://rpi-
 
 ## Cloud Identity
 
-Enables RPI to authenticate with cloud services using platform-native identity federation, removing the need for static credentials. The Interaction CLI configures this automatically based on your platform.
+Enables RPI to authenticate with cloud services using platform-native identity federation, removing the need for static credentials. The RPI Helm CLI configures this automatically based on your platform.
 
 ### Azure (Workload Identity)
 
@@ -109,15 +109,15 @@ The resolution priority is: per-service `serviceAccountName` override first, the
 
 ## Secrets Management
 
-Controls how RPI reads sensitive values (database passwords, connection strings, API tokens). Three providers are available. Use the Interaction CLI to configure:
+Controls how RPI reads sensitive values (database passwords, connection strings, API tokens). Three providers are available. Use the RPI Helm CLI to configure:
 
 ```bash
-bash rpihelmcli/setup.sh -a secrets_management
+bash rpihelmcli -a secrets_management
 ```
 
 ### Kubernetes Secrets (default)
 
-Secrets are stored in a Kubernetes Secret object that you create and manage outside the chart. The [Interaction CLI](greenfield.md#2-quick-start-with-the-interaction-cli) generates this Secret manifest for you (`secrets.yaml`) with all the required keys pre-populated.
+Secrets are stored in a Kubernetes Secret object that you create and manage outside the chart. The CLI (`rpihelmcli secrets -f overrides.yaml`) generates this Secret manifest for you (`secrets.yaml`) with all the required keys pre-populated.
 
 ```yaml
 secretsManagement:
@@ -198,7 +198,7 @@ The CLI supports incremental updates. You don't need to rebuild the entire block
 **Adding a new class:**
 
 ```bash
-bash rpihelmcli/setup.sh -a secrets_management
+bash rpihelmcli -a secrets_management
 # Choose: add_csi_class
 # Follow prompts for name, provider, vault parameters, objects, and secret mappings
 ```
@@ -206,7 +206,7 @@ bash rpihelmcli/setup.sh -a secrets_management
 **Updating an existing class (adding vault objects):**
 
 ```bash
-bash rpihelmcli/setup.sh -a secrets_management
+bash rpihelmcli -a secrets_management
 # Choose: update_csi_class
 # Select class name (auto-selected if only one exists)
 # Choose: objects
@@ -229,7 +229,7 @@ This appends new entries to the class's `objects:` list:
 **Updating an existing class (adding secret data mappings):**
 
 ```bash
-bash rpihelmcli/setup.sh -a secrets_management
+bash rpihelmcli -a secrets_management
 # Choose: update_csi_class
 # Select class name
 # Choose: secret_data
@@ -564,7 +564,7 @@ When enabled, the chart creates Server resources for each RPI service, defining 
 Controls which nodes RPI pods are placed on. Use this to schedule workloads on dedicated node pools (e.g., nodes labeled for RPI) and tolerate their taints.
 
 ```bash
-bash rpihelmcli/setup.sh -a node_scheduling
+bash rpihelmcli -a node_scheduling
 ```
 
 ### Node Selector
@@ -680,7 +680,7 @@ redpointAI:
   enabled: true
 ```
 
-API keys and endpoints are configured via Kubernetes Secrets. See the secret key reference in the [Greenfield guide](greenfield.md#2-quick-start-with-the-interaction-cli).
+API keys and endpoints are configured via Kubernetes Secrets. See the [Greenfield guide](greenfield.md) for details.
 
 ---
 

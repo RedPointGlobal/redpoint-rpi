@@ -10,8 +10,8 @@
 #   3. prereqs.sh        — kubectl commands for namespace, registry, TLS
 #
 # Usage:
-#   bash deploy/cli/interactioncli.sh
-#   bash deploy/cli/interactioncli.sh -o my-overrides.yaml
+#   rpihelmcli
+#   rpihelmcli -o my-overrides.yaml
 # ============================================================
 
 set -euo pipefail
@@ -109,13 +109,13 @@ while getopts "o:a:fh" opt; do
       echo "    storage_class"
       echo ""
       echo "  Examples:"
-      echo "    bash interactioncli.sh                           # Interactive setup"
-      echo "    bash interactioncli.sh secrets -f overrides.yaml # Generate secrets"
-      echo "    bash interactioncli.sh deploy -f overrides.yaml  # Deploy to cluster"
-      echo "    bash interactioncli.sh deploy -f overrides.yaml --dry-run"
-      echo "    bash interactioncli.sh status -n my-namespace    # Cluster status"
-      echo "    bash interactioncli.sh troubleshoot crashloop    # Diagnose crashes"
-      echo "    bash interactioncli.sh -a redpoint_ai            # Add a feature"
+      echo "    rpihelmcli                           # Interactive setup"
+      echo "    rpihelmcli secrets -f overrides.yaml # Generate secrets"
+      echo "    rpihelmcli deploy -f overrides.yaml  # Deploy to cluster"
+      echo "    rpihelmcli deploy -f overrides.yaml --dry-run"
+      echo "    rpihelmcli status -n my-namespace    # Cluster status"
+      echo "    rpihelmcli troubleshoot crashloop    # Diagnose crashes"
+      echo "    rpihelmcli -a redpoint_ai            # Add a feature"
       exit 0
       ;;
     *) echo "Unknown option: -$opt" >&2; exit 1 ;;
@@ -1374,7 +1374,7 @@ add_secrets_management() {
     secretName: ${secret_name}"
         echo ""
         echo "  ${DIM}You can add SecretProviderClass entries now, or add them later with:${RESET}"
-        echo "  ${DIM}  bash interactioncli.sh -a secrets_management${RESET}"
+        echo "  ${DIM}  rpihelmcli -a secrets_management${RESET}"
         local add_classes=""
         prompt_yesno add_classes "Add a SecretProviderClass now?" "y"
         if [ "$add_classes" = "true" ]; then
@@ -3489,7 +3489,7 @@ cat >> "$OUTPUT_FILE" << YAML
     smartactivation: ${HOST_PREFIX}-smartActivation
 YAML
 
-# Storage is added on demand via: bash interactioncli.sh -a storage
+# Storage is added on demand via: rpihelmcli -a storage
 
 # Realtime API (non-sensitive parts only)
 if [ "$REALTIME_ENABLED" = "true" ]; then
@@ -3596,7 +3596,7 @@ else
   section "Optional Features"
   echo ""
   echo "  Select features to include now. You can always add more later"
-  echo "  with ${DIM}bash interactioncli.sh -a <feature>${RESET}"
+  echo "  with ${DIM}rpihelmcli -a <feature>${RESET}"
   echo ""
   for feat in $FEATURES_LIST; do
     label=""
@@ -3682,8 +3682,8 @@ cat >> "$OUTPUT_FILE" << 'YAML'
 
 # ---------------------------------------------------------------
 # Add more features with the Interaction CLI:
-#   bash deploy/cli/interactioncli.sh -a <feature>
-#   bash deploy/cli/interactioncli.sh -a menu
+#   rpihelmcli -a <feature>
+#   rpihelmcli -a menu
 #
 # See docs/readme-configuration.md for details on each feature.
 # ---------------------------------------------------------------
@@ -3870,7 +3870,7 @@ echo "  ${CYAN}3.${RESET} Deploy:             ${DIM}helm upgrade --install rpi .
 echo "  ${CYAN}4.${RESET} Validate:           ${DIM}helm test rpi -n ${NAMESPACE}${RESET}"
 echo ""
 echo "  ${BOLD}Add features later:${RESET}"
-echo "  ${DIM}bash deploy/cli/interactioncli.sh -a menu${RESET}"
+echo "  ${DIM}rpihelmcli -a menu${RESET}"
 echo ""
 echo "  ${ICON_WARN}  ${YELLOW}${SECRETS_FILE} contains sensitive values.${RESET}"
 echo "     ${YELLOW}Do NOT commit it to version control.${RESET}"
