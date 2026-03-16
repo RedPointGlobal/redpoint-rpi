@@ -522,59 +522,13 @@ To migrate: generate a fresh v7.7 overrides file using the [Helm Assistant Web U
 <details>
 <summary><strong style="font-size:1.25em;">Troubleshooting</strong></summary>
 
-If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use the CLI `troubleshoot` command for quick diagnosis, re-run the migration in the Web UI, or check the reference below.
+If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use `rpihelmcli status` for quick diagnosis, or ask the [Helm Assistant Chat](https://rpi-helm-assistant.redpointcdp.com) for help.
 
 ```bash
 bash rpihelmcli troubleshoot -n redpoint-rpi
 ```
 
 If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key.
-
-<details>
-<summary><strong>Key renames reference</strong> (for manual overrides)</summary>
-
-If you prefer to build your overrides manually instead of using the CLI, here are all the key changes between v7.6 and v7.7:
-
-| v7.6 | v7.7 | Change |
-|:-----|:-----|:-------|
-| `global.deployment.images.<service>` | `global.deployment.images.repository` | Consolidated |
-| `global.deployment.serviceAccount.*` | `cloudIdentity.serviceAccount.*` | Moved |
-| `imagePullPolicy: IfNotPresent` | `imagePullPolicy: Always` | Default changed |
-| `cloudIdentity.provider` | *(removed)* | Derived from platform |
-| `cloudIdentity.azureSettings.*` | `cloudIdentity.azure.*` | Renamed |
-| `cloudIdentity.amazonSettings.*` | `cloudIdentity.amazon.*` | Renamed |
-| `cloudIdentity.googleSettings.*` | `cloudIdentity.google.*` | Renamed |
-| `cloudIdentity.secretsManagement.*` | `secretsManagement.*` | Moved to top-level |
-| `ingress.tlsSecretName` | `ingress.tls[].secretName` | Array format |
-| `ingress.className` default | Defaults to release namespace | Was `nginx-redpoint-rpi` |
-| `<service>.customLabels` | `<service>.podLabels` | Renamed |
-| `<service>.customAnnotations` | `<service>.podAnnotations` | Renamed |
-| `<service>.serviceAccount.enabled` | `cloudIdentity.serviceAccount.mode` | Centralized (shared/per-service/both) |
-| `<service>.resources.enabled` | *(removed)* | Always applied |
-| `<service>.resources` (per-service defaults) | `resources` (global) | Global defaults apply to all services; override per-service in your overrides file |
-| `queuereader.listenerQueueErrorQueuePath` | `queuereader.errorQueuePath` | Shortened |
-| `queuereader.listenerQueueNonActiveQueuePath` | `queuereader.nonActiveQueuePath` | Shortened |
-| `queuereader.realtimeConfiguration.distributedCache` | `queuereader.realtimeConfiguration.internalCache` | Renamed |
-| `executionservice.internalCache.type` | `executionservice.internalCache.redisSettings.type` | Restructured |
-| `databases.datawarehouse.redshift` | *(removed)* | See [Breaking Changes](#breaking-changes) |
-
-**Now set directly under the top-level key** (only needed if you customized these in v7.6):
-
-| v7.6 | v7.7 |
-|:-----|:-----|
-| `securityContext.*` | `securityContext.*` |
-| `topologySpreadConstraints.*` | `topologySpreadConstraints.*` |
-| `<service>.logging.*` | `<service>.logging.*` |
-| `<service>.livenessProbe.*` | `livenessProbe.*` (shared) or `<service>.livenessProbe.*` |
-| `<service>.readinessProbe.*` | `readinessProbe.*` (shared) or `<service>.readinessProbe.*` |
-| `<service>.type` / `.rollout.*` | `<service>.type` / `<service>.rollout.*` |
-| `<service>.customMetrics.*` | `<service>.customMetrics.*` |
-| `<service>.terminationGracePeriodSeconds` | `<service>.terminationGracePeriodSeconds` |
-| `queuereader.threadPoolSize` / `.maxBatchSize` / etc. | `queuereader.threadPoolSize` / `queuereader.maxBatchSize` / etc. |
-| `executionservice.jobExecution.*` | `executionservice.jobExecution.*` |
-| `realtimeapi.dataMaps.*` / `.idValidation.*` / `.customPlugins.*` | `realtimeapi.dataMaps.*` / `realtimeapi.idValidation.*` / etc. |
-
-</details>
 
 
 </details>
