@@ -513,19 +513,9 @@ helm upgrade rpi ./chart -f my-old-values.yaml -n redpoint-rpi
 
 ## Template Customizations
 
-If you added custom template files to your v7.6 `chart/templates/` directory (e.g., CronJobs, NetworkPolicies, custom ConfigMaps) or modified any of the stock templates (e.g., added sidecars, init containers, extra env vars), these changes need to be carried forward manually.
+In v7.6, many deployments required editing Helm template files directly (adding annotations, custom probes, sidecars, extra env vars, NetworkPolicies, StorageClasses, Karpenter NodePools, etc.). In v7.7, all of these are now native chart features configurable through the overrides file. No template edits should be needed.
 
-**With Interaction Helm Assistant:**
-
-> "Analyze my v7.6 templates at /path/to/chart/templates for migration to v7.7"
-
-The Assistant compares your templates against the stock v7.6 versions, identifies every custom file and every modification, and provides specific guidance for each, including diffs and advice on which changes can now be expressed as values instead of template edits.
-
-**Without the Assistant:**
-
-1. Copy custom template files (files not in the stock v7.6 chart) to the v7.7 `chart/templates/` directory. Review for compatibility with v7.7 values paths.
-2. For modified stock templates, diff your version against the [stock v7.6 templates](https://github.com/RedPointGlobal/redpoint-rpi/tree/release/v7.6/redpoint-rpi/templates) and apply your changes to the v7.7 versions.
-3. Many v7.6 template-level customizations (probes, resources, labels, annotations, security context) can now be set directly through values, so check values first before editing templates.
+To migrate: generate a fresh v7.7 overrides file using the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com), then update it with your environment-specific values. Use the **Reference** tab to find the keys for any settings you previously customized in templates.
 
 ---
 
