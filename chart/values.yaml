@@ -28,7 +28,7 @@ global:
         enabled: true
         name: redpoint-rpi
       # Utility image for jobs (upgrade, post-install, smoke tests)
-      net_utils: busybox:1.37
+      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
       # Per-service image overrides
       # When set, the value is used verbatim instead of {repository}/{service-name}:{tag}.
       # Useful for flat registries (e.g., ECR with all images in a single repo).

@@ -379,6 +379,34 @@ helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
 
 ### Enterprise features
 
+### Granular Realtime API logging
+
+**Before:** Logging for the Realtime API was controlled by a single default level. Setting it to `Information` to see request details also generated excessive internal framework logs. There was no way to log plugin-specific activity without increasing the noise from core components.
+
+**Now:** The Realtime API logging is split into independent channels that can be configured separately:
+
+```yaml
+realtimeapi:
+  logging:
+    realtimeapi:
+      default: Error        # Core Redpoint framework (quiet in production)
+      endpoint: Information  # HTTP request/response details
+      shared: Error          # Shared libraries
+      plugins: Information   # Custom plugin execution
+      other: Error           # Everything else
+      console: "true"        # Enable stdout logging
+    realtimeagent:
+      default: Error         # Background worker service
+      database: Error        # Database operations
+      rpiTrace: Error        # RPI trace events
+      rpiError: Error        # RPI error events
+      console: "false"
+```
+
+This allows you to see detailed plugin and endpoint logs while keeping core framework logging quiet, solving the common problem of log noise in production environments with custom plugins.
+
+---
+
 ### Queue Reader distributed processing with flexible storage
 
 **Before:** The queue reader's internal Redis cache and RabbitMQ queue were configured with hardcoded volume settings. Customers who pre-provisioned their volumes had to edit the StatefulSet templates.

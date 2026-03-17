@@ -250,7 +250,7 @@ logging:
     shared: Error
     plugins: Error
     other: Error
-    console: Error
+    console: "false"
 autoscaling:
   enabled: false
   type: hpa
