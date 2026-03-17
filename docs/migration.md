@@ -379,6 +379,52 @@ helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
 
 ### Enterprise features
 
+### Queue Reader distributed processing with flexible storage
+
+**Before:** The queue reader's internal Redis cache and RabbitMQ queue were configured with hardcoded volume settings. Customers who pre-provisioned their volumes had to edit the StatefulSet templates.
+
+**Now:** The `internalCache` and `internalQueues` sections support two storage modes:
+
+**Dynamic provisioning** (default): The chart creates volumeClaimTemplates that automatically provision storage:
+
+```yaml
+queuereader:
+  realtimeConfiguration:
+    isDistributed: true
+  internalCache:
+    provider: redis
+    type: internal
+  internalQueues:
+    provider: rabbitmq
+    type: internal
+```
+
+**Pre-provisioned volumes**: For customers who create PVCs in advance, set `existingClaim` and disable volumeClaimTemplates:
+
+```yaml
+queuereader:
+  realtimeConfiguration:
+    isDistributed: true
+  internalCache:
+    provider: redis
+    type: internal
+    redisSettings:
+      existingClaim: my-redis-pvc
+      volumeClaimTemplates:
+        enabled: false
+  internalQueues:
+    provider: rabbitmq
+    type: internal
+    rabbitmqSettings:
+      existingClaim: my-rabbitmq-pvc
+      volumeClaimTemplates:
+        enabled: false
+```
+
+Note: `internalCache` and `internalQueues` are top-level keys under `queuereader`, not nested under `realtimeConfiguration`.
+
+---
+
 ### Multi-tenant Snowflake support
 
 **Before:** The chart supported a single Snowflake private key file, which meant multi-tenant deployments where each tenant connects to a different Snowflake database with its own credentials required workarounds.

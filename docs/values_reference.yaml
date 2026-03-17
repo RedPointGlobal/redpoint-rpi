@@ -971,7 +971,7 @@ queuereader:
       type: internal
       redisSettings:
         connectionString: my-redis-host:6379,password=<your-password>,abortConnect=False
-    distributedQueue:
+    internalQueues:
       provider: rabbitmq
       type: internal
       rabbitmqSettings:
