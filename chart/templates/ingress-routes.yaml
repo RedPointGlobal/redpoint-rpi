@@ -14,9 +14,7 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "redpoint-rpi" "component" "ingress") | nindent 4 }}
   annotations:
-  {{- if $ingCfg.controller.enabled }}
     {{- include "rpi.ingress.annotations" . | nindent 4 }}
-  {{- end }}
 spec:
   ingressClassName: {{ $ingCfg.className }}
   {{- if eq $ingCfg.certificateSource "kubernetes" }}

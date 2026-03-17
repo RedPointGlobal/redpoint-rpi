@@ -11,12 +11,12 @@
 
   Enabled via: smokeTests.enabled: true
 */}}
-{{- if ((.Values.smokeTests).enabled) }}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
-{{- range .Values.smokeTests.deployments }}
+{{- range (.Values.smokeTests).deployments }}
+{{- if ne (.enabled | toString) "false" }}
 {{- $name := .name }}
 {{- $containerName := .containerName | default $name }}
-{{- $volumeName := .volumeName | default (printf "%s-volume" $name) }}
+{{- $volumeName := .volumeName | default $name }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -37,15 +37,17 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations: {}
+      annotations:
+        {{- if eq (.type | default "pvc") "csiSecret" }}
+        container.apparmor.security.beta.kubernetes.io/{{ $containerName }}: runtime/default
+        {{- end }}
+        {{- with .podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       labels:
         app.kubernetes.io/name: {{ $name }}
         {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
     spec:
-      {{- if $.Values.global.deployment.images.imagePullSecret.enabled }}
-      imagePullSecrets:
-        - name: {{ $.Values.global.deployment.images.imagePullSecret.name }}
-      {{- end }}
       {{- with .serviceAccountName }}
       serviceAccountName: {{ . | quote }}
       {{- end }}
@@ -82,7 +84,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              while true; do echo $(date) >> {{ .mountPath }}/smoketest.log; sleep 30; done
+              while true; do echo $(date) >> {{ .mountPath }}/outfile; sleep 1; done
           {{- else }}
           command:
             - /bin/sh
@@ -101,12 +103,21 @@ spec:
               readOnly: true
               {{- end }}
           resources:
+            {{- if eq (.type | default "pvc") "csiSecret" }}
+            requests:
+              memory: 250Mi
+              cpu: 64m
+            limits:
+              memory: 750Mi
+              cpu: 256m
+            {{- else }}
             requests:
               memory: 512Mi
               cpu: 500m
             limits:
               memory: "1024Mi"
               cpu: "1000m"
+            {{- end }}
       volumes:
         {{- if eq (.type | default "pvc") "pvc" }}
         - name: {{ $volumeName }}

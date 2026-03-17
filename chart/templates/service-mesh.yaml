@@ -10,7 +10,7 @@
 apiVersion: policy.linkerd.io/v1beta3
 kind: Server
 metadata:
-  name: {{ $.Release.Namespace }}-{{ .name }}
+  name: {{ .name }}
   namespace: {{ $.Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" $ "name" .name "component" "service-mesh") | nindent 4 }}
