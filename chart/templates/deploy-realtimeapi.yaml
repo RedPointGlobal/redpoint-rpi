@@ -222,15 +222,6 @@ spec:
           {{- end }}
           image: {{ include "rpi.image" (dict "root" . "name" $name) }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
-          {{- if $dwEnabled }}
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - /bin/sh
-                  - -c 
-                  - cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini
-          {{- end }}
           ports:
           - containerPort: 8080
             name: web-port
@@ -286,8 +277,6 @@ spec:
             value: {{ $cfg.logging.realtimeapi.console | quote }}
           - name: RPI__DateTimeSource
             value: {{ .Values.databases.operational.dateTimeSource | default "OperatingSystem" | quote }}
-          - name: ODBCINI
-            value: "/odbc-config/odbc.ini"
           {{- if $diag.copytoAzureBlob.enabled }}
           - name: RPI__Diagnostics__CopyToAzure__IsEnabled
             value: "true"
@@ -1194,13 +1183,6 @@ spec:
           volumeMounts:
             - name: tempstore
               mountPath: /tmp
-            {{- if $dwEnabled }}
-            - name: odbc-config
-              mountPath: /app/odbc-config/odbc2.ini
-              subPath: odbc2.ini
-            - name: odbcini
-              mountPath: /odbc-config
-            {{- end }}
             {{- if (($dw.bigquery | default dict).enabled | default false) }}
             {{- range .Values.databases.datawarehouse.bigquery.connections }}
             {{- if eq .credentialsType "serviceAccount" }}
@@ -1234,14 +1216,6 @@ spec:
       volumes:
         - name: tempstore
           emptyDir: {}
-        {{- if $dwEnabled }}
-        - name: odbc-config
-          configMap:
-            name: odbc-config
-            defaultMode: 0777
-        - name: odbcini
-          emptyDir: {}
-        {{- end }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}

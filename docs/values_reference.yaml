@@ -194,17 +194,6 @@ databases:
       mountPath: /app/snowflake-creds
       keys:
       - keyName: my-snowflake-rsakey.p8
-    databricks:
-      enabled: false
-      connections:
-      - name: dbx-tenant1
-        host: my-host.2.azuredatabricks.net
-        port: 443
-        httpPath: /sql/1.0/warehouses/c546e1e69e8d2ac9
-        username: token
-        password: my_databricks_token
-        schema: my_schema_name
-        authMechanism: 3
 
 # ==========================================================
 #  CLOUDIDENTITY

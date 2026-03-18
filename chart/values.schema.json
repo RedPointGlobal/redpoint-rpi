@@ -202,25 +202,6 @@
                   "description": "Mount path for the ConfigMap"
                 }
               }
-            },
-            "databricks": {
-              "type": "object",
-              "description": "Databricks data warehouse configuration",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Enable Databricks data warehouse provider"
-                },
-                "connections": {
-                  "type": "array",
-                  "description": "List of Databricks connection configurations",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": true
-                  }
-                }
-              }
             }
           }
         }

@@ -207,8 +207,6 @@ spec:
           value: {{ $cfg.logging.Console | quote }}
         - name: RPI__DateTimeSource
           value: {{ .Values.databases.operational.dateTimeSource | default "OperatingSystem" | quote }}
-        - name: ODBCINI
-          value: "/odbc-config/odbc.ini"
         - name: RPIExecution__MaxSmartAssetInstancesForOfferCodes
           value: {{ $cfg.jobExecution.maxSmartAssetInstancesForOfferCodes | quote }}
         {{- if .Values.rebrandly.enabled }}
@@ -526,14 +524,6 @@ spec:
           timeoutSeconds: {{ $startup.timeoutSeconds }}
         {{- end }}
         lifecycle:
-          {{- if $dwEnabled }}
-          postStart:
-            exec:
-              command:
-                - /bin/sh
-                - -c 
-                - cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini
-          {{- end }}
           preStop:
             exec:
               command:
@@ -584,13 +574,6 @@ spec:
         volumeMounts:
           - name: tempstore
             mountPath: /tmp
-          {{- if $dwEnabled }}
-          - name: odbc-config
-            mountPath: /app/odbc-config/odbc2.ini
-            subPath: odbc2.ini
-          - name: odbcini
-            mountPath: /odbc-config
-          {{- end }}
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
           {{- range .Values.databases.datawarehouse.bigquery.connections }}
           {{- if eq .credentialsType "serviceAccount" }}
@@ -624,14 +607,6 @@ spec:
       volumes:
         - name: tempstore
           emptyDir: {}
-        {{- if $dwEnabled }}
-        - name: odbc-config
-          configMap:
-            name: odbc-config
-            defaultMode: 0777
-        - name: odbcini
-          emptyDir: {}
-        {{- end }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}

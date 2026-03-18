@@ -35,7 +35,7 @@ databases:
   # ==========================
   # Data Warehouse Providers
   # ==========================
-  # snowflake | bigquery | databricks
+  # snowflake | bigquery
   datawarehouse:
 
     # Snowflake

@@ -216,12 +216,8 @@ tolerations:
 {{- define "redpoint.DatawarehouseProviders" -}}
 {{- $dw := .Values.databases.datawarehouse | default dict -}}
 {{- $bigquery := $dw.bigquery | default dict -}}
-{{- $databricks := $dw.databricks | default dict -}}
 
-{{- $bigqueryEnabled := $bigquery.enabled | default false -}}
-{{- $databricksEnabled := $databricks.enabled | default false -}}
-
-{{- if or $bigqueryEnabled $databricksEnabled -}}
+{{- if ($bigquery.enabled | default false) -}}
 true
 {{- else -}}
 false

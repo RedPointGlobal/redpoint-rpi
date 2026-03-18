@@ -507,13 +507,6 @@ spec:
         volumeMounts:
           - name: tempstore
             mountPath: /tmp
-          {{- if $dwEnabled }}
-          - name: odbc-config
-            mountPath: /app/odbc-config/odbc2.ini
-            subPath: odbc2.ini
-          - name: odbcini
-            mountPath: /odbc-config
-          {{- end }}
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
           {{- range .Values.databases.datawarehouse.bigquery.connections }}
           {{- if eq .credentialsType "serviceAccount" }}
@@ -547,14 +540,6 @@ spec:
       volumes:
         - name: tempstore
           emptyDir: {}
-        {{- if $dwEnabled }}
-        - name: odbc-config
-          configMap:
-            name: odbc-config
-            defaultMode: 0777
-        - name: odbcini
-          emptyDir: {}
-        {{- end }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}
