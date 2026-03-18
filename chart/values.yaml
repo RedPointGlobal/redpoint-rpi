@@ -131,9 +131,9 @@ databases:
       enabled: false
       # Supported: snowflake_jwt
       credentialsType: snowflake_jwt
-      ConfigMapName: snowflake-creds
-      ConfigMapFilePath: /app/snowflake-creds
-      # Key files mounted from the ConfigMap.
+      secretName: snowflake-creds
+      mountPath: /app/snowflake-creds
+      # Key files mounted from the Secret.
       # For single tenant: one key file.
       # For multi-tenant: add one entry per tenant. Each tenant's connection
       # string references its own file via PRIVATE_KEY_FILE=/app/snowflake-creds/<keyName>

@@ -2715,13 +2715,13 @@ SECRETS_TLS
     echo ""
   fi
 
-  # --- Snowflake ConfigMap ---
-  local sf_enabled sf_configmap
+  # --- Snowflake Secret ---
+  local sf_enabled sf_secret
   sf_enabled=$(read_val "$overrides" "databases.datawarehouse.snowflake.enabled")
-  sf_configmap=$(read_val "$overrides" "databases.datawarehouse.snowflake.ConfigMapName")
+  sf_secret=$(read_val "$overrides" "databases.datawarehouse.snowflake.secretName")
 
   if [ "$sf_enabled" = "true" ] || [ "$sf_enabled" = "True" ]; then
-    sf_configmap="${sf_configmap:-snowflake-creds}"
+    sf_secret="${sf_secret:-snowflake-creds}"
 
     # Read key names from overrides (supports multiple tenants)
     local sf_key_names
@@ -2738,7 +2738,7 @@ for k in keys:
     print(k['keyName'])
 " "$overrides" 2>/dev/null)
 
-    echo "  ${BOLD}Snowflake RSA keys (ConfigMap: ${sf_configmap})${RESET}"
+    echo "  ${BOLD}Snowflake RSA keys (Secret: ${sf_secret})${RESET}"
 
     local sf_has_keys=false
     local sf_data_block=""
@@ -2765,16 +2765,17 @@ $(echo "$sf_key_content" | sed 's/^/    /')
       cat >> "$output" << SECRETS_SF_HEADER
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
-  name: ${sf_configmap}
+  name: ${sf_secret}
   namespace: ${namespace}
-data:
+type: Opaque
+stringData:
 SECRETS_SF_HEADER
       echo "$sf_data_block" >> "$output"
-      echo "  ${GREEN}✔ Snowflake ConfigMap added${RESET}"
+      echo "  ${GREEN}✔ Snowflake Secret added${RESET}"
     else
-      echo "  ${YELLOW}No key files provided. Create the ConfigMap manually.${RESET}"
+      echo "  ${YELLOW}No key files provided. Create the Secret manually.${RESET}"
     fi
     echo ""
   fi

@@ -377,7 +377,19 @@ helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
 
 ---
 
-### Enterprise features
+### Execution Service internal cache changed to filesystem
+
+**Before:** The Execution Service used Redis as its internal cache by default, requiring a separate Redis StatefulSet for execution state management.
+
+**Now:** The default internal cache provider is `filesystem`, which uses the same persistent volume mounted for the FileOutputDirectory. This simplifies the deployment by removing the need for a dedicated Redis instance for execution state.
+
+```yaml
+executionservice:
+  internalCache:
+    provider: filesystem
+```
+
+---
 
 ### Granular Realtime API logging
 
@@ -455,9 +467,9 @@ Note: `internalCache` and `internalQueues` are top-level keys under `queuereader
 
 ### Multi-tenant Snowflake support
 
-**Before:** The chart supported a single Snowflake private key file, which meant multi-tenant deployments where each tenant connects to a different Snowflake database with its own credentials required workarounds.
+**Before:** The chart supported a single Snowflake private key file stored in a ConfigMap, which meant multi-tenant deployments where each tenant connects to a different Snowflake database with its own credentials required workarounds.
 
-**Now:** The `keys` array supports multiple private key files in a single ConfigMap. Each tenant's connection string references its own key file:
+**Now:** Snowflake private keys are stored in a Kubernetes Secret (not a ConfigMap), supporting both direct creation via the CLI and CSI Secret Store sync from a cloud vault. The `keys` array supports multiple key files for multi-tenant deployments:
 
 ```yaml
 databases:
@@ -465,20 +477,53 @@ databases:
     snowflake:
       enabled: true
       credentialsType: snowflake_jwt
-      ConfigMapName: snowflake-creds
-      ConfigMapFilePath: /app/snowflake-creds
+      secretName: snowflake-creds
+      mountPath: /app/snowflake-creds
       keys:
         - keyName: tenant1-private-key.p8
         - keyName: tenant2-private-key.p8
 ```
 
-All key files are stored in one ConfigMap and mounted to `/app/snowflake-creds/`. Each tenant's connection string in the RPI client uses:
+All key files are stored in one Secret and mounted to `/app/snowflake-creds/`. Each tenant's connection string in the RPI client uses:
 
 ```
 Host=<host>;Account=<account>;User=<user>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/tenant1-private-key.p8;Db=<database>;
 ```
 
-The RPI Helm CLI prompts for each key file when generating secrets.
+**For kubernetes secrets provider:** The RPI Helm CLI creates the Secret and prompts for each key file.
+
+**For CSI secrets provider:** Add a Snowflake SecretProviderClass that syncs the private key(s) from your cloud vault to the same Secret:
+
+```yaml
+secretsManagement:
+  csi:
+    secretProviderClasses:
+      - name: snowflake-secretprovider
+        provider: azure
+        parameters:
+          clientID: "<your-client-id>"
+          keyvaultName: "<your-keyvault>"
+          resourceGroup: "<your-rg>"
+          subscriptionId: "<your-sub-id>"
+          tenantId: "<your-tenant-id>"
+          useVMManagedIdentity: "false"
+          usePodIdentity: "false"
+        objects:
+          - objectName: sf-tenant1-key
+            objectType: secret
+            objectAlias: tenant1-private-key.p8
+          - objectName: sf-tenant2-key
+            objectType: secret
+            objectAlias: tenant2-private-key.p8
+        secretObjects:
+          - secretName: snowflake-creds
+            type: Opaque
+            data:
+              - objectName: tenant1-private-key.p8
+                key: tenant1-private-key.p8
+              - objectName: tenant2-private-key.p8
+                key: tenant2-private-key.p8
+```
 
 ---
 

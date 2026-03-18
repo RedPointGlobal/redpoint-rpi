@@ -70,9 +70,9 @@ httpGet:
   port: 8080
   scheme: HTTP
 initialDelaySeconds: 20
-periodSeconds: 10
-timeoutSeconds: 2
-failureThreshold: 3
+periodSeconds: 30
+timeoutSeconds: 5
+failureThreshold: 5
 successThreshold: 1
 {{- end -}}
 
@@ -80,7 +80,7 @@ successThreshold: 1
 {{- define "rpi.defaults.startupProbe" -}}
 enabled: true
 httpGet:
-  path: /health/ready
+  path: /health/live
   port: 8080
   scheme: HTTP
 initialDelaySeconds: 10

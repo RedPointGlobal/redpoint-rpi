@@ -31,7 +31,7 @@ data:
     LargeResultsTempTableExpirationTime={{ .largeResultsTempTableExpirationTime }}
     OAuthMechanism={{ .OAuthMechanism }}
     Email={{ .serviceAccountEmail }}
-    KeyFilePath={{ .ConfigMapFilePath }}/{{ .keyName }}
+    KeyFilePath={{ .mountPath }}/{{ .keyName }}
     {{- end }}
     {{- end }}
     {{- end }}

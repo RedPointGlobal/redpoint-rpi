@@ -48,8 +48,10 @@ spec:
         app.kubernetes.io/name: {{ $name }}
         {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
     spec:
-      {{- with .serviceAccountName }}
-      serviceAccountName: {{ . | quote }}
+      {{- if .serviceAccountName }}
+      serviceAccountName: {{ .serviceAccountName | quote }}
+      {{- else }}
+      serviceAccountName: {{ $.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" | quote }}
       {{- end }}
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       {{- if .nodeSelector }}
@@ -59,12 +61,15 @@ spec:
       nodeSelector:
         {{ $.Values.nodeSelector.key }}: {{ $.Values.nodeSelector.value }}
       {{- end }}
-      {{- if $.Values.tolerations.enabled }}
+      {{- if .tolerations }}
       tolerations:
-        - effect: NoSchedule
-          key: {{ $.Values.nodeSelector.key }}
-          operator: Equal
-          value: {{ $.Values.nodeSelector.value }}
+        {{- toYaml .tolerations | nindent 8 }}
+      {{- else if $.Values.tolerations.enabled }}
+      tolerations:
+        - effect: {{ $.Values.tolerations.effect | default "NoSchedule" }}
+          key: {{ $.Values.tolerations.key }}
+          operator: {{ $.Values.tolerations.operator | default "Equal" }}
+          value: {{ $.Values.tolerations.value }}
       {{- end }}
       containers:
         - name: {{ $containerName }}

@@ -27,7 +27,7 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
-      net_utils: busybox:1.37
+      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
     podTimezone: ''
 
 # ==========================================================
@@ -127,9 +127,9 @@ readinessProbe:
     port: 8080
     scheme: HTTP
   initialDelaySeconds: 20
-  periodSeconds: 10
-  timeoutSeconds: 2
-  failureThreshold: 3
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 5
   successThreshold: 1
 
 # ==========================================================
@@ -139,7 +139,7 @@ readinessProbe:
 startupProbe:
   enabled: true
   httpGet:
-    path: /health/ready
+    path: /health/live
     port: 8080
     scheme: HTTP
   initialDelaySeconds: 10
@@ -190,8 +190,8 @@ databases:
     snowflake:
       enabled: false
       credentialsType: snowflake_jwt
-      ConfigMapName: snowflake-creds
-      ConfigMapFilePath: /app/snowflake-creds
+      secretName: snowflake-creds
+      mountPath: /app/snowflake-creds
       keys:
       - keyName: my-snowflake-rsakey.p8
     databricks:
@@ -435,7 +435,7 @@ realtimeapi:
       shared: Error
       plugins: Error
       other: Error
-      console: Error
+      console: 'false'
   autoscaling:
     enabled: false
     type: hpa
@@ -966,20 +966,6 @@ queuereader:
     maxRetryDelay: 00:01:00
   realtimeConfiguration:
     isDistributed: false
-    internalCache:
-      provider: redis
-      type: internal
-      redisSettings:
-        connectionString: my-redis-host:6379,password=<your-password>,abortConnect=False
-    internalQueues:
-      provider: rabbitmq
-      type: internal
-      rabbitmqSettings:
-        hostname: rpi-queuereader-rabbitmq
-        username: redpointrpi
-        password: my_Super_Strong_Pwd
-    tenantIds:
-    - 00000000-0000-0000-0000-000000000000
   internalCache:
     backupToOpsDBInterval: 00:00:20
     redisSettings:
@@ -997,11 +983,14 @@ queuereader:
       podDisruptionBudget:
         enabled: false
         minAvailable: 1
+      connectionString: my-redis-host:6379,password=<your-password>,abortConnect=False
+    provider: redis
+    type: internal
   internalQueues:
     rabbitmqSettings:
       virtualhost: /
       hostname: rpi-queuereader-rabbitmq
-      username: rabbitmq
+      username: redpointrpi
       resources:
         enabled: true
         requests:
@@ -1015,6 +1004,11 @@ queuereader:
       volumes:
         enabled: false
         claimName: rpi-queuereader-rabbitmq-data
+      password: my_Super_Strong_Pwd
+    provider: rabbitmq
+    type: internal
+    tenantIds:
+    - 00000000-0000-0000-0000-000000000000
   customMetrics:
     enabled: false
     prometheus_scrape: true
@@ -1510,6 +1504,29 @@ postInstall:
 # ==========================================================
 
 diagnosticsMode:
+  dotNetTools:
+    enabled: false
+    useGcDump: false
+    useCounters: false
+    path: /app/dotnet-tools
+    extractionBaseDir: /tmp
+  netutils:
+    enabled: false
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 7777
+      runAsGroup: 7777
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      privileged: false
+      appArmorProfile:
+        type: RuntimeDefault
+      capabilities:
+        drop:
+        - ALL
+        add:
+        - NET_ADMIN
+        - NET_RAW
   copytoAzureBlob:
     enabled: false
     accountName: <yourstorageaccount>

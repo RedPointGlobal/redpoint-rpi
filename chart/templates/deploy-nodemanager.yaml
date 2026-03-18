@@ -438,8 +438,8 @@ spec:
           {{- end }}
           {{- if (($dw.snowflake | default dict).enabled | default false) }}
           {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
-          - name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
-            mountPath: "{{ .Values.databases.datawarehouse.snowflake.ConfigMapFilePath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}"
+          - name: {{ .Values.databases.datawarehouse.snowflake.secretName }}
+            mountPath: "{{ .Values.databases.datawarehouse.snowflake.mountPath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}"
             subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
           {{- end }}
           {{- end }}
@@ -478,9 +478,9 @@ spec:
         {{- end }}
         {{- if (($dw.snowflake | default dict).enabled | default false) }}
         {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
-        - name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
-          configMap:
-            name: {{ .Values.databases.datawarehouse.snowflake.ConfigMapName }}
+        - name: {{ .Values.databases.datawarehouse.snowflake.secretName }}
+          secret:
+            secretName: {{ .Values.databases.datawarehouse.snowflake.secretName }}
         {{- end }}
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
