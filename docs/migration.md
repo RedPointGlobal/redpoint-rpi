@@ -564,7 +564,7 @@ The `odbc-config` ConfigMap, `ODBCINI` environment variable, and the `postStart`
 </details>
 
 <details>
-<summary><strong style="font-size:1.25em;">Migration Steps</strong></summary>
+<summary><strong style="font-size:1.25em;">Upgrade Steps</strong></summary>
 
 ### 1. Generate Your v7.7 Overrides
 
