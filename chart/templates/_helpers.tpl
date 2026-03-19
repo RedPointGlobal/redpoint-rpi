@@ -471,6 +471,23 @@ Call this once from any top-level template to catch misconfiguration early.
 {{- end -}}
 
 {{/*
+Service mesh pod annotations.
+When serviceMesh is enabled with Linkerd, merges default annotations with
+any user overrides from serviceMesh.podAnnotations. User values win.
+Usage: {{- include "rpi.serviceMesh.podAnnotations" . | nindent 8 }}
+*/}}
+{{- define "rpi.serviceMesh.podAnnotations" -}}
+{{- if .Values.serviceMesh.enabled }}
+{{- if eq (.Values.serviceMesh.provider | default "linkerd") "linkerd" }}
+{{- $defaults := dict "config.linkerd.io/skip-outbound-ports" "443" "config.linkerd.io/proxy-outbound-connect-timeout" "240000ms" -}}
+{{- $overrides := .Values.serviceMesh.podAnnotations | default dict -}}
+{{- $merged := mustMergeOverwrite $defaults $overrides -}}
+{{- toYaml $merged }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
 ServiceAccount annotations for cloud identity.
 Renders the appropriate annotation based on global.deployment.platform.
 Usage: {{- include "rpi.cloudidentity.saAnnotations" . | nindent 4 }}

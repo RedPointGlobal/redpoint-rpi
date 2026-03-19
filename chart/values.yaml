@@ -695,6 +695,14 @@ serviceMesh:
   enabled: false
   # Supported: linkerd
   provider: linkerd
+  # Pod annotations added to all RPI deployments when service mesh is enabled.
+  # Defaults: skip-outbound-ports=443, proxy-outbound-connect-timeout=240000ms
+  # Override or add annotations here; these merge with (and override) the defaults.
+  podAnnotations: {}
+  # podAnnotations:
+  #   config.linkerd.io/skip-outbound-ports: "443,587"
+  #   config.linkerd.io/proxy-outbound-connect-timeout: "300000ms"
+  #   config.linkerd.io/proxy-cpu-request: "100m"
   # Linkerd Server CRDs for L7 traffic policy
   servers: []
   # servers:

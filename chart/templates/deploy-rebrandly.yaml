@@ -129,7 +129,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" . | trim) }}{{- . | nindent 8 }}{{- end }}
-      {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations }}
+      {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations .Values.serviceMesh.enabled }}
       annotations:
         {{- with .Values.commonAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -140,6 +140,7 @@ spec:
         {{- with $cfg.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- include "rpi.serviceMesh.podAnnotations" . | nindent 8 }}
       {{- end }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}

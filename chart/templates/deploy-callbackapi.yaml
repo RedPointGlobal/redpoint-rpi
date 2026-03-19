@@ -148,7 +148,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" . | trim) }}{{- . | nindent 8 }}{{- end }}
-      {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) }}
+      {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) .Values.serviceMesh.enabled }}
       annotations:
         {{- with .Values.commonAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -164,6 +164,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
         {{- end }}
+        {{- include "rpi.serviceMesh.podAnnotations" . | nindent 8 }}
       {{- end }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
@@ -685,7 +686,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
-      {{- if or $.Values.commonAnnotations $.Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) }}
+      {{- if or $.Values.commonAnnotations $.Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) $.Values.serviceMesh.enabled }}
       annotations:
         {{- with $.Values.commonAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -701,6 +702,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
         {{- end }}
+        {{- include "rpi.serviceMesh.podAnnotations" $ | nindent 8 }}
       {{- end }}
     spec:
       {{- if $.Values.global.deployment.images.imagePullSecret.enabled }}
