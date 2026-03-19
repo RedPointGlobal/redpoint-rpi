@@ -641,6 +641,49 @@ rpi-internal-services
 {{- end -}}
 
 {{/*
+Snowflake volume definition.
+For sdk provider with a SecretProviderClass defined, mounts via CSI inline volume.
+For kubernetes/csi providers, mounts from the Kubernetes Secret.
+Usage: {{- include "rpi.snowflake.volume" . | nindent 8 }}
+*/}}
+{{- define "rpi.snowflake.volume" -}}
+{{- $sf := .Values.databases.datawarehouse.snowflake -}}
+{{- if and (eq .Values.secretsManagement.provider "sdk") $sf.secretProviderClassName -}}
+- name: {{ $sf.secretName }}
+  csi:
+    driver: secrets-store.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      secretProviderClass: {{ $sf.secretProviderClassName | quote }}
+{{- else -}}
+- name: {{ $sf.secretName }}
+  secret:
+    secretName: {{ $sf.secretName }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Snowflake volume mount.
+For sdk with CSI, mounts the directory (CSI places files by objectAlias).
+For kubernetes/csi, mounts with subPath to pick the specific key.
+Usage: {{- include "rpi.snowflake.volumeMount" . | nindent 10 }}
+*/}}
+{{- define "rpi.snowflake.volumeMount" -}}
+{{- $sf := .Values.databases.datawarehouse.snowflake -}}
+{{- if and (eq .Values.secretsManagement.provider "sdk") $sf.secretProviderClassName -}}
+- name: {{ $sf.secretName }}
+  mountPath: {{ $sf.mountPath }}
+  readOnly: true
+{{- else -}}
+{{- range $sf.keys }}
+- name: {{ $sf.secretName }}
+  mountPath: "{{ $sf.mountPath }}/{{ .keyName }}"
+  subPath: {{ .keyName }}
+{{- end }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Resolve which ServiceAccount name a pod should use.
 Usage: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
   - root: the top-level context (.)

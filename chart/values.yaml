@@ -133,6 +133,10 @@ databases:
       credentialsType: snowflake_jwt
       secretName: snowflake-creds
       mountPath: /app/snowflake-creds
+      # For sdk provider: set this to the SecretProviderClass name that syncs
+      # the private key via CSI inline volume (no K8s Secret needed).
+      # Leave empty for kubernetes/csi providers.
+      secretProviderClassName: ""
       # Key files mounted from the Secret.
       # For single tenant: one key file.
       # For multi-tenant: add one entry per tenant. Each tenant's connection

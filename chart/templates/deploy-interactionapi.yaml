@@ -524,9 +524,7 @@ spec:
           {{- end }}
           {{- if (($dw.snowflake | default dict).enabled | default false) }}
           {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
-          - name: {{ .Values.databases.datawarehouse.snowflake.secretName }}
-            mountPath: "{{ .Values.databases.datawarehouse.snowflake.mountPath }}/{{ .Values.databases.datawarehouse.snowflake.keyName }}"
-            subPath: {{ .Values.databases.datawarehouse.snowflake.keyName }}
+          {{- include "rpi.snowflake.volumeMount" . | nindent 10 }}
           {{- end }}
           {{- end }}
           {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
@@ -556,9 +554,7 @@ spec:
         {{- end }}
         {{- if (($dw.snowflake | default dict).enabled | default false) }}
         {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
-        - name: {{ .Values.databases.datawarehouse.snowflake.secretName }}
-          secret:
-            secretName: {{ .Values.databases.datawarehouse.snowflake.secretName }}
+        {{- include "rpi.snowflake.volume" . | nindent 8 }}
         {{- end }}
         {{- end }}
         {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}

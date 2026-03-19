@@ -254,36 +254,25 @@ The hostname in the connection string must match the internal service name the c
 
 ## Snowflake Private Key Authentication
 
-Snowflake supports two methods for providing the RSA private key used in JWT authentication:
+Snowflake JWT authentication requires the `.p8` RSA private key file to be mounted in the container. All three providers use the file-based approach (`PRIVATE_KEY_FILE`), but the way the file gets into the pod differs.
 
-| Method | Connection string parameter | How it works |
-|:-------|:---------------------------|:-------------|
-| **File-based** | `PRIVATE_KEY_FILE=/app/snowflake-creds/key.p8` | The `.p8` file is mounted into the container from a Kubernetes Secret |
-| **Inline** | `PRIVATE_KEY=<key-content>` | The private key content is passed directly in the connection string |
+### How It Works Per Provider
 
-### Recommended Approach Per Provider
+| Provider | Key source | Volume type | Smoke test needed? |
+|:---------|:-----------|:------------|:-------------------|
+| **kubernetes** | CLI creates a K8s Secret from your `.p8` file | Secret volume with `subPath` | No |
+| **csi** | SecretProviderClass syncs key from vault to a K8s Secret | Secret volume with `subPath` | Yes (triggers CSI sync) |
+| **sdk** | SecretProviderClass mounts key directly via CSI inline volume | CSI inline volume | No (mounted by RPI pods directly) |
 
-| Provider | Recommended method | Why |
-|:---------|:-------------------|:----|
-| **kubernetes** | File-based (`PRIVATE_KEY_FILE`) | The CLI creates the Secret from your `.p8` file. The chart mounts it automatically. |
-| **csi** | File-based (`PRIVATE_KEY_FILE`) | A SecretProviderClass syncs the key from your vault to a Kubernetes Secret. A smoke test pod triggers the sync. |
-| **sdk** | Inline (`PRIVATE_KEY`) | SDK services read secrets from the vault at runtime. There is no Kubernetes Secret to mount as a file, so use the inline method. |
-
-### SDK Provider: Using Inline Private Key
-
-When using the `sdk` provider, store the private key content (not the file) in your vault. In the RPI client, configure the Snowflake connection string using `PRIVATE_KEY` instead of `PRIVATE_KEY_FILE`:
+All three result in the same file path inside the container. The connection string in the RPI client is always:
 
 ```
-User=<user>;Db=<database>;Host=<host>;Account=<account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY=<base64-encoded-key-content>;PRIVATE_KEY_PWD=<passphrase-if-encrypted>
+User=<user>;Db=<database>;Host=<host>;Account=<account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/my-snowflake-rsakey.p8
 ```
 
-If the private key value contains equal signs (`=`), replace each with two (`==`) so the connection string is parsed correctly.
+### kubernetes Provider
 
-With this approach, no Snowflake-related Helm configuration is needed in your overrides. The `databases.datawarehouse.snowflake` section and its associated Secret mount can be omitted entirely.
-
-### Kubernetes / CSI Provider: Using File-based Private Key
-
-For `kubernetes` and `csi` providers, configure the Snowflake section in your overrides to mount the `.p8` file:
+The CLI (`rpihelmcli secrets`) creates a Kubernetes Secret from your `.p8` file. Configure the Snowflake section in your overrides:
 
 ```yaml
 databases:
@@ -297,13 +286,106 @@ databases:
       - keyName: my-snowflake-rsakey.p8
 ```
 
-The connection string in the RPI client then uses the file path:
+### csi Provider
 
-```
-User=<user>;Db=<database>;Host=<host>;Account=<account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/my-snowflake-rsakey.p8
+Store the `.p8` private key in your vault. Define a SecretProviderClass that syncs it to a K8s Secret, and a smoke test pod to trigger the sync:
+
+```yaml
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      secretName: snowflake-creds
+      mountPath: /app/snowflake-creds
+      keys:
+      - keyName: my-snowflake-rsakey.p8
+
+secretsManagement:
+  provider: csi
+  csi:
+    secretProviderClasses:
+    - name: snowflake-creds
+      provider: azure
+      parameters:
+        clientID: <managed-identity-client-id>
+        keyvaultName: <your-keyvault>
+        resourceGroup: <your-rg>
+        subscriptionId: <your-sub>
+        tenantId: <your-tenant>
+        useVMManagedIdentity: "false"
+        usePodIdentity: "false"
+      objects:
+      - objectName: my-snowflake-private-key
+        objectType: secret
+        objectAlias: my-snowflake-rsakey.p8
+      secretObjects:
+      - secretName: snowflake-creds
+        type: Opaque
+        data:
+        - objectName: my-snowflake-rsakey.p8
+          key: my-snowflake-rsakey.p8
+
+smokeTests:
+  deployments:
+  - name: deployment-sf
+    enabled: true
+    containerName: secrets
+    image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+    type: csiSecret
+    secretProviderClass: snowflake-creds
+    mountPath: /home/secrets/snowflake
+    volumeName: secrets-store-sf
 ```
 
-For CSI, add a SecretProviderClass that syncs the private key from your vault, and a smoke test deployment to trigger the CSI sync.
+### sdk Provider
+
+With SDK, RPI services read secrets from the vault at runtime. But Snowflake needs a file, not a runtime value. The chart solves this by mounting the key directly via a CSI inline volume on the RPI pods themselves, so no K8s Secret is created and no smoke test is needed.
+
+Define a SecretProviderClass under `secretsManagement.csi` (the chart renders it regardless of the main provider) and set `secretProviderClassName` on the Snowflake config:
+
+```yaml
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+      configurationReloadIntervalSeconds: 30
+      useADTokenForDatabaseConnection: true
+  csi:
+    secretProviderClasses:
+    - name: snowflake-creds
+      provider: azure
+      parameters:
+        clientID: <managed-identity-client-id>
+        keyvaultName: <your-keyvault>
+        resourceGroup: <your-rg>
+        subscriptionId: <your-sub>
+        tenantId: <your-tenant>
+        useVMManagedIdentity: "false"
+        usePodIdentity: "false"
+      objects:
+      - objectName: my-snowflake-private-key
+        objectType: secret
+        objectAlias: my-snowflake-rsakey.p8
+
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      secretName: snowflake-creds
+      mountPath: /app/snowflake-creds
+      secretProviderClassName: snowflake-creds
+      keys:
+      - keyName: my-snowflake-rsakey.p8
+```
+
+Key differences from the CSI provider approach:
+- No `secretObjects` on the SecretProviderClass (no K8s Secret created)
+- `secretProviderClassName` tells the chart to use a CSI inline volume instead of a Secret volume
+- No smoke test needed since the CSI volume is mounted directly by the RPI pods
+- The `objectAlias` controls the filename inside the container
 
 ---
 
