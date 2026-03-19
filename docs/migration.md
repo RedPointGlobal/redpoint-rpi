@@ -366,6 +366,76 @@ nodeProvisioning:
 
 Use this together with `nodeSelector` and `tolerations` to ensure RPI pods land on the provisioned nodes.
 
+### Service mesh (Linkerd) integration
+
+**Before:** Customers using Linkerd had to manually annotate every deployment with proxy injection and timeout settings, either by editing templates or using namespace-level injection (which affected non-RPI pods too).
+
+**Now:** The `serviceMesh` section enables per-pod Linkerd proxy injection and configuration for all RPI deployments:
+
+```yaml
+serviceMesh:
+  enabled: true
+  provider: linkerd
+  servers:
+  - name: aks-rpi-interactionapi
+    podSelector:
+      app.kubernetes.io/name: rpi-interactionapi
+    port: 8080
+    proxyProtocol: HTTP/1
+```
+
+When enabled, the chart automatically adds these pod annotations to all RPI deployments:
+- `linkerd.io/inject: enabled` (per-pod proxy injection)
+- `config.linkerd.io/skip-outbound-ports: "443"` (skip TLS for outbound HTTPS)
+- `config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"` (proxy timeout)
+
+Override any default or add additional annotations via `serviceMesh.podAnnotations`:
+
+```yaml
+serviceMesh:
+  enabled: true
+  provider: linkerd
+  podAnnotations:
+    config.linkerd.io/skip-outbound-ports: "443,587"
+    config.linkerd.io/proxy-cpu-request: "100m"
+```
+
+To disable injection for a specific service, use that service's `podAnnotations`:
+
+```yaml
+deploymentapi:
+  podAnnotations:
+    linkerd.io/inject: disabled
+```
+
+The `servers` list generates Linkerd `Server` CRDs for L7 traffic policy. Each server is automatically paired with an `AuthorizationPolicy` and `NetworkAuthentication` to allow unmeshed traffic (e.g. from your ingress controller). Per-server options:
+
+| Option | Default | Description |
+|:-------|:--------|:------------|
+| `allowUnauthenticated` | `true` | When true, creates AuthorizationPolicy + NetworkAuthentication to allow unmeshed clients. Set to false to require mTLS only. |
+| `networks` | All (`0.0.0.0/0`, `::/0`) | Custom CIDR list for NetworkAuthentication. Restricts which source IPs can reach the server. |
+
+```yaml
+serviceMesh:
+  servers:
+  - name: aks-rpi-interactionapi
+    podSelector:
+      app.kubernetes.io/name: rpi-interactionapi
+    port: 8080
+    proxyProtocol: HTTP/1
+    # allowUnauthenticated: true    # default
+    # networks:                     # restrict to cluster-internal only
+    #   - cidr: 10.0.0.0/8
+  - name: aks-rpi-executionservice
+    podSelector:
+      app.kubernetes.io/name: rpi-executionservice
+    port: 8080
+    proxyProtocol: HTTP/1
+    allowUnauthenticated: false     # mTLS only, no ingress traffic
+```
+
+No template edits required.
+
 ### Ingress domain from external sources
 
 The `ingress.domain` field accepts any value, including those resolved from external sources. If your domain is managed via AWS Secrets Manager or another external system, resolve it before running Helm and pass it with `--set`:

@@ -708,7 +708,12 @@ serviceMesh:
   #   config.linkerd.io/skip-outbound-ports: "443,587"
   #   config.linkerd.io/proxy-outbound-connect-timeout: "300000ms"
   #   config.linkerd.io/proxy-cpu-request: "100m"
-  # Linkerd Server CRDs for L7 traffic policy
+  # Linkerd Server CRDs for L7 traffic policy.
+  # Each server creates a Server + AuthorizationPolicy + NetworkAuthentication.
+  # Per-server options:
+  #   allowUnauthenticated: true (default) — allows unmeshed traffic (e.g. ingress)
+  #                         false — only meshed (mTLS) clients are permitted
+  #   networks: custom CIDR list for NetworkAuthentication (default: all traffic)
   servers: []
   # servers:
   #   - name: realtimeapi
@@ -716,6 +721,9 @@ serviceMesh:
   #       app.kubernetes.io/name: rpi-realtimeapi
   #     port: 8080
   #     proxyProtocol: HTTP/1
+  #     # allowUnauthenticated: true     # default, allows ingress traffic
+  #     # networks:                      # restrict to specific CIDRs
+  #     #   - cidr: 10.0.0.0/8
   #   - name: executionservice
   #     podSelector:
   #       app.kubernetes.io/name: rpi-executionservice

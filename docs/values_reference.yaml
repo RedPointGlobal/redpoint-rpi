@@ -1619,7 +1619,18 @@ serviceMesh:
   # Defaults (auto-applied): linkerd.io/inject=enabled, skip-outbound-ports=443,
   # proxy-outbound-connect-timeout=240000ms. Override or extend here.
   podAnnotations: {}
+  # Each server generates a Server + AuthorizationPolicy + NetworkAuthentication.
+  # Per-server: allowUnauthenticated (default true), networks (default all).
   servers: []
+  # servers:
+  #   - name: rpi-interactionapi
+  #     podSelector:
+  #       app.kubernetes.io/name: rpi-interactionapi
+  #     port: 8080
+  #     proxyProtocol: HTTP/1
+  #     allowUnauthenticated: true   # allows unmeshed/ingress traffic
+  #     networks:                    # custom CIDRs (default: all)
+  #       - cidr: 10.0.0.0/8
 
 # ==========================================================
 #  NODESELECTOR
