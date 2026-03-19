@@ -1,9 +1,20 @@
 ![redpoint_logo](../chart/images/redpoint.png)
-# Deploying RPI with Terraform
+# Automation Guide
 
 [< Back to main README](../README.md)
 
 ## Overview
+
+RPI deployment can be automated with Terraform for infrastructure provisioning and CI/CD pipelines for continuous delivery. The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab generates both Terraform modules and CI/CD pipeline files tailored to your configuration.
+
+| Tool | What it generates |
+|:-----|:------------------|
+| **Terraform** | Infrastructure modules (identity, database, secrets store) + Helm release |
+| **CI/CD Pipelines** | GitHub Actions, Azure DevOps, or GitLab CI workflows for Helm deploy with optional image mirroring |
+
+---
+
+## Terraform
 
 The Terraform modules in `deploy/terraform/modules/` provision cloud infrastructure and generate a valid Helm overrides file from the provisioned resource outputs. This gives you a single `terraform apply` that creates everything needed for RPI: database, identity, secrets store, and a ready-to-use values file.
 
@@ -98,10 +109,6 @@ resource "helm_release" "rpi" {
     value = "3"
   }
 
-  set {
-    name  = "postInstall.enabled"
-    value = "true"
-  }
 }
 ```
 
@@ -146,3 +153,38 @@ deploy/terraform/examples/
 ```
 
 Each example shows a full module invocation with provider configuration and optional Helm deployment.
+
+---
+
+## CI/CD Pipelines
+
+The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab generates ready-to-use CI/CD pipeline files for deploying RPI via Helm. Pipelines are built from your Generate tab configuration.
+
+### Supported Pipeline Tools
+
+| Tool | File generated |
+|:-----|:---------------|
+| **GitHub Actions** | `.github/workflows/rpi-deploy.yml` |
+| **Azure DevOps** | `azure-pipelines.yml` |
+| **GitLab CI** | `.gitlab-ci.yml` |
+
+### What the Pipeline Does
+
+Each generated pipeline includes:
+
+1. **Checkout** the chart repository
+2. **Configure** cloud credentials (Azure, AWS, or GCP)
+3. **Helm upgrade/install** with your overrides file
+4. **Rollout monitoring** to verify pods are healthy
+
+### Optional: Image Mirroring
+
+When enabled, the pipeline adds a step to mirror RPI container images from the Redpoint Container Registry into your own registry before deploying. This is useful for air-gapped environments or organizations that require all images to come from an internal registry.
+
+### Getting Started
+
+1. Go to the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com)
+2. Configure your deployment in the **Generate** tab
+3. Switch to the **Automate** tab and select **CI/CD Pipeline**
+4. Choose your pipeline tool and download the generated file
+5. Add your overrides file and the pipeline to your repository
