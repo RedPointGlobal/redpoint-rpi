@@ -1615,6 +1615,10 @@ networkPolicy:
 serviceMesh:
   enabled: false
   provider: linkerd
+  # Pod annotations added to all RPI deployments when enabled.
+  # Defaults (auto-applied): linkerd.io/inject=enabled, skip-outbound-ports=443,
+  # proxy-outbound-connect-timeout=240000ms. Override or extend here.
+  podAnnotations: {}
   servers: []
 
 # ==========================================================

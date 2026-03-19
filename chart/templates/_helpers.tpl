@@ -479,7 +479,7 @@ Usage: {{- include "rpi.serviceMesh.podAnnotations" . | nindent 8 }}
 {{- define "rpi.serviceMesh.podAnnotations" -}}
 {{- if .Values.serviceMesh.enabled }}
 {{- if eq (.Values.serviceMesh.provider | default "linkerd") "linkerd" }}
-{{- $defaults := dict "config.linkerd.io/skip-outbound-ports" "443" "config.linkerd.io/proxy-outbound-connect-timeout" "240000ms" -}}
+{{- $defaults := dict "linkerd.io/inject" "enabled" "config.linkerd.io/skip-outbound-ports" "443" "config.linkerd.io/proxy-outbound-connect-timeout" "240000ms" -}}
 {{- $overrides := .Values.serviceMesh.podAnnotations | default dict -}}
 {{- $merged := mustMergeOverwrite $defaults $overrides -}}
 {{- toYaml $merged }}

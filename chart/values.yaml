@@ -696,10 +696,15 @@ serviceMesh:
   # Supported: linkerd
   provider: linkerd
   # Pod annotations added to all RPI deployments when service mesh is enabled.
-  # Defaults: skip-outbound-ports=443, proxy-outbound-connect-timeout=240000ms
+  # Defaults: inject=enabled, skip-outbound-ports=443, proxy-outbound-connect-timeout=240000ms
   # Override or add annotations here; these merge with (and override) the defaults.
+  # To disable injection for a specific service, set podAnnotations on that service:
+  #   deploymentapi:
+  #     podAnnotations:
+  #       linkerd.io/inject: disabled
   podAnnotations: {}
   # podAnnotations:
+  #   linkerd.io/inject: enabled
   #   config.linkerd.io/skip-outbound-ports: "443,587"
   #   config.linkerd.io/proxy-outbound-connect-timeout: "300000ms"
   #   config.linkerd.io/proxy-cpu-request: "100m"
