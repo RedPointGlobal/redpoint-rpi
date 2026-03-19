@@ -252,6 +252,61 @@ The hostname in the connection string must match the internal service name the c
 
 ---
 
+## Snowflake Private Key Authentication
+
+Snowflake supports two methods for providing the RSA private key used in JWT authentication:
+
+| Method | Connection string parameter | How it works |
+|:-------|:---------------------------|:-------------|
+| **File-based** | `PRIVATE_KEY_FILE=/app/snowflake-creds/key.p8` | The `.p8` file is mounted into the container from a Kubernetes Secret |
+| **Inline** | `PRIVATE_KEY=<key-content>` | The private key content is passed directly in the connection string |
+
+### Recommended Approach Per Provider
+
+| Provider | Recommended method | Why |
+|:---------|:-------------------|:----|
+| **kubernetes** | File-based (`PRIVATE_KEY_FILE`) | The CLI creates the Secret from your `.p8` file. The chart mounts it automatically. |
+| **csi** | File-based (`PRIVATE_KEY_FILE`) | A SecretProviderClass syncs the key from your vault to a Kubernetes Secret. A smoke test pod triggers the sync. |
+| **sdk** | Inline (`PRIVATE_KEY`) | SDK services read secrets from the vault at runtime. There is no Kubernetes Secret to mount as a file, so use the inline method. |
+
+### SDK Provider: Using Inline Private Key
+
+When using the `sdk` provider, store the private key content (not the file) in your vault. In the RPI client, configure the Snowflake connection string using `PRIVATE_KEY` instead of `PRIVATE_KEY_FILE`:
+
+```
+User=<user>;Db=<database>;Host=<host>;Account=<account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY=<base64-encoded-key-content>;PRIVATE_KEY_PWD=<passphrase-if-encrypted>
+```
+
+If the private key value contains equal signs (`=`), replace each with two (`==`) so the connection string is parsed correctly.
+
+With this approach, no Snowflake-related Helm configuration is needed in your overrides. The `databases.datawarehouse.snowflake` section and its associated Secret mount can be omitted entirely.
+
+### Kubernetes / CSI Provider: Using File-based Private Key
+
+For `kubernetes` and `csi` providers, configure the Snowflake section in your overrides to mount the `.p8` file:
+
+```yaml
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      secretName: snowflake-creds
+      mountPath: /app/snowflake-creds
+      keys:
+      - keyName: my-snowflake-rsakey.p8
+```
+
+The connection string in the RPI client then uses the file path:
+
+```
+User=<user>;Db=<database>;Host=<host>;Account=<account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/my-snowflake-rsakey.p8
+```
+
+For CSI, add a SecretProviderClass that syncs the private key from your vault, and a smoke test deployment to trigger the CSI sync.
+
+---
+
 ## Image Pull Secrets
 
 Image pull secrets (for private container registries) cannot be managed through CSI due to a chicken-and-egg problem: the pod needs the secret to pull its image, but CSI only syncs secrets when a pod mounts the volume.
