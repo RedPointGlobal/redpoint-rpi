@@ -222,6 +222,7 @@ The hostname in the connection string must match the internal service name the c
 Image pull secrets (for private container registries) cannot be managed through CSI due to a chicken-and-egg problem: the pod needs the secret to pull its image, but CSI only syncs secrets when a pod mounts the volume.
 
 Options for image pull secrets:
-- **Azure-native (ACR)**: Assign the `AcrPull` role to your managed identity. No secret needed.
+- **Mirrored ACR**: If you mirror RPI images from `rg1acrpub.azurecr.io` into your own Azure Container Registry, assign the `AcrPull` role to your managed identity on your ACR. No image pull secret needed.
+- **Direct pull from Redpoint ACR**: Create an image pull secret with the credentials provided by Redpoint Support using `kubectl create secret docker-registry`.
 - **Private registries (Artifactory, ECR, etc.)**: Create the secret before deploying using `kubectl create secret docker-registry`.
 - **CLI**: Use `rpihelmcli secrets` to generate the image pull secret as part of the secrets workflow.
