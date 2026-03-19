@@ -207,11 +207,13 @@ spec:
           value: {{ $cfg.baseUrl | quote }}
         - name: Rebrandly__EnterpriseBaseUrl
           value: {{ $cfg.enterpriseBaseUrl | quote }}
+        {{- if not (eq $.Values.secretsManagement.provider "sdk") }}
         - name: Rebrandly__ApiKey
           valueFrom:
             secretKeyRef:
-              name: {{ $cfg.secretName }}
+              name: {{ include "rpi.secrets.secretName" $ | quote }}
               key: Rebrandly_ApiKey
+        {{- end }}
         - name: Redis__Hostname
           value: {{ $cfg.redisSettings.hostname | quote }}
 #        - name: Redis__Username
@@ -220,7 +222,7 @@ spec:
         - name: Redis__Password
           valueFrom:
             secretKeyRef:
-              name: {{ $cfg.secretName }}
+              name: {{ include "rpi.secrets.internalSecretName" $ | quote }}
               key: Rebrandly_RedisPassword
         {{- end }}
         - name: Redis__Port
@@ -368,7 +370,7 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ $cfg.secretName }}
+                  name: {{ include "rpi.secrets.internalSecretName" $ | quote }}
                   key: Rebrandly_RedisPassword
           command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
           volumeMounts:

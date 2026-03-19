@@ -162,7 +162,7 @@ spec:
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "rpi.secrets.secretName" . | quote }}
+                  name: {{ include "rpi.secrets.internalSecretName" . | quote }}
                   key: QueueService_RabbitMQ_Password
             - name: RABBITMQ_DEFAULT_VHOST
               value: "/"
@@ -378,7 +378,7 @@ spec:
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "rpi.secrets.secretName" . | quote }}
+                  name: {{ include "rpi.secrets.internalSecretName" . | quote }}
                   key: RealtimeAPI_RabbitMQ_Password
             - name: RABBITMQ_DEFAULT_VHOST
               value: "/"

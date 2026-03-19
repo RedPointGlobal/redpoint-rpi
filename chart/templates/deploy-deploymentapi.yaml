@@ -212,6 +212,7 @@ spec:
           value: {{ $cfg.logging.rpiError | quote }}
         - name: Logging__Console__LogLevel__Default
           value: {{ $cfg.logging.Console | quote }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
           valueFrom:
             secretKeyRef:
@@ -227,6 +228,7 @@ spec:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: Operations_Database_ServerHost
+        {{- end }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
           value: "true"
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema

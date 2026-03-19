@@ -627,6 +627,20 @@ Usage: {{ include "rpi.secrets.secretName" . }}
 {{- end -}}
 
 {{/*
+Secret name for internal chart-managed services (Redis, RabbitMQ).
+For sdk/csi providers, uses the auto-generated rpi-internal-services secret.
+For kubernetes provider, uses the main secret (which already contains these keys).
+Usage: {{ include "rpi.secrets.internalSecretName" . }}
+*/}}
+{{- define "rpi.secrets.internalSecretName" -}}
+{{- if eq .Values.secretsManagement.provider "sdk" -}}
+rpi-internal-services
+{{- else -}}
+{{ include "rpi.secrets.secretName" . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Resolve which ServiceAccount name a pod should use.
 Usage: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
   - root: the top-level context (.)

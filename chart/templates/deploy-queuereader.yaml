@@ -380,14 +380,12 @@ spec:
         - name: InternalCache__Provider
           value: "Redis"
         {{- end }}
-        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         {{- if $cfg.realtimeConfiguration.isDistributed }}
         - name: InternalCache__RedisSettings__IPAddress
           valueFrom:
             secretKeyRef:
-              name: {{ include "rpi.secrets.secretName" . | quote }}
+              name: {{ include "rpi.secrets.internalSecretName" . | quote }}
               key: QueueService_RedisCache_ConnectionString
-        {{- end }}
         {{- end }}
         {{- if $cfg.realtimeConfiguration.isDistributed }}
         - name: InternalQueues__Enabled
@@ -407,14 +405,12 @@ spec:
         - name: QueueService__RealtimeConfiguration__DistributedQueue__Type
           value: "RedPoint.Resonance.RabbitMQAccess.RabbitMQFactory"
         {{- end }}
-        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         {{- if $cfg.realtimeConfiguration.isDistributed }}
         - name: InternalQueues__Password
           valueFrom:
             secretKeyRef:
-              name: {{ include "rpi.secrets.secretName" . | quote }}
+              name: {{ include "rpi.secrets.internalSecretName" . | quote }}
               key: QueueService_RabbitMQ_Password
-        {{- end }}
         {{- end }}
         image: {{ include "rpi.image" (dict "root" . "name" $name) }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}

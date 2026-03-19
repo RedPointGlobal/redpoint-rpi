@@ -256,25 +256,6 @@ spec:
         {{- end }}
         {{- end }}
         {{- if $cfg.internalCache.enabled }}
-        {{- if eq $cfg.internalCache.provider "default" }}
-        - name: InternalCache__BackupToOpsDBInterval
-          value: {{ $cfg.internalCache.backupToOpsDBInterval | quote }}
-        - name: InternalCache__MaxNumberRetries
-          value: {{ $cfg.internalCache.maxNumberRetries | quote }}
-        - name: InternalCache__MaxRetryDelay
-          value: {{ $cfg.internalCache.maxRetryDelay | quote }}
-        - name: InternalCache__FailOnPrimaryDataLoss
-          value: {{ $cfg.internalCache.failOnPrimaryDataLoss | quote }}
-        - name: InternalCache__FailOnCacheConnectionError
-          value: {{ $cfg.internalCache.failOnCacheConnectionError | quote }}
-        - name: InternalCache__RedisSettings__IPAddress
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "rpi.secrets.secretName" . | quote }}
-              key: ExecutionService_RedisCache_ConnectionString
-        {{- end }}
-        {{- end }}
-        {{- if $cfg.internalCache.enabled }}
         {{- if eq $cfg.internalCache.provider "azureblob" }}
         - name: InternalCache__StatePersistence__FileSystem__OverrideDirectoryPath
           value: "true"

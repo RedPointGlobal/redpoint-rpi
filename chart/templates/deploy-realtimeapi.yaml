@@ -1418,13 +1418,11 @@ spec:
           command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
           {{- end }}
           env:
-          {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: {{ include "rpi.secrets.secretName" . | quote }}
+                name: {{ include "rpi.secrets.internalSecretName" . | quote }}
                 key: RealtimeAPI_RedisCache_Password
-          {{- end }}
           volumeMounts:
             {{- if $cfg.cacheProvider.redis.redisSettings.volumeClaimTemplates.enabled }}
             - name: {{ $cacheName }}-data
