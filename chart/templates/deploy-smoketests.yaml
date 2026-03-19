@@ -57,19 +57,10 @@ spec:
       {{- if .nodeSelector }}
       nodeSelector:
         {{- toYaml .nodeSelector | nindent 8 }}
-      {{- else if $.Values.nodeSelector.enabled }}
-      nodeSelector:
-        {{ $.Values.nodeSelector.key }}: {{ $.Values.nodeSelector.value }}
       {{- end }}
       {{- if .tolerations }}
       tolerations:
         {{- toYaml .tolerations | nindent 8 }}
-      {{- else if $.Values.tolerations.enabled }}
-      tolerations:
-        - effect: {{ $.Values.tolerations.effect | default "NoSchedule" }}
-          key: {{ $.Values.tolerations.key }}
-          operator: {{ $.Values.tolerations.operator | default "Equal" }}
-          value: {{ $.Values.tolerations.value }}
       {{- end }}
       containers:
         - name: {{ $containerName }}

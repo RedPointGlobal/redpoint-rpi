@@ -2474,19 +2474,116 @@ cli_secrets() {
     echo "  ${YELLOW}Secrets provider is '${secrets_provider}'. RPI secrets are managed by the ${_provider_label}.${RESET}"
     echo "  ${DIM}No RPI secret will be created. Ensure your ${_provider_label} syncs the required keys.${RESET}"
     echo ""
-    echo "  Required keys:"
+
+    # Read additional config to determine conditional keys
+    local qr_distributed smtp_use_creds ai_enabled rebrandly_enabled da_enabled platform
+    qr_distributed=$(read_val "$overrides" "queuereader.realtimeConfiguration.isDistributed")
+    qr_distributed="${qr_distributed:-false}"
+    smtp_use_creds=$(read_val "$overrides" "SMTPSettings.UseCredentials")
+    smtp_use_creds="${smtp_use_creds:-false}"
+    ai_enabled=$(read_val "$overrides" "redpointAI.enabled")
+    ai_enabled="${ai_enabled:-false}"
+    rebrandly_enabled=$(read_val "$overrides" "rebrandly.enabled")
+    rebrandly_enabled="${rebrandly_enabled:-false}"
+    da_enabled=$(read_val "$overrides" "dataActivation.enabled")
+    da_enabled="${da_enabled:-false}"
+    platform=$(read_val "$overrides" "global.deployment.platform")
+    platform="${platform:-azure}"
+
+    echo "  ${BOLD}Required vault keys:${RESET}"
+    echo ""
+    echo "  ${BOLD}Always required:${RESET}"
     echo "    - ConnectionString_Operations_Database"
     echo "    - ConnectionString_Logging_Database"
-    echo "    - Operations_Database_Server_Password"
     echo "    - Operations_Database_ServerHost"
     echo "    - Operations_Database_Server_Username"
+    echo "    - Operations_Database_Server_Password"
     echo "    - Operations_Database_Pulse_Database_Name"
     echo "    - Operations_Database_Pulse_Logging_Database_Name"
+
     if [ "$rt_enabled" = "true" ] || [ "$rt_enabled" = "True" ]; then
+      echo ""
+      echo "  ${BOLD}Realtime API:${RESET}"
       echo "    - RealtimeAPI_Auth_Token"
-      echo "    - RealtimeAPI_MongoCache_ConnectionString (or cache-specific key)"
-      echo "    - RealtimeAPI_ServiceBus_ConnectionString (or queue-specific key)"
+      case "$rt_cache_provider" in
+        mongodb)
+          echo "    - RealtimeAPI_MongoCache_ConnectionString"
+          echo "    - RealtimeAPI_MongoCache_ConnectionKey"
+          ;;
+        redis)
+          echo "    - RealtimeAPI_RedisCache_ConnectionString"
+          echo "    - RealtimeAPI_RedisCache_Password"
+          ;;
+        inMemorySql)
+          echo "    - RealtimeAPI_inMemorySql_ConnectionString"
+          ;;
+      esac
+      case "$rt_queue_provider" in
+        azureservicebus)
+          echo "    - RealtimeAPI_ServiceBus_ConnectionString"
+          ;;
+        azureeventhubs)
+          echo "    - RealtimeAPI_EventHub_ConnectionString"
+          ;;
+        azurestorage)
+          echo "    - RealtimeAPI_AzureStorage_ConnectionString"
+          ;;
+        rabbitmq)
+          echo "    - RealtimeAPI_RabbitMQ_Password"
+          ;;
+      esac
     fi
+
+    if [ "$qr_distributed" = "true" ] || [ "$qr_distributed" = "True" ]; then
+      echo ""
+      echo "  ${BOLD}Queue Reader (distributed):${RESET}"
+      echo "    - QueueService_RedisCache_ConnectionString"
+      echo "    - QueueService_RedisCache_Password"
+      echo "    - QueueService_RabbitMQ_Password"
+    fi
+
+    if [ "$smtp_use_creds" = "true" ] || [ "$smtp_use_creds" = "True" ]; then
+      echo ""
+      echo "  ${BOLD}SMTP:${RESET}"
+      echo "    - SMTP_Password"
+    fi
+
+    if [ "$ai_enabled" = "true" ] || [ "$ai_enabled" = "True" ]; then
+      echo ""
+      echo "  ${BOLD}Redpoint AI:${RESET}"
+      echo "    - RPI_NLP_SEARCH_KEY"
+      echo "    - RPI_NLP_API_KEY"
+      echo "    - RPI_NLP_MODEL_CONNECTION_STRING"
+    fi
+
+    if [ "$rebrandly_enabled" = "true" ] || [ "$rebrandly_enabled" = "True" ]; then
+      echo ""
+      echo "  ${BOLD}Rebrandly:${RESET}"
+      echo "    - Rebrandly_RedisPassword"
+      echo "    - Rebrandly_ApiKey"
+    fi
+
+    if [ "$da_enabled" = "true" ] || [ "$da_enabled" = "True" ]; then
+      echo ""
+      echo "  ${BOLD}Smart Activation (CDP):${RESET}"
+      echo "    - CDP_Default_Password"
+      echo "    - CDP_Keycloak_Admin_Password"
+      echo "    - CDP_Mongo_ConnectionString"
+      echo "    - CDP_Integration_Password"
+      echo "    - CDP_RabbitMQ_Password"
+      echo "    - CDP_RabbitMQ_ErlangCookie"
+      echo "    - CDP_Keycloak_Client_Secret"
+    fi
+
+    if [ "$platform" = "amazon" ]; then
+      echo ""
+      echo "  ${BOLD}AWS Cloud Identity:${RESET}"
+      echo "    - AWS_Access_Key_ID"
+      echo "    - AWS_Secret_Access_Key"
+    fi
+
+    echo ""
+    echo "  ${DIM}Full reference: docs/secrets-management.md${RESET}"
     echo ""
 
     # Still create the output file for non-secret resources (image pull, TLS, ConfigMaps)

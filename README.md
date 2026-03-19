@@ -22,7 +22,8 @@ This chart deploys RPI on Kubernetes using Helm.
 | Guide | Description |
 |:------|:------------|
 | [Helm Assistant](docs/readme-mcp.md) | Web UI and MCP endpoint for AI-assisted configuration and troubleshooting |
-| [Helm Assistant Reference](https://rpi-helm-assistant.redpointcdp.com) | Browse every configurable key, or ask the Chat about any feature |
+| [Complete Values Reference](https://rpi-helm-assistant.redpointcdp.com) | Browse every configurable key, or ask the Chat about any feature |
+| [Secrets Management](docs/secrets-management.md) | Providers (Kubernetes, CSI, SDK), required vault keys, and image pull secrets |
 | [Values Guide](docs/readme-values.md) | How the two-tier values system works and how to customize defaults |
 | [Terraform Guide](docs/readme-terraform.md) | Infrastructure-as-code modules for Azure, AWS, and GCP |
 | [GitOps Guide](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |
