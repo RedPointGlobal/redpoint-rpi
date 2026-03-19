@@ -223,4 +223,8 @@ Image pull secrets (for private container registries) cannot be managed through 
 
 An image pull secret is only required when your cluster cannot already authenticate to the container registry. If your nodes already have access (e.g., EKS node IAM roles for ECR, AKS with `AcrPull` role on your own ACR), set `imagePullSecret.enabled: false` and no secret is needed.
 
-When authentication is required (e.g., pulling directly from the Redpoint ACR, or from a private registry that requires credentials), create the secret before deploying using `kubectl create secret docker-registry` or `rpihelmcli secrets`.
+You need an image pull secret when:
+- **Pulling directly from the Redpoint Container Registry** (`rg1acrpub.azurecr.io`), which requires authentication credentials provided by Redpoint Support.
+- **Pulling from an internal registry that requires Docker credentials** (e.g., Artifactory, Harbor, or any registry where node-level authentication is not configured).
+
+In either case, create the secret before deploying. The `rpihelmcli secrets` command will prompt you for registry URL, username, and password, then generate the image pull secret automatically as part of the secrets workflow.
