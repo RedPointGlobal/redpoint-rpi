@@ -10,7 +10,7 @@ This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you
 ---
 
 <details>
-<summary><strong style="font-size:1.25em;">What Changed in v7.7</strong></summary>
+<summary><strong style="font-size:1.25em;">What Changed in the Helm Chart</strong></summary>
 
 The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to a **small user-facing override** file. Internal defaults (health probes, security contexts, logging, ports, rollout strategies, etc.) are now managed by the chart automatically.
 
@@ -25,7 +25,7 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 </details>
 
 <details>
-<summary><strong style="font-size:1.25em;">What's New in v7.7</strong></summary>
+<summary><strong style="font-size:1.25em;">New Chart Features</strong></summary>
 
 ### Custom container images and private registries
 
