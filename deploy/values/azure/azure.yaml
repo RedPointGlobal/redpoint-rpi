@@ -520,7 +520,7 @@ databaseUpgrade:
     enabled: true
     recipientEmail: first.last@example.com
 # ============================================================
-#  SMOKE TESTS
+#  VALIDATION PODS
 # ============================================================
 # Lightweight validation pods that verify storage mounts and CSI
 # secret mounts are working. Enable during initial setup or after
@@ -529,7 +529,7 @@ databaseUpgrade:
 # Two types:
 #   pvc       — Mounts a PersistentVolumeClaim and writes a test file
 #   csiSecret — Mounts a CSI SecretProviderClass volume and sleeps
-smokeTests:
+validationPods:
   enabled: true
   deployments:
     - name: deployment-blob

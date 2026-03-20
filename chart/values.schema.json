@@ -2320,25 +2320,25 @@
         }
       }
     },
-    "smokeTests": {
+    "validationPods": {
       "type": "object",
-      "description": "Smoke test pods that verify storage mounts and CSI secret mounts are working",
+      "description": "Validation pods that verify storage mounts and CSI secret mounts are working",
       "additionalProperties": true,
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable smoke test deployments"
+          "description": "Enable validation pod deployments"
         },
         "deployments": {
           "type": "array",
-          "description": "List of smoke test deployment definitions",
+          "description": "List of validation pod deployment definitions",
           "items": {
             "type": "object",
             "additionalProperties": true,
             "properties": {
               "name": {
                 "type": "string",
-                "description": "Smoke test deployment name"
+                "description": "Validation pod deployment name"
               },
               "type": {
                 "type": "string",

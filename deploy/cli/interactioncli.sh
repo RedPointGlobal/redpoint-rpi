@@ -103,7 +103,7 @@ while getopts "o:a:fh" opt; do
       echo ""
       echo "  Available features (-a):"
       echo "    database_upgrade  queue_reader  autoscaling  custom_metrics  service_mesh"
-      echo "    smoke_tests  entra_id  oidc  smtp  redpoint_ai  storage  data_warehouse"
+      echo "    validation_pods  entra_id  oidc  smtp  redpoint_ai  storage  data_warehouse"
       echo "    extra_envs  secrets_management  node_scheduling  common_annotations"
       echo "    custom_ca_certs  image_overrides  pod_anti_affinity  node_provisioning"
       echo "    storage_class"
@@ -900,14 +900,14 @@ BLOCK
   fi
 }
 
-add_smoke_tests() {
+add_validation_pods() {
   local file=$1
-  check_replace_block "$file" "smokeTests" "Smoke Tests" || return 0
+  check_replace_block "$file" "validationPods" "Validation Pods" || return 0
   local deployments=""
   local more="true"
   while [ "$more" = "true" ]; do
     local test_name test_type test_image
-    prompt test_name "Smoke test name" "storage-check"
+    prompt test_name "Validation pod name" "storage-check"
     prompt test_image "Container image" "busybox:1.37"
     prompt_choice test_type "Type" "pvc|csiSecret" "pvc"
 
@@ -944,15 +944,15 @@ add_smoke_tests() {
       secretProviderClass: ${spc}
       mountPath: ${mount_path}${ns_block}"
     fi
-    prompt_yesno more "Add another smoke test?" "n"
+    prompt_yesno more "Add another validation pod?" "n"
   done
   append_block "$file" "$(cat <<BLOCK
-smokeTests:
+validationPods:
   enabled: true
   deployments:${deployments}
 BLOCK
-)" "Smoke Tests"
-  echo "  ${ICON_CHECK} Added smokeTests to ${file}"
+)" "Validation Pods"
+  echo "  ${ICON_CHECK} Added validationPods to ${file}"
 }
 
 add_entra_id() {
@@ -2119,7 +2119,7 @@ show_feature_menu() {
   echo "    ${CYAN}3${RESET})  autoscaling       — Scale services based on CPU/memory with HPA or KEDA"
   echo "    ${CYAN}4${RESET})  custom_metrics    — Expose Prometheus /metrics endpoints for monitoring"
   echo "    ${CYAN}5${RESET})  service_mesh      — Enable Linkerd mTLS and traffic policies"
-  echo "    ${CYAN}6${RESET})  smoke_tests       — Validate PVC mounts and CSI drivers post-deploy"
+  echo "    ${CYAN}6${RESET})  validation_pods       — Validate PVC mounts and CSI drivers post-deploy"
   echo "    ${CYAN}7${RESET})  entra_id          — Single sign-on via Microsoft Entra ID (Azure AD)"
   echo "    ${CYAN}8${RESET})  oidc              — Single sign-on via OpenID Connect (Keycloak, Okta, etc.)"
   echo "    ${CYAN}9${RESET})  smtp              — Send transactional emails from RPI workflows"
@@ -2144,7 +2144,7 @@ show_feature_menu() {
     3|autoscaling)         ADD_FEATURE="autoscaling" ;;
     4|custom_metrics)      ADD_FEATURE="custom_metrics" ;;
     5|service_mesh)        ADD_FEATURE="service_mesh" ;;
-    6|smoke_tests)         ADD_FEATURE="smoke_tests" ;;
+    6|validation_pods)         ADD_FEATURE="validation_pods" ;;
     7|entra_id)            ADD_FEATURE="entra_id" ;;
     8|oidc)                ADD_FEATURE="oidc" ;;
     9|smtp)                ADD_FEATURE="smtp" ;;
@@ -3078,7 +3078,7 @@ run_add_feature() {
     autoscaling)      add_autoscaling "$file" ;;
     custom_metrics)   add_custom_metrics "$file" ;;
     service_mesh)     add_service_mesh "$file" ;;
-    smoke_tests)      add_smoke_tests "$file" ;;
+    validation_pods)      add_validation_pods "$file" ;;
     entra_id)         add_entra_id "$file" ;;
     oidc)             add_oidc "$file" ;;
     smtp)             add_smtp "$file" ;;
@@ -3706,7 +3706,7 @@ fi
 # ============================================================
 # Optional features — prompt during initial setup
 # ============================================================
-FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh smoke_tests extra_envs secrets_management node_scheduling common_annotations custom_ca_certs image_overrides pod_anti_affinity node_provisioning storage_class"
+FEATURES_LIST="database_upgrade queue_reader storage smtp redpoint_ai oidc entra_id autoscaling custom_metrics service_mesh validation_pods extra_envs secrets_management node_scheduling common_annotations custom_ca_certs image_overrides pod_anti_affinity node_provisioning storage_class"
 SELECTED_FEATURES=""
 
 if [ "$FILE_MODE" = "true" ]; then
@@ -3738,7 +3738,7 @@ else
       autoscaling)      label="Autoscaling — scale services based on CPU/memory with HPA or KEDA" ;;
       custom_metrics)   label="Custom Metrics — expose Prometheus /metrics endpoints for monitoring" ;;
       service_mesh)     label="Service Mesh — enable Linkerd mTLS and traffic policies" ;;
-      smoke_tests)      label="Smoke Tests — validate PVC mounts and CSI drivers post-deploy" ;;
+      validation_pods)      label="Validation Pods — validate PVC mounts and CSI drivers post-deploy" ;;
       extra_envs)         label="Extra Envs — debug and plugin environment variables for execution service" ;;
       secrets_management) label="Secrets Management — configure secrets provider, CSI classes, SDK vault settings" ;;
       node_scheduling)    label="Node Scheduling — node selector and tolerations for dedicated nodes" ;;
@@ -3791,7 +3791,7 @@ for feat in $SELECTED_FEATURES; do
     autoscaling)      add_autoscaling "$OUTPUT_FILE" ;;
     custom_metrics)   add_custom_metrics "$OUTPUT_FILE" ;;
     service_mesh)     add_service_mesh "$OUTPUT_FILE" ;;
-    smoke_tests)      add_smoke_tests "$OUTPUT_FILE" ;;
+    validation_pods)      add_validation_pods "$OUTPUT_FILE" ;;
     extra_envs)       add_extra_envs "$OUTPUT_FILE" ;;
     secrets_management) add_secrets_management "$OUTPUT_FILE" ;;
     node_scheduling)    add_node_scheduling "$OUTPUT_FILE" ;;

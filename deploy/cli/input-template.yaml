@@ -168,9 +168,9 @@ features:
   # Enables Linkerd mTLS and traffic policies.
   # service_mesh: true
 
-  # --- Smoke Tests ---
+  # --- Validation Pods ---
   # Validates PVC mounts and CSI drivers post-deploy.
-  # smoke_tests: true
+  # validation_pods: true
 
 
   # --- Extra Envs ---

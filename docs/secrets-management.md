@@ -357,8 +357,8 @@ Snowflake JWT authentication requires the `.p8` RSA private key file to be mount
 
 ### How It Works Per Provider
 
-| Provider | Key source | Volume type | Smoke test needed? |
-|:---------|:-----------|:------------|:-------------------|
+| Provider | Key source | Volume type | Validation pod needed? |
+|:---------|:-----------|:------------|:-----------------------|
 | **kubernetes** | CLI creates a K8s Secret from your `.p8` file | Secret volume with `subPath` | No |
 | **csi** | SecretProviderClass syncs key from vault to a K8s Secret | Secret volume with `subPath` | Yes (triggers CSI sync) |
 | **sdk** | SecretProviderClass mounts key directly via CSI inline volume | CSI inline volume | No (mounted by RPI pods directly) |
@@ -387,7 +387,7 @@ databases:
 
 ### csi Provider
 
-Store the `.p8` private key in your vault. Define a SecretProviderClass that syncs it to a K8s Secret, and a smoke test pod to trigger the sync:
+Store the `.p8` private key in your vault. Define a SecretProviderClass that syncs it to a K8s Secret, and a validation pod to trigger the sync:
 
 ```yaml
 databases:
@@ -425,7 +425,7 @@ secretsManagement:
         - objectName: my-snowflake-rsakey.p8
           key: my-snowflake-rsakey.p8
 
-smokeTests:
+validationPods:
   deployments:
   - name: deployment-sf
     enabled: true
@@ -439,7 +439,7 @@ smokeTests:
 
 ### sdk Provider
 
-With SDK, RPI services read secrets from the vault at runtime. But Snowflake needs a file, not a runtime value. The chart solves this by mounting the key directly via a CSI inline volume on the RPI pods themselves, so no K8s Secret is created and no smoke test is needed.
+With SDK, RPI services read secrets from the vault at runtime. But Snowflake needs a file, not a runtime value. The chart solves this by mounting the key directly via a CSI inline volume on the RPI pods themselves, so no K8s Secret is created and no validation pod is needed.
 
 Define a SecretProviderClass under `secretsManagement.csi` (the chart renders it regardless of the main provider) and set `secretProviderClassName` on the Snowflake config:
 
@@ -483,7 +483,7 @@ databases:
 Key differences from the CSI provider approach:
 - No `secretObjects` on the SecretProviderClass (no K8s Secret created)
 - `secretProviderClassName` tells the chart to use a CSI inline volume instead of a Secret volume
-- No smoke test needed since the CSI volume is mounted directly by the RPI pods
+- No validation pod needed since the CSI volume is mounted directly by the RPI pods
 - The `objectAlias` controls the filename inside the container
 
 </details>

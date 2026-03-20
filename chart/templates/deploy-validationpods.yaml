@@ -1,5 +1,5 @@
 {{/*
-  Smoke Test Deployments
+  Validation Pods
   Lightweight validation pods that verify storage mounts and CSI secret mounts
   are working correctly. Each entry needs only a name, type, and mount target.
   Security context, imagePullSecrets, and workload identity labels are inherited
@@ -9,10 +9,33 @@
     pvc       — Mounts a PersistentVolumeClaim and writes a test file in a loop
     csiSecret — Mounts a CSI SecretProviderClass volume and sleeps
 
-  Enabled via: smokeTests.enabled: true
+  Enabled via: validationPods.enabled: true
 */}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
-{{- range (.Values.smokeTests).deployments }}
+{{- $saMode := .Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
+{{- $vpSAName := "rpi-validationpods" -}}
+{{- if and (eq $saMode "per-service") ((.Values.validationPods).deployments) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $vpSAName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $vpSAName "component" "validation") | nindent 4 }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
+  {{- if or $saAnnotations $ciAnnotations }}
+  annotations:
+    {{- if $saAnnotations }}
+    {{- $saAnnotations | nindent 4 }}
+    {{- end }}
+    {{- if $ciAnnotations }}
+    {{- $ciAnnotations | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- range (.Values.validationPods).deployments }}
 {{- if ne (.enabled | toString) "false" }}
 {{- $name := .name }}
 {{- $containerName := .containerName | default $name }}
@@ -50,8 +73,10 @@ spec:
     spec:
       {{- if .serviceAccountName }}
       serviceAccountName: {{ .serviceAccountName | quote }}
-      {{- else }}
+      {{- else if eq ($.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
       serviceAccountName: {{ $.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" | quote }}
+      {{- else }}
+      serviceAccountName: "rpi-validationpods"
       {{- end }}
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       {{- if .nodeSelector }}
