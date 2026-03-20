@@ -64,7 +64,7 @@ cloudIdentity:
 | Mode | Behavior |
 |:-----|:---------|
 | `shared` | All pods use the single SA specified in `name`. Simplest for workload identity -- only one federation credential needed. |
-| `per-service` | Each service gets its own SA (e.g., `rpi-realtimeapi`, `rpi-interactionapi`). Use when you need per-service IAM roles. This is the default. |
+| `per-service` | Each service gets its own SA (e.g., `rpi-realtimeapi`, `rpi-interactionapi`). Enables per-service audit trails in vault access logs, least-privilege access policies per service, and independent credential rotation. This is the default. |
 
 No template edits required for either mode.
 
