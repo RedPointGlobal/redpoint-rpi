@@ -2969,8 +2969,10 @@ cli_deploy() {
       if ! command -v git &>/dev/null; then
         echo "  ${RED}✘ git not found. Install git first, or clone manually.${RESET}"; exit 1
       fi
-      echo "  Cloning repository..."
-      git clone --depth 1 --branch release/v7.7 \
+      local _chart_branch
+      prompt _chart_branch "Chart branch" "main"
+      echo "  Cloning repository (branch: ${_chart_branch})..."
+      git clone --depth 1 --branch "$_chart_branch" \
         https://github.com/RedPointGlobal/redpoint-rpi.git "$_clone_dir" 2>&1 | \
         sed 's/^/  /'
       chart="${_clone_dir}/chart"
