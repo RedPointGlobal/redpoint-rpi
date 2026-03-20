@@ -589,31 +589,12 @@ Features like per-service image overrides, custom CA certificates, common annota
 <details>
 <summary><strong style="font-size:1.25em;">Breaking Changes</strong></summary>
 
-### Redshift Data Warehouse
+- **Redshift**: The `databases.datawarehouse.redshift` config block has been removed. Redshift now uses the Npgsql library instead of the ODBC driver. Remove this block from your overrides before upgrading.
+- **Databricks**: The `databases.datawarehouse.databricks` config block has been removed. Remove this block from your overrides before upgrading.
+- **ODBC ConfigMap**: The `odbc-config` ConfigMap, `ODBCINI` environment variable, and `postStart` lifecycle hook have been removed.
+- **Snowflake**: Changed from ConfigMap to Secret. `ConfigMapName` is now `secretName`, `ConfigMapFilePath` is now `mountPath`.
 
-Redshift now uses the Npgsql library instead of the ODBC driver. The `databases.datawarehouse.redshift` config block has been removed from the chart. Redshift connections are configured in the RPI client interface using a connection string:
-
-```
-Host=<hostname>;Database=<database>;Port=5439;User Id=<username>;Password=<password>;SslMode=Require;Trust Server Certificate=true
-```
-
-If you have Redshift in your overrides file, remove the `databases.datawarehouse.redshift` block before upgrading. After deploying v7.7, add your connection string through the client interface.
-
-### Databricks Data Warehouse
-
-Databricks now uses a connection string configured in the RPI client interface. The `databases.datawarehouse.databricks` config block and the `odbc-config` ConfigMap have been removed from the chart.
-
-Example connection string format:
-
-```
-Driver=/app/odbc-lib/simba/spark/lib/libsparkodbc_sb64.so;SparkServerType=3;Host=<hostname>;Port=443;Schema=<schema>;SSL=1;ThriftTransport=2;AuthMech=3;UID=token;PWD=<token>;HTTPPath=<path>
-```
-
-If you have Databricks in your overrides file, remove the `databases.datawarehouse.databricks` block before upgrading. After deploying v7.7, add your connection string through the client interface.
-
-### ODBC ConfigMap Removed
-
-The `odbc-config` ConfigMap, `ODBCINI` environment variable, and the `postStart` lifecycle hook that copied the ODBC ini file are no longer needed. All data warehouse providers (Redshift, Databricks, BigQuery) now use connection strings configured directly in the RPI client interface. BigQuery service account credential mounts remain unchanged.
+All data warehouse connections (Redshift, Databricks, BigQuery, Snowflake) are now configured as connection strings in the RPI client interface. See [Step 6: Update Data Warehouse Connections](#6-update-data-warehouse-connections) in the Upgrade Steps for connection string formats and examples.
 
 </details>
 
