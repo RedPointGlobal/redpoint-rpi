@@ -19,7 +19,7 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 | Copy the full `values.yaml` and edit it | Maintain a small overrides file with only your customizations |
 | 3,000+ lines to manage | 50–100 lines typical |
 | Upgrades require diffing the entire file | Upgrades apply new defaults automatically |
-| No escape hatch for hidden internals | Any internal default can be overridden directly under its top-level key |
+| Some defaults were locked inside templates and not overridable | Every internal default can be overridden from your overrides file |
 
 
 </details>
