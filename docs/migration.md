@@ -29,7 +29,7 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 
 ### Custom container images and private registries
 
-**Before:** Each service had its own image path (`global.deployment.images.interactionapi`, `global.deployment.images.realtimeapi`, etc.), requiring changes to every `images:` entry when deploying from a private registry like ECR. Some customers also needed to edit individual deploy templates to match their registry's naming convention.
+**Before:** Each service had its own image path (`global.deployment.images.interactionapi`, `global.deployment.images.realtimeapi`, etc.), requiring changes to every `images:` entry when deploying from a private registry like ECR. Deploying from registries with different naming conventions also required editing individual deploy templates.
 
 **Now:** All services now share a single repository and tag:
 
@@ -49,7 +49,7 @@ helm template rpi ./chart -f overrides.yaml | grep "image:" | sort -u
 
 ### Service account per deployment file
 
-**Before:** Each deploy template created its own ServiceAccount and used the deployment name as the service account name. Customers using a single shared service account (common on EKS with IRSA) had to edit every deploy file to replace `serviceAccountName: {{ $name }}` with their shared SA name.
+**Before:** Each deploy template created its own ServiceAccount and used the deployment name as the service account name. Using a single shared service account (common on EKS with IRSA) required editing every deploy file to replace `serviceAccountName: {{ $name }}` with the shared SA name.
 
 **Now:** The `cloudIdentity.serviceAccount.mode` field controls this centrally:
 
@@ -183,7 +183,7 @@ Create the ConfigMap from your CA bundle, then reference it in your overrides. T
 
 ### Ingress annotations passthrough
 
-**Before:** The chart rendered only nginx-specific annotations. Customers using AWS ALB, Traefik, or other ingress controllers had to edit the ingress template to add their controller-specific annotations (scheme, target type, SSL policy, etc.).
+**Before:** The chart rendered only nginx-specific annotations. Deploying with AWS ALB, Traefik, or other ingress controllers required editing the ingress template to add controller-specific annotations (scheme, target type, SSL policy, etc.).
 
 **Now:** Set `ingress.annotations` in your overrides to pass any annotations to the ingress resources. When set, your annotations replace the nginx defaults entirely:
 
@@ -200,7 +200,7 @@ No template edits required for any ingress controller.
 
 ### Controllable pod anti-affinity
 
-**Before:** Pod anti-affinity was hardcoded in every deploy template as soft (preferred) spreading by hostname. Customers who needed hard (required) anti-affinity for compliance, or wanted to disable it entirely for dev/test environments, had to edit every template.
+**Before:** Pod anti-affinity was hardcoded in every deploy template as soft (preferred) spreading by hostname. Requiring hard anti-affinity for compliance, or disabling it for dev/test environments, meant editing every template.
 
 **Now:** The `podAntiAffinity` section controls anti-affinity for all services from a single place:
 
@@ -245,7 +245,7 @@ No template edits required. Annotations appear on every ServiceAccount, Service,
 
 ### CSI Secrets Store (AWS Secrets Manager)
 
-**Before:** Customers using AWS Secrets Manager via the CSI driver had to create a custom `SecretProviderClass` template and manage it outside the chart.
+**Before:** Using AWS Secrets Manager via the CSI driver required creating a custom `SecretProviderClass` template and managing it outside the chart.
 
 **Now:** The existing `secretsManagement.csi.secretProviderClasses` array now supports AWS-format objects with `jmesPath` extraction via the `objectsContent` field:
 
@@ -279,7 +279,7 @@ The chart generates the `SecretProviderClass` resource. Use `objectsContent` for
 
 ### StorageClass for CSI-backed storage
 
-**Before:** Customers needing a dedicated StorageClass (e.g., EFS CSI on AWS for shared file access) had to create a custom template.
+**Before:** Creating a dedicated StorageClass (e.g., EFS CSI on AWS for shared file access) required a custom template outside the chart.
 
 **Now:** The `storage.storageClass` section creates a StorageClass directly from values:
 
@@ -305,7 +305,7 @@ storage:
 
 ### Karpenter NodePool for dedicated nodes
 
-**Before:** Customers using Karpenter for node provisioning had to create and maintain a custom `NodePool` template with instance type requirements, taints, and labels.
+**Before:** Using Karpenter for node provisioning required creating and maintaining a custom `NodePool` template with instance type requirements, taints, and labels.
 
 **Now:** The `nodeProvisioning` section generates a Karpenter `NodePool` resource:
 
@@ -352,7 +352,7 @@ Use this together with `nodeSelector` and `tolerations` to ensure RPI pods land 
 
 ### Service mesh (Linkerd) integration
 
-**Before:** Customers using Linkerd had to manually annotate every deployment with proxy injection and timeout settings, either by editing templates or using namespace-level injection (which affected non-RPI pods too).
+**Before:** Using Linkerd required manually annotating every deployment with proxy injection and timeout settings, either by editing templates or using namespace-level injection (which affected non-RPI pods too).
 
 **Now:** The `serviceMesh` section enables per-pod Linkerd proxy injection and configuration for all RPI deployments:
 
@@ -475,7 +475,7 @@ This allows you to see detailed plugin and endpoint logs while keeping core fram
 
 ### Queue Reader distributed processing with flexible storage
 
-**Before:** The queue reader's internal Redis cache and RabbitMQ queue were configured with hardcoded volume settings. Customers who pre-provisioned their volumes had to edit the StatefulSet templates.
+**Before:** The queue reader's internal Redis cache and RabbitMQ queue were configured with hardcoded volume settings. Pre-provisioning volumes required editing the StatefulSet templates.
 
 **Now:** The `internalCache` and `internalQueues` sections support two storage modes:
 
@@ -493,7 +493,7 @@ queuereader:
     type: internal
 ```
 
-**Pre-provisioned volumes**: For customers who create PVCs in advance, set `existingClaim` and disable volumeClaimTemplates:
+**Pre-provisioned volumes**: When PVCs are created in advance, set `existingClaim` and disable volumeClaimTemplates:
 
 ```yaml
 queuereader:
