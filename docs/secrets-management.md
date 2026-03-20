@@ -87,21 +87,42 @@ Store the following secrets in your vault. The secret names must match exactly a
 
 **Realtime API** (if enabled):
 
-| Vault Secret Name | Description |
-|:-------------------|:------------|
-| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | API key for Realtime API authentication |
-| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Auth token for API access |
-| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | Cache provider connection key name (e.g., `ConnectionString`) |
-| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Cache provider connection string value |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | Queue provider connection key name (e.g., `ConnectionString`) |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | Queue provider connection string value |
+| Vault Secret Name | Value | Description |
+|:-------------------|:------|:------------|
+| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key | API key for Realtime API authentication |
+| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token | Auth token for API access |
+
+**Realtime API -- Cache provider** (e.g., MongoDB):
+
+| Vault Secret Name | Value | Description |
+|:-------------------|:------|:------------|
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string | MongoDB, Redis, or other cache connection string |
+
+**Realtime API -- Client queue provider** (e.g., Azure Service Bus):
+
+| Vault Secret Name | Value | Description |
+|:-------------------|:------|:------------|
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` | Key name (always `QueueType`) |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `ServiceBus` | Queue provider type (e.g., `ServiceBus`, `AmazonSQS`, `RabbitMQ`) |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your queue connection string | Service Bus, SQS, or other queue connection string |
+
+**Realtime API -- Listener queue provider** (e.g., Azure Service Bus):
+
+| Vault Secret Name | Value | Description |
+|:-------------------|:------|:------------|
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` | Key name (always `QueueType`) |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `ServiceBus` | Queue provider type (e.g., `ServiceBus`, `AmazonSQS`, `RabbitMQ`) |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your queue connection string | Service Bus, SQS, or other queue connection string |
 
 **Callback API** (if enabled):
 
-| Vault Secret Name | Description |
-|:-------------------|:------------|
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | Queue connection key name (e.g., `ConnectionString`) |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Queue connection string value |
+| Vault Secret Name | Value | Description |
+|:-------------------|:------|:------------|
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your callback queue connection string | Queue connection string for callback processing |
 
 **SMTP** (if sending email):
 
