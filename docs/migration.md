@@ -57,32 +57,16 @@ helm template rpi ./chart -f overrides.yaml | grep "image:" | sort -u
 cloudIdentity:
   enabled: true
   serviceAccount:
-    mode: shared              # shared | per-service | both
+    mode: shared              # shared | per-service
     name: sa-redpoint-rpi     # any name you want
 ```
 
 | Mode | Behavior |
 |:-----|:---------|
-| `shared` | All pods use the single SA specified in `name`. No per-service SAs are created. |
-| `per-service` | Each service gets its own SA (e.g., `rpi-realtimeapi`, `rpi-interactionapi`). This is the default. |
-| `both` | Per-service SAs are created, plus a shared SA exists for services that need it. |
+| `shared` | All pods use the single SA specified in `name`. Simplest for workload identity -- only one federation credential needed. |
+| `per-service` | Each service gets its own SA (e.g., `rpi-realtimeapi`, `rpi-interactionapi`). Use when you need per-service IAM roles. This is the default. |
 
-Any individual service can override its SA by setting `serviceAccountName` in its config block. For example, in `both` mode every service gets its own per-service SA and the shared SA is also created but not used by default. To assign the shared SA to a specific service while the others keep their own:
-
-```yaml
-cloudIdentity:
-  serviceAccount:
-    mode: both
-    name: redpoint-rpi
-
-realtimeapi:
-  serviceAccountName: redpoint-rpi      # use the shared SA
-# all other services keep their per-service SAs (rpi-interactionapi, rpi-executionservice, etc.)
-```
-
-The resolution priority is: per-service `serviceAccountName` override first, then mode-based resolution.
-
-No template edits required for any mode.
+No template edits required for either mode.
 
 ### Credentials in values.yaml
 

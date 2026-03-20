@@ -160,10 +160,8 @@ databases:
 cloudIdentity:
   enabled: false
   # ServiceAccount mode:
-  #   shared      -> one shared SA used by all services (simplest)
+  #   shared      -> one shared SA used by all services (simplest for workload identity)
   #   per-service -> each service creates its own SA (for per-service IAM roles)
-  #   both        -> shared SA + per-service SAs (shared for common resources, per-service for identity)
-  # Individual services can override by setting serviceAccountName in their config block.
   serviceAccount:
     mode: per-service
     name: redpoint-rpi
