@@ -620,76 +620,96 @@ The `odbc-config` ConfigMap, `ODBCINI` environment variable, and the `postStart`
 <details>
 <summary><strong style="font-size:1.25em;">Upgrade Steps</strong></summary>
 
-### 1. Generate Your v7.7 Overrides
+### 1. Determine Secrets Management
 
-Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) to generate a fresh v7.7 overrides file:
+Choose how RPI will access sensitive values (database credentials, connection strings, API tokens):
 
-1. Open the **Generate** tab and select your platform
-2. Walk through the 9 configuration steps, using your v7.6 values as reference for database host, identity settings, ingress domain, cache/queue providers, etc.
+| Provider | Best for | Setup |
+|:---------|:---------|:------|
+| **sdk** (recommended) | Cloud deployments (Azure, AWS, GCP) | Services read secrets from vault at runtime. Simplest ongoing maintenance. |
+| **csi** | Cloud deployments that require all secrets synced to K8s | CSI driver syncs vault to K8s Secret. More YAML config, requires validation pods. |
+| **kubernetes** | Self-hosted / on-premise | CLI generates K8s Secret from user input. No vault needed. |
+
+For **sdk** or **csi**, you need to create the required secrets in your vault before deploying. See the [Secrets Management Guide](secrets-management.md) for the full list of required keys per feature, and use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** to generate a script that creates everything automatically.
+
+### 2. Prepare Cloud Identity
+
+RPI services authenticate to cloud resources (vaults, storage accounts) using workload identity. Create a cloud identity and configure it with the access your deployment needs:
+
+**What to create:**
+- **Azure**: User-Assigned Managed Identity with `Key Vault Secrets User` role and storage account access
+- **AWS**: IAM Role with Secrets Manager read access and EFS/S3 access
+- **GCP**: Service Account with Secret Manager access and Filestore/GCS access
+
+**Configure workload identity federation** so each RPI service account can authenticate as the cloud identity. The services that need federation:
+
+`rpi-interactionapi`, `rpi-integrationapi`, `rpi-executionservice`, `rpi-nodemanager`, `rpi-realtimeapi`, `rpi-callbackapi`, `rpi-queuereader`, `rpi-deploymentapi`, `rpi-validationpods`
+
+Use `cloudIdentity.serviceAccount.mode: per-service` in your overrides for per-service audit trails in vault access logs.
+
+The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** generates a script that creates the identity, grants vault and storage access, and configures all 9 federated credentials in one step.
+
+### 3. Generate Overrides
+
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab to create a fresh v7.7 overrides file:
+
+1. Select your platform and walk through the configuration steps
+2. Use your v7.6 values as reference for database host, identity settings, ingress domain, cache/queue providers, etc.
 3. Review and download from the **Validate** tab
 
-Use the **Chat** tab to ask "What changed between v7.6 and v7.7?" for a summary of key renames, removed features, and new defaults.
+> **Important:** Do not reuse your v7.6 `values.yaml` directly. The v7.7 chart uses a different key structure, and many settings that were previously in the values file are now chart-managed defaults. A fresh overrides file is typically 50-100 lines instead of 2,600+.
 
-> **Important:** Do not attempt to reuse your v7.6 `values.yaml` directly. The v7.7 chart uses a different key structure, and many settings that were previously in the values file are now chart-managed defaults. A fresh overrides file is typically 50-100 lines instead of 2,600+.
+### 4. Pull v7.7 Chart
 
-### 2. Generate Secrets and Deploy
-
-Download the RPI Helm CLI from the **Deploy** tab, then:
+Clone or mirror the upstream chart repository. If you forked the v7.6 chart, you no longer need the fork -- all customization is now done through the overrides file.
 
 ```bash
-unzip rpihelmcli.zip
-export PATH="$PWD/rpihelmcli:$PATH"
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+cd redpoint-rpi
+git checkout release/v7.7
+```
 
-rpihelmcli secrets -f overrides.yaml
+For ArgoCD/Flux: point to the upstream chart (or a clean mirror) and keep overrides in a separate config repo. See the [GitOps Guide](readme-argocd.md) for details.
+
+### 5. Deploy v7.7 Chart
+
+```bash
+# Create namespace
+kubectl create namespace <namespace>
+
+# Create image pull secret (if pulling from Redpoint ACR)
+kubectl create secret docker-registry redpoint-rpi-secrets \
+  --docker-server=rg1acrpub.azurecr.io \
+  --docker-username=<username> \
+  --docker-password='<password>' \
+  -n <namespace>
+
+# Deploy
+helm upgrade --install rpi ./chart \
+  -f overrides.yaml \
+  -n <namespace> \
+  --create-namespace \
+  --wait \
+  --timeout 15m
+```
+
+Verify all pods are running:
+
+```bash
+kubectl get pods -n <namespace>
+```
+
+For CSI: check that validation pods started and secrets synced (`kubectl get secrets -n <namespace>`).
+
+### 6. Perform Database Upgrade
+
+After the v7.7 containers are running, upgrade the operational database schema:
+
+**Option A: Via the chart (recommended)**
+
+```bash
+rpihelmcli -a database_upgrade
 rpihelmcli deploy -f overrides.yaml
-```
-
-The deploy command clones the v7.7 chart repository automatically, applies secrets, and runs Helm upgrade with live rollout monitoring.
-
-### 3. Verify
-
-```bash
-rpihelmcli status -n redpoint-rpi
-```
-
-<details>
-<summary><strong>ArgoCD / Flux users</strong></summary>
-
-Update the branch reference from `release/v7.6` to `main` in your Application or GitRepository manifest:
-
-```yaml
-# ArgoCD Application
-source:
-  repoURL: https://your-org.visualstudio.com/project/_git/redpoint-rpi
-  targetRevision: main       # was: release/v7.6
-  path: chart
-```
-
-```yaml
-# Flux GitRepository
-spec:
-  url: https://your-org.visualstudio.com/project/_git/redpoint-rpi
-  ref:
-    branch: main             # was: release/v7.6
-```
-
-Commit your `overrides.yaml` to the repo and sync. See the [GitOps Guide](readme-argocd.md) for details.
-
-</details>
-
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">Post-Upgrade: Database Schema Migration</strong></summary>
-
-After the v7.7 containers are running, the operational databases need a schema upgrade.
-
-**Option A: Automatic (recommended)**
-
-```bash
-bash rpihelmcli -a database_upgrade
-bash rpihelmcli deploy -f overrides.yaml
 ```
 
 The chart creates a Job that waits for the Deployment API to become ready, then runs the upgrade automatically.
@@ -705,7 +725,6 @@ curl -X 'GET' \
 ```
 
 Wait for `"Status": "LastRunComplete"` in the response.
-
 
 </details>
 
