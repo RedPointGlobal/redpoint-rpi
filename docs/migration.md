@@ -70,7 +70,7 @@ No template edits required for either mode.
 
 ### Credentials in values.yaml
 
-**Before:** Database passwords, API keys, and other credentials had to live in `values.yaml` or be passed via `--set` flags, which made security teams uncomfortable. There was no built-in way to pull secrets from an external vault.
+**Before:** Database passwords, API keys, and other credentials had to live in `values.yaml` or be passed via `--set` flags. There was no built-in way to pull secrets from an external vault.
 
 **Now:** The new top-level `secretsManagement` section supports three modes:
 
