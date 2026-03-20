@@ -11,7 +11,7 @@ RPI supports three secrets management providers. The provider controls how sensi
 
 | Provider | How it works |
 |:---------|:-------------|
-| **kubernetes** (default) | The chart auto-generates a Kubernetes Secret (`redpoint-rpi-secrets`) containing all required keys. Internal service passwords (Redis, RabbitMQ) are randomly generated at install time. |
+| **kubernetes** (default) | The CLI (`rpihelmcli secrets`) prompts for your database credentials, connection strings, and other values, then generates a Kubernetes Secret (`redpoint-rpi-secrets`). Internal service passwords (Redis, RabbitMQ) are randomly generated. Apply the secret before deploying. |
 | **csi** | The CSI Secrets Store Driver syncs secrets from an external vault (Azure Key Vault, AWS Secrets Manager, GCP Secret Manager) into a Kubernetes Secret. You are responsible for storing ALL required keys in your vault. |
 | **sdk** | Each RPI service reads secrets directly from the vault at runtime using cloud identity. A separate `rpi-internal-services` Kubernetes Secret is auto-generated for chart-managed infrastructure (Redis, RabbitMQ). |
 
