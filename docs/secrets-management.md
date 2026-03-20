@@ -18,60 +18,17 @@ RPI supports three secrets management providers. The provider controls how sensi
 <details>
 <summary><strong style="font-size:1.25em;">SDK Provider: Prerequisites</strong></summary>
 
-When using the `sdk` provider, RPI services authenticate to your cloud vault using workload identity and read secrets at runtime. Before deploying, you must complete two steps:
+When using the `sdk` provider, RPI services authenticate to your cloud vault using workload identity and read secrets at runtime. Before deploying, you need to:
 
-### 1. Create a Managed Identity and Configure Workload Identity Federation
+1. **Create a Key Vault** (or use an existing one) and store the required secrets
+2. **Create a Managed Identity** and grant it read access to the vault
+3. **Configure Workload Identity Federation** for each RPI service account
 
-Create a User-Assigned Managed Identity (Azure), IAM Role (AWS), or GCP Service Account and grant it read access to your vault.
+The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** generates a complete setup script (Bash or Terraform) that handles all three steps. Select your platform, enter your environment details, and download the script.
 
-Then configure Kubernetes workload identity federation so the RPI pods can authenticate as that identity. The federation must cover the service accounts used by the RPI pods.
+### Required Vault Secrets
 
-**Shared service account** (simplest): Create one federation for a single service account (e.g., `redpoint-rpi`). All RPI pods use this identity. Set `cloudIdentity.serviceAccount.mode: shared`.
-
-```bash
-# Example: Azure federated credential for a shared service account
-az identity federated-credential create \
-  --name rpi-shared \
-  --identity-name <managed-identity-name> \
-  --resource-group <rg> \
-  --issuer <aks-oidc-issuer-url> \
-  --subject system:serviceaccount:<namespace>:redpoint-rpi \
-  --audiences api://AzureADTokenExchange
-```
-
-**Per-service service accounts** (more granular): Create a federation for each RPI service account. This allows different vault access policies per service but requires more setup. Set `cloudIdentity.serviceAccount.mode: per-service`.
-
-The services that need federation:
-
-| Service Account | Service |
-|:----------------|:--------|
-| `rpi-interactionapi` | Interaction API (client login, campaign management) |
-| `rpi-executionservice` | Execution Service (workflow processing) |
-| `rpi-nodemanager` | Node Manager (cluster coordination) |
-| `rpi-integrationapi` | Integration API (data integration) |
-| `rpi-realtimeapi` | Realtime API (decisioning, cache, queues) |
-| `rpi-callbackapi` | Callback API (async callbacks) |
-| `rpi-queuereader` | Queue Reader (queue processing) |
-| `rpi-deploymentapi` | Deployment API (configuration management) |
-
-```bash
-# Example: Azure federated credentials for per-service accounts
-for sa in rpi-interactionapi rpi-executionservice rpi-nodemanager \
-          rpi-integrationapi rpi-realtimeapi rpi-callbackapi \
-          rpi-queuereader rpi-deploymentapi; do
-  az identity federated-credential create \
-    --name "$sa" \
-    --identity-name <managed-identity-name> \
-    --resource-group <rg> \
-    --issuer <aks-oidc-issuer-url> \
-    --subject "system:serviceaccount:<namespace>:$sa" \
-    --audiences api://AzureADTokenExchange
-done
-```
-
-### 2. Create the Required Vault Secrets
-
-Store the following secrets in your vault. The secret names must match exactly as shown. RPI services look up secrets by these names at runtime.
+The secret names use `--` as the hierarchy separator and must match exactly. RPI services look up secrets by these names at runtime.
 
 **Database connections** (always required):
 
@@ -87,52 +44,52 @@ Store the following secrets in your vault. The secret names must match exactly a
 
 **Realtime API** (if enabled):
 
-| Vault Secret Name | Value | Description |
-|:-------------------|:------|:------------|
-| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key | API key for Realtime API authentication |
-| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token | Auth token for API access |
-
-**Realtime API -- Cache provider** (e.g., MongoDB):
-
-| Vault Secret Name | Value | Description |
-|:-------------------|:------|:------------|
-| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
-| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string | MongoDB, Redis, or other cache connection string |
-
-**Realtime API -- Client queue provider** (e.g., Azure Service Bus):
-
-| Vault Secret Name | Value | Description |
-|:-------------------|:------|:------------|
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` | Key name (always `QueueType`) |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `ServiceBus` | Queue provider type (e.g., `ServiceBus`, `AmazonSQS`, `RabbitMQ`) |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your queue connection string | Service Bus, SQS, or other queue connection string |
-
-**Realtime API -- Listener queue provider** (e.g., Azure Service Bus):
-
-| Vault Secret Name | Value | Description |
-|:-------------------|:------|:------------|
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` | Key name (always `QueueType`) |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `ServiceBus` | Queue provider type (e.g., `ServiceBus`, `AmazonSQS`, `RabbitMQ`) |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your queue connection string | Service Bus, SQS, or other queue connection string |
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key |
+| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string (MongoDB, Redis, etc.) |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `ServiceBus` (or `AmazonSQS`, `RabbitMQ`) |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your queue connection string |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `ServiceBus` (or `AmazonSQS`, `RabbitMQ`) |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your queue connection string |
 
 **Callback API** (if enabled):
 
-| Vault Secret Name | Value | Description |
-|:-------------------|:------|:------------|
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` | Key name (always `ConnectionString`) |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your callback queue connection string | Queue connection string for callback processing |
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your callback queue connection string |
 
 **SMTP** (if sending email):
 
-| Vault Secret Name | Description |
-|:-------------------|:------------|
-| `RPI--SMTP--Password` | SMTP server password |
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RPI--SMTP--Password` | Your SMTP password |
 
-The secret names use `--` as the hierarchy separator. In Azure Key Vault, create the secrets with `--` in the name exactly as shown (e.g., `ConnectionStrings--LoggingDatabase`).
+### Workload Identity Federation
 
-To automate the creation of these secrets, use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** to generate a Bash or Terraform script. The script can create a new Key Vault or use an existing one, and pre-populates all required secret names.
+Each RPI service runs under its own Kubernetes ServiceAccount. The managed identity must have a federated credential for each service account so the pods can authenticate to Key Vault.
+
+| Service Account | Service |
+|:----------------|:--------|
+| `rpi-interactionapi` | Interaction API |
+| `rpi-integrationapi` | Integration API |
+| `rpi-executionservice` | Execution Service |
+| `rpi-nodemanager` | Node Manager |
+| `rpi-realtimeapi` | Realtime API |
+| `rpi-callbackapi` | Callback API |
+| `rpi-queuereader` | Queue Reader |
+| `rpi-deploymentapi` | Deployment API |
+
+Use `cloudIdentity.serviceAccount.mode: per-service` in your overrides. This provides per-service audit trails in Key Vault access logs.
+
+For a fully automated setup, use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** which generates a script that creates the Key Vault secrets, the managed identity, and all 8 federated credentials in one step.
 
 </details>
 
