@@ -49,7 +49,7 @@ helm template rpi ./chart -f overrides.yaml | grep "image:" | sort -u
 
 ### Service account per deployment file
 
-**Before:** Each deploy template created its own ServiceAccount and used the deployment name as the service account name. Using a single shared service account (common on EKS with IRSA) required editing every deploy file to replace `serviceAccountName: {{ $name }}` with the shared SA name.
+**Before:** Each deploy template created its own ServiceAccount using the deployment name. Using a single shared service account (common on EKS with IRSA) required modifying the deployment templates to hardcode a shared service account name.
 
 **Now:** The `cloudIdentity.serviceAccount.mode` field controls this centrally:
 
