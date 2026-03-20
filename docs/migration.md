@@ -589,12 +589,12 @@ Features like per-service image overrides, custom CA certificates, common annota
 <details>
 <summary><strong style="font-size:1.25em;">Breaking Changes</strong></summary>
 
-- **Redshift**: The `databases.datawarehouse.redshift` config block has been removed. Redshift now uses the Npgsql library instead of the ODBC driver. Remove this block from your overrides before upgrading.
-- **Databricks**: The `databases.datawarehouse.databricks` config block has been removed. Remove this block from your overrides before upgrading.
-- **ODBC ConfigMap**: The `odbc-config` ConfigMap, `ODBCINI` environment variable, and `postStart` lifecycle hook have been removed.
+- **Redshift**: The `databases.datawarehouse.redshift` config block no longer exists in the chart. Redshift now uses the Npgsql library instead of the ODBC driver.
+- **Databricks**: The `databases.datawarehouse.databricks` config block no longer exists in the chart.
+- **ODBC ConfigMap**: The `odbc-config` ConfigMap, `ODBCINI` environment variable, and `postStart` lifecycle hook no longer exist.
 - **Snowflake**: Changed from ConfigMap to Secret. `ConfigMapName` is now `secretName`, `ConfigMapFilePath` is now `mountPath`.
 
-All data warehouse connections (Redshift, Databricks, BigQuery, Snowflake) are now configured as connection strings in the RPI client interface. See [Step 6: Update Data Warehouse Connections](#6-update-data-warehouse-connections) in the Upgrade Steps for connection string formats and examples.
+When you generate your fresh v7.7 overrides, these blocks will not be present. All data warehouse connections are now configured as connection strings in the RPI client interface after deployment. See [Step 6: Update Data Warehouse Connections](#6-update-data-warehouse-connections) in the Upgrade Steps for connection string formats and examples.
 
 </details>
 
