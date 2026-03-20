@@ -599,6 +599,20 @@ When you generate your fresh v7.7 overrides, these blocks will not be present. A
 </details>
 
 <details>
+<summary><strong style="font-size:1.25em;">Before You Upgrade</strong></summary>
+
+The v7.7 upgrade includes a database schema migration (Step 7) that modifies your operational databases. This migration is **not reversible** without restoring from a database backup. Rolling back to v7.6 after the schema upgrade requires both redeploying the v7.6 chart and restoring the databases to their pre-upgrade state.
+
+**Recommendations:**
+
+- **Test in a non-production environment first.** Deploy v7.7 to a staging or dev cluster with a copy of your databases before upgrading production.
+- **Back up your operational databases** before running the schema upgrade in production.
+- **Take your time.** The `release/v7.6` branch will remain available after v7.7 is GA. Only upgrade when you are confident in your v7.7 configuration and have validated it in a lower environment.
+- **Contact [Redpoint Support](mailto:support@redpointglobal.com)** if you need assistance with the upgrade or if you encounter issues.
+
+</details>
+
+<details>
 <summary><strong style="font-size:1.25em;">Upgrade Steps</strong></summary>
 
 ### 1. Determine Secrets Management
@@ -736,20 +750,6 @@ curl -X 'GET' \
 ```
 
 Wait for `"Status": "LastRunComplete"` in the response.
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">Before You Upgrade</strong></summary>
-
-The v7.7 upgrade includes a database schema migration (Step 7) that modifies your operational databases. This migration is **not reversible** without restoring from a database backup. Rolling back to v7.6 after the schema upgrade requires both redeploying the v7.6 chart and restoring the databases to their pre-upgrade state.
-
-**Recommendations:**
-
-- **Test in a non-production environment first.** Deploy v7.7 to a staging or dev cluster with a copy of your databases before upgrading production.
-- **Back up your operational databases** before running the schema upgrade in production.
-- **Take your time.** The `release/v7.6` branch will remain available after v7.7 is GA. Only upgrade when you are confident in your v7.7 configuration and have validated it in a lower environment.
-- **Contact [Redpoint Support](mailto:support@redpointglobal.com)** if you need assistance with the upgrade or if you encounter issues.
 
 </details>
 
