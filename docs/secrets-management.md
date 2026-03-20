@@ -17,6 +17,105 @@ RPI supports three secrets management providers. The provider controls how sensi
 
 ---
 
+## SDK Provider: Prerequisites
+
+When using the `sdk` provider, RPI services authenticate to your cloud vault using workload identity and read secrets at runtime. Before deploying, you must complete two steps:
+
+### 1. Create a Managed Identity and Configure Workload Identity Federation
+
+Create a User-Assigned Managed Identity (Azure), IAM Role (AWS), or GCP Service Account and grant it read access to your vault.
+
+Then configure Kubernetes workload identity federation so the RPI pods can authenticate as that identity. The federation must cover the service accounts used by the RPI pods.
+
+**Shared service account** (simplest): Create one federation for a single service account (e.g., `redpoint-rpi`). All RPI pods use this identity. Set `cloudIdentity.serviceAccount.mode: shared`.
+
+```bash
+# Example: Azure federated credential for a shared service account
+az identity federated-credential create \
+  --name rpi-shared \
+  --identity-name <managed-identity-name> \
+  --resource-group <rg> \
+  --issuer <aks-oidc-issuer-url> \
+  --subject system:serviceaccount:<namespace>:redpoint-rpi \
+  --audiences api://AzureADTokenExchange
+```
+
+**Per-service service accounts** (more granular): Create a federation for each RPI service account. This allows different vault access policies per service but requires more setup. Set `cloudIdentity.serviceAccount.mode: per-service`.
+
+The services that need federation:
+
+| Service Account | Service |
+|:----------------|:--------|
+| `rpi-interactionapi` | Interaction API (client login, campaign management) |
+| `rpi-executionservice` | Execution Service (workflow processing) |
+| `rpi-nodemanager` | Node Manager (cluster coordination) |
+| `rpi-integrationapi` | Integration API (data integration) |
+| `rpi-realtimeapi` | Realtime API (decisioning, cache, queues) |
+| `rpi-callbackapi` | Callback API (async callbacks) |
+| `rpi-queuereader` | Queue Reader (queue processing) |
+| `rpi-deploymentapi` | Deployment API (configuration management) |
+
+```bash
+# Example: Azure federated credentials for per-service accounts
+for sa in rpi-interactionapi rpi-executionservice rpi-nodemanager \
+          rpi-integrationapi rpi-realtimeapi rpi-callbackapi \
+          rpi-queuereader rpi-deploymentapi; do
+  az identity federated-credential create \
+    --name "$sa" \
+    --identity-name <managed-identity-name> \
+    --resource-group <rg> \
+    --issuer <aks-oidc-issuer-url> \
+    --subject "system:serviceaccount:<namespace>:$sa" \
+    --audiences api://AzureADTokenExchange
+done
+```
+
+### 2. Create the Required Vault Secrets
+
+Store the following secrets in your vault. The secret names must match exactly as shown. RPI services look up secrets by these names at runtime.
+
+**Database connections** (always required):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `ConnectionStrings--LoggingDatabase` | Full connection string to the logging database |
+| `ConnectionStrings--OperationalDatabase` | Full connection string to the operational database |
+| `ClusterEnvironment--OperationalDatabase--PulseDatabaseName` | Operational database name |
+| `ClusterEnvironment--OperationalDatabase--LoggingDatabaseName` | Logging database name |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username` | Database username |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` | Database password |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Server` | Database server hostname |
+
+**Realtime API** (if enabled):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | API key for Realtime API authentication |
+| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Auth token for API access |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | Cache provider connection key name (e.g., `ConnectionString`) |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Cache provider connection string value |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | Queue provider connection key name (e.g., `ConnectionString`) |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | Queue provider connection string value |
+
+**Callback API** (if enabled):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | Queue connection key name (e.g., `ConnectionString`) |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Queue connection string value |
+
+**SMTP** (if sending email):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `RPI--SMTP--Password` | SMTP server password |
+
+The secret names use `--` as the hierarchy separator. In Azure Key Vault, create the secrets with `--` in the name exactly as shown (e.g., `ConnectionStrings--LoggingDatabase`).
+
+To automate the creation of these secrets, use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** to generate a Bash or Terraform script. The script can create a new Key Vault or use an existing one, and pre-populates all required secret names.
+
+---
+
 ## CSI Provider: Required Vault Keys
 
 When `secretsManagement.provider: csi`, the chart expects a Kubernetes Secret (synced by CSI) containing specific keys. The required keys depend on which features are enabled in your overrides.
