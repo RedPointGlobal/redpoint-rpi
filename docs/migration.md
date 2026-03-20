@@ -243,40 +243,6 @@ serviceAnnotations:
 
 No template edits required. Annotations appear on every ServiceAccount, Service, Deployment, and Pod.
 
-### CSI Secrets Store (AWS Secrets Manager)
-
-**Before:** Using AWS Secrets Manager via the CSI driver required creating a custom `SecretProviderClass` template and managing it outside the chart.
-
-**Now:** The existing `secretsManagement.csi.secretProviderClasses` array now supports AWS-format objects with `jmesPath` extraction via the `objectsContent` field:
-
-```yaml
-secretsManagement:
-  provider: csi
-  csi:
-    secretName: redpoint-rpi-secrets
-    secretProviderClasses:
-      - name: redpoint-secret-class
-        provider: aws
-        objectsContent: |
-          - objectName: "arn:aws:secretsmanager:us-east-1:123456789:secret/rpi-db"
-            objectType: secretsmanager
-            jmesPath:
-              - path: username
-                objectAlias: db_username
-              - path: password
-                objectAlias: db_password
-        secretObjects:
-          - secretName: redpoint-rpi-secrets
-            type: Opaque
-            data:
-              - key: db_username
-                objectName: db_username
-              - key: db_password
-                objectName: db_password
-```
-
-The chart generates the `SecretProviderClass` resource. Use `objectsContent` for raw provider-specific YAML (AWS `jmesPath`, HashiCorp Vault paths, etc.) or `objects` for the structured format.
-
 ### StorageClass for CSI-backed storage
 
 **Before:** Creating a dedicated StorageClass (e.g., EFS CSI on AWS for shared file access) required a custom template outside the chart.
