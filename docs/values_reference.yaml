@@ -192,6 +192,9 @@ databases:
       credentialsType: snowflake_jwt
       secretName: snowflake-creds
       mountPath: /app/snowflake-creds
+      # For sdk provider: set to the SecretProviderClass name to mount the
+      # private key via CSI inline volume instead of a K8s Secret.
+      secretProviderClassName: ""
       keys:
       - keyName: my-snowflake-rsakey.p8
 

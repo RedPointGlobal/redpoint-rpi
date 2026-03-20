@@ -12,9 +12,8 @@ The **Interaction Helm Assistant** is an AI-powered assistant that helps you con
 
 Both interfaces access the same underlying tools and search the official [RPI documentation](https://docs.redpointglobal.com/rpi) and the local chart documentation.
 
----
-
-## Option A: Web UI
+<details>
+<summary><strong style="font-size:1.25em;">Option A: Web UI</strong></summary>
 
 Use this option for a browser-based experience with forms, file uploads/downloads, and AI chat. No MCP client required.
 
@@ -41,9 +40,10 @@ The Web UI includes six tabs:
 | **Reference** | Searchable browser for every configurable key in the Helm chart with defaults. |
 | **Chat** | Natural language assistant. Ask questions about RPI features, chart configuration, deployment, and troubleshooting. |
 
----
+</details>
 
-## Option B: MCP (Claude Code)
+<details>
+<summary><strong style="font-size:1.25em;">Option B: MCP (Claude Code)</strong></summary>
 
 Use this option if you have Claude Code or another MCP-compatible client (Claude Desktop, Cursor, Windsurf, etc.).
 
@@ -100,9 +100,10 @@ For Claude Desktop, add the following to your `claude_desktop_config.json`:
 }
 ```
 
----
+</details>
 
-## Available Tools
+<details>
+<summary><strong style="font-size:1.25em;">Available Tools</strong></summary>
 
 Both the MCP server and the Web UI expose the same set of tools:
 
@@ -117,9 +118,10 @@ Both the MCP server and the Web UI expose the same set of tools:
 | `rpi_docs_search` | Searches the official RPI product documentation by keyword |
 | `rpi_docs_fetch` | Fetches a specific page from the RPI documentation site |
 
----
+</details>
 
-## Usage Examples
+<details>
+<summary><strong style="font-size:1.25em;">Usage Examples</strong></summary>
 
 In Claude Code or the Web UI's Chat tab, just ask questions in plain English. In the Web UI's form tabs, use the structured inputs directly.
 
@@ -204,8 +206,11 @@ These tools require `kubectl` access to your cluster. They work when running the
 
 </details>
 
----
+</details>
 
-## IDE Autocomplete
+<details>
+<summary><strong style="font-size:1.25em;">IDE Autocomplete</strong></summary>
 
 The chart also includes `values.schema.json` which provides autocomplete in any YAML-aware editor (VS Code, IntelliJ, etc.) and automatic validation during `helm install` and `helm upgrade`. This works out of the box with no setup required.
+
+</details>

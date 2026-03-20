@@ -12,13 +12,15 @@ RPI deployment can be automated with Terraform for infrastructure provisioning a
 | **Terraform** | Infrastructure modules (identity, database, secrets store) + Helm release |
 | **CI/CD Pipelines** | GitHub Actions, Azure DevOps, or GitLab CI workflows for Helm deploy with optional image mirroring |
 
----
-
-## Terraform
+<details>
+<summary><strong style="font-size:1.25em;">Terraform</strong></summary>
 
 The Terraform modules in `deploy/terraform/modules/` provision cloud infrastructure and generate a valid Helm overrides file from the provisioned resource outputs. This gives you a single `terraform apply` that creates everything needed for RPI: database, identity, secrets store, and a ready-to-use values file.
 
-## Available Modules
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Available Modules</strong></summary>
 
 | Module | Cloud | Resources |
 |--------|-------|-----------|
@@ -28,7 +30,10 @@ The Terraform modules in `deploy/terraform/modules/` provision cloud infrastruct
 
 Each module outputs a `helm_values_path` pointing to the generated overrides YAML.
 
-## Quick Start
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Quick Start</strong></summary>
 
 ### Azure Example
 
@@ -81,7 +86,10 @@ module "rpi" {
 }
 ```
 
-## What Gets Created
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">What Gets Created</strong></summary>
 
 Each module creates:
 
@@ -90,7 +98,10 @@ Each module creates:
 3. **Secrets** (optional): A cloud secrets store (Key Vault / Secrets Manager / Secret Manager) when `enable_keyvault` / `enable_secrets_manager` / `enable_secret_manager` is set
 4. **Helm Values:** A generated `rpi-values.yaml` file with all connection details populated from Terraform outputs
 
-## Generated Values File
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Generated Values File</strong></summary>
 
 The generated file is minimal. It contains only the values derived from provisioned resources. You can extend it by merging with additional overrides:
 
@@ -121,7 +132,10 @@ helm upgrade --install rpi ./chart \
   -n redpoint-rpi
 ```
 
-## Customization
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Customization</strong></summary>
 
 All modules accept common variables:
 
@@ -135,13 +149,19 @@ All modules accept common variables:
 
 See each module's `variables.tf` for the full list.
 
-## Prerequisites
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Prerequisites</strong></summary>
 
 - Terraform >= 1.5
 - An existing Kubernetes cluster (AKS / EKS / GKE) with OIDC enabled
 - Appropriate cloud provider configured (`azurerm` >= 3.0, `aws` >= 5.0, `google` >= 5.0)
 
-## Examples
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Examples</strong></summary>
 
 Complete usage examples are in `deploy/terraform/examples/`:
 
@@ -154,9 +174,10 @@ deploy/terraform/examples/
 
 Each example shows a full module invocation with provider configuration and optional Helm deployment.
 
----
+</details>
 
-## CI/CD Pipelines
+<details>
+<summary><strong style="font-size:1.25em;">CI/CD Pipelines</strong></summary>
 
 The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab generates ready-to-use CI/CD pipeline files for deploying RPI via Helm. Pipelines are built from your Generate tab configuration.
 
@@ -188,3 +209,5 @@ When enabled, the pipeline adds a step to mirror RPI container images from the R
 3. Switch to the **Automate** tab and select **CI/CD Pipeline**
 4. Choose your pipeline tool and download the generated file
 5. Add your overrides file and the pipeline to your repository
+
+</details>

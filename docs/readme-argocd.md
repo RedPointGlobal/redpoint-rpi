@@ -20,7 +20,8 @@ GitOps is an operational model where your entire deployment state (application c
 
 For full documentation, see the [ArgoCD Getting Started Guide](https://argo-cd.readthedocs.io/en/stable/getting_started/).
 
-## Repository Access
+<details>
+<summary><strong style="font-size:1.25em;">Repository Access</strong></summary>
 
 ArgoCD needs read access to the Git repository containing the Helm chart. You have two options:
 
@@ -75,7 +76,10 @@ argocd repo add https://git.yourorg.com/platform/redpoint-rpi.git \
   --username <user> --password <token>
 ```
 
-## Repository Layout
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Repository Layout</strong></summary>
 
 ArgoCD needs to know two things: where the chart lives and where your values file lives.
 
@@ -92,7 +96,10 @@ redpoint-rpi/               (this repo)
         └── demo/demo.yaml
 ```
 
-## Single-Environment Application
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Single-Environment Application</strong></summary>
 
 The simplest setup: one ArgoCD Application per environment.
 
@@ -148,7 +155,10 @@ spec:
     namespace: rpi-staging
 ```
 
-## ApplicationSet (Recommended for Multi-Environment)
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">ApplicationSet (Recommended for Multi-Environment)</strong></summary>
 
 Use an ApplicationSet to manage all environments from a single definition:
 
@@ -194,7 +204,10 @@ spec:
           - CreateNamespace=true
 ```
 
-## Separate Config Repository
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Separate Config Repository</strong></summary>
 
 If you keep your deployment overrides in a separate Git repo (recommended for production), use multiple sources:
 
@@ -240,7 +253,10 @@ platform-config/
 
 This pattern keeps secrets and environment config separate from the chart source.
 
-## Version Pinning
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Version Pinning</strong></summary>
 
 ### Staying on v7.6
 
@@ -275,7 +291,10 @@ source:
 4. Update `valueFiles` to point to your new overrides file.
 5. Sync staging first, verify, then promote to production.
 
-## Troubleshooting
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Troubleshooting</strong></summary>
 
 ### "helm template failed" on sync
 
@@ -301,3 +320,5 @@ spec:
       jsonPointers:
         - /data
 ```
+
+</details>

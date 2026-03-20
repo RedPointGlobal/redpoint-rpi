@@ -15,9 +15,8 @@ RPI supports three secrets management providers. The provider controls how sensi
 | **csi** | The CSI Secrets Store Driver syncs secrets from an external vault (Azure Key Vault, AWS Secrets Manager, GCP Secret Manager) into a Kubernetes Secret. You are responsible for storing ALL required keys in your vault. |
 | **sdk** | Each RPI service reads secrets directly from the vault at runtime using cloud identity. A separate `rpi-internal-services` Kubernetes Secret is auto-generated for chart-managed infrastructure (Redis, RabbitMQ). |
 
----
-
-## SDK Provider: Prerequisites
+<details>
+<summary><strong style="font-size:1.25em;">SDK Provider: Prerequisites</strong></summary>
 
 When using the `sdk` provider, RPI services authenticate to your cloud vault using workload identity and read secrets at runtime. Before deploying, you must complete two steps:
 
@@ -114,9 +113,10 @@ The secret names use `--` as the hierarchy separator. In Azure Key Vault, create
 
 To automate the creation of these secrets, use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** to generate a Bash or Terraform script. The script can create a new Key Vault or use an existing one, and pre-populates all required secret names.
 
----
+</details>
 
-## CSI Provider: Required Vault Keys
+<details>
+<summary><strong style="font-size:1.25em;">CSI Provider: Required Vault Keys</strong></summary>
 
 When `secretsManagement.provider: csi`, the chart expects a Kubernetes Secret (synced by CSI) containing specific keys. The required keys depend on which features are enabled in your overrides.
 
@@ -229,9 +229,10 @@ Required when `global.deployment.platform: amazon` with access key authenticatio
 | `AWS_Access_Key_ID` | AWS IAM access key ID |
 | `AWS_Secret_Access_Key` | AWS IAM secret access key |
 
----
+</details>
 
-## CSI SecretProviderClass Configuration
+<details>
+<summary><strong style="font-size:1.25em;">CSI SecretProviderClass Configuration</strong></summary>
 
 Your SecretProviderClass must include each required key in both `objects` (to fetch from vault) and `secretObjects` (to sync into the Kubernetes Secret).
 
@@ -299,9 +300,10 @@ secretsManagement:
 
 Note: Azure Key Vault secret names cannot contain underscores. Use hyphens in `objectName` and `objectAlias` to map to the underscore-based keys the chart expects.
 
----
+</details>
 
-## Internal Service Passwords (Redis, RabbitMQ)
+<details>
+<summary><strong style="font-size:1.25em;">Internal Service Passwords (Redis, RabbitMQ)</strong></summary>
 
 The chart deploys internal Redis and RabbitMQ StatefulSets for features like distributed queue processing and realtime caching. These are chart-managed infrastructure, not customer applications. They always run with authentication regardless of your secrets provider.
 
@@ -349,9 +351,10 @@ When using the `csi` provider, you are responsible for all keys including intern
 
 The hostname in the connection string must match the internal service name the chart creates (e.g., `rpi-queuereader-cache`, `rpi-executionservice-cache`).
 
----
+</details>
 
-## Snowflake Private Key Authentication
+<details>
+<summary><strong style="font-size:1.25em;">Snowflake Private Key Authentication</strong></summary>
 
 Snowflake JWT authentication requires the `.p8` RSA private key file to be mounted in the container. All three providers use the file-based approach (`PRIVATE_KEY_FILE`), but the way the file gets into the pod differs.
 
@@ -486,9 +489,10 @@ Key differences from the CSI provider approach:
 - No smoke test needed since the CSI volume is mounted directly by the RPI pods
 - The `objectAlias` controls the filename inside the container
 
----
+</details>
 
-## Image Pull Secrets
+<details>
+<summary><strong style="font-size:1.25em;">Image Pull Secrets</strong></summary>
 
 Image pull secrets (for private container registries) cannot be managed through CSI due to a chicken-and-egg problem: the pod needs the secret to pull its image, but CSI only syncs secrets when a pod mounts the volume.
 
@@ -499,3 +503,5 @@ You need an image pull secret when:
 - **Pulling from an internal registry that requires Docker credentials** (e.g., Artifactory, Harbor, or any registry where node-level authentication is not configured).
 
 In either case, create the secret before deploying. The `rpihelmcli secrets` command will prompt you for registry URL, username, and password, then generate the image pull secret automatically as part of the secrets workflow.
+
+</details>
