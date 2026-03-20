@@ -96,11 +96,35 @@ For a fully automated setup, use the [Helm Assistant Web UI](https://rpi-helm-as
 <details>
 <summary><strong style="font-size:1.25em;">CSI Provider: Required Vault Keys</strong></summary>
 
-When `secretsManagement.provider: csi`, the chart expects a Kubernetes Secret (synced by CSI) containing specific keys. The required keys depend on which features are enabled in your overrides.
+When `secretsManagement.provider: csi`, the CSI Secrets Store Driver syncs secrets from your vault into a Kubernetes Secret. The chart templates reference specific keys from that secret, so the names must match exactly.
 
-### Always Required
+### How It Works
 
-These keys must always be present in your vault and CSI SecretProviderClass:
+1. You store secrets in your vault (e.g., Azure Key Vault)
+2. You define a SecretProviderClass with `objects` (what to fetch) and `secretObjects` (what K8s Secret to create)
+3. A validation pod mounts the SecretProviderClass to trigger the sync
+4. The CSI driver creates the Kubernetes Secret, and RPI pods read from it
+
+The vault secret names you choose can be anything (e.g., `V7-ConnectionString-Operations-Database`). The `objectAlias` in the SecretProviderClass maps your vault name to the key name the chart expects (e.g., `ConnectionString_Operations_Database`).
+
+### Vault Secret Naming
+
+Store your secrets in Key Vault using any naming convention you prefer. Then use `objectAlias` in the SecretProviderClass to map them to the keys the chart expects.
+
+Example mapping:
+
+| Your Key Vault secret name | `objectAlias` (what the chart expects) |
+|:----------------------------|:---------------------------------------|
+| `V7-ConnectionString-Operations-Database` | `ConnectionString_Operations_Database` |
+| `V7-ConnectionString-LoggingDatabase` | `ConnectionString_Logging_Database` |
+| `V7-Operations-Database-ServerHost` | `Operations_Database_ServerHost` |
+| `V7-RealtimeAPI-Auth-Token` | `RealtimeAPI_Auth_Token` |
+
+### Required Keys
+
+The keys the chart expects in the synced Kubernetes Secret (the `objectAlias` / `secretObjects` key values):
+
+**Always required:**
 
 | Key | Description |
 |:----|:------------|
@@ -112,100 +136,30 @@ These keys must always be present in your vault and CSI SecretProviderClass:
 | `Operations_Database_Pulse_Database_Name` | Operational database name |
 | `Operations_Database_Pulse_Logging_Database_Name` | Logging database name |
 
-### Realtime API
-
-Required when `realtimeapi.enabled: true`:
-
-| Key | When required |
-|:----|:--------------|
-| `RealtimeAPI_Auth_Token` | Always (authentication token for API access) |
-| `ConnectionString_RealtimeApi_OAuth` | When using OAuth authentication |
-
-**Cache provider keys** (one set, depending on `realtimeapi.cacheProvider.provider`):
-
-| Key | Provider |
-|:----|:---------|
-| `RealtimeAPI_MongoCache_ConnectionString` | mongodb |
-| `RealtimeAPI_MongoCache_ConnectionKey` | mongodb |
-| `RealtimeAPI_RedisCache_ConnectionString` | redis (external) |
-| `RealtimeAPI_RedisCache_Password` | redis (internal, chart-managed) |
-
-**Queue provider keys** (one set, depending on `realtimeapi.queueProvider.provider`):
-
-| Key | Provider |
-|:----|:---------|
-| `RealtimeAPI_ServiceBus_ConnectionString` | azureservicebus |
-| `RealtimeAPI_EventHub_ConnectionString` | azureeventhubs |
-| `RealtimeAPI_AzureStorage_ConnectionString` | azurestorage |
-| `RealtimeAPI_RabbitMQ_Password` | rabbitmq (internal, chart-managed) |
-
-### Queue Reader (Distributed Processing)
-
-Required when `queuereader.realtimeConfiguration.isDistributed: true`:
+**Realtime API** (if enabled):
 
 | Key | Description |
 |:----|:------------|
-| `QueueService_RedisCache_ConnectionString` | Redis connection string for the queue reader cache. Format: `rpi-queuereader-cache:6379,password=<password>,abortConnect=False` |
+| `RealtimeAPI_Auth_Token` | Authentication token for API access |
+| `ConnectionString_RealtimeApi_OAuth` | OAuth database connection string (if using OAuth) |
+| `RealtimeAPI_MongoCache_ConnectionString` | MongoDB connection string (if mongodb cache) |
+| `RealtimeAPI_MongoCache_ConnectionKey` | MongoDB connection key (if mongodb cache) |
+| `RealtimeAPI_ServiceBus_ConnectionString` | Service Bus connection string (if azureservicebus queue) |
+| `RealtimeAPI_RabbitMQ_Password` | RabbitMQ password (if rabbitmq queue, internal) |
+
+**Queue Reader** (if distributed processing enabled):
+
+| Key | Description |
+|:----|:------------|
+| `QueueService_RedisCache_ConnectionString` | Format: `rpi-queuereader-cache:6379,password=<password>,abortConnect=False` |
 | `QueueService_RedisCache_Password` | Password for the queue reader Redis instance |
 | `QueueService_RabbitMQ_Password` | Password for the queue reader RabbitMQ instance |
 
-### SMTP
+**SMTP** (if using credentials): `SMTP_Password`
 
-Required when `SMTPSettings.UseCredentials: true`:
+**Rebrandly** (if enabled): `Rebrandly_RedisPassword`, `Rebrandly_ApiKey`
 
-| Key | Description |
-|:----|:------------|
-| `SMTP_Password` | SMTP server password |
-
-### Redpoint AI
-
-Required when `redpointAI.enabled: true`:
-
-| Key | Description |
-|:----|:------------|
-| `RPI_NLP_SEARCH_KEY` | Azure Cognitive Search API key |
-| `RPI_NLP_API_KEY` | OpenAI API key |
-| `RPI_NLP_MODEL_CONNECTION_STRING` | Azure Blob Storage connection string for model artifacts |
-
-### Diagnostics
-
-| Key | When required |
-|:----|:--------------|
-| `CopyToAzureBlobAccessKey` | When `diagnosticsMode.copytoAzureBlob.enabled: true` |
-| `CopyToSFTPSecureFTPPassword` | When `diagnosticsMode.copytoSftp.enabled: true` |
-
-### Rebrandly
-
-Required when `rebrandly.enabled: true`:
-
-| Key | Description |
-|:----|:------------|
-| `Rebrandly_RedisPassword` | Password for the Rebrandly Redis instance |
-| `Rebrandly_ApiKey` | Rebrandly API key |
-
-### Smart Activation (CDP)
-
-Required when `dataActivation.enabled: true`:
-
-| Key | Description |
-|:----|:------------|
-| `CDP_Default_Password` | Default admin password |
-| `CDP_Keycloak_Admin_Password` | Keycloak admin password |
-| `CDP_Mongo_ConnectionString` | MongoDB connection string for CDP |
-| `CDP_Integration_Password` | Integration API password |
-| `CDP_RabbitMQ_Password` | CDP RabbitMQ password |
-| `CDP_RabbitMQ_ErlangCookie` | Erlang cookie for RabbitMQ clustering |
-| `CDP_Keycloak_Client_Secret` | Keycloak client secret |
-| `CDP_SIGMA_Client_Secret` | Sigma reporting client secret (if reporting enabled) |
-
-### AWS Cloud Identity
-
-Required when `global.deployment.platform: amazon` with access key authentication:
-
-| Key | Description |
-|:----|:------------|
-| `AWS_Access_Key_ID` | AWS IAM access key ID |
-| `AWS_Secret_Access_Key` | AWS IAM secret access key |
+Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** to generate a script that creates all required vault secrets. The same script works for both SDK and CSI -- the secrets are the same, only the naming convention differs (SDK uses `--` separators, CSI uses whatever names you choose and maps them via `objectAlias`).
 
 </details>
 
