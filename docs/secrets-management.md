@@ -305,7 +305,7 @@ Note: Azure Key Vault secret names cannot contain underscores. Use hyphens in `o
 <details>
 <summary><strong style="font-size:1.25em;">Internal Service Passwords (Redis, RabbitMQ)</strong></summary>
 
-The chart deploys internal Redis and RabbitMQ StatefulSets for features like distributed queue processing and realtime caching. These are chart-managed infrastructure, not customer applications. They always run with authentication regardless of your secrets provider.
+When distributed queue processing is enabled on the Queue Reader (`queuereader.realtimeConfiguration.isDistributed: true`), the chart deploys internal Redis and RabbitMQ StatefulSets. The Rebrandly service also deploys its own internal Redis when enabled. These are chart-managed infrastructure and always run with authentication regardless of your secrets provider.
 
 ### How Internal Passwords Work Per Provider
 
@@ -326,8 +326,6 @@ The internal secret contains:
 | `QueueService_RedisCache_Password` | Queue reader internal Redis password |
 | `QueueService_RedisCache_ConnectionString` | Queue reader Redis connection string (includes hostname and password) |
 | `QueueService_RabbitMQ_Password` | Queue reader internal RabbitMQ password |
-| `ExecutionService_RedisCache_Password` | Execution service internal Redis password |
-| `ExecutionService_RedisCache_ConnectionString` | Execution service Redis connection string |
 | `RealtimeAPI_RedisCache_Password` | Realtime API internal Redis password |
 | `RealtimeAPI_RabbitMQ_Password` | Realtime API internal RabbitMQ password |
 | `Rebrandly_RedisPassword` | Rebrandly internal Redis password |
@@ -347,9 +345,8 @@ When using the `csi` provider, you are responsible for all keys including intern
 | Key | Format |
 |:----|:-------|
 | `QueueService_RedisCache_ConnectionString` | `rpi-queuereader-cache:6379,password=<your-password>,abortConnect=False` |
-| `ExecutionService_RedisCache_ConnectionString` | `rpi-executionservice-cache:6379,password=<your-password>,abortConnect=False` |
 
-The hostname in the connection string must match the internal service name the chart creates (e.g., `rpi-queuereader-cache`, `rpi-executionservice-cache`).
+The hostname in the connection string must match the internal service name the chart creates (e.g., `rpi-queuereader-cache`).
 
 </details>
 
