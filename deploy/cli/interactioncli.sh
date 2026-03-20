@@ -3812,7 +3812,7 @@ cat >> "$OUTPUT_FILE" << 'YAML'
 #   rpihelmcli -a <feature>
 #   rpihelmcli -a menu
 #
-# See docs/readme-configuration.md for details on each feature.
+# See docs/secrets-management.md and the Helm Assistant Reference tab for details.
 # ---------------------------------------------------------------
 YAML
 
