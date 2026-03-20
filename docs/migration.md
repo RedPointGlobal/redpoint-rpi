@@ -598,7 +598,16 @@ For **sdk** or **csi**, you need to create the required secrets in your vault be
 RPI services authenticate to cloud resources (vaults, storage accounts) using workload identity. Create a cloud identity and configure it with the access your deployment needs:
 
 **What to create:**
-- **Azure**: User-Assigned Managed Identity with `Key Vault Secrets User` role and storage account access
+- **Azure**: User-Assigned Managed Identity with the following role assignments:
+
+  | Scope | Role |
+  |:------|:-----|
+  | Key Vault | `Key Vault Secrets Officer` |
+  | Storage Account (FileOutputDirectory) | `Reader` |
+  | Storage Account (FileOutputDirectory) | `Storage Account Key Operator Service Role` |
+  | Storage Account (FileOutputDirectory) | `Storage Blob Data Contributor` |
+  | Storage Account (FileOutputDirectory) | `Storage File Data SMB Share Contributor` |
+
 - **AWS**: IAM Role with Secrets Manager read access and EFS/S3 access
 - **GCP**: Service Account with Secret Manager access and Filestore/GCS access
 

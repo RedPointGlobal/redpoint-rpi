@@ -21,8 +21,18 @@ RPI supports three secrets management providers. The provider controls how sensi
 When using the `sdk` provider, RPI services authenticate to your cloud vault using workload identity and read secrets at runtime. Before deploying, you need to:
 
 1. **Create a Key Vault** (or use an existing one) and store the required secrets
-2. **Create a Managed Identity** and grant it read access to the vault
+2. **Create a Managed Identity** and grant it the required roles (vault access + storage access)
 3. **Configure Workload Identity Federation** for each RPI service account
+
+For Azure, the managed identity needs the following role assignments:
+
+| Scope | Role |
+|:------|:-----|
+| Key Vault | `Key Vault Secrets Officer` |
+| Storage Account (FileOutputDirectory) | `Reader` |
+| Storage Account (FileOutputDirectory) | `Storage Account Key Operator Service Role` |
+| Storage Account (FileOutputDirectory) | `Storage Blob Data Contributor` |
+| Storage Account (FileOutputDirectory) | `Storage File Data SMB Share Contributor` |
 
 The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** generates a complete setup script (Bash or Terraform) that handles all three steps. Select your platform, enter your environment details, and download the script.
 
