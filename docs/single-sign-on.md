@@ -2,10 +2,8 @@
 
 RPI supports single sign-on through two authentication methods:
 
-- **Microsoft Entra ID** (formerly Azure AD) — native integration for organizations using Microsoft identity
-- **OpenID Connect (OIDC)** — standards-based SSO supporting Keycloak, Okta, and other OIDC providers
-
-You can enable one or both methods depending on your identity requirements.
+- **Microsoft Entra ID** (formerly Azure AD): recommended for Azure customers. Native integration with Microsoft identity for secure access and single sign-on.
+- **OpenID Connect (OIDC)**: for organizations using an external identity provider such as Keycloak or Okta.
 
 ---
 
@@ -42,17 +40,11 @@ Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate*
    - **Who can consent:** Admins and users
 4. Under **Authorized client applications**, add the Interaction Client's **Client ID**
 
-### Enable in the Helm Chart
+### Generate Your Overrides
 
-Update your `values.yaml` with the IDs from either method above:
+Once you have the Client ID, API ID, and Tenant ID from either method above, go to the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 8: Services** > **Microsoft Entra ID** and enter these values. They will be included in your generated `overrides.yaml` automatically.
 
-```yaml
-MicrosoftEntraID:
-  enabled: true
-  interaction_client_id: <interaction-client Client ID>
-  interaction_api_id: <interaction-api Client ID>
-  tenant_id: <Azure Tenant ID>
-```
+> **Important:** Complete the Entra ID app registrations **before** generating your overrides so you have the required IDs ready.
 
 > **Note:** To sign in with Microsoft Entra ID, each RPI user account must use the same email address as their Entra ID username (e.g., `first.last@example.com`).
 
@@ -62,7 +54,28 @@ MicrosoftEntraID:
 
 RPI supports any OpenID Connect-compliant identity provider. The chart includes built-in templates for **Keycloak** and **Okta**.
 
-### Keycloak
+### Prerequisites
+
+Before generating your overrides, set up your OIDC provider and gather the following values:
+
+| Value | Where to find it |
+|-------|-----------------|
+| **Authorization Host** | Keycloak: `https://<host>/realms/<realm>`. Okta: `https://<domain>/oauth2/default` |
+| **Client ID** | The application/client ID from your identity provider's app registration |
+| **Audience** | Usually the same as Client ID (Keycloak) or `api://<client-id>` (Okta) |
+| **Redirect URL** | Your RPI Interaction API URL, e.g. `https://rpi-interactionapi.example.com` |
+| **Custom Scopes** | Keycloak: `openid`, `profile`. Okta: `api://<client-id>/Interaction.Clients` |
+
+> **Important:** Complete your identity provider setup **before** generating your overrides so you have the required values ready.
+
+### Generate Your Overrides
+
+Once you have the values above, go to the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 8: Services** > **OpenID Connect** and enter them. They will be included in your generated `overrides.yaml` automatically.
+
+### Example Values
+
+<details>
+<summary>Keycloak</summary>
 
 ```yaml
 OpenIdProviders:
@@ -82,7 +95,10 @@ OpenIdProviders:
   supportsUserManagement: false
 ```
 
-### Okta
+</details>
+
+<details>
+<summary>Okta</summary>
 
 ```yaml
 OpenIdProviders:
@@ -101,11 +117,13 @@ OpenIdProviders:
   supportsUserManagement: false
 ```
 
+</details>
+
 ### Configuration Reference
 
 | Key | Description |
 |-----|-------------|
-| `name` | Provider name — must be `keycloak` or `Okta` (maps to the chart template) |
+| `name` | Provider name. Must be `keycloak` or `Okta` (maps to the chart template) |
 | `authorizationHost` | The OIDC issuer/authorization endpoint URL |
 | `clientID` | The application/client ID registered with the identity provider |
 | `audience` | The expected audience claim in the token |
@@ -123,25 +141,4 @@ OpenIdProviders:
 
 You can enable both Microsoft Entra ID and an OIDC provider simultaneously. Users will see multiple sign-in options in the RPI client. This is useful when migrating between identity providers or supporting users from different identity systems.
 
-```yaml
-MicrosoftEntraID:
-  enabled: true
-  interaction_client_id: <interaction-client Client ID>
-  interaction_api_id: <interaction-api Client ID>
-  tenant_id: <Azure Tenant ID>
-
-OpenIdProviders:
-  enabled: true
-  name: keycloak
-  authorizationHost: https://keycloak.example.com/realms/rpi
-  clientID: <keycloak-client-id>
-  audience: <keycloak-client-id>
-  redirectURL: https://rpi-interactionapi.example.com
-  enableRefreshTokens: true
-  validateIssuer: false
-  validateAudience: true
-  logoutIdTokenParameter: id_token_hint
-  customScopes:
-    - openid
-  supportsUserManagement: false
-```
+To enable both, complete the setup steps for each method above, then enable both sections in the **Generate** tab > **Step 8: Services**.
