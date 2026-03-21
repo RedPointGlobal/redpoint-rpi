@@ -87,10 +87,3 @@ For all available `OpenIdProviders` configuration keys, see the [Helm Assistant]
 
 </details>
 
----
-
-## Using Both Methods
-
-You can enable both Microsoft Entra ID and an OIDC provider simultaneously. Users will see multiple sign-in options in the RPI client. This is useful when migrating between identity providers or supporting users from different identity systems.
-
-To enable both, complete the setup steps for each method above, then enable both sections in the **Generate** tab > **Step 8: Services**.
