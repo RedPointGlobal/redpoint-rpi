@@ -71,7 +71,7 @@ chmod +x "${PKG_DIR}/deploy.sh"
 cd "${DIST_DIR}"
 python3 -c "
 import zipfile, os
-with zipfile.ZipFile('interactioncli.zip', 'w', zipfile.ZIP_DEFLATED) as zf:
+with zipfile.ZipFile('rpihelmcli.zip', 'w', zipfile.ZIP_DEFLATED) as zf:
     for root, dirs, files in os.walk('interactioncli'):
         for f in files:
             zf.write(os.path.join(root, f))
@@ -80,4 +80,4 @@ with zipfile.ZipFile('interactioncli.zip', 'w', zipfile.ZIP_DEFLATED) as zf:
 # Clean up
 rm -rf "${PKG_DIR}"
 
-echo "Created: ${DIST_DIR}/interactioncli.zip"
+echo "Created: ${DIST_DIR}/rpihelmcli.zip"
