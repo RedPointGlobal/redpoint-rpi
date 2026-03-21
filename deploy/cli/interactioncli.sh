@@ -2736,6 +2736,26 @@ SECRETS_AUTO
     echo ""
   fi
 
+  # --- Rebrandly secrets ---
+  local rebrandly_enabled_k8s
+  rebrandly_enabled_k8s=$(read_val "$overrides" "rebrandly.enabled")
+  rebrandly_enabled_k8s="${rebrandly_enabled_k8s:-false}"
+  if [ "$rebrandly_enabled_k8s" = "true" ] || [ "$rebrandly_enabled_k8s" = "True" ]; then
+    echo "  ${BOLD}Rebrandly${RESET}"
+    local rb_api_key rb_redis_pass
+    read -rsp "    API key: " rb_api_key
+    echo ""
+    rb_redis_pass=$(gen_password)
+
+    cat >> "$output" << SECRETS_REBRANDLY
+  # -- Rebrandly --
+  Rebrandly_ApiKey: "${rb_api_key}"
+  Rebrandly_RedisPassword: "${rb_redis_pass}"
+SECRETS_REBRANDLY
+    echo "  ${GREEN}✔ Rebrandly secrets added${RESET}"
+    echo ""
+  fi
+
   fi  # end kubernetes provider check
 
   # --- Image pull secret ---
