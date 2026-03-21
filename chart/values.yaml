@@ -710,27 +710,44 @@ serviceMesh:
   #   config.linkerd.io/skip-outbound-ports: "443,587"
   #   config.linkerd.io/proxy-outbound-connect-timeout: "300000ms"
   #   config.linkerd.io/proxy-cpu-request: "100m"
+  # Shared defaults for all servers. Per-server values override these.
+  serverDefaults: {}
+  # serverDefaults:
+  #   port: 8080
+  #   proxyProtocol: HTTP/1
+  #   allowUnauthenticated: true
+  #   networks:
+  #     - cidr: 10.0.0.0/8
+  #
   # Linkerd Server CRDs for L7 traffic policy.
   # Each server creates a Server + AuthorizationPolicy + NetworkAuthentication.
-  # Per-server options:
-  #   allowUnauthenticated: true (default) — allows unmeshed traffic (e.g. ingress)
-  #                         false — only meshed (mTLS) clients are permitted
-  #   networks: custom CIDR list for NetworkAuthentication (default: all traffic)
+  # podSelector is auto-derived from the name if not set (e.g., name "aks-rpi-realtimeapi"
+  # produces podSelector app.kubernetes.io/name: rpi-realtimeapi).
+  # Per-server values override serverDefaults.
   servers: []
+  # Minimal example (using serverDefaults for shared settings):
   # servers:
-  #   - name: realtimeapi
+  #   - name: aks-rpi-interactionapi
+  #   - name: aks-rpi-executionservice
+  #     allowUnauthenticated: false
+  #   - name: aks-rpi-nodemanager
+  #     allowUnauthenticated: false
+  #   - name: aks-rpi-realtimeapi
+  #   - name: aks-rpi-callbackapi
+  #   - name: aks-rpi-integrationapi
+  #   - name: aks-rpi-deploymentapi
+  #   - name: aks-rpi-queuereader
+  #
+  # Full example (explicit per-server settings):
+  # servers:
+  #   - name: aks-rpi-realtimeapi
   #     podSelector:
   #       app.kubernetes.io/name: rpi-realtimeapi
   #     port: 8080
   #     proxyProtocol: HTTP/1
-  #     # allowUnauthenticated: true     # default, allows ingress traffic
-  #     # networks:                      # restrict to specific CIDRs
-  #     #   - cidr: 10.0.0.0/8
-  #   - name: executionservice
-  #     podSelector:
-  #       app.kubernetes.io/name: rpi-executionservice
-  #     port: 8080
-  #     proxyProtocol: HTTP/1
+  #     allowUnauthenticated: true
+  #     networks:
+  #       - cidr: 10.0.0.0/8
 
 # ==========================
 # Node Scheduling

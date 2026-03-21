@@ -320,18 +320,23 @@ Use this together with `nodeSelector` and `tolerations` to ensure RPI pods land 
 
 **Before:** Using Linkerd required manually annotating every deployment with proxy injection and timeout settings, either by editing templates or using namespace-level injection (which affected non-RPI pods too).
 
-**Now:** The `serviceMesh` section enables per-pod Linkerd proxy injection and configuration for all RPI deployments:
+**Now:** The `serviceMesh` section enables per-pod Linkerd proxy injection and configuration for all RPI deployments. The `serverDefaults` block sets shared settings for all servers, and each server entry only needs a `name` -- the chart auto-derives `podSelector` from the name (e.g., `aks-rpi-realtimeapi` produces `app.kubernetes.io/name: rpi-realtimeapi`):
 
 ```yaml
 serviceMesh:
   enabled: true
   provider: linkerd
+  serverDefaults:
+    allowUnauthenticated: false
   servers:
   - name: aks-rpi-interactionapi
-    podSelector:
-      app.kubernetes.io/name: rpi-interactionapi
-    port: 8080
-    proxyProtocol: HTTP/1
+  - name: aks-rpi-executionservice
+  - name: aks-rpi-nodemanager
+  - name: aks-rpi-realtimeapi
+  - name: aks-rpi-callbackapi
+  - name: aks-rpi-integrationapi
+  - name: aks-rpi-deploymentapi
+  - name: aks-rpi-queuereader
 ```
 
 When enabled, the chart automatically adds these pod annotations to all RPI deployments:
@@ -339,49 +344,40 @@ When enabled, the chart automatically adds these pod annotations to all RPI depl
 - `config.linkerd.io/skip-outbound-ports: "443"` (skip TLS for outbound HTTPS)
 - `config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"` (proxy timeout)
 
-Override any default or add additional annotations via `serviceMesh.podAnnotations`:
+These annotations are overridable via `serviceMesh.podAnnotations`, and can be disabled per-service using that service's `podAnnotations` (e.g., `deploymentapi.podAnnotations: { linkerd.io/inject: disabled }`).
+
+The `servers` list generates Linkerd `Server` CRDs for L7 traffic policy. Each server is automatically paired with an `AuthorizationPolicy` and `NetworkAuthentication` to allow unmeshed traffic (e.g. from your ingress controller). Server options can be set at `serverDefaults` level or overridden per server:
+
+| Option | Default | Description |
+|:-------|:--------|:------------|
+| `port` | `8080` | Server port. Settable in `serverDefaults` or per server. |
+| `proxyProtocol` | `HTTP/1` | Linkerd proxy protocol. Settable in `serverDefaults` or per server. |
+| `allowUnauthenticated` | `true` | When true, creates AuthorizationPolicy + NetworkAuthentication to allow unmeshed clients. Set to false to require mTLS only. Settable in `serverDefaults` or per server. |
+| `networks` | All (`0.0.0.0/0`, `::/0`) | Custom CIDR list for NetworkAuthentication. Restricts which source IPs can reach the server. Settable in `serverDefaults` or per server. |
+
+**With overrides** -- set defaults for all servers, then override specific ones:
 
 ```yaml
 serviceMesh:
   enabled: true
   provider: linkerd
-  podAnnotations:
-    config.linkerd.io/skip-outbound-ports: "443,587"
-    config.linkerd.io/proxy-cpu-request: "100m"
-```
-
-To disable injection for a specific service, use that service's `podAnnotations`:
-
-```yaml
-deploymentapi:
-  podAnnotations:
-    linkerd.io/inject: disabled
-```
-
-The `servers` list generates Linkerd `Server` CRDs for L7 traffic policy. Each server is automatically paired with an `AuthorizationPolicy` and `NetworkAuthentication` to allow unmeshed traffic (e.g. from your ingress controller). Per-server options:
-
-| Option | Default | Description |
-|:-------|:--------|:------------|
-| `allowUnauthenticated` | `true` | When true, creates AuthorizationPolicy + NetworkAuthentication to allow unmeshed clients. Set to false to require mTLS only. |
-| `networks` | All (`0.0.0.0/0`, `::/0`) | Custom CIDR list for NetworkAuthentication. Restricts which source IPs can reach the server. |
-
-```yaml
-serviceMesh:
+  serverDefaults:
+    port: 8080
+    proxyProtocol: HTTP/1
+    allowUnauthenticated: true
+    networks:
+    - cidr: 10.147.128.0/18
   servers:
   - name: aks-rpi-interactionapi
-    podSelector:
-      app.kubernetes.io/name: rpi-interactionapi
-    port: 8080
-    proxyProtocol: HTTP/1
-    # allowUnauthenticated: true    # default
-    # networks:                     # restrict to cluster-internal only
-    #   - cidr: 10.0.0.0/8
   - name: aks-rpi-executionservice
-    podSelector:
-      app.kubernetes.io/name: rpi-executionservice
-    port: 8080
-    proxyProtocol: HTTP/1
-    allowUnauthenticated: false     # mTLS only, no ingress traffic
+    allowUnauthenticated: false
+  - name: aks-rpi-nodemanager
+    allowUnauthenticated: false
+  - name: aks-rpi-realtimeapi
+  - name: aks-rpi-callbackapi
+  - name: aks-rpi-integrationapi
+  - name: aks-rpi-deploymentapi
+  - name: aks-rpi-queuereader
 ```
 
 No template edits required.

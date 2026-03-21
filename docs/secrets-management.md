@@ -74,7 +74,7 @@ The secret names use `--` as the hierarchy separator and must match exactly. RPI
 | Vault Secret Name | Value |
 |:-------------------|:------|
 | `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your callback queue connection string |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your Service Bus connection string |
 
 **SMTP** (if sending email):
 
