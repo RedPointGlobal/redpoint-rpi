@@ -5,9 +5,12 @@ RPI supports single sign-on through two authentication methods:
 - **Microsoft Entra ID** (formerly Azure AD): recommended for Azure customers. Native integration with Microsoft identity for secure access and single sign-on.
 - **OpenID Connect (OIDC)**: for organizations using an external identity provider such as Keycloak or Okta.
 
+For a full reference of all configurable keys, see the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab.
+
 ---
 
-## Microsoft Entra ID
+<details>
+<summary><strong>Microsoft Entra ID</strong></summary>
 
 ### Prerequisites
 
@@ -48,9 +51,14 @@ Once you have the Client ID, API ID, and Tenant ID from either method above, go 
 
 > **Note:** To sign in with Microsoft Entra ID, each RPI user account must use the same email address as their Entra ID username (e.g., `first.last@example.com`).
 
+For all available `MicrosoftEntraID` configuration keys, see the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab.
+
+</details>
+
 ---
 
-## OpenID Connect (OIDC)
+<details>
+<summary><strong>OpenID Connect (OIDC)</strong></summary>
 
 RPI supports any OpenID Connect-compliant identity provider. The chart includes built-in templates for **Keycloak** and **Okta**.
 
@@ -72,68 +80,9 @@ Before generating your overrides, set up your OIDC provider and gather the follo
 
 Once you have the values above, go to the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 8: Services** > **OpenID Connect** and enter them. They will be included in your generated `overrides.yaml` automatically.
 
-### Example Values
-
-<details>
-<summary>Keycloak</summary>
-
-```yaml
-OpenIdProviders:
-  enabled: true
-  name: keycloak
-  authorizationHost: https://<keycloak-host>/realms/<realm>
-  clientID: <keycloak-client-id>
-  audience: <keycloak-client-id>
-  redirectURL: https://<rpi-interactionapi-host>
-  enableRefreshTokens: true
-  validateIssuer: false
-  validateAudience: true
-  logoutIdTokenParameter: id_token_hint
-  customScopes:
-    - openid
-    - profile
-  supportsUserManagement: false
-```
+For all available `OpenIdProviders` configuration keys, see the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab.
 
 </details>
-
-<details>
-<summary>Okta</summary>
-
-```yaml
-OpenIdProviders:
-  enabled: true
-  name: Okta
-  authorizationHost: https://<okta-domain>/oauth2/default
-  clientID: <okta-client-id>
-  audience: api://<okta-client-id>
-  redirectURL: https://<rpi-interactionapi-host>
-  enableRefreshTokens: true
-  validateIssuer: false
-  validateAudience: true
-  logoutIdTokenParameter: id_token_hint
-  customScopes:
-    - api://<okta-client-id>/Interaction.Clients
-  supportsUserManagement: false
-```
-
-</details>
-
-### Configuration Reference
-
-| Key | Description |
-|-----|-------------|
-| `name` | Provider name. Must be `keycloak` or `Okta` (maps to the chart template) |
-| `authorizationHost` | The OIDC issuer/authorization endpoint URL |
-| `clientID` | The application/client ID registered with the identity provider |
-| `audience` | The expected audience claim in the token |
-| `redirectURL` | The Interaction API URL that receives the authentication callback |
-| `enableRefreshTokens` | Allow token refresh for long-lived sessions |
-| `validateIssuer` | Validate the token issuer claim against the authorization host |
-| `validateAudience` | Validate the token audience claim |
-| `logoutIdTokenParameter` | Parameter name used to pass the ID token during logout |
-| `customScopes` | Additional OAuth scopes to request during authentication |
-| `supportsUserManagement` | Whether the provider handles user provisioning |
 
 ---
 
