@@ -1,4 +1,7 @@
+![redpoint_logo](../chart/images/redpoint.png)
 # Single Sign-On (SSO)
+
+[< Back to main README](../README.md)
 
 RPI supports single sign-on through two authentication methods:
 
@@ -10,7 +13,7 @@ For a full reference of all configurable keys, see the [Helm Assistant](https://
 ---
 
 <details>
-<summary><strong>Microsoft Entra ID</strong></summary>
+<summary><strong style="font-size:1.25em;">Microsoft Entra ID</strong></summary>
 
 ### Prerequisites
 
@@ -53,12 +56,11 @@ Once you have the Client ID, API ID, and Tenant ID from either method above, go 
 
 For all available `MicrosoftEntraID` configuration keys, see the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab.
 
+
 </details>
 
----
-
 <details>
-<summary><strong>OpenID Connect (OIDC)</strong></summary>
+<summary><strong style="font-size:1.25em;">OpenID Connect (OIDC)</strong></summary>
 
 RPI supports any OpenID Connect-compliant identity provider. The chart includes built-in templates for **Keycloak** and **Okta**.
 
@@ -81,6 +83,7 @@ Before generating your overrides, set up your OIDC provider and gather the follo
 Once you have the values above, go to the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 8: Services** > **OpenID Connect** and enter them. They will be included in your generated `overrides.yaml` automatically.
 
 For all available `OpenIdProviders` configuration keys, see the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab.
+
 
 </details>
 
