@@ -1,15 +1,15 @@
-{{- $rtCfg := fromYaml (include "rpi.merged.realtimeapi" .) -}}
-{{- $cbCfg := fromYaml (include "rpi.merged.callbackapi" .) -}}
-{{- $execCfg := fromYaml (include "rpi.merged.executionservice" .) -}}
-{{- $iaCfg := fromYaml (include "rpi.merged.interactionapi" .) -}}
-{{- $intCfg := fromYaml (include "rpi.merged.integrationapi" .) -}}
-{{- $nmCfg := fromYaml (include "rpi.merged.nodemanager" .) -}}
-{{- $qrCfg := fromYaml (include "rpi.merged.queuereader" .) -}}
-{{- $authCfg := fromYaml (include "rpi.merged.authservice" .) -}}
-{{- $kcCfg := fromYaml (include "rpi.merged.keycloak" .) -}}
-{{- $saCfg := fromYaml (include "rpi.merged.servicesapi" .) -}}
-{{- $sioCfg := fromYaml (include "rpi.merged.socketio" .) -}}
-{{- $uiCfg := fromYaml (include "rpi.merged.uiservice" .) -}}
+{{- $rtCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
+{{- $cbCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "callbackapi")) -}}
+{{- $execCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "executionservice")) -}}
+{{- $iaCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "interactionapi")) -}}
+{{- $intCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "integrationapi")) -}}
+{{- $nmCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "nodemanager")) -}}
+{{- $qrCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "queuereader")) -}}
+{{- $authCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "authservice")) -}}
+{{- $kcCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
+{{- $saCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "servicesapi")) -}}
+{{- $sioCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "socketio")) -}}
+{{- $uiCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "uiservice")) -}}
 {{- if $execCfg.autoscaling.enabled }}
 {{- if eq $execCfg.autoscaling.type "hpa" }}
 {{- if $execCfg.enabled }}

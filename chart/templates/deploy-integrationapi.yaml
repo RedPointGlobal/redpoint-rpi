@@ -1,4 +1,4 @@
-{{- $cfg := fromYaml (include "rpi.merged.integrationapi" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "integrationapi")) -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 {{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
 {{- $readiness := fromYaml (include "rpi.merged.readinessProbe" .) -}}
@@ -10,30 +10,7 @@
 {{- $dwEnabled := (include "redpoint.DatawarehouseProviders" .) | eq "true" -}}
 {{- $dw := .Values.databases.datawarehouse | default dict -}}
 
-{{- if $cfg.serviceAccount.enabled }}
-{{- if $cfg.enabled }}
-{{- if ne (.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: {{ $name }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
-  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
-  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
-  {{- if or $saAnnotations $ciAnnotations }}
-  annotations:
-    {{- if $saAnnotations }}
-    {{- $saAnnotations | nindent 4 }}
-    {{- end }}
-    {{- if $ciAnnotations }}
-    {{- $ciAnnotations | nindent 4 }}
-    {{- end }}
-  {{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "api" "cfg" $cfg) }}
 
 ---
 {{- if $cfg.podDisruptionBudget.enabled }}
@@ -415,39 +392,7 @@ spec:
         image: {{ include "rpi.image" (dict "root" . "name" $name) }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         name: {{ $name }}
-        {{- if $liveness.enabled }}
-        livenessProbe:
-          httpGet:
-            path: {{ $liveness.httpGet.path }}
-            port: {{ $liveness.httpGet.port }}
-            scheme: {{ $liveness.httpGet.scheme }}
-          initialDelaySeconds: {{ $liveness.initialDelaySeconds }}
-          periodSeconds: {{ $liveness.periodSeconds }}
-          timeoutSeconds: {{ $liveness.timeoutSeconds }}
-          failureThreshold: {{ $liveness.failureThreshold }}
-        {{- end }}
-        {{- if $readiness.enabled }}
-        readinessProbe:
-          httpGet:
-            path: {{ $readiness.httpGet.path }}
-            port: {{ $readiness.httpGet.port }}
-            scheme: {{ $readiness.httpGet.scheme }}
-          initialDelaySeconds: {{ $readiness.initialDelaySeconds }}
-          periodSeconds: {{ $readiness.periodSeconds }}
-          failureThreshold: {{ $readiness.failureThreshold }}
-          timeoutSeconds: {{ $readiness.timeoutSeconds }}
-        {{- end }}
-        {{- if $startup.enabled }}
-        startupProbe:
-          httpGet:
-            path: {{ $startup.httpGet.path }}
-            port: {{ $startup.httpGet.port }}
-            scheme: {{ $startup.httpGet.scheme }}
-          failureThreshold: {{ $startup.failureThreshold }}
-          periodSeconds: {{ $startup.periodSeconds }}
-          initialDelaySeconds: {{ $startup.initialDelaySeconds }}
-          timeoutSeconds: {{ $startup.timeoutSeconds }}
-        {{- end }}
+        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup) | nindent 8 }}
         ports:
         - containerPort: 8080
           name: web-port

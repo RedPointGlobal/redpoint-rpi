@@ -1,6 +1,6 @@
 {{- $cfg := fromYaml (include "rpi.merged.databaseUpgrade" .) -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
-{{- $deploymentapiCfg := fromYaml (include "rpi.merged.deploymentapi" .) -}}
+{{- $deploymentapiCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "deploymentapi")) -}}
 {{- $tagSanitized := .Values.global.deployment.images.tag | replace "." "-" | lower | trunc 40 -}}
 {{- $name := printf "rpi-db-upgrade-%s" $tagSanitized -}}
 

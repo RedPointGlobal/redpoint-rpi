@@ -1,5 +1,5 @@
-{{- $cfg := fromYaml (include "rpi.merged.socketio" .) -}}
-{{- $kcCfg := fromYaml (include "rpi.merged.keycloak" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "socketio")) -}}
+{{- $kcCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
 {{- $name := "cdp-socketio" -}}
 
 {{- if .Values.smartActivation.enabled }}

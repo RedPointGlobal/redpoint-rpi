@@ -1,8 +1,8 @@
-{{- $cfg := fromYaml (include "rpi.merged.authservice" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "authservice")) -}}
 {{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
 {{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
-{{- $cacheCfg := fromYaml (include "rpi.merged.cdpcache" .) -}}
-{{- $kcCfg := fromYaml (include "rpi.merged.keycloak" .) -}}
+{{- $cacheCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "cdpcache")) -}}
+{{- $kcCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
 {{- $name := "cdp-authservice" -}}
 

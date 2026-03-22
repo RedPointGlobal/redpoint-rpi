@@ -372,22 +372,15 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "ingress") | nindent 4 }}
   annotations:
-    {{- if eq $ingCfg.mode "private" }}
     {{- if eq .Values.global.deployment.platform "azure" }}
-    service.beta.kubernetes.io/azure-load-balancer-internal: {{$ingCfg.controller.enabled | quote }}
-    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{$ingCfg.subnetName | quote }}
-    {{- end }}
-    {{- end }}
     {{- if eq $ingCfg.mode "private" }}
-    {{- if eq .Values.global.deployment.platform "google" }}
-    networking.gke.io/load-balancer-type: "Internal"
-    {{- end }}
+    service.beta.kubernetes.io/azure-load-balancer-internal: {{ $ingCfg.controller.enabled | quote }}
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: {{ $ingCfg.subnetName | quote }}
     {{- end }}
     {{- if $ingCfg.privateLink.azure.enabled }}
-    {{- if eq .Values.global.deployment.platform "azure" }}
     service.beta.kubernetes.io/azure-pls-create: "true"
     service.beta.kubernetes.io/azure-pls-name: {{ .Release.Namespace }}
-    service.beta.kubernetes.io/azure-pls-ip-configuration-subnet: {{$ingCfg.subnetName | quote }}
+    service.beta.kubernetes.io/azure-pls-ip-configuration-subnet: {{ $ingCfg.subnetName | quote }}
     service.beta.kubernetes.io/azure-pls-ip-configuration-ip-address-count: "1"
     service.beta.kubernetes.io/azure-pls-proxy-protocol: "false"
     service.beta.kubernetes.io/azure-pls-visibility: "*"
@@ -398,22 +391,21 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
     service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
-    {{- end }}
     {{- if eq $ingCfg.mode "public" }}
-    {{- if eq .Values.global.deployment.platform "amazon" }}
     service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
     {{- end }}
-    {{- end }}
-    {{- if eq .Values.global.deployment.platform "amazon" }}
     {{- if eq $ingCfg.mode "private" }}
     service.beta.kubernetes.io/aws-load-balancer-internal: "true"
     {{- end }}
-    {{- end }}
-    {{- if eq .Values.global.deployment.platform "amazon" }}
     {{- if eq $ingCfg.certificateSource "acm" }}
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ $ingCfg.certificateArn | quote }}
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    {{- end }}
+    {{- end }}
+    {{- if eq .Values.global.deployment.platform "google" }}
+    {{- if eq $ingCfg.mode "private" }}
+    networking.gke.io/load-balancer-type: "Internal"
     {{- end }}
     {{- end }}
 spec:

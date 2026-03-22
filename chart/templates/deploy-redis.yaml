@@ -1,7 +1,7 @@
-{{- $rtCfg := fromYaml (include "rpi.merged.realtimeapi" .) -}}
-{{- $execCfg := fromYaml (include "rpi.merged.executionservice" .) -}}
-{{- $qrCfg := fromYaml (include "rpi.merged.queuereader" .) -}}
-{{- $rbCfg := fromYaml (include "rpi.merged.rebrandly" .) -}}
+{{- $rtCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
+{{- $execCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "executionservice")) -}}
+{{- $qrCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "queuereader")) -}}
+{{- $rbCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "rebrandly")) -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 {{- $QueueReadercacheName := "rpi-queuereader-cache" -}}
 {{- $ExecutioncacheName := "rpi-executionservice-cache" -}}

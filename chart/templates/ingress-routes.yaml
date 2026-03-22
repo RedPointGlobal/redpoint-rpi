@@ -1,11 +1,11 @@
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
-{{- $iaCfg := fromYaml (include "rpi.merged.interactionapi" .) -}}
-{{- $daCfg := fromYaml (include "rpi.merged.deploymentapi" .) -}}
-{{- $qrCfg := fromYaml (include "rpi.merged.queuereader" .) -}}
-{{- $intCfg := fromYaml (include "rpi.merged.integrationapi" .) -}}
-{{- $rtCfg := fromYaml (include "rpi.merged.realtimeapi" .) -}}
-{{- $cbCfg := fromYaml (include "rpi.merged.callbackapi" .) -}}
-{{- $sioCfg := fromYaml (include "rpi.merged.socketio" .) -}}
+{{- $iaCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "interactionapi")) -}}
+{{- $daCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "deploymentapi")) -}}
+{{- $qrCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "queuereader")) -}}
+{{- $intCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "integrationapi")) -}}
+{{- $rtCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
+{{- $cbCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "callbackapi")) -}}
+{{- $sioCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "socketio")) -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

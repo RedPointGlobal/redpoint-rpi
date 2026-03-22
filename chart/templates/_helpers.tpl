@@ -143,41 +143,44 @@ lifecycle:
 {{- end }}
 
 {{/*
-Standard probe configuration
-Usage: {{ include "redpoint-rpi.livenessProbe" (dict "probes" .Values.realtimeapi "path" "/health") }}
+Container probes (liveness, readiness, startup) from merged config.
+Usage: {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup) | nindent 8 }}
 */}}
-{{- define "redpoint-rpi.livenessProbe" -}}
+{{- define "rpi.block.probes" -}}
+{{- if .liveness.enabled }}
 livenessProbe:
   httpGet:
-    path: {{ .path | default "/health" }}
-    port: 8080
-  initialDelaySeconds: {{ .probes.livenessProbe.initialDelaySeconds }}
-  periodSeconds: {{ .probes.livenessProbe.periodSeconds }}
-  failureThreshold: {{ .probes.livenessProbe.failureThreshold }}
-  timeoutSeconds: {{ .probes.livenessProbe.timeoutSeconds }}
+    path: {{ .liveness.httpGet.path }}
+    port: {{ .liveness.httpGet.port }}
+    scheme: {{ .liveness.httpGet.scheme }}
+  initialDelaySeconds: {{ .liveness.initialDelaySeconds }}
+  periodSeconds: {{ .liveness.periodSeconds }}
+  timeoutSeconds: {{ .liveness.timeoutSeconds }}
+  failureThreshold: {{ .liveness.failureThreshold }}
 {{- end }}
-
-{{- define "redpoint-rpi.readinessProbe" -}}
+{{- if .readiness.enabled }}
 readinessProbe:
   httpGet:
-    path: {{ .path | default "/health/ready" }}
-    port: 8080
-  initialDelaySeconds: {{ .probes.readinessProbe.initialDelaySeconds }}
-  periodSeconds: {{ .probes.readinessProbe.periodSeconds }}
-  failureThreshold: {{ .probes.readinessProbe.failureThreshold }}
-  timeoutSeconds: {{ .probes.readinessProbe.timeoutSeconds }}
+    path: {{ .readiness.httpGet.path }}
+    port: {{ .readiness.httpGet.port }}
+    scheme: {{ .readiness.httpGet.scheme }}
+  initialDelaySeconds: {{ .readiness.initialDelaySeconds }}
+  periodSeconds: {{ .readiness.periodSeconds }}
+  failureThreshold: {{ .readiness.failureThreshold }}
+  timeoutSeconds: {{ .readiness.timeoutSeconds }}
 {{- end }}
-
-{{- define "redpoint-rpi.startupProbe" -}}
+{{- if .startup.enabled }}
 startupProbe:
   httpGet:
-    path: {{ .path | default "/health" }}
-    port: 8080
-  initialDelaySeconds: {{ .probes.startupProbe.initialDelaySeconds }}
-  failureThreshold: {{ .probes.startupProbe.failureThreshold }}
-  periodSeconds: {{ .probes.startupProbe.periodSeconds }}
-  timeoutSeconds: {{ .probes.startupProbe.timeoutSeconds }}
+    path: {{ .startup.httpGet.path }}
+    port: {{ .startup.httpGet.port }}
+    scheme: {{ .startup.httpGet.scheme }}
+  failureThreshold: {{ .startup.failureThreshold }}
+  periodSeconds: {{ .startup.periodSeconds }}
+  initialDelaySeconds: {{ .startup.initialDelaySeconds }}
+  timeoutSeconds: {{ .startup.timeoutSeconds }}
 {{- end }}
+{{- end -}}
 
 {{/*
 Image pull secrets
@@ -229,7 +232,7 @@ false
      ============================================================
      Each helper merges: defaults + user values (user wins).
      Usage in templates:
-       {{- $cfg := fromYaml (include "rpi.merged.realtimeapi" .) -}}
+       {{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
      ============================================================ */}}
 
 {{/* --- Component merge helpers ---
@@ -238,122 +241,118 @@ false
      Per-service overrides (e.g. .Values.interactionapi.resources) win.
 */}}
 
-{{/* Apply global resources onto a service defaults dict */}}
-{{- define "rpi.applyGlobalResources" -}}
-{{- $d := index . 0 -}}
-{{- $g := index . 1 -}}
+{{/*
+Merge a service's config: chart defaults + global resources + user overrides.
+Usage: {{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
+*/}}
+{{- define "rpi.merged.service" -}}
+{{- $d := fromYaml (include (printf "rpi.defaults.%s" .name) .root) -}}
+{{- $g := .root.Values.resources | default dict -}}
 {{- if $g -}}
 {{- $_ := set $d "resources" (mustMergeOverwrite ($d.resources | default dict) $g) -}}
 {{- end -}}
-{{- toYaml $d -}}
-{{- end -}}
-
-{{- define "rpi.merged.realtimeapi" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.realtimeapi" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.realtimeapi | default dict -}}
+{{- $u := index .root.Values .name | default dict -}}
 {{- toYaml (mustMergeOverwrite $d $u) -}}
 {{- end -}}
 
-{{- define "rpi.merged.callbackapi" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.callbackapi" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.callbackapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
+{{/* --- Shared resource blocks (reduces duplication across deploy-*.yaml files) --- */}}
+
+{{/*
+ServiceAccount for per-service mode.
+Usage: {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "api" "cfg" $cfg) }}
+*/}}
+{{- define "rpi.block.serviceAccount" -}}
+{{- if .cfg.serviceAccount.enabled }}
+{{- if .cfg.enabled }}
+{{- if ne (.root.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .name }}
+  namespace: {{ .root.Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" .root "name" .name "component" .component) | nindent 4 }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" .root "type" "serviceAccount") | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" .root | trim }}
+  {{- if or $saAnnotations $ciAnnotations }}
+  annotations:
+    {{- if $saAnnotations }}
+    {{- $saAnnotations | nindent 4 }}
+    {{- end }}
+    {{- if $ciAnnotations }}
+    {{- $ciAnnotations | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end -}}
 
-{{- define "rpi.merged.executionservice" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.executionservice" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.executionservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
+{{/*
+PodDisruptionBudget.
+Usage: {{- include "rpi.block.pdb" (dict "root" . "name" $name "component" "api" "cfg" $cfg) }}
+*/}}
+{{- define "rpi.block.pdb" -}}
+{{- if .cfg.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .name }}
+  namespace: {{ .root.Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" .root "name" .name "component" .component) | nindent 4 }}
+spec:
+  maxUnavailable: {{ .cfg.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .name }}
+{{- end }}
 {{- end -}}
 
-{{- define "rpi.merged.interactionapi" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.interactionapi" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.interactionapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.integrationapi" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.integrationapi" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.integrationapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.nodemanager" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.nodemanager" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.nodemanager | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.deploymentapi" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.deploymentapi" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.deploymentapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.queuereader" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.queuereader" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.queuereader | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.rebrandly" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.rebrandly" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.rebrandly | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.authservice" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.authservice" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.authservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.keycloak" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.keycloak" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.keycloak | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.initservice" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.initservice" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.initservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.messageq" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.messageq" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.messageq | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.maintenanceservice" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.maintenanceservice" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.maintenanceservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.servicesapi" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.servicesapi" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.servicesapi | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.socketio" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.socketio" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.socketio | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.uiservice" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.uiservice" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.uiservice | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
-{{- end -}}
-
-{{- define "rpi.merged.cdpcache" -}}
-{{- $d := fromYaml (include "rpi.applyGlobalResources" (list (fromYaml (include "rpi.defaults.cdpcache" .)) (.Values.resources | default dict))) -}}
-{{- $u := .Values.cdpcache | default dict -}}
-{{- toYaml (mustMergeOverwrite $d $u) -}}
+{{/*
+Pod scheduling: nodeSelector, tolerations, topology spread, anti-affinity.
+Usage: {{- include "rpi.block.scheduling" (dict "root" . "name" $name "cfg" $cfg "topo" $topo) | nindent 6 }}
+*/}}
+{{- define "rpi.block.scheduling" -}}
+{{- if .root.Values.nodeSelector.enabled }}
+nodeSelector:
+  {{ .root.Values.nodeSelector.key }}: {{ .root.Values.nodeSelector.value }}
+{{- end }}
+{{- if .root.Values.tolerations.enabled }}
+tolerations:
+  - effect: NoSchedule
+    key: {{ .root.Values.nodeSelector.key }}
+    operator: Equal
+    value: {{ .root.Values.nodeSelector.value }}
+{{- end }}
+{{- if .root.Values.podAntiAffinity.enabled }}
+affinity:
+  podAntiAffinity:
+    {{- if eq .root.Values.podAntiAffinity.type "preferred" }}
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: {{ .root.Values.podAntiAffinity.weight | default 100 }}
+      podAffinityTerm:
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: {{ .name }}
+        topologyKey: {{ .root.Values.podAntiAffinity.topologyKey | default "kubernetes.io/hostname" }}
+    {{- else }}
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: {{ .name }}
+      topologyKey: {{ .root.Values.podAntiAffinity.topologyKey | default "kubernetes.io/hostname" }}
+    {{- end }}
+{{- end }}
+{{- if .topo.enabled }}
+topologySpreadConstraints:
+- maxSkew: {{ .topo.maxSkew | default 1 }}
+  topologyKey: {{ .topo.topologyKey | default "kubernetes.io/hostname" }}
+  whenUnsatisfiable: {{ .topo.whenUnsatisfiable | default "ScheduleAnyway" }}
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .name }}
+{{- end }}
 {{- end -}}
 
 {{/* --- Cross-cutting merge helpers --- */}}

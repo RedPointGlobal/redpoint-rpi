@@ -1,8 +1,8 @@
-{{- $cfg := fromYaml (include "rpi.merged.maintenanceservice" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "maintenanceservice")) -}}
 {{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
 {{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
-{{- $cacheCfg := fromYaml (include "rpi.merged.cdpcache" .) -}}
-{{- $sioCfg := fromYaml (include "rpi.merged.socketio" .) -}}
+{{- $cacheCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "cdpcache")) -}}
+{{- $sioCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "socketio")) -}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
 {{- $name := "cdp-maintenance" -}}
 

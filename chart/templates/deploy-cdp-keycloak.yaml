@@ -1,4 +1,4 @@
-{{- $cfg := fromYaml (include "rpi.merged.keycloak" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
 {{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
 {{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}

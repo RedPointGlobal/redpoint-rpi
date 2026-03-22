@@ -1,10 +1,10 @@
-{{- $cfg := fromYaml (include "rpi.merged.initservice" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "initservice")) -}}
 {{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
 {{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
-{{- $sioCfg := fromYaml (include "rpi.merged.socketio" .) -}}
-{{- $intCfg := fromYaml (include "rpi.merged.integrationapi" .) -}}
-{{- $cacheCfg := fromYaml (include "rpi.merged.cdpcache" .) -}}
-{{- $kcCfg := fromYaml (include "rpi.merged.keycloak" .) -}}
+{{- $sioCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "socketio")) -}}
+{{- $intCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "integrationapi")) -}}
+{{- $cacheCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "cdpcache")) -}}
+{{- $kcCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
 {{- $name := "cdp-init" -}}
 

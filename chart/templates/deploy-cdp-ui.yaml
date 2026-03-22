@@ -1,4 +1,4 @@
-{{- $cfg := fromYaml (include "rpi.merged.uiservice" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "uiservice")) -}}
 {{- $name := "cdp-ui" -}}
 
 {{- if .Values.smartActivation.enabled }}

@@ -1,5 +1,5 @@
-{{- $rtCfg := fromYaml (include "rpi.merged.realtimeapi" .) -}}
-{{- $qrCfg := fromYaml (include "rpi.merged.queuereader" .) -}}
+{{- $rtCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
+{{- $qrCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "queuereader")) -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 {{- $QueueReaderMQ := "rpi-queuereader-rabbitmq" -}}
 {{- $RealtimeapiMQ := "rpi-realtimeapi-rabbitmq" -}}

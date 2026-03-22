@@ -1,4 +1,4 @@
-{{- $cfg := fromYaml (include "rpi.merged.cdpcache" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "cdpcache")) -}}
 {{- $name := "cdp-cache" -}}
 {{- if .Values.smartActivation.enabled }}
 apiVersion: v1

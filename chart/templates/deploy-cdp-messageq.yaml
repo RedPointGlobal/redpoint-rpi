@@ -1,4 +1,4 @@
-{{- $cfg := fromYaml (include "rpi.merged.messageq" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "messageq")) -}}
 {{- $name := "cdp-messageq" -}}
 
 {{- if .Values.smartActivation.enabled }}

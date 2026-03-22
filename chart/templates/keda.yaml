@@ -1,4 +1,4 @@
-{{- $cfg := fromYaml (include "rpi.merged.executionservice" .) -}}
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "executionservice")) -}}
 {{- if $cfg.autoscaling.enabled }}
 {{- if eq $cfg.autoscaling.type "keda" }}
 {{- if $cfg.autoscaling.kedaScaledObject.useTriggerAuthentication }}
