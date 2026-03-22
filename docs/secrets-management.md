@@ -428,6 +428,150 @@ Key differences from the CSI provider approach:
 - No validation pod needed since the CSI volume is mounted directly by the RPI pods
 - The `objectAlias` controls the filename inside the container
 
+#### AWS Example
+
+On AWS, use the AWS Secrets and Configuration Provider (ASCP) with `provider: aws` and `objectType: secretsmanager`:
+
+```yaml
+secretsManagement:
+  provider: sdk
+  sdk:
+    amazon:
+      secretTagKey: my-rpi-tag
+  csi:
+    secretProviderClasses:
+    - name: snowflake-rsa-private-key
+      provider: aws
+      objects:
+      - objectName: sf-rpi-svc-rsa-private-key
+        objectType: secretsmanager
+        objectAlias: sf_rpi_usr_private_key.p8
+
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      secretName: snowflake-rsa-private-key
+      mountPath: /app/snowflake-creds
+      secretProviderClassName: snowflake-rsa-private-key
+      keys:
+      - keyName: sf_rpi_usr_private_key.p8
+```
+
+Store the `.p8` key in AWS Secrets Manager as a binary secret:
+
+```bash
+# Get the key from Azure Key Vault (if migrating)
+# az keyvault secret show --vault-name <vault> --name <secret> --query value -o tsv > sf_rpi_usr_private_key.p8
+
+# Create in AWS Secrets Manager
+aws secretsmanager create-secret \
+  --name sf-rpi-svc-rsa-private-key \
+  --secret-binary fileb://sf_rpi_usr_private_key.p8 \
+  --region us-east-1
+```
+
+Prerequisites: the [AWS Secrets and Configuration Provider](https://github.com/aws/secrets-store-csi-driver-provider-aws) and the CSI Secrets Store Driver must be installed on your EKS cluster.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Custom CA Certificates with SDK</strong></summary>
+
+When using the SDK provider, custom CA certificates can be mounted directly from your vault via CSI inline volume, just like Snowflake keys. This avoids having to create a separate Kubernetes Secret or ConfigMap for the certificate.
+
+### Azure
+
+Store your CA bundle in Azure Key Vault, define a SecretProviderClass, and set `secretProviderClassName` on the `customCACerts` config:
+
+```yaml
+customCACerts:
+  enabled: true
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+  secretProviderClassName: ca-cert-provider
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+  csi:
+    secretProviderClasses:
+    - name: ca-cert-provider
+      provider: azure
+      parameters:
+        clientID: <managed-identity-client-id>
+        keyvaultName: <your-keyvault>
+        resourceGroup: <your-rg>
+        subscriptionId: <your-sub>
+        tenantId: <your-tenant>
+      objects:
+      - objectName: my-ca-bundle
+        objectType: secret
+        objectAlias: ca-bundle.pem
+```
+
+Store the certificate in Key Vault:
+
+```bash
+# az keyvault secret set --vault-name <vault> --name my-ca-bundle --file ca-bundle.pem
+```
+
+### AWS
+
+```yaml
+customCACerts:
+  enabled: true
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+  secretProviderClassName: ca-cert-provider
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    amazon:
+      secretTagKey: my-rpi-tag
+  csi:
+    secretProviderClasses:
+    - name: ca-cert-provider
+      provider: aws
+      objects:
+      - objectName: rpi-ca-bundle
+        objectType: secretsmanager
+        objectAlias: ca-bundle.pem
+```
+
+Store the certificate in Secrets Manager:
+
+```bash
+aws secretsmanager create-secret \
+  --name rpi-ca-bundle \
+  --secret-binary fileb://ca-bundle.pem \
+  --region us-east-1
+```
+
+### Kubernetes / CSI providers
+
+When using the `kubernetes` or `csi` provider, CA certificates are mounted from a Kubernetes Secret or ConfigMap instead:
+
+```yaml
+customCACerts:
+  enabled: true
+  source: secret        # or configMap
+  name: my-ca-certs
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+```
+
+Create the Secret:
+```bash
+kubectl create secret generic my-ca-certs \
+  --from-file=ca-bundle.pem=ca-bundle.pem \
+  -n redpoint-rpi
+```
+
 </details>
 
 <details>

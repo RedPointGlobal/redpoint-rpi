@@ -806,10 +806,12 @@ Custom CA certificate volume mount.
 Usage: {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
 */}}
 {{- define "rpi.customCACerts.volumeMount" -}}
-{{- if and .Values.customCACerts .Values.customCACerts.enabled .Values.customCACerts.name }}
+{{- if and .Values.customCACerts .Values.customCACerts.enabled }}
+{{- if or .Values.customCACerts.name .Values.customCACerts.secretProviderClassName }}
 - name: custom-ca-certs
   mountPath: {{ .Values.customCACerts.mountPath | default "/usr/local/share/ca-certificates/custom" }}
   readOnly: true
+{{- end }}
 {{- end }}
 {{- end -}}
 
@@ -818,7 +820,15 @@ Custom CA certificate volume definition.
 Usage: {{- include "rpi.customCACerts.volume" . | nindent 8 }}
 */}}
 {{- define "rpi.customCACerts.volume" -}}
-{{- if and .Values.customCACerts .Values.customCACerts.enabled .Values.customCACerts.name }}
+{{- if and .Values.customCACerts .Values.customCACerts.enabled }}
+{{- if and (eq .Values.secretsManagement.provider "sdk") .Values.customCACerts.secretProviderClassName }}
+- name: custom-ca-certs
+  csi:
+    driver: secrets-store.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      secretProviderClass: {{ .Values.customCACerts.secretProviderClassName | quote }}
+{{- else if .Values.customCACerts.name }}
 - name: custom-ca-certs
   {{- if eq (.Values.customCACerts.source | default "configMap") "secret" }}
   secret:
@@ -827,6 +837,7 @@ Usage: {{- include "rpi.customCACerts.volume" . | nindent 8 }}
   configMap:
     name: {{ .Values.customCACerts.name }}
   {{- end }}
+{{- end }}
 {{- end }}
 {{- end -}}
 

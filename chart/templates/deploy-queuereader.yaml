@@ -298,10 +298,6 @@ spec:
             secretKeyRef:
               key: ConnectionString_Operations_Database
               name: {{ include "rpi.secrets.secretName" . | quote }}
-        {{- end }} 
-        {{- if eq .Values.databases.operational.provider "postgresql" }}
-        - name: RPI_OperationalDatabaseType
-          value: "PostgreSQL"
         {{- end }}
         - name: QueueService__QueueListener__IsEnabled
           value: {{ $cfg.queueListenerEnabled | quote }}

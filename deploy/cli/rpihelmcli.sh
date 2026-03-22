@@ -2976,34 +2976,40 @@ cli_deploy() {
   echo "  ${GREEN}✔${RESET} Cluster reachable"
 
   if [ ! -d "$chart" ]; then
-    echo "  ${YELLOW}Chart not found at: ${chart}${RESET}"
-    echo ""
-    echo "  The Helm chart is required to deploy RPI."
-    echo "  The CLI can clone it for you from GitHub."
-    echo ""
-    local _clone_dir _clone_confirm
-    _clone_dir="$(pwd)/redpoint-rpi"
-    read -rp "  Clone the chart repository to ${_clone_dir}? [Y/n] " _clone_confirm
-    _clone_confirm="${_clone_confirm:-Y}"
-    if [[ "$_clone_confirm" =~ ^[Yy] ]]; then
-      if ! command -v git &>/dev/null; then
-        echo "  ${RED}✘ git not found. Install git first, or clone manually.${RESET}"; exit 1
-      fi
-      local _chart_branch
-      prompt _chart_branch "Chart branch" "main"
-      echo "  Cloning repository (branch: ${_chart_branch})..."
-      git clone --depth 1 --branch "$_chart_branch" \
-        https://github.com/RedPointGlobal/redpoint-rpi.git "$_clone_dir" 2>&1 | \
-        sed 's/^/  /'
+    local _clone_dir="$(pwd)/redpoint-rpi"
+    # Reuse existing clone if present
+    if [ -d "${_clone_dir}/chart" ]; then
       chart="${_clone_dir}/chart"
-      if [ ! -d "$chart" ]; then
-        echo "  ${RED}✘ Clone succeeded but chart/ directory not found.${RESET}"; exit 1
-      fi
-      echo "  ${GREEN}✔${RESET} Chart cloned to ${chart}"
+      echo "  ${GREEN}✔${RESET} Chart found at ${chart} (existing clone)"
     else
-      echo "  ${DIM}Provide the chart path with -c, or clone manually:${RESET}"
-      echo "    git clone https://github.com/RedPointGlobal/redpoint-rpi.git"
-      exit 1
+      echo "  ${YELLOW}Chart not found at: ${chart}${RESET}"
+      echo ""
+      echo "  The Helm chart is required to deploy RPI."
+      echo "  The CLI can clone it for you from GitHub."
+      echo ""
+      local _clone_confirm
+      read -rp "  Clone the chart repository to ${_clone_dir}? [Y/n] " _clone_confirm
+      _clone_confirm="${_clone_confirm:-Y}"
+      if [[ "$_clone_confirm" =~ ^[Yy] ]]; then
+        if ! command -v git &>/dev/null; then
+          echo "  ${RED}✘ git not found. Install git first, or clone manually.${RESET}"; exit 1
+        fi
+        local _chart_branch
+        prompt _chart_branch "Chart branch" "main"
+        echo "  Cloning repository (branch: ${_chart_branch})..."
+        git clone --depth 1 --branch "$_chart_branch" \
+          https://github.com/RedPointGlobal/redpoint-rpi.git "$_clone_dir" 2>&1 | \
+          sed 's/^/  /'
+        chart="${_clone_dir}/chart"
+        if [ ! -d "$chart" ]; then
+          echo "  ${RED}✘ Clone succeeded but chart/ directory not found.${RESET}"; exit 1
+        fi
+        echo "  ${GREEN}✔${RESET} Chart cloned to ${chart}"
+      else
+        echo "  ${DIM}Provide the chart path with -c, or clone manually:${RESET}"
+        echo "    git clone https://github.com/RedPointGlobal/redpoint-rpi.git"
+        exit 1
+      fi
     fi
   else
     echo "  ${GREEN}✔${RESET} Chart found at ${chart}"

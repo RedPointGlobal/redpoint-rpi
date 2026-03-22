@@ -244,7 +244,7 @@ secretsManagement:
   csi:
     secretName: redpoint-rpi-secrets
     secretProviderClasses:
-    - name: my_secret_class_1
+    - name: my-secret-class-1
       provider: azure
       secretObjects:
       - secretName: secret1
@@ -264,7 +264,7 @@ secretsManagement:
       objects:
       - objectName: my-tls-certificate
         objectType: secret
-    - name: my_secret_class_2
+    - name: my-secret-class-2
       provider: azure
       secretObjects:
       - secretName: secret2

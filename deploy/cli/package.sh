@@ -1,31 +1,30 @@
 #!/usr/bin/env bash
 # ============================================================
-# Package the Interaction CLI into a distributable zip
+# Package the RPI Helm CLI into a distributable zip
 #
 # Usage:
 #   bash deploy/cli/package.sh
 #
 # Output:
-#   dist/interactioncli.zip
+#   dist/rpihelmcli.zip
 # ============================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="${SCRIPT_DIR}/dist"
-PKG_DIR="${DIST_DIR}/interactioncli"
+PKG_DIR="${DIST_DIR}/rpihelmcli"
 
-echo "Packaging Interaction CLI..."
+echo "Packaging RPI Helm CLI..."
 
 rm -rf "${PKG_DIR}"
 mkdir -p "${PKG_DIR}/lib"
 
-cp "${SCRIPT_DIR}/interactioncli.sh" "${PKG_DIR}/"
-cp "${SCRIPT_DIR}/deploy.sh" "${PKG_DIR}/"
+cp "${SCRIPT_DIR}/rpihelmcli.sh" "${PKG_DIR}/"
 cp "${SCRIPT_DIR}/lib/common.sh" "${PKG_DIR}/lib/"
 cp "${SCRIPT_DIR}/lib/yaml_helpers.py" "${PKG_DIR}/lib/"
 
 cat > "${PKG_DIR}/README.md" << 'EOF'
-# Interaction CLI
+# RPI Helm CLI
 
 Command-line tool for deploying and managing Redpoint Interaction (RPI) on Kubernetes.
 
@@ -41,21 +40,21 @@ Command-line tool for deploying and managing Redpoint Interaction (RPI) on Kuber
 1. Generate your overrides file using the Web UI at https://rpi-helm-assistant.redpointcdp.com
 2. Generate secrets from your overrides:
 
-       bash interactioncli.sh secrets -f overrides.yaml
+       bash rpihelmcli.sh secrets -f overrides.yaml
 
 3. Deploy to your cluster:
 
-       bash interactioncli.sh deploy -f overrides.yaml -c /path/to/chart
+       bash rpihelmcli.sh deploy -f overrides.yaml
 
 ## Commands
 
-    bash interactioncli.sh                              # Full interactive setup
-    bash interactioncli.sh secrets -f overrides.yaml    # Generate secrets.yaml
-    bash interactioncli.sh deploy -f overrides.yaml     # Deploy to cluster
-    bash interactioncli.sh deploy -f overrides.yaml --dry-run  # Preview manifests
-    bash interactioncli.sh status -n my-namespace       # Check deployment status
-    bash interactioncli.sh troubleshoot -n my-namespace # Diagnose issues
-    bash interactioncli.sh -a autoscaling               # Add a feature
+    bash rpihelmcli.sh                              # Full interactive setup
+    bash rpihelmcli.sh secrets -f overrides.yaml    # Generate secrets.yaml
+    bash rpihelmcli.sh deploy -f overrides.yaml     # Deploy to cluster
+    bash rpihelmcli.sh deploy -f overrides.yaml --dry-run  # Preview manifests
+    bash rpihelmcli.sh status -n my-namespace       # Check deployment status
+    bash rpihelmcli.sh troubleshoot -n my-namespace # Diagnose issues
+    bash rpihelmcli.sh -a autoscaling               # Add a feature
 
 ## Workflow
 
@@ -64,15 +63,14 @@ Command-line tool for deploying and managing Redpoint Interaction (RPI) on Kuber
 For full documentation, visit: https://rpi-helm-assistant.redpointcdp.com
 EOF
 
-chmod +x "${PKG_DIR}/interactioncli.sh"
-chmod +x "${PKG_DIR}/deploy.sh"
+chmod +x "${PKG_DIR}/rpihelmcli.sh"
 
 # Create zip using Python (no zip dependency needed)
 cd "${DIST_DIR}"
 python3 -c "
 import zipfile, os
 with zipfile.ZipFile('rpihelmcli.zip', 'w', zipfile.ZIP_DEFLATED) as zf:
-    for root, dirs, files in os.walk('interactioncli'):
+    for root, dirs, files in os.walk('rpihelmcli'):
         for f in files:
             zf.write(os.path.join(root, f))
 "

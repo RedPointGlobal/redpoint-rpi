@@ -74,6 +74,8 @@ customCACerts:
   mountPath: /usr/local/share/ca-certificates/custom
   # Optional: set SSL_CERT_FILE env var to a specific file in the mount
   # certFile: ""                # e.g., "internal-ca.pem"
+  # SDK provider: mount cert directly from vault via CSI inline volume
+  # secretProviderClassName: "" # name of the SecretProviderClass to mount
 
 # ==========================
 # Common Annotations
@@ -227,7 +229,7 @@ secretsManagement:
     # ----------------------------------------------------
     # Example: TLS Certificate from Azure Key Vault
     # ----------------------------------------------------
-    - name: my_secret_class_1
+    - name: my-secret-class-1
       provider: azure
       secretObjects:
         - secretName: secret1
@@ -236,11 +238,11 @@ secretsManagement:
             - key: tls.key
               objectName: my-tls-certificate
       parameters:
-        keyvaultName: key_vault_name
-        resourceGroup: resource_group_name
-        subscriptionId: subscription_id
-        clientID: your_managed_identity_client_id
-        tenantId: azure_tenant_id
+        keyvaultName: my-keyvault-name
+        resourceGroup: my-resource-group
+        subscriptionId: my-subscription-id
+        clientID: my-managed-identity-client-id
+        tenantId: my-azure-tenant-id
         usePodIdentity: "false"
         useVMManagedIdentity: "false"
         useWorkloadIdentity: "true"
@@ -250,7 +252,7 @@ secretsManagement:
     # ----------------------------------------------------
     # Example: Database Connection String
     # ----------------------------------------------------
-    - name: my_secret_class_2
+    - name: my-secret-class-2
       provider: azure
       secretObjects:
         - secretName: secret2
@@ -259,11 +261,11 @@ secretsManagement:
             - key: ConnectionString_Logging_Database
               objectName: V7-ConnectionString-LoggingDatabase
       parameters:
-        keyvaultName: key_vault_name
-        resourceGroup: resource_group_name
-        subscriptionId: subscription_id
-        clientID: your_managed_identity_client_id
-        tenantId: azure_tenant_id
+        keyvaultName: my-keyvault-name
+        resourceGroup: my-resource-group
+        subscriptionId: my-subscription-id
+        clientID: my-managed-identity-client-id
+        tenantId: my-azure-tenant-id
         usePodIdentity: "false"
         useVMManagedIdentity: "false"
         useWorkloadIdentity: "true"
