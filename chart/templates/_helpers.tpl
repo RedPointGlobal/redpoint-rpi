@@ -860,3 +860,21 @@ Merges commonAnnotations + type-specific overrides (serviceAccountAnnotations, s
 {{- toYaml $merged -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+KEY_VAULT_NAME env var for CDP services.
+When smartActivation is enabled and secretsManagement provider is sdk,
+extracts the vault name from the vaultUri (e.g. https://myvault.vault.azure.net/ -> myvault).
+Usage: {{- include "rpi.cdp.keyVaultEnv" . | nindent 8 }}
+*/}}
+{{- define "rpi.cdp.keyVaultEnv" -}}
+{{- if and .Values.smartActivation.enabled (eq .Values.secretsManagement.provider "sdk") -}}
+{{- $uri := .Values.secretsManagement.sdk.azure.vaultUri | default "" -}}
+{{- $name := regexReplaceAll "^https://" $uri "" -}}
+{{- $name = regexReplaceAll "\\.vault\\.azure\\.net/?$" $name "" -}}
+{{- if $name }}
+- name: KEY_VAULT_NAME
+  value: {{ $name | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}

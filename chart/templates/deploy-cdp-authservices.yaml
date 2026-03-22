@@ -208,21 +208,15 @@ spec:
         - name: TZ
           value: {{ .Values.global.deployment.podTimezone | quote }}
         {{- end }}
+        {{- include "rpi.cdp.keyVaultEnv" . | nindent 8 }}
         - name: LOG_LEVEL
           value: {{ $cfg.logging.verbosity | quote }}
-        - name: RPI_SHARED_USER
-          value: {{ .Values.integrationapi.username | quote }}
-        - name: RPI_SHARED_PASS
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "rpi.secrets.secretName" . | quote }}
-              key: CDP_Integration_Password
         - name: RPI_NAME
           value: "{{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.integration "domain" $ingCfg.domain) }}"
         - name: RPI_PORT
           value: "443"
         - name: CACHE_HOST
-          value: "cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
+          value: "cdp-cache"
         - name: CACHE_PORT
           value: {{ $cacheCfg.service.port | quote }}
         - name: _JAVA_OPTIONS
@@ -231,28 +225,23 @@ spec:
           value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
         - name: SMTP_PORT
           value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
-        - name: SMTP_USER
-          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
         - name: SMTP_PROTOCOL
           value: SMTP
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: RPI_SHARED_USER
+          value: {{ .Values.integrationapi.username | quote }}
+        - name: RPI_SHARED_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: CDP_Integration_Password
+        - name: SMTP_USER
+          value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
         - name: SMTP_PASS
           valueFrom:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: SMTP_Password
-        - name: SMTP_FROM_DISPLAY_NAME
-          value: {{ .Values.SMTPSettings.SMTP_SenderName | quote }}
-        - name: KEYCLOAK_HOST
-          value: {{ $kcCfg.hostname | quote }}
-        - name: KEYCLOAK_PORT
-          value: {{ $kcCfg.service.port | quote }}
-        - name: KEYCLOAK_ADMIN_USER
-          value: {{ $kcCfg.username | quote }}
-        - name: KEYCLOAK_ADMIN_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "rpi.secrets.secretName" . | quote }}
-              key: CDP_Keycloak_Admin_Password
         - name: DEFAULT_DCC_ADMIN_USER
           value: {{ $cfg.default_username | quote }}
         - name: DEFAULT_DCC_ADMIN_PASS
@@ -265,6 +254,20 @@ spec:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CDP_Mongo_ConnectionString
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: CDP_Keycloak_Admin_Password
+        {{- end }}
+        - name: SMTP_FROM_DISPLAY_NAME
+          value: {{ .Values.SMTPSettings.SMTP_SenderName | quote }}
+        - name: KEYCLOAK_HOST
+          value: {{ $kcCfg.hostname | quote }}
+        - name: KEYCLOAK_PORT
+          value: {{ $kcCfg.service.port | quote }}
+        - name: KEYCLOAK_ADMIN_USER
+          value: {{ $kcCfg.username | quote }}
         - name: MONGODB_MERCURY_DB
           value: {{ .Values.initservice.database.operational.name | quote }}
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}

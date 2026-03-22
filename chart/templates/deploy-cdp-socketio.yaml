@@ -190,6 +190,7 @@ spec:
         - name: TZ
           value: {{ .Values.global.deployment.podTimezone | quote }}
         {{- end }}
+        {{- include "rpi.cdp.keyVaultEnv" . | nindent 8 }}
         - name: SOCKETIO_HOST
           value: 0.0.0.0
         - name: SOCKETIO_PORT
@@ -200,11 +201,13 @@ spec:
           value: {{ $kcCfg.hostname | quote }}
         - name: KEYCLOAK_PORT
           value: {{ $kcCfg.service.port | quote }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: MONGO_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CDP_Mongo_ConnectionString
+        {{- end }}
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         volumeMounts:
           - name: tempstore

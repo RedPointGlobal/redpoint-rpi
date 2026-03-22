@@ -154,6 +154,7 @@ spec:
           - name: TZ
             value: {{ .Values.global.deployment.podTimezone | quote }}
           {{- end }}
+          {{- include "rpi.cdp.keyVaultEnv" . | nindent 10 }}
           volumeMounts:
             - name: {{ $name }}-data
               mountPath: /data

@@ -207,19 +207,22 @@ spec:
         - name: TZ
           value: {{ .Values.global.deployment.podTimezone | quote }}
         {{- end }}
+        {{- include "rpi.cdp.keyVaultEnv" . | nindent 8 }}
         - name: CACHE_HOST
-          value: "cdp-cache.{{ .Release.Namespace }}.svc.cluster.local"
+          value: "cdp-cache"
         - name: CACHE_PORT
           value: {{ $cacheCfg.service.port | quote }}
         - name: SOCKETIO_HOST
           value: "cdp-socketio"
         - name: SOCKETIO_PORT
           value: {{ $sioCfg.service.port | quote }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: MONGODB_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: CDP_Mongo_ConnectionString
+        {{- end }}
         - name: MONGODB_MERCURY_DB
           value: {{ .Values.initservice.database.operational.name | quote }}
         - name: API_BASE_URL
