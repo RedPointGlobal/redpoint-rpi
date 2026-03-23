@@ -704,8 +704,7 @@ After the v7.7 containers are running, upgrade the operational database schema:
 **Option A: Via the chart (recommended)**
 
 ```bash
-rpihelmcli -a database_upgrade
-rpihelmcli deploy -f overrides.yaml
+rpihelmcli/setup.sh deploy -f overrides.yaml
 ```
 
 The chart creates a Job that waits for the Deployment API to become ready, then runs the upgrade automatically.
@@ -735,10 +734,10 @@ To migrate: generate a fresh v7.7 overrides file using the [Helm Assistant Web U
 <details>
 <summary><strong style="font-size:1.25em;">Troubleshooting</strong></summary>
 
-If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use `rpihelmcli status` for quick diagnosis, or ask the [Helm Assistant Chat](https://rpi-helm-assistant.redpointcdp.com) for help.
+If services fail to start after upgrade, the most common cause is a v7.6 customization that wasn't carried over. Use `rpihelmcli/setup.sh status` for quick diagnosis, or ask the [Helm Assistant Chat](https://rpi-helm-assistant.redpointcdp.com) for help.
 
 ```bash
-bash rpihelmcli troubleshoot -n redpoint-rpi
+rpihelmcli/setup.sh troubleshoot -n redpoint-rpi
 ```
 
 If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key.

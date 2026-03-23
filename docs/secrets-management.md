@@ -11,7 +11,7 @@ RPI supports three secrets management providers. The provider controls how sensi
 
 | Provider | How it works |
 |:---------|:-------------|
-| **kubernetes** (default) | The CLI (`rpihelmcli secrets`) prompts for your database credentials, connection strings, and other values, then generates a Kubernetes Secret (`redpoint-rpi-secrets`). Internal service passwords (Redis, RabbitMQ) are randomly generated. Apply the secret before deploying. |
+| **kubernetes** (default) | The CLI (`rpihelmcli/setup.sh secrets`) prompts for your database credentials, connection strings, and other values, then generates a Kubernetes Secret (`redpoint-rpi-secrets`). Internal service passwords (Redis, RabbitMQ) are randomly generated. Apply the secret before deploying. |
 | **csi** | The CSI Secrets Store Driver syncs secrets from an external vault (Azure Key Vault, AWS Secrets Manager, GCP Secret Manager) into a Kubernetes Secret. You are responsible for storing ALL required keys in your vault. |
 | **sdk** | Each RPI service reads secrets directly from the vault at runtime using cloud identity. A separate `rpi-internal-services` Kubernetes Secret is auto-generated for chart-managed infrastructure (Redis, RabbitMQ). |
 
@@ -313,7 +313,7 @@ User=<user>;Db=<database>;Host=<host>;Account=<account>;AUTHENTICATOR=snowflake_
 
 ### kubernetes Provider
 
-The CLI (`rpihelmcli secrets`) creates a Kubernetes Secret from your `.p8` file. Configure the Snowflake section in your overrides:
+The CLI (`rpihelmcli/setup.sh secrets`) creates a Kubernetes Secret from your `.p8` file. Configure the Snowflake section in your overrides:
 
 ```yaml
 databases:
@@ -585,6 +585,6 @@ You need an image pull secret when:
 - **Pulling directly from the Redpoint Container Registry** (`rg1acrpub.azurecr.io`), which requires authentication credentials provided by Redpoint Support.
 - **Pulling from an internal registry that requires Docker credentials** (e.g., Artifactory, Harbor, or any registry where node-level authentication is not configured).
 
-In either case, create the secret before deploying. The `rpihelmcli secrets` command will prompt you for registry URL, username, and password, then generate the image pull secret automatically as part of the secrets workflow.
+In either case, create the secret before deploying. The `rpihelmcli/setup.sh secrets` command will prompt you for registry URL, username, and password, then generate the image pull secret automatically as part of the secrets workflow.
 
 </details>

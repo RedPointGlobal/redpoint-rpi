@@ -68,10 +68,10 @@ while getopts "o:a:fh" opt; do
     a) ADD_MODE=true; ADD_FEATURE="$OPTARG" ;;
     f) FILE_MODE=true ;;
     h)
-      echo "Usage: rpihelmcli secrets -f <overrides> [-o secrets.yaml] [-n namespace]"
-      echo "       rpihelmcli deploy -f <overrides> [-n namespace] [-c chart-path] [--dry-run]"
-      echo "       rpihelmcli status [-n namespace]"
-      echo "       rpihelmcli troubleshoot [-n namespace] [symptom]"
+      echo "Usage: rpihelmcli/setup.sh secrets -f <overrides> [-o secrets.yaml] [-n namespace]"
+      echo "       rpihelmcli/setup.sh deploy -f <overrides> [-n namespace] [-c chart-path] [--dry-run]"
+      echo "       rpihelmcli/setup.sh status [-n namespace]"
+      echo "       rpihelmcli/setup.sh troubleshoot [-n namespace] [symptom]"
       echo ""
       echo "  Commands:"
       echo "    secrets          Generate secrets.yaml from an overrides file"
@@ -97,12 +97,11 @@ while getopts "o:a:fh" opt; do
       echo "  Generate your overrides at: https://rpi-helm-assistant.redpointcdp.com"
       echo ""
       echo "  Examples:"
-      echo "    rpihelmcli secrets -f overrides.yaml # Generate secrets"
-      echo "    rpihelmcli deploy -f overrides.yaml  # Deploy to cluster"
-      echo "    rpihelmcli deploy -f overrides.yaml --dry-run"
-      echo "    rpihelmcli status -n my-namespace    # Cluster status"
-      echo "    rpihelmcli troubleshoot crashloop    # Diagnose crashes"
-      echo "    rpihelmcli -a redpoint_ai            # Add a feature"
+      echo "    rpihelmcli/setup.sh secrets -f overrides.yaml # Generate secrets"
+      echo "    rpihelmcli/setup.sh deploy -f overrides.yaml  # Deploy to cluster"
+      echo "    rpihelmcli/setup.sh deploy -f overrides.yaml --dry-run"
+      echo "    rpihelmcli/setup.sh status -n my-namespace    # Cluster status"
+      echo "    rpihelmcli/setup.sh troubleshoot crashloop    # Diagnose crashes"
       exit 0
       ;;
     *) echo "Unknown option: -$opt" >&2; exit 1 ;;
@@ -2406,7 +2405,7 @@ cli_secrets() {
 
   if [ -z "$overrides" ]; then
     echo "${RED}Error: -f <overrides-file> is required.${RESET}" >&2
-    echo "Usage: rpihelmcli secrets -f overrides.yaml [-o secrets.yaml] [-n namespace]" >&2
+    echo "Usage: rpihelmcli/setup.sh secrets -f overrides.yaml [-o secrets.yaml] [-n namespace]" >&2
     exit 1
   fi
   if [ ! -f "$overrides" ]; then
@@ -2933,7 +2932,7 @@ cli_deploy() {
 
   if [ -z "$overrides" ]; then
     echo "${RED}Error: -f <overrides-file> is required.${RESET}" >&2
-    echo "Usage: rpihelmcli deploy -f overrides.yaml [-n namespace] [-c chart-path] [--dry-run]" >&2
+    echo "Usage: rpihelmcli/setup.sh deploy -f overrides.yaml [-n namespace] [-c chart-path] [--dry-run]" >&2
     exit 1
   fi
   if [ ! -f "$overrides" ]; then

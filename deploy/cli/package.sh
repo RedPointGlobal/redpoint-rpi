@@ -19,7 +19,7 @@ echo "Packaging RPI Helm CLI..."
 rm -rf "${PKG_DIR}"
 mkdir -p "${PKG_DIR}/lib"
 
-cp "${SCRIPT_DIR}/rpihelmcli.sh" "${PKG_DIR}/"
+cp "${SCRIPT_DIR}/setup.sh" "${PKG_DIR}/"
 cp "${SCRIPT_DIR}/lib/common.sh" "${PKG_DIR}/lib/"
 cp "${SCRIPT_DIR}/lib/yaml_helpers.py" "${PKG_DIR}/lib/"
 
@@ -37,33 +37,22 @@ Command-line tool for deploying and managing Redpoint Interaction (RPI) on Kuber
 
 ## Quick Start
 
-1. Generate your overrides file using the Web UI at https://rpi-helm-assistant.redpointcdp.com
-2. Generate secrets from your overrides:
-
-       bash rpihelmcli.sh secrets -f overrides.yaml
-
-3. Deploy to your cluster:
-
-       bash rpihelmcli.sh deploy -f overrides.yaml
+    unzip rpihelmcli.zip
+    rpihelmcli/setup.sh secrets -f overrides.yaml
+    rpihelmcli/setup.sh deploy -f overrides.yaml
 
 ## Commands
 
-    bash rpihelmcli.sh                              # Full interactive setup
-    bash rpihelmcli.sh secrets -f overrides.yaml    # Generate secrets.yaml
-    bash rpihelmcli.sh deploy -f overrides.yaml     # Deploy to cluster
-    bash rpihelmcli.sh deploy -f overrides.yaml --dry-run  # Preview manifests
-    bash rpihelmcli.sh status -n my-namespace       # Check deployment status
-    bash rpihelmcli.sh troubleshoot -n my-namespace # Diagnose issues
-    bash rpihelmcli.sh -a autoscaling               # Add a feature
+    rpihelmcli/setup.sh secrets -f overrides.yaml           # Generate secrets.yaml
+    rpihelmcli/setup.sh deploy -f overrides.yaml            # Deploy to cluster
+    rpihelmcli/setup.sh deploy -f overrides.yaml --dry-run  # Preview manifests
+    rpihelmcli/setup.sh status -n my-namespace              # Check deployment status
+    rpihelmcli/setup.sh troubleshoot -n my-namespace        # Diagnose issues
 
-## Workflow
-
-    Web UI (generate overrides) -> CLI secrets -> CLI deploy
-
-For full documentation, visit: https://rpi-helm-assistant.redpointcdp.com
+Generate your overrides at: https://rpi-helm-assistant.redpointcdp.com
 EOF
 
-chmod +x "${PKG_DIR}/rpihelmcli.sh"
+chmod +x "${PKG_DIR}/setup.sh"
 
 # Create zip using Python (no zip dependency needed)
 cd "${DIST_DIR}"
