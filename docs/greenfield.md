@@ -47,7 +47,7 @@ If using **sdk** or **csi**, set up your vault and store the required secrets be
 
 ### Choose your cloud identity
 
-RPI services need cloud identity to access your vault and storage resources. Configure this before generating overrides:
+RPI services need cloud identity to access your vault and storage resources. Configure this when generating overrides:
 
 **Azure:**
 ```yaml
@@ -263,11 +263,9 @@ curl -X POST "https://$DEPLOYMENT_URL/api/deployment/installcluster?waitTimeoutS
   -d '{"useExistingDatabases": false, "coreUserInitialPassword": "<password>", "systemAdministrator": {"username": "coreuser", "emailAddress": "coreuser@noemail.com"}}'
 ```
 
-### Download the RPI client
+### Download the RPI Client
 
-```
-https://<interactionapi-host>/download
-```
+Download the RPI Client from the Post-release Product Updates section of the [RPI Release Notes](https://docs.redpointglobal.com/rpi/rpi-release-notes). Ensure the version matches your deployed RPI version.
 
 The client requires [Microsoft WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section).
 
@@ -313,15 +311,3 @@ The `secretProviderClassName` in your Snowflake or CA cert config must match the
 
 </details>
 
----
-
-## Additional Resources
-
-| Resource | Description |
-|:---------|:------------|
-| [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | Web UI for generating overrides, validating, and troubleshooting |
-| [RPI Helm CLI](readme-cli.md) | Pre-flight checks, secrets generation, deployment, status, and troubleshooting |
-| [Secrets Management](secrets-management.md) | Providers, required vault keys, Snowflake keys, CA certs |
-| [Single Sign-On](single-sign-on.md) | Microsoft Entra ID and OIDC setup |
-| [Values Guide](readme-values.md) | How the override system works |
-| [Migration Guide](migration.md) | Upgrading from v7.6 to v7.7 |
