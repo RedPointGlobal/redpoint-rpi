@@ -33,7 +33,7 @@ INPUT_FILE="inputs.yaml"
 
 # --- Handle positional commands (status, troubleshoot, secrets, deploy) ---
 # These run before getopts since they are standalone commands, not flags.
-if [ "${1:-}" = "status" ] || [ "${1:-}" = "troubleshoot" ] || \
+if [ "${1:-}" = "check" ] || [ "${1:-}" = "status" ] || [ "${1:-}" = "troubleshoot" ] || \
    [ "${1:-}" = "secrets" ] || [ "${1:-}" = "deploy" ]; then
   CLI_COMMAND="$1"
   shift
@@ -68,12 +68,14 @@ while getopts "o:a:fh" opt; do
     a) ADD_MODE=true; ADD_FEATURE="$OPTARG" ;;
     f) FILE_MODE=true ;;
     h)
-      echo "Usage: rpihelmcli/setup.sh secrets -f <overrides> [-o secrets.yaml] [-n namespace]"
+      echo "Usage: rpihelmcli/setup.sh check [-f overrides.yaml]"
+      echo "       rpihelmcli/setup.sh secrets -f <overrides> [-o secrets.yaml] [-n namespace]"
       echo "       rpihelmcli/setup.sh deploy -f <overrides> [-n namespace] [-c chart-path] [--dry-run]"
       echo "       rpihelmcli/setup.sh status [-n namespace]"
       echo "       rpihelmcli/setup.sh troubleshoot [-n namespace] [symptom]"
       echo ""
       echo "  Commands:"
+      echo "    check            Pre-flight checks (tools, cluster, overrides validation)"
       echo "    secrets          Generate secrets.yaml from an overrides file"
       echo "    deploy           Deploy RPI (auto-clones chart, creates namespace, runs helm install/upgrade)"
       echo "    status           Show RPI pod, service, and ingress status"
@@ -97,9 +99,10 @@ while getopts "o:a:fh" opt; do
       echo "  Generate your overrides at: https://rpi-helm-assistant.redpointcdp.com"
       echo ""
       echo "  Examples:"
+      echo "    rpihelmcli/setup.sh check -f overrides.yaml   # Pre-flight checks"
       echo "    rpihelmcli/setup.sh secrets -f overrides.yaml # Generate secrets"
+      echo "    rpihelmcli/setup.sh deploy -f overrides.yaml --dry-run  # Preview"
       echo "    rpihelmcli/setup.sh deploy -f overrides.yaml  # Deploy to cluster"
-      echo "    rpihelmcli/setup.sh deploy -f overrides.yaml --dry-run"
       echo "    rpihelmcli/setup.sh status -n my-namespace    # Cluster status"
       echo "    rpihelmcli/setup.sh troubleshoot crashloop    # Diagnose crashes"
       exit 0
@@ -3060,17 +3063,142 @@ cli_deploy() {
     exit 0
   fi
 
-  # Delegate to deploy.sh for helm install/upgrade + rollout monitoring
-  local deploy_script="${SCRIPT_DIR}/deploy.sh"
-  if [ ! -f "$deploy_script" ]; then
-    echo "  ${RED}✘ deploy.sh not found at: ${deploy_script}${RESET}"; exit 1
+  # Helm install/upgrade
+  local helm_mode
+  if helm status rpi -n "$namespace" &>/dev/null; then
+    helm_mode="upgrade"
+  else
+    helm_mode="install"
   fi
 
-  bash "$deploy_script" -f "$overrides" -n "$namespace" -c "$chart"
+  echo "  ${CYAN}${BOLD}Running helm ${helm_mode}...${RESET}"
+  echo ""
+  if helm "${helm_mode}" rpi "$chart" \
+    -f "$overrides" \
+    -n "$namespace" \
+    --create-namespace \
+    --wait \
+    --timeout 10m; then
+    echo ""
+    echo "  ${GREEN}✔${RESET} Helm ${helm_mode} successful"
+  else
+    echo ""
+    echo "  ${RED}✘${RESET} Helm ${helm_mode} failed"
+    exit 1
+  fi
+}
+
+# --- Pre-flight check command ---
+cli_check() {
+  local overrides="${1:-}"
+  local errors=0
+
+  echo ""
+  echo "${CYAN}${BOLD}RPI Helm CLI — Pre-flight Check${RESET}"
+  echo ""
+
+  # 1. Required tools
+  echo "  ${BOLD}Required tools${RESET}"
+  for tool in bash kubectl helm python3 git; do
+    if command -v "$tool" &>/dev/null; then
+      local ver
+      case "$tool" in
+        kubectl) ver=$(kubectl version --client -o json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['clientVersion']['gitVersion'])" 2>/dev/null || echo "unknown") ;;
+        helm) ver=$(helm version --short 2>/dev/null || echo "unknown") ;;
+        python3) ver=$(python3 --version 2>/dev/null | cut -d' ' -f2) ;;
+        git) ver=$(git --version 2>/dev/null | cut -d' ' -f3) ;;
+        *) ver="" ;;
+      esac
+      echo "  ${GREEN}✔${RESET} ${tool} ${DIM}(${ver})${RESET}"
+    else
+      echo "  ${RED}✘${RESET} ${tool} not found"
+      errors=$((errors + 1))
+    fi
+  done
+
+  # 2. Python PyYAML
+  if command -v python3 &>/dev/null; then
+    if python3 -c "import yaml" 2>/dev/null; then
+      echo "  ${GREEN}✔${RESET} PyYAML installed"
+    else
+      echo "  ${RED}✘${RESET} PyYAML not installed (run: pip3 install pyyaml)"
+      errors=$((errors + 1))
+    fi
+  fi
+  echo ""
+
+  # 3. Cluster connectivity
+  echo "  ${BOLD}Cluster connectivity${RESET}"
+  if kubectl cluster-info &>/dev/null 2>&1; then
+    local ctx
+    ctx=$(kubectl config current-context 2>/dev/null || echo "unknown")
+    echo "  ${GREEN}✔${RESET} Cluster reachable ${DIM}(context: ${ctx})${RESET}"
+  else
+    echo "  ${RED}✘${RESET} Cannot reach Kubernetes cluster. Check your kubeconfig."
+    errors=$((errors + 1))
+  fi
+  echo ""
+
+  # 4. Overrides file
+  echo "  ${BOLD}Overrides file${RESET}"
+  if [ -n "$overrides" ] && [ -f "$overrides" ]; then
+    local lines
+    lines=$(wc -l < "$overrides")
+    echo "  ${GREEN}✔${RESET} ${overrides} ${DIM}(${lines} lines)${RESET}"
+
+    # Validate YAML syntax (requires PyYAML)
+    if python3 -c "import yaml" 2>/dev/null; then
+      if python3 -c "import yaml; yaml.safe_load(open('${overrides}'))" 2>/dev/null; then
+        echo "  ${GREEN}✔${RESET} Valid YAML syntax"
+      else
+        echo "  ${RED}✘${RESET} Invalid YAML syntax"
+        errors=$((errors + 1))
+      fi
+    else
+      echo "  ${YELLOW}●${RESET} YAML validation skipped (PyYAML not installed)"
+    fi
+
+    # Check for required top-level keys (requires PyYAML)
+    local platform
+    platform=$(python3 -c "import yaml; d=yaml.safe_load(open('${overrides}')); print(d.get('global',{}).get('deployment',{}).get('platform',''))" 2>/dev/null)
+    if [ -n "$platform" ]; then
+      echo "  ${GREEN}✔${RESET} Platform: ${platform}"
+    else
+      echo "  ${YELLOW}●${RESET} No platform set (will default to azure)"
+    fi
+
+    local secrets_provider
+    secrets_provider=$(python3 -c "import yaml; d=yaml.safe_load(open('${overrides}')); print(d.get('secretsManagement',{}).get('provider',''))" 2>/dev/null)
+    if [ -n "$secrets_provider" ]; then
+      echo "  ${GREEN}✔${RESET} Secrets provider: ${secrets_provider}"
+    else
+      echo "  ${YELLOW}●${RESET} No secrets provider set (will default to kubernetes)"
+    fi
+  elif [ -n "$overrides" ]; then
+    echo "  ${RED}✘${RESET} File not found: ${overrides}"
+    errors=$((errors + 1))
+  else
+    echo "  ${YELLOW}●${RESET} No overrides file specified (use -f)"
+  fi
+
+  echo ""
+  if [ "$errors" -eq 0 ]; then
+    echo "  ${GREEN}${BOLD}All checks passed.${RESET} Ready to deploy."
+    echo ""
+    echo "  Next steps:"
+    echo "    rpihelmcli/setup.sh deploy -f overrides.yaml --dry-run  # Preview"
+    echo "    rpihelmcli/setup.sh deploy -f overrides.yaml            # Deploy"
+  else
+    echo "  ${RED}${BOLD}${errors} check(s) failed.${RESET} Fix the issues above before deploying."
+  fi
+  echo ""
 }
 
 # --- Handle CLI commands ---
-if [ "${CLI_COMMAND:-}" = "status" ]; then
+if [ "${CLI_COMMAND:-}" = "check" ]; then
+  cli_check "$CLI_OVERRIDES"
+  exit 0
+elif [ "${CLI_COMMAND:-}" = "status" ]; then
   cli_status "$CLI_NAMESPACE"
   exit 0
 elif [ "${CLI_COMMAND:-}" = "troubleshoot" ]; then

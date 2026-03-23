@@ -3,7 +3,7 @@
 
 [< Back to main README](../README.md)
 
-This guide walks through deploying RPI from scratch in a new environment, meaning new cluster, new databases, new cache and queue providers.
+This guide walks through deploying RPI from scratch on a new Kubernetes cluster.
 
 ---
 
@@ -21,30 +21,307 @@ This guide walks through deploying RPI from scratch in a new environment, meanin
 |-------|-----|-----|
 | D8s_v5 | m5.2xlarge | n2-standard-8 |
 
-## Prerequisites
+---
+
+<details>
+<summary><strong style="font-size:1.25em;">Prerequisites</strong></summary>
 
 Before starting, ensure you have:
 
-- **Redpoint Container Registry**: Open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.
-- **RPI License**: Open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 license activation key.
-- **Single Sign-On** (optional): If using Microsoft Entra ID or an OIDC provider (Keycloak, Okta), complete the identity provider setup before deploying. See the [Single Sign-On Guide](single-sign-on.md).
+- **Redpoint Container Registry access**: open a [Support](mailto:support@redpointglobal.com) ticket requesting access to download RPI images.
+- **RPI License**: open a [Support](mailto:support@redpointglobal.com) ticket to obtain your RPI v7 license activation key.
+- **Operational database**: provision a SQL Server or PostgreSQL instance and note the hostname, username, and password.
+- **Single Sign-On** (optional): if using Microsoft Entra ID or an OIDC provider (Keycloak, Okta), complete the identity provider setup first. See the [Single Sign-On Guide](single-sign-on.md).
+
+### Choose your secrets provider
+
+Before generating your overrides, decide how RPI will access sensitive values:
+
+| Provider | How it works | Best for |
+|:---------|:-------------|:---------|
+| **kubernetes** (default) | The [CLI](readme-cli.md) prompts for credentials and generates a K8s Secret | Simple setups, getting started quickly |
+| **sdk** (recommended for cloud) | RPI reads secrets directly from your cloud vault at runtime | Azure Key Vault, AWS Secrets Manager, GCP Secret Manager |
+| **csi** | CSI Secrets Store driver syncs vault secrets to K8s Secrets | Existing CSI infrastructure, fine-grained vault access policies |
+
+If using **sdk** or **csi**, set up your vault and store the required secrets before deploying. Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab to generate a vault setup script, or see the [Secrets Management Guide](secrets-management.md) for the full list of required keys.
+
+### Choose your cloud identity
+
+RPI services need cloud identity to access your vault and storage resources. Configure this before generating overrides:
+
+**Azure:**
+```yaml
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    mode: shared
+    name: redpoint-rpi
+  azure:
+    managedIdentityClientId: <your-client-id>
+    tenantId: <your-tenant-id>
+```
+
+**AWS:**
+```yaml
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    mode: shared
+    name: redpoint-rpi
+  amazon:
+    roleArn: arn:aws:iam::<account>:role/<role-name>
+    region: us-east-1
+```
+
+**Google:**
+```yaml
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    mode: shared
+  google:
+    serviceAccountEmail: <sa>@<project>.iam.gserviceaccount.com
+    projectId: <project-id>
+```
+
+| Mode | Behavior |
+|:-----|:---------|
+| `shared` | All pods use one service account. Simplest setup, only one federation credential needed. |
+| `per-service` | Each RPI service gets its own service account. Better audit trails and per-service access policies. This is the default. |
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Generate Your Overrides</strong></summary>
+
+The overrides file is a small YAML file containing only your customizations. The chart provides sensible defaults for everything else.
+
+### Using the Web UI (recommended)
+
+Go to [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com) and use the **Generate** tab:
+
+1. Click **Start Here** and walk through each step
+2. Select your platform, configure databases, cloud identity, secrets, storage, ingress, and services
+3. The preview panel on the right shows your overrides in real time
+4. Switch to the **Validate** tab to check for errors or warnings
+5. Download your `overrides.yaml`
+
+### What goes in the overrides
+
+A typical overrides file is 50-100 lines and covers:
+
+```yaml
+global:
+  deployment:
+    platform: azure              # azure | amazon | google | selfhosted
+    images:
+      repository: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      tag: "7.7.20260220.1524"
+
+databases:
+  operational:
+    provider: sqlserver          # sqlserver | postgresql
+
+cloudIdentity:
+  enabled: true
+  azure:
+    managedIdentityClientId: <your-id>
+    tenantId: <your-tenant>
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+
+ingress:
+  className: nginx
+  domain: example.com
+  hosts:
+    config: rpi-deploymentapi
+    client: rpi-interactionapi
+```
+
+Everything else (probes, security contexts, resource defaults, rollout strategies, logging) is managed by the chart automatically. Override only what you need.
+
+### Container images
+
+All services share a single `repository` and `tag`. The chart builds each image path automatically:
+
+```
+{repository}/rpi-interactionapi:{tag}
+{repository}/rpi-executionservice:{tag}
+...
+```
+
+If you mirror images to a private registry (ECR, ACR, GAR), just change the `repository` value. For flat registries where all images share one repo with different tags, use `global.deployment.images.overrides`:
+
+```yaml
+global:
+  deployment:
+    images:
+      overrides:
+        rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524
+```
+
+### Custom CA certificates
+
+If your cluster uses a corporate proxy or self-signed certificates, mount your CA bundle:
+
+```yaml
+customCACerts:
+  enabled: true
+  source: configMap
+  name: my-ca-bundle
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+```
+
+When using the SDK secrets provider, the cert can be mounted directly from your vault. See the [Secrets Management Guide](secrets-management.md) for details.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Deploy</strong></summary>
+
+### 1. Download the CLI
+
+```bash
+# Download from the Helm Assistant
+unzip rpihelmcli.zip
+```
+
+### 2. Pre-flight check
+
+Verify all prerequisites are met before deploying:
+
+```bash
+rpihelmcli/setup.sh check -f overrides.yaml
+```
+
+This checks: required tools, cluster connectivity, YAML syntax, platform, and secrets provider.
+
+### 3. Generate secrets (kubernetes provider only)
+
+If using `secretsManagement.provider: kubernetes`, the CLI prompts for credentials and generates a K8s Secret:
+
+```bash
+rpihelmcli/setup.sh secrets -f overrides.yaml
+kubectl apply -f secrets.yaml -n <namespace>
+```
+
+Skip this step if using `sdk` or `csi`. Your secrets come from the vault.
+
+### 4. Dry run
+
+Preview the rendered manifests without deploying:
+
+```bash
+rpihelmcli/setup.sh deploy -f overrides.yaml -n <namespace> --dry-run
+```
+
+### 5. Deploy
+
+```bash
+rpihelmcli/setup.sh deploy -f overrides.yaml -n <namespace>
+```
+
+The CLI auto-clones the chart from GitHub, creates the namespace if needed, and runs `helm install`.
+
+### 6. Verify
+
+```bash
+rpihelmcli/setup.sh status -n <namespace>
+kubectl get pods -n <namespace>
+kubectl get ingress -n <namespace>
+```
+
+Wait for all pods to show `Running` and the ingress to get an address (may take several minutes for load balancers).
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Post-Deployment</strong></summary>
+
+### Activate your license
+
+```bash
+DEPLOYMENT_URL=<deploymentapi-host>
+ACTIVATION_KEY=<your-license-key>
+SYSTEM_NAME=<your-system-name>
+
+curl -X POST "https://$DEPLOYMENT_URL/api/licensing/activatelicense" \
+  -H "Content-Type: application/json" \
+  -d '{"ActivationKey": "'$ACTIVATION_KEY'", "SystemName": "'$SYSTEM_NAME'"}'
+```
+
+### Install databases
+
+```bash
+curl -X POST "https://$DEPLOYMENT_URL/api/deployment/installcluster?waitTimeoutSeconds=300" \
+  -H "Content-Type: application/json" \
+  -d '{"useExistingDatabases": false, "coreUserInitialPassword": "<password>", "systemAdministrator": {"username": "coreuser", "emailAddress": "coreuser@noemail.com"}}'
+```
+
+### Download the RPI client
+
+```
+https://<interactionapi-host>/download
+```
+
+The client requires [Microsoft WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section).
+
+### Configure data warehouse connections
+
+Snowflake, Databricks, and Redshift connections are configured in the RPI client using connection strings, not Helm values. Add them through the client interface after logging in.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Troubleshooting</strong></summary>
+
+### Common issues
+
+**Pods stuck in Init or Pending:**
+```bash
+rpihelmcli/setup.sh troubleshoot -n <namespace> pending
+kubectl describe pod <pod-name> -n <namespace>
+```
+
+Check for: missing secrets, unresolvable vault endpoints, storage mount failures, or insufficient node resources.
+
+**504 Gateway Timeout on install/upgrade API calls:**
+
+Your ingress proxy timeout may be too low for long-running database operations. The chart's default nginx annotations set a 3600s timeout. If using a custom ingress controller, ensure your timeout annotations are correct for your controller type.
+
+**Image pull errors:**
+```bash
+rpihelmcli/setup.sh troubleshoot -n <namespace> imagepull
+```
+
+Check: registry credentials, image tag format, network access to the registry.
+
+**SecretProviderClass not found:**
+
+The `secretProviderClassName` in your Snowflake or CA cert config must match the `name` of a SecretProviderClass defined under `secretsManagement.csi.secretProviderClasses`.
+
+### Get help
+
+- Use the [Helm Assistant Chat](https://rpi-helm-assistant.redpointcdp.com) to ask questions about configuration or troubleshooting
+- Run `rpihelmcli/setup.sh troubleshoot -n <namespace>` for automated diagnosis
+- Contact [support@redpointglobal.com](mailto:support@redpointglobal.com) for product issues
+
+</details>
 
 ---
 
-## Get Started
+## Additional Resources
 
-Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) for a guided deployment experience. The Web UI walks you through the entire process:
-
-| Tab | What it does |
-|-----|-------------|
-| **Generate** | Select your platform, configure features step by step, and preview your overrides file in real time |
-| **Validate** | Review the generated configuration for errors or warnings, then download `overrides.yaml` |
-| **Deploy** | Download the CLI, generate secrets, deploy to your cluster, retrieve endpoints, and activate your license |
-| **Reference** | Search and browse every configurable key in the Helm chart |
-| **Chat** | Ask questions about RPI features, configuration, or troubleshooting in plain English |
-
----
-
-## Next Steps
-
-Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key, or ask the **Chat** for help with specific features.
+| Resource | Description |
+|:---------|:------------|
+| [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | Web UI for generating overrides, validating, and troubleshooting |
+| [RPI Helm CLI](readme-cli.md) | Pre-flight checks, secrets generation, deployment, status, and troubleshooting |
+| [Secrets Management](secrets-management.md) | Providers, required vault keys, Snowflake keys, CA certs |
+| [Single Sign-On](single-sign-on.md) | Microsoft Entra ID and OIDC setup |
+| [Values Guide](readme-values.md) | How the override system works |
+| [Migration Guide](migration.md) | Upgrading from v7.6 to v7.7 |
