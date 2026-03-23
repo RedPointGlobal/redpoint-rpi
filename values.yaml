@@ -2966,7 +2966,6 @@ cdpcache:
     failureThreshold: 30
     periodSeconds: 10
     timeoutSeconds: 5
-  # Persistent volume claim template for the Statefulset.
-  # Defines the size of storage to request for each pod instance.
+  # Persistent volume claim template for the Statefulset. Defines the size of storage to request for each pod instance.
   volumeClaimTemplates:
     storage: 100Gi
