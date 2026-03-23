@@ -40,6 +40,8 @@ The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automa
 
 The secret names use `--` as the hierarchy separator and must match exactly. RPI services look up secrets by these names at runtime.
 
+The database and cache secrets are the same across all platforms. The queue secrets differ depending on your queue provider.
+
 **Database connections** (always required):
 
 | Vault Secret Name | Description |
@@ -54,27 +56,62 @@ The secret names use `--` as the hierarchy separator and must match exactly. RPI
 
 **Realtime API** (if enabled):
 
-| Vault Secret Name | Value |
-|:-------------------|:------|
+| Vault Secret Name | Description |
+|:-------------------|:------------|
 | `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key |
 | `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token |
 | `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` |
 | `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string (MongoDB, Redis, etc.) |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `ServiceBus` (or `AmazonSQS`, `RabbitMQ`) |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your queue connection string |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `ServiceBus` (or `AmazonSQS`, `RabbitMQ`) |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your queue connection string |
 
-**Callback API** (if enabled):
+<details>
+<summary><strong>Azure queue secrets (Service Bus)</strong></summary>
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `ServiceBus` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your Service Bus connection string |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `ServiceBus` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your Service Bus connection string |
 | `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
 | `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your Service Bus connection string |
+
+</details>
+
+<details>
+<summary><strong>AWS queue secrets (Amazon SQS)</strong></summary>
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `AccessKey` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | Your AWS access key ID |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `SecretKey` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your AWS secret access key |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `AccessKey` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | Your AWS access key ID |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `SecretKey` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your AWS secret access key |
+
+</details>
+
+<details>
+<summary><strong>Google queue secrets (Pub/Sub)</strong></summary>
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your GCP project ID |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your GCP project ID |
+
+</details>
 
 **SMTP** (if sending email):
 
@@ -82,9 +119,14 @@ The secret names use `--` as the hierarchy separator and must match exactly. RPI
 |:-------------------|:------|
 | `RPI--SMTP--Password` | Your SMTP password |
 
-### Workload Identity Federation
+### Workload Identity / IRSA
 
-Each RPI service runs under its own Kubernetes ServiceAccount. The managed identity must have a federated credential for each service account so the pods can authenticate to Key Vault.
+Each RPI service runs under its own Kubernetes ServiceAccount. Your cloud identity must be configured to allow these service accounts to access the vault.
+
+<details>
+<summary><strong>Azure (Workload Identity Federation)</strong></summary>
+
+The managed identity needs a federated credential for each service account:
 
 | Service Account | Service |
 |:----------------|:--------|
@@ -97,9 +139,50 @@ Each RPI service runs under its own Kubernetes ServiceAccount. The managed ident
 | `rpi-queuereader` | Queue Reader |
 | `rpi-deploymentapi` | Deployment API |
 
-Use `cloudIdentity.serviceAccount.mode: per-service` in your overrides. This provides per-service audit trails in Key Vault access logs.
+Use `cloudIdentity.serviceAccount.mode: per-service` for per-service audit trails, or `mode: shared` for a single federation credential.
 
-For a fully automated setup, use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** which generates a script that creates the Key Vault secrets, the managed identity, and all 8 federated credentials in one step.
+For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Azure** > **Vault Secrets Setup**.
+
+</details>
+
+<details>
+<summary><strong>AWS (IRSA)</strong></summary>
+
+Create an IAM role with a trust policy that allows the EKS OIDC provider to assume the role for RPI service accounts. The simplest approach uses a `StringLike` wildcard:
+
+```json
+{
+  "Condition": {
+    "StringLike": {
+      "<oidc-id>:sub": "system:serviceaccount:<namespace>:rpi-*",
+      "<oidc-id>:aud": "sts.amazonaws.com"
+    }
+  }
+}
+```
+
+Attach the `SecretsManagerReadWrite` policy to the role.
+
+For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Amazon** > **Vault Secrets Setup**.
+
+</details>
+
+<details>
+<summary><strong>Google (Workload Identity)</strong></summary>
+
+Create a GCP service account with `roles/secretmanager.secretAccessor` and bind it to the Kubernetes service accounts:
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding <sa>@<project>.iam.gserviceaccount.com \
+  --role roles/iam.workloadIdentityUser \
+  --member "serviceAccount:<project>.svc.id.goog[<namespace>/rpi-interactionapi]"
+```
+
+Repeat for each RPI service account, or use `mode: shared` for a single binding.
+
+For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Google** > **Vault Secrets Setup**.
+
+</details>
 
 </details>
 
