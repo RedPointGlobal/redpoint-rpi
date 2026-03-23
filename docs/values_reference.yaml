@@ -1111,7 +1111,7 @@ authservice:
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1158,7 +1158,7 @@ keycloak:
     runAsNonRoot: true
     readOnlyRootFilesystem: false
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1205,7 +1205,7 @@ initservice:
     runAsNonRoot: true
     readOnlyRootFilesystem: false
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1242,7 +1242,7 @@ messageq:
     runAsNonRoot: true
     readOnlyRootFilesystem: true
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1280,7 +1280,7 @@ maintenanceservice:
     runAsNonRoot: true
     readOnlyRootFilesystem: false
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1326,7 +1326,7 @@ servicesapi:
     runAsNonRoot: true
     readOnlyRootFilesystem: false
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1370,7 +1370,7 @@ socketio:
     runAsNonRoot: true
     readOnlyRootFilesystem: false
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1412,7 +1412,7 @@ uiservice:
     runAsNonRoot: true
     readOnlyRootFilesystem: false
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1442,7 +1442,7 @@ cdpcache:
     runAsNonRoot: true
     readOnlyRootFilesystem: false
     privileged: false
-    appArmorProfile: runtime/default
+    appArmorProfile: ""
     allowPrivilegeEscalation: false
     capabilities:
       drop:
@@ -1511,8 +1511,7 @@ diagnosticsMode:
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
       privileged: false
-      appArmorProfile:
-        type: RuntimeDefault
+      appArmorProfile: ""
       capabilities:
         drop:
         - ALL

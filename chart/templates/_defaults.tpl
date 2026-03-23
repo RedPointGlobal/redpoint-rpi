@@ -132,8 +132,7 @@ netutils:
     readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     privileged: false
-    appArmorProfile:
-      type: RuntimeDefault
+    appArmorProfile: ""
     capabilities:
       drop:
         - ALL
@@ -824,7 +823,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: true
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -865,7 +864,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: false
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -901,7 +900,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: false
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -930,7 +929,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: true
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -963,7 +962,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: false
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -1005,7 +1004,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: false
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -1044,7 +1043,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: false
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -1082,7 +1081,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: false
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]
@@ -1108,7 +1107,7 @@ securityContext:
   runAsNonRoot: true
   readOnlyRootFilesystem: false
   privileged: false
-  appArmorProfile: runtime/default
+  appArmorProfile: ""
   allowPrivilegeEscalation: false
   capabilities:
     drop: ["ALL"]

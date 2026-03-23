@@ -105,8 +105,10 @@ securityContext:
   privileged: {{ $sc.privileged }}
   allowPrivilegeEscalation: {{ $sc.allowPrivilegeEscalation }}
   readOnlyRootFilesystem: {{ $sc.readOnlyRootFilesystem }}
+  {{- if $sc.appArmorProfile }}
   appArmorProfile:
-    type: RuntimeDefault
+    type: {{ $sc.appArmorProfile }}
+  {{- end }}
   capabilities:
     drop:
     {{- range $sc.capabilities.drop }}
