@@ -504,7 +504,7 @@ spec:
           failureThreshold: {{ .Values.integrationapi.livenessProbe.failureThreshold }}
         readinessProbe:
           httpGet:
-            path: /health/live
+            path: /health/ready
             port: 8080
           initialDelaySeconds: {{ .Values.integrationapi.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.integrationapi.readinessProbe.periodSeconds }}

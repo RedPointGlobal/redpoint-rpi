@@ -433,7 +433,7 @@ spec:
           failureThreshold: {{ .Values.nodemanager.livenessProbe.failureThreshold }}
         readinessProbe:
           httpGet:
-            path: /health/live
+            path: /health/ready
             port: 8080
           initialDelaySeconds: {{ .Values.nodemanager.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.nodemanager.readinessProbe.periodSeconds }}
