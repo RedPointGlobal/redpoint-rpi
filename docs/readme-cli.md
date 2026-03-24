@@ -146,7 +146,7 @@ Reading configuration from: overrides.yaml
 <details>
 <summary><strong style="font-size:1.25em;">Deploy</strong></summary>
 
-Auto-clones the chart from GitHub (or reuses an existing clone), creates the namespace if needed, and runs `helm install` or `helm upgrade`. Live pod status is shown while waiting for the deployment to complete.
+Auto-clones the chart from GitHub (or reuses an existing clone), creates the namespace if needed, and runs `helm install` or `helm upgrade`. After submitting, the CLI polls pod status every 10 seconds until all pods are ready or timeout (10 minutes). Pods in error states show the reason from cluster events.
 
 ```bash
 rpihelmcli/setup.sh deploy -f overrides.yaml -n my-namespace
@@ -166,28 +166,34 @@ Interaction CLI -- Deploy
 
   Running helm install...
 
+  ✔ Helm install submitted
+
+  Waiting for pods to be ready...
+
   01:23:45 Pod status:
-    ◌ rpi-deploymentapi-79bfb9d884-rxnqd   0/2  Init:0/1
-    ◌ rpi-interactionapi-8558b7fbc6-kqrq8  0/2  ContainerCreating
-    ◌ rpi-executionservice-8ffc9797b-t8xhj  0/2  ContainerCreating
+    ◌ rpi-deploymentapi-79bfb9d884-rxnqd   0/1  ContainerCreating
+    ◌ rpi-interactionapi-8558b7fbc6-kqrq8  0/1  Pending
+    ◌ rpi-executionservice-8ffc9797b-t8xhj  0/1  ContainerCreating
 
   01:23:55 Pod status:
-    ✔ rpi-deploymentapi-79bfb9d884-rxnqd   2/2  Running
-    ● rpi-interactionapi-8558b7fbc6-kqrq8  1/2  Running
-    ◌ rpi-executionservice-8ffc9797b-t8xhj  0/2  Init:0/1
+    ✔ rpi-deploymentapi-79bfb9d884-rxnqd   1/1  Running
+    ● rpi-interactionapi-8558b7fbc6-kqrq8  0/1  ContainerCreating
+      MountVolume.SetUp failed for volume "custom-ca-certs": provider "aws" not found
+    ◌ rpi-executionservice-8ffc9797b-t8xhj  0/1  Init:0/1
 
   01:24:05 Pod status:
-    ✔ rpi-deploymentapi-79bfb9d884-rxnqd   2/2  Running
-    ✔ rpi-interactionapi-8558b7fbc6-kqrq8  2/2  Running
-    ✔ rpi-executionservice-8ffc9797b-t8xhj  2/2  Running
+    ✔ rpi-deploymentapi-79bfb9d884-rxnqd   1/1  Running
+    ✔ rpi-interactionapi-8558b7fbc6-kqrq8  1/1  Running
+    ✔ rpi-executionservice-8ffc9797b-t8xhj  1/1  Running
 
-  ✔ Helm install successful
+  ✔ All pods ready
 ```
 
 Pod status indicators:
 - ✔ Green: all containers ready
 - ● Yellow: running but not all containers ready
-- ◌ Circle: still starting (init, creating, pulling)
+- ✘ Red: crash or error (shows reason from events)
+- ◌ Circle: still starting (shows reason if stuck)
 
 **Dry run** (preview without deploying):
 

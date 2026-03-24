@@ -2995,23 +2995,81 @@ cli_deploy() {
 
   echo "  ${CYAN}${BOLD}Running helm ${helm_mode}...${RESET}"
   echo ""
-  echo "  ${DIM}Tip: watch pod status in another terminal:${RESET}"
-  echo "  ${DIM}  kubectl get pods -n ${namespace} --watch${RESET}"
-  echo ""
 
-  if helm "${helm_mode}" rpi "$chart" \
+  # Submit manifests without waiting
+  if ! helm "${helm_mode}" rpi "$chart" \
     -f "$overrides" \
     -n "$namespace" \
     --create-namespace \
-    --wait \
-    --timeout 10m \
-    --rollback-on-failure; then
-    echo ""
-    echo "  ${GREEN}✔${RESET} Helm ${helm_mode} successful"
-  else
+    --timeout 10m; then
     echo ""
     echo "  ${RED}✘${RESET} Helm ${helm_mode} failed"
     exit 1
+  fi
+  echo ""
+  echo "  ${GREEN}✔${RESET} Helm ${helm_mode} submitted"
+  echo ""
+
+  # Poll pod status until all ready or timeout
+  echo "  ${CYAN}${BOLD}Waiting for pods to be ready...${RESET}"
+  echo ""
+  local timeout=600
+  local elapsed=0
+  local all_ready=false
+
+  while [ "$elapsed" -lt "$timeout" ]; do
+    local total=0 ready_count=0
+    local status_lines=""
+
+    status_lines=$(kubectl get pods -n "$namespace" -l app.kubernetes.io/part-of=rpi --no-headers 2>/dev/null || true)
+
+    if [ -n "$status_lines" ]; then
+      echo "  $(date +%H:%M:%S) Pod status:"
+      echo "$status_lines" | while IFS= read -r line; do
+        local pod_name ready status
+        pod_name=$(echo "$line" | awk '{print $1}')
+        ready=$(echo "$line" | awk '{print $2}')
+        status=$(echo "$line" | awk '{print $3}')
+        if [ "$status" = "Running" ] && [[ "$ready" != *"0/"* ]]; then
+          echo "    ${GREEN}✔${RESET} ${pod_name}  ${ready}  ${status}"
+        elif [ "$status" = "Running" ]; then
+          echo "    ${YELLOW}●${RESET} ${pod_name}  ${ready}  ${status}"
+        elif [ "$status" = "CrashLoopBackOff" ] || [ "$status" = "Error" ]; then
+          echo "    ${RED}✘${RESET} ${pod_name}  ${ready}  ${status}"
+          # Show reason from events
+          local reason
+          reason=$(kubectl get events -n "$namespace" --field-selector "involvedObject.name=${pod_name}" --sort-by='.lastTimestamp' 2>/dev/null | grep -i "warning\|error\|failed" | tail -1 | awk '{for(i=6;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/^ *//;s/ *$//')
+          [ -n "$reason" ] && echo "      ${DIM}${reason}${RESET}"
+        else
+          echo "    ${CYAN}◌${RESET} ${pod_name}  ${ready}  ${status}"
+          # Show reason for non-running pods
+          if [ "$status" = "Pending" ] || [ "$status" = "ContainerCreating" ] || [[ "$status" == *"Init"* ]] || [ "$status" = "ImagePullBackOff" ] || [ "$status" = "ErrImagePull" ]; then
+            local reason
+            reason=$(kubectl get events -n "$namespace" --field-selector "involvedObject.name=${pod_name}" --sort-by='.lastTimestamp' 2>/dev/null | grep -i "warning\|error\|failed" | tail -1 | awk '{for(i=6;i<=NF;i++) printf "%s ", $i; print ""}' | sed 's/^ *//;s/ *$//')
+            [ -n "$reason" ] && echo "      ${DIM}${reason}${RESET}"
+          fi
+        fi
+      done
+      echo ""
+
+      # Check if all pods are ready
+      total=$(echo "$status_lines" | wc -l | tr -d ' ')
+      ready_count=$(echo "$status_lines" | awk '$3 == "Running" && $2 !~ /^0\// {c++} END {print c+0}')
+      if [ "$total" -gt 0 ] && [ "$ready_count" -eq "$total" ]; then
+        all_ready=true
+        break
+      fi
+    fi
+
+    sleep 10
+    elapsed=$((elapsed + 10))
+  done
+
+  if [ "$all_ready" = true ]; then
+    echo "  ${GREEN}✔${RESET} All pods ready"
+  else
+    echo "  ${YELLOW}●${RESET} Timeout waiting for pods. Some pods may still be starting."
+    echo "  ${DIM}Run 'rpihelmcli/setup.sh status -n ${namespace}' to check.${RESET}"
   fi
 }
 
