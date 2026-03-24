@@ -14,7 +14,7 @@ A shared volume mounted by execution service, node manager, and queue reader pod
 
 | Platform | Recommended driver |
 |:---------|:------------------|
-| Azure | `blob.csi.azure.com` or `file.csi.azure.com` |
+| Azure | `file.csi.azure.com` |
 | AWS | `efs.csi.aws.com` |
 | Google | `filestore.csi.storage.gke.io` |
 
@@ -49,7 +49,7 @@ storage:
       claimName: rpifileoutputdir
 ```
 
-### Example: Azure Blob
+### Example: Azure Files
 
 ```yaml
 storage:
@@ -59,21 +59,18 @@ storage:
       claimName: rpifileoutputdir
       mountPath: /rpifileoutputdir
   persistentVolumes:
-  - name: pv-rpi-blob
+  - name: pv-rpi-files
     capacity: 10Gi
     accessModes:
     - ReadWriteMany
-    storageClassName: blob-fuse
+    storageClassName: azurefile-csi
     reclaimPolicy: Retain
-    mountOptions:
-    - -o allow_other
-    - --file-cache-timeout-in-seconds=120
     csi:
-      driver: blob.csi.azure.com
-      volumeHandle: <resourceGroup>_<storageAccount>_<container>
+      driver: file.csi.azure.com
+      volumeHandle: <storageAccount>-<shareName>
       volumeAttributes:
         storageaccount: <your-storage-account>
-        containerName: <your-container>
+        shareName: <your-file-share>
         clientID: <managed-identity-client-id>
         resourcegroup: <resource-group>
         subscriptionid: <subscription-id>

@@ -411,6 +411,9 @@ metadata:
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
+  {{- if eq .Values.global.deployment.platform "amazon" }}
+  externalTrafficPolicy: Cluster
+  {{- end }}
   ipFamilyPolicy: SingleStack
   ipFamilies:
     - IPv4
