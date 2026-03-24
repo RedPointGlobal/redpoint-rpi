@@ -65,12 +65,11 @@ podAntiAffinity:
 # ==========================
 # Custom CA Certificates
 # ==========================
-# Mount a ConfigMap or Secret containing custom CA certificates into all pods.
+# Mount custom CA certificates into all pods.
 # Useful when connecting to databases or services using internal/private CAs.
 customCACerts:
   enabled: false
-  source: configMap             # configMap | secret
-  name: ""                      # name of the ConfigMap or Secret
+  name: ""                      # name of the Kubernetes Secret containing the CA bundle
   mountPath: /usr/local/share/ca-certificates/custom
   # Optional: set SSL_CERT_FILE env var to a specific file in the mount
   # certFile: ""                # e.g., "internal-ca.pem"

@@ -832,13 +832,8 @@ Usage: {{- include "rpi.customCACerts.volume" . | nindent 8 }}
       secretProviderClass: {{ .Values.customCACerts.secretProviderClassName | quote }}
 {{- else if .Values.customCACerts.name }}
 - name: custom-ca-certs
-  {{- if eq (.Values.customCACerts.source | default "configMap") "secret" }}
   secret:
     secretName: {{ .Values.customCACerts.name }}
-  {{- else }}
-  configMap:
-    name: {{ .Values.customCACerts.name }}
-  {{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}

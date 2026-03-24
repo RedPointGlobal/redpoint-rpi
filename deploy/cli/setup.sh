@@ -2640,6 +2640,33 @@ SECRETS_REBRANDLY
     echo ""
   fi
 
+  # --- Custom CA certificate ---
+  local ca_enabled ca_name ca_source ca_file
+  ca_enabled=$(read_val "$overrides" "customCACerts.enabled")
+  ca_enabled="${ca_enabled:-false}"
+  if [ "$ca_enabled" = "true" ] || [ "$ca_enabled" = "True" ]; then
+    ca_name=$(read_val "$overrides" "customCACerts.name")
+    ca_file=$(read_val "$overrides" "customCACerts.certFile")
+    # Only prompt if not using CSI/SDK (secretProviderClassName)
+    local ca_spc
+    ca_spc=$(read_val "$overrides" "customCACerts.secretProviderClassName")
+    if [ -z "$ca_spc" ] && [ -n "$ca_name" ]; then
+      echo "  ${BOLD}Custom CA certificate${RESET}"
+      local ca_file_path
+      read -rp "    Path to CA bundle file (e.g., ca-bundle.pem): " ca_file_path
+      if [ -n "$ca_file_path" ] && [ -f "$ca_file_path" ]; then
+        kubectl create secret generic "$ca_name" \
+          --from-file="${ca_file:-ca-bundle.pem}=${ca_file_path}" \
+          -n "$namespace" 2>/dev/null || echo "    (already exists)"
+        echo "  ${GREEN}✔${RESET} CA certificate secret '${ca_name}' created"
+        echo ""
+      else
+        echo "  ${YELLOW}●${RESET} Skipped (file not found)"
+        echo ""
+      fi
+    fi
+  fi
+
   fi  # end kubernetes provider check
 
   # --- Image pull secret ---

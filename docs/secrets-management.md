@@ -13,7 +13,45 @@ RPI supports three secrets management providers. The provider controls how sensi
 |:---------|:-------------|
 | **kubernetes** (default) | The CLI (`rpihelmcli/setup.sh secrets`) prompts for your database credentials, connection strings, and other values, then generates a Kubernetes Secret (`redpoint-rpi-secrets`). Internal service passwords (Redis, RabbitMQ) are randomly generated. Apply the secret before deploying. |
 | **csi** | The CSI Secrets Store Driver syncs secrets from an external vault (Azure Key Vault, AWS Secrets Manager, GCP Secret Manager) into a Kubernetes Secret. You are responsible for storing ALL required keys in your vault. |
-| **sdk** | Each RPI service reads secrets directly from the vault at runtime using cloud identity. A separate `rpi-internal-services` Kubernetes Secret is auto-generated for chart-managed infrastructure (Redis, RabbitMQ). |
+| **sdk** (recommended for cloud) | Each RPI service reads secrets directly from the vault at runtime using cloud identity. A separate `rpi-internal-services` Kubernetes Secret is auto-generated for chart-managed infrastructure (Redis, RabbitMQ). |
+
+### What each provider handles
+
+**kubernetes:**
+
+| Item | How it's handled |
+|:-----|:----------------|
+| Image pull secret | CLI prompts for registry credentials and creates the K8s Secret |
+| Ingress TLS certificate | CLI prompts for cert/key files and creates a `kubernetes.io/tls` Secret |
+| Snowflake private key | CLI creates a K8s Secret from the `.p8` file, mounted as a volume |
+| Custom CA certificate | CLI prompts for the CA bundle file and creates a K8s Secret |
+| RPI application secrets | CLI prompts for database, realtime, SMTP credentials and creates the main K8s Secret |
+
+**csi:**
+
+| Item | How it's handled |
+|:-----|:----------------|
+| Image pull secret | Create manually with `kubectl` before deploying |
+| Ingress TLS certificate | SecretProviderClass syncs from vault into a `kubernetes.io/tls` K8s Secret |
+| Snowflake private key | SecretProviderClass syncs from vault into a K8s Secret, mounted as a volume |
+| Custom CA certificate | SecretProviderClass syncs from vault into a K8s Secret |
+| RPI application secrets | SecretProviderClass syncs all keys from vault into a K8s Secret |
+
+A validation pod is required to trigger the initial CSI sync before RPI pods can start.
+
+**sdk:**
+
+| Item | How it's handled |
+|:-----|:----------------|
+| Image pull secret | Create manually with `kubectl` before deploying |
+| Ingress TLS certificate | SecretProviderClass syncs from vault into a `kubernetes.io/tls` K8s Secret (nginx requires a K8s Secret) |
+| Snowflake private key | Mounted directly into the pod from vault via CSI inline volume (no K8s Secret) |
+| Custom CA certificate | Mounted directly into the pod from vault via CSI inline volume (no K8s Secret) |
+| RPI application secrets | Read directly from vault at runtime via SDK (no K8s Secret) |
+
+No validation pods needed. Snowflake keys and CA certs are mounted as files by the pods themselves.
+
+---
 
 <details>
 <summary><strong style="font-size:1.25em;">SDK Provider: Prerequisites</strong></summary>
@@ -562,7 +600,7 @@ Prerequisites: the [AWS Secrets and Configuration Provider](https://github.com/a
 <details>
 <summary><strong style="font-size:1.25em;">Custom CA Certificates with SDK</strong></summary>
 
-When using the SDK provider, custom CA certificates can be mounted directly from your vault via CSI inline volume, just like Snowflake keys. This avoids having to create a separate Kubernetes Secret or ConfigMap for the certificate.
+When using the SDK provider, custom CA certificates can be mounted directly from your vault via CSI inline volume, just like Snowflake keys. This avoids having to create a separate Kubernetes Secret for the certificate.
 
 ### Azure
 
@@ -637,12 +675,11 @@ aws secretsmanager create-secret \
 
 ### Kubernetes / CSI providers
 
-When using the `kubernetes` or `csi` provider, CA certificates are mounted from a Kubernetes Secret or ConfigMap instead:
+When using the `kubernetes` or `csi` provider, CA certificates are mounted from a Kubernetes Secret:
 
 ```yaml
 customCACerts:
   enabled: true
-  source: secret        # or configMap
   name: my-ca-certs
   mountPath: /usr/local/share/ca-certificates/custom
   certFile: ca-bundle.pem

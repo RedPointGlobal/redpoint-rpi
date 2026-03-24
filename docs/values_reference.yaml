@@ -57,7 +57,6 @@ podAntiAffinity:
 
 customCACerts:
   enabled: false
-  source: configMap
   name: ''
   mountPath: /usr/local/share/ca-certificates/custom
 
