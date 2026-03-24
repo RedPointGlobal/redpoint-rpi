@@ -9,8 +9,9 @@ The RPI Helm CLI is a command-line tool for deploying and managing RPI on Kubern
 
 ## Quick Start
 
+Download the [CLI](https://rpi-helm-assistant.redpointcdp.com/app/static/rpihelmcli.zip) from the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com), then:
+
 ```bash
-# Download and extract
 unzip rpihelmcli.zip
 
 # Check prerequisites
