@@ -183,8 +183,13 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
-          {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 10 }}
-      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noFsGroup" true "noSupplementalGroups" true) | nindent 6 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
       volumes:
         - name: {{ $QueueReaderMQ }}-config
           configMap:
@@ -399,8 +404,13 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
-          {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 10 }}
-      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noFsGroup" true "noSupplementalGroups" true) | nindent 6 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
       volumes:
         - name: {{ $RealtimeapiMQ }}-config
           configMap:
