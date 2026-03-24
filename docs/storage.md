@@ -215,7 +215,7 @@ The chart creates the PVs and PVCs from the `persistentVolumes` block. The `exis
 <details>
 <summary><strong>emptyDir (no persistence)</strong></summary>
 
-Simplest option. Data is lost on pod restart but rebuilds automatically. No PVs, PVCs, or StorageClasses needed.
+Simplest option. Data is cleared when the pod is deleted or rescheduled (emptyDir is tied to the pod lifecycle). Cache entries and queue messages rebuild automatically. No PVs, PVCs, or StorageClasses needed.
 
 ```yaml
 queuereader:
