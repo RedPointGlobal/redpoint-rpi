@@ -213,8 +213,11 @@ spec:
           privileged: {{ $cfg.securityContext.privileged }}
           allowPrivilegeEscalation: {{ $cfg.securityContext.allowPrivilegeEscalation }}
           readOnlyRootFilesystem: {{ $cfg.securityContext.readOnlyRootFilesystem }}
+          {{- $kcAppArmor := $cfg.securityContext.appArmorProfile | default $.Values.securityContext.appArmorProfile }}
+          {{- if $kcAppArmor }}
           appArmorProfile:
-            type: RuntimeDefault
+            type: {{ $kcAppArmor }}
+          {{- end }}
         {{- end }}
         env:
         {{- if .Values.global.deployment.podTimezone }}

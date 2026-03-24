@@ -61,9 +61,6 @@ spec:
   template:
     metadata:
       annotations:
-        {{- if eq (.type | default "pvc") "csiSecret" }}
-        container.apparmor.security.beta.kubernetes.io/{{ $containerName }}: runtime/default
-        {{- end }}
         {{- with .podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
