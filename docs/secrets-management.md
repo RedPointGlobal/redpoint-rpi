@@ -64,13 +64,10 @@ When using the `sdk` provider, RPI services authenticate to your cloud vault usi
 
 For Azure, the managed identity needs the following role assignments:
 
-| Scope | Role |
-|:------|:-----|
+| Scope | Role(s) |
+|:------|:--------|
 | Key Vault | `Key Vault Secrets Officer` |
-| Storage Account (FileOutputDirectory) | `Reader` |
-| Storage Account (FileOutputDirectory) | `Storage Account Key Operator Service Role` |
-| Storage Account (FileOutputDirectory) | `Storage Blob Data Contributor` |
-| Storage Account (FileOutputDirectory) | `Storage File Data SMB Share Contributor` |
+| Storage Account (FileOutputDirectory) | `Reader`, `Storage Account Key Operator Service Role`, `Storage Blob Data Contributor`, `Storage File Data SMB Share Contributor` |
 
 The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** generates a complete setup script (Bash or Terraform) that handles all three steps. Select your platform, enter your environment details, and download the script.
 
