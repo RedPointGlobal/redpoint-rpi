@@ -215,16 +215,51 @@ kubectl create secret docker-registry redpoint-rpi \
 
 Skip this if your nodes already have access to the registry (e.g., ECR with node IAM roles, ACR with `AcrPull`).
 
-### 4. Generate secrets (kubernetes provider only)
+### 4. Prepare secrets
 
-If using `secretsManagement.provider: kubernetes`, the CLI prompts for credentials and generates a K8s Secret:
+Choose your path based on your secrets provider:
+
+<details>
+<summary><strong>kubernetes provider</strong></summary>
+
+The CLI prompts for credentials and generates a K8s Secret:
 
 ```bash
 rpihelmcli/setup.sh secrets -f overrides.yaml
 kubectl apply -f secrets.yaml -n <namespace>
 ```
 
-Skip this step if using `sdk` or `csi`. Your secrets come from the vault.
+This creates the main application secret with database credentials, connection strings, and API tokens. Internal service passwords (Redis, RabbitMQ) are randomly generated.
+
+</details>
+
+<details>
+<summary><strong>sdk provider</strong></summary>
+
+RPI reads application secrets directly from your vault at runtime. Before deploying:
+
+1. **Populate your vault** with the required secrets. Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab to generate a vault setup script for your platform.
+2. **Store Snowflake key in vault** (if using Snowflake). The chart mounts it directly into the pod via CSI inline volume.
+3. **Store TLS certificate in vault** (if using ingress TLS). The CSI driver syncs it to a `kubernetes.io/tls` K8s Secret for nginx.
+4. **Store CA bundle in vault** (if using custom CA certs). The chart mounts it directly into the pod via CSI inline volume.
+5. **Ensure CSI Secrets Store driver and cloud provider are installed** on your cluster if using any of the above (Snowflake, TLS, or CA certs). See [AWS ASCP](https://github.com/aws/secrets-store-csi-driver-provider-aws) or [Azure Key Vault provider](https://azure.github.io/secrets-store-csi-driver-provider-azure/).
+
+See the [Secrets Management Guide](secrets-management.md) for the full list of required vault keys per platform.
+
+</details>
+
+<details>
+<summary><strong>csi provider</strong></summary>
+
+The CSI Secrets Store Driver syncs secrets from your vault into K8s Secrets. Before deploying:
+
+1. **Populate your vault** with ALL required secrets. Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab to generate a vault setup script for your platform.
+2. **Ensure CSI Secrets Store driver and cloud provider are installed** on your cluster.
+3. The chart creates SecretProviderClass resources from your overrides. Validation pods trigger the initial sync before RPI pods start.
+
+See the [Secrets Management Guide](secrets-management.md) for the full list of required vault keys and CSI configuration.
+
+</details>
 
 ### 5. Dry run
 
