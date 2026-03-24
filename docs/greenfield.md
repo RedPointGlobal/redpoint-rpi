@@ -33,18 +33,6 @@ Before starting, ensure you have:
 - **Operational database**: provision a SQL Server or PostgreSQL instance and note the hostname, username, and password.
 - **Single Sign-On** (optional): if using Microsoft Entra ID or an OIDC provider (Keycloak, Okta), complete the identity provider setup first. See the [Single Sign-On Guide](single-sign-on.md).
 
-### Choose your secrets provider
-
-Before generating your overrides, decide how RPI will access sensitive values:
-
-| Provider | How it works | Best for |
-|:---------|:-------------|:---------|
-| **kubernetes** (default) | The [CLI](readme-cli.md) prompts for credentials and generates a K8s Secret | Simple setups, getting started quickly |
-| **sdk** (recommended for cloud) | RPI reads secrets directly from your cloud vault at runtime | Azure Key Vault, AWS Secrets Manager, GCP Secret Manager |
-| **csi** | CSI Secrets Store driver syncs vault secrets to K8s Secrets | Existing CSI infrastructure, fine-grained vault access policies |
-
-If using **sdk** or **csi**, set up your vault and store the required secrets before deploying. Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab to generate a vault setup script, or see the [Secrets Management Guide](secrets-management.md) for the full list of required keys.
-
 ### Choose your cloud identity
 
 RPI services need cloud identity to access your vault and storage resources. Configure this when generating overrides:
@@ -88,6 +76,18 @@ cloudIdentity:
 |:-----|:---------|
 | `shared` | All pods use one service account. Simplest setup, only one federation credential needed. |
 | `per-service` | Each RPI service gets its own service account. Better audit trails and per-service access policies. This is the default. |
+
+### Choose your secrets provider
+
+Decide how RPI will access sensitive values:
+
+| Provider | How it works | Best for |
+|:---------|:-------------|:---------|
+| **kubernetes** (default) | The [CLI](readme-cli.md) prompts for credentials and generates a K8s Secret | Simple setups, getting started quickly |
+| **sdk** (recommended for cloud) | RPI reads secrets directly from your cloud vault at runtime | Azure Key Vault, AWS Secrets Manager, GCP Secret Manager |
+| **csi** | CSI Secrets Store driver syncs vault secrets to K8s Secrets | Existing CSI infrastructure, fine-grained vault access policies |
+
+If using **sdk** or **csi**, set up your vault and store the required secrets before deploying. Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab to generate a vault setup script, or see the [Secrets Management Guide](secrets-management.md) for the full list of required keys.
 
 </details>
 
