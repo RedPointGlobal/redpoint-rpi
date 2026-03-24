@@ -21,7 +21,7 @@ global:
     mode: standard
     platform: amazon
     images:
-      repository: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      registry: rg1acrpub.azurecr.io/docker/redpointglobal/releases
       tag: 7.7.20260220.1524
       imagePullPolicy: Always
       imagePullSecret:

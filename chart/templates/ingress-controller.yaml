@@ -288,7 +288,7 @@ spec:
       {{- end }}
       containers:
         - name: controller
-          {{- $defaultImage := printf "%s/nginx-ingress-controller:%s" .Values.global.deployment.images.repository .Values.global.deployment.images.tag }}
+          {{- $defaultImage := printf "%s/nginx-ingress-controller:%s" .Values.global.deployment.images.registry .Values.global.deployment.images.tag }}
           {{- $image := ternary $ingCfg.internalImageOverride.image $defaultImage $ingCfg.internalImageOverride.enabled }}
           image: {{ $image }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}

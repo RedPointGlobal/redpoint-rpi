@@ -126,7 +126,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $QueueReaderMQ }}
-          image: {{ .Values.global.deployment.images.repository }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.registry }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - name: amqp
@@ -342,7 +342,7 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: {{ $RealtimeapiMQ }}
-          image: {{ .Values.global.deployment.images.repository }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
+          image: {{ .Values.global.deployment.images.registry }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - name: amqp

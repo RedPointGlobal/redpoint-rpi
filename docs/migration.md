@@ -37,11 +37,11 @@ The `values.yaml` has been redesigned from a **3,000+ line monolithic file** to 
 global:
   deployment:
     images:
-      repository: 123456789.dkr.ecr.us-east-1.amazonaws.com/redpoint
+      registry: 123456789.dkr.ecr.us-east-1.amazonaws.com/redpoint
       tag: "7.7.20260220.1524"
 ```
 
-The chart constructs each image as `{repository}/{service-name}:{tag}` automatically. No template edits required, regardless of registry provider. To extract the full list of images for pre-pulling or mirroring:
+The chart constructs each image as `{registry}/{service-name}:{tag}` automatically. No template edits required, regardless of registry provider. To extract the full list of images for pre-pulling or mirroring:
 
 ```bash
 helm template rpi ./chart -f overrides.yaml | grep "image:" | sort -u
@@ -149,13 +149,13 @@ The chart references your secret by name without creating or modifying it. You a
 
 **Before:** Some registries (especially AWS ECR) use a flat structure where all images live in a single repository with different tags, rather than separate repositories per service. The v7.6 chart had no way to express this without editing every deploy template.
 
-**Now:** The `global.deployment.images.overrides` map lets you override the image for any service. When set, the value is used verbatim instead of the default `{repository}/{service-name}:{tag}` construction:
+**Now:** The `global.deployment.images.overrides` map lets you override the image for any service. When set, the value is used verbatim instead of the default `{registry}/{service-name}:{tag}` construction:
 
 ```yaml
 global:
   deployment:
     images:
-      repository: 123456789.dkr.ecr.us-east-1.amazonaws.com/redpoint
+      registry: 123456789.dkr.ecr.us-east-1.amazonaws.com/redpoint
       tag: "7.7.20260220.1524"
       overrides:
         rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524

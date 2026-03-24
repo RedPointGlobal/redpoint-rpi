@@ -20,7 +20,7 @@ global:
     platform: amazon
 
     images:
-      repository: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      registry: rg1acrpub.azurecr.io/docker/redpointglobal/releases
       # RPI version: <major.minor>.<year>-<MMDD>-<HHMM>
       tag: "7.7.20260220.1524"
       imagePullPolicy: Always
@@ -30,7 +30,7 @@ global:
       # Utility image for jobs (upgrade, post-install, validation pods)
       net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
       # Per-service image overrides
-      # When set, the value is used verbatim instead of {repository}/{service-name}:{tag}.
+      # When set, the value is used verbatim instead of {registry}/{service-name}:{tag}.
       # Useful for flat registries (e.g., ECR with all images in a single repo).
       # overrides:
       #   rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524

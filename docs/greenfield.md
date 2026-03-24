@@ -115,7 +115,7 @@ global:
   deployment:
     platform: azure              # azure | amazon | google | selfhosted
     images:
-      repository: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      registry: rg1acrpub.azurecr.io/docker/redpointglobal/releases
       tag: "7.7.20260220.1524"
 
 databases:
@@ -149,8 +149,8 @@ Everything else (probes, security contexts, resource defaults, rollout strategie
 All services share a single `repository` and `tag`. The chart builds each image path automatically:
 
 ```
-{repository}/rpi-interactionapi:{tag}
-{repository}/rpi-executionservice:{tag}
+{registry}/rpi-interactionapi:{tag}
+{registry}/rpi-executionservice:{tag}
 ...
 ```
 

@@ -57,7 +57,7 @@
               "description": "Container image settings for all RPI services",
               "additionalProperties": true,
               "properties": {
-                "repository": {
+                "registry": {
                   "type": "string",
                   "description": "Container image registry and repository path"
                 },
@@ -92,7 +92,7 @@
                 },
                 "overrides": {
                   "type": "object",
-                  "description": "Per-service image overrides. When set, the value is used verbatim instead of {repository}/{service-name}:{tag}. Useful for flat registries (e.g., ECR with all images in a single repo).",
+                  "description": "Per-service image overrides. When set, the value is used verbatim instead of {registry}/{service-name}:{tag}. Useful for flat registries (e.g., ECR with all images in a single repo).",
                   "additionalProperties": {
                     "type": "string"
                   }

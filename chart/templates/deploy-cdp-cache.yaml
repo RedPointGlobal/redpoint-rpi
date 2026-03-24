@@ -142,7 +142,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $name }}
-          image: "{{ .Values.global.deployment.images.repository }}/rediscache:{{ .Values.global.deployment.images.tag }}"
+          image: "{{ .Values.global.deployment.images.registry }}/rediscache:{{ .Values.global.deployment.images.tag }}"
           imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: 6379
