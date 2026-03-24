@@ -13,6 +13,9 @@ metadata:
 provisioner: {{ .Values.storage.storageClass.provisioner }}
 reclaimPolicy: {{ .Values.storage.storageClass.reclaimPolicy | default "Delete" }}
 volumeBindingMode: {{ .Values.storage.storageClass.volumeBindingMode | default "Immediate" }}
+{{- if .Values.storage.storageClass.allowVolumeExpansion }}
+allowVolumeExpansion: {{ .Values.storage.storageClass.allowVolumeExpansion }}
+{{- end }}
 {{- with .Values.storage.storageClass.mountOptions }}
 mountOptions:
   {{- toYaml . | nindent 2 }}

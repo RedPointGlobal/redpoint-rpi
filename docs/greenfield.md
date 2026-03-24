@@ -91,6 +91,8 @@ If using **sdk** or **csi**, set up your vault and store the required secrets be
 
 </details>
 
+See the [Storage Guide](storage.md) for FileOutputDirectory configuration, internal Redis/RabbitMQ provisioning options (dynamic, static BYO, emptyDir), and EFS permission setup.
+
 <details>
 <summary><strong style="font-size:1.25em;">Generate Your Overrides</strong></summary>
 

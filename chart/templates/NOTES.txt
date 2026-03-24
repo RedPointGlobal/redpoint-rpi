@@ -12,9 +12,9 @@
     kubectl get pods -n {{ $ns }}
     kubectl get ingress -n {{ $ns }}
 
-  Watch live rollout progress:
+  Watch pod status:
 
-    bash deploy/cli/deploy.sh --watch -n {{ $ns }}
+    rpihelmcli/setup.sh status -n {{ $ns }}
 
   Troubleshoot:
 

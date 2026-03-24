@@ -25,6 +25,7 @@ This chart deploys RPI on Kubernetes using Helm.
 | [Values Guide](docs/readme-values.md) | How the two-tier values system works, override patterns, and complete values reference |
 | [Secrets Management](docs/secrets-management.md) | Providers (Kubernetes, CSI, SDK), required vault keys, and image pull secrets |
 | [Single Sign-On](docs/single-sign-on.md) | Microsoft Entra ID and OpenID Connect (Keycloak, Okta) authentication setup |
+| [Storage](docs/storage.md) | FileOutputDirectory, internal Redis/RabbitMQ, dynamic provisioning, EFS permissions |
 | [RPI Helm CLI](docs/readme-cli.md) | Pre-flight checks, secrets generation, deployment, status, and troubleshooting |
 | [Automation Guide](docs/readme-terraform.md) | Infrastructure-as-code modules for Azure, AWS, and GCP |
 | [GitOps Guide](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |

@@ -230,11 +230,7 @@ spec:
             failureThreshold: 3
           securityContext:
             allowPrivilegeEscalation: false
-      securityContext:
-        runAsUser: 999
-        runAsGroup: 999
-        fsGroup: 999
-        runAsNonRoot: true
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       volumes:
         - name: {{ $QueueReadercacheName }}-config
           configMap:
