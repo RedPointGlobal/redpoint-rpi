@@ -94,8 +94,6 @@ spec:
           {{- if $secCtx.enabled }}
           securityContext:
             allowPrivilegeEscalation: false
-            appArmorProfile:
-              type: RuntimeDefault
           {{- end }}
           {{- if .command }}
           command:
