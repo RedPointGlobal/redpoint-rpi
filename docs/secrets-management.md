@@ -605,39 +605,65 @@ az keyvault certificate import --vault-name <vault> --name my-tls-certificate --
 
 ### AWS
 
-Store the combined PEM (cert + key in one file) in Secrets Manager:
+AWS Secrets Manager requires the certificate and private key stored as separate secrets:
 
 ```bash
-# Combine cert and key if in separate files
-cat tls.crt tls.key > ingress-cert.pem
+aws secretsmanager create-secret --name rpi-tls-crt \
+  --secret-binary fileb://tls.crt --region us-east-1
 
-aws secretsmanager create-secret \
-  --name rpi-tls-certificate \
-  --secret-binary fileb://ingress-cert.pem \
-  --region us-east-1
+aws secretsmanager create-secret --name rpi-tls-key \
+  --secret-binary fileb://tls.key --region us-east-1
 ```
 
 ### SecretProviderClass configuration
 
-Add to your overrides under `secretsManagement.csi.secretProviderClasses`:
+**Azure** (single secret, Key Vault splits cert and key automatically):
 
 ```yaml
 - name: ingress-tls-certificate
-  provider: aws          # or azure
+  provider: azure
+  parameters:
+    clientID: <managed-identity-client-id>
+    keyvaultName: <your-keyvault>
+    resourceGroup: <your-rg>
+    subscriptionId: <your-sub>
+    tenantId: <your-tenant>
   objects:
-  - objectName: rpi-tls-certificate
-    objectType: secretsmanager    # or secret (for Azure)
+  - objectName: my-tls-certificate
+    objectType: secret
   secretObjects:
   - secretName: ingress-tls
     type: kubernetes.io/tls
     data:
-    - objectName: rpi-tls-certificate
+    - objectName: my-tls-certificate
       key: tls.key
-    - objectName: rpi-tls-certificate
+    - objectName: my-tls-certificate
       key: tls.crt
 ```
 
-A validation pod or the ingress controller pod must mount this SecretProviderClass to trigger the initial sync of the K8s TLS Secret.
+**AWS** (separate secrets for cert and key):
+
+```yaml
+- name: ingress-tls-certificate
+  provider: aws
+  objects:
+  - objectName: rpi-tls-crt
+    objectType: secretsmanager
+    objectAlias: tls.crt
+  - objectName: rpi-tls-key
+    objectType: secretsmanager
+    objectAlias: tls.key
+  secretObjects:
+  - secretName: ingress-tls
+    type: kubernetes.io/tls
+    data:
+    - objectName: tls.crt
+      key: tls.crt
+    - objectName: tls.key
+      key: tls.key
+```
+
+A validation pod must mount this SecretProviderClass to trigger the initial sync of the K8s TLS Secret. The RPI pods themselves do not mount TLS certificates.
 
 </details>
 
