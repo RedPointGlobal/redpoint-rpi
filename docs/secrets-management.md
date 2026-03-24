@@ -598,6 +598,57 @@ Prerequisites: the [AWS Secrets and Configuration Provider](https://github.com/a
 </details>
 
 <details>
+<summary><strong style="font-size:1.25em;">TLS Certificates with SDK</strong></summary>
+
+When using the SDK provider, the ingress TLS certificate must still be synced to a `kubernetes.io/tls` Kubernetes Secret because nginx reads TLS from K8s Secrets. Use a SecretProviderClass with `secretObjects` to sync from your vault.
+
+### Azure
+
+Store the certificate in Key Vault and define a SecretProviderClass:
+
+```bash
+az keyvault certificate import --vault-name <vault> --name my-tls-certificate --file ingress-cert.pem
+```
+
+### AWS
+
+Store the combined PEM (cert + key in one file) in Secrets Manager:
+
+```bash
+# Combine cert and key if in separate files
+cat tls.crt tls.key > ingress-cert.pem
+
+aws secretsmanager create-secret \
+  --name rpi-tls-certificate \
+  --secret-binary fileb://ingress-cert.pem \
+  --region us-east-1
+```
+
+### SecretProviderClass configuration
+
+Add to your overrides under `secretsManagement.csi.secretProviderClasses`:
+
+```yaml
+- name: ingress-tls-certificate
+  provider: aws          # or azure
+  objects:
+  - objectName: rpi-tls-certificate
+    objectType: secretsmanager    # or secret (for Azure)
+  secretObjects:
+  - secretName: ingress-tls
+    type: kubernetes.io/tls
+    data:
+    - objectName: rpi-tls-certificate
+      key: tls.key
+    - objectName: rpi-tls-certificate
+      key: tls.crt
+```
+
+A validation pod or the ingress controller pod must mount this SecretProviderClass to trigger the initial sync of the K8s TLS Secret.
+
+</details>
+
+<details>
 <summary><strong style="font-size:1.25em;">Custom CA Certificates with SDK</strong></summary>
 
 When using the SDK provider, custom CA certificates can be mounted directly from your vault via CSI inline volume, just like Snowflake keys. This avoids having to create a separate Kubernetes Secret for the certificate.
