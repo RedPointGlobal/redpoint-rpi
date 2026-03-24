@@ -501,7 +501,7 @@ azure.workload.identity/tenant-id: {{ .Values.cloudIdentity.azure.tenantId | quo
 {{- else if eq .Values.global.deployment.platform "google" }}
 iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.google.serviceAccountEmail | quote }}
 {{- else if eq .Values.global.deployment.platform "amazon" }}
-{{- if and (not .Values.cloudIdentity.amazon.useAccessKeys) (not .Values.cloudIdentity.amazon.usePodIdentity) }}
+{{- if not .Values.cloudIdentity.amazon.useAccessKeys }}
 eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
 {{- end }}
 {{- end }}
