@@ -2610,6 +2610,17 @@
     {
       "if": {
         "properties": {
+          "global": {
+            "properties": {
+              "deployment": {
+                "properties": {
+                  "platform": {
+                    "const": "azure"
+                  }
+                }
+              }
+            }
+          },
           "ingress": {
             "properties": {
               "mode": {
