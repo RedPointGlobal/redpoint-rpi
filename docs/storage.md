@@ -142,43 +142,76 @@ queuereader:
 <details>
 <summary><strong>Static BYO (pre-created PV/PVC)</strong></summary>
 
-Create PersistentVolumes and PVCs manually before deploying. When using EFS, create access points with POSIX ownership matching UID/GID 7777 (the user RPI pods run as):
+When using EFS, Redis and RabbitMQ need EFS access points with POSIX ownership matching UID/GID 7777 (the user RPI pods run as). Create one access point per volume:
 
 ```bash
+# Redis
 aws efs create-access-point \
   --file-system-id <your-efs-id> \
   --posix-user Uid=7777,Gid=7777 \
-  --root-directory "Path=/redis,CreationInfo={OwnerUid=7777,OwnerGid=7777,Permissions=755}" \
+  --root-directory "Path=/<namespace>/redis,CreationInfo={OwnerUid=7777,OwnerGid=7777,Permissions=755}" \
+  --region us-east-1
+
+# RabbitMQ
+aws efs create-access-point \
+  --file-system-id <your-efs-id> \
+  --posix-user Uid=7777,Gid=7777 \
+  --root-directory "Path=/<namespace>/rabbitmq,CreationInfo={OwnerUid=7777,OwnerGid=7777,Permissions=755}" \
   --region us-east-1
 ```
 
-Use the access point ID in the PV volumeHandle:
+Note the access point IDs from the output (e.g., `fsap-0abc123...`).
+
+Define the PVs in your overrides using the `<efs-id>::<access-point-id>` format for volumeHandle. A simple StorageClass is needed (no dynamic provisioning parameters required for static BYO):
 
 ```yaml
-csi:
-  driver: efs.csi.aws.com
-  volumeHandle: <efs-id>::<access-point-id>
-```
+storage:
+  storageClass:
+    enabled: true
+    name: my-efs-sc
+    provisioner: efs.csi.aws.com
+  persistentVolumes:
+  - name: pv-redis
+    capacity: 10Gi
+    accessModes:
+    - ReadWriteMany
+    storageClassName: my-efs-sc
+    reclaimPolicy: Retain
+    csi:
+      driver: efs.csi.aws.com
+      volumeHandle: <efs-id>::<redis-access-point-id>
+    pvc:
+      claimName: pvc-redis
+  - name: pv-rabbitmq
+    capacity: 10Gi
+    accessModes:
+    - ReadWriteMany
+    storageClassName: my-efs-sc
+    reclaimPolicy: Retain
+    csi:
+      driver: efs.csi.aws.com
+      volumeHandle: <efs-id>::<rabbitmq-access-point-id>
+    pvc:
+      claimName: pvc-rabbitmq
 
-In your overrides, reference the pre-created PVC:
-
-```yaml
 queuereader:
   internalCache:
     provider: redis
     type: internal
     redisSettings:
-      existingClaim: my-redis-pvc
+      existingClaim: pvc-redis
       volumeClaimTemplates:
         enabled: false
   internalQueues:
     provider: rabbitmq
     type: internal
     rabbitmqSettings:
-      existingClaim: my-rabbitmq-pvc
+      existingClaim: pvc-rabbitmq
       volumeClaimTemplates:
         enabled: false
 ```
+
+The chart creates the PVs and PVCs from the `persistentVolumes` block. The `existingClaim` on the queue reader tells it to use those PVCs instead of dynamic provisioning.
 
 </details>
 
