@@ -184,10 +184,9 @@ When using the SDK secrets provider, the cert can be mounted directly from your 
 <details>
 <summary><strong style="font-size:1.25em;">Deploy</strong></summary>
 
-### 1. Download the CLI
+### 1. Download the [CLI](https://rpi-helm-assistant.redpointcdp.com/app/static/rpihelmcli.zip)
 
 ```bash
-# Download from the Helm Assistant
 unzip rpihelmcli.zip
 ```
 
