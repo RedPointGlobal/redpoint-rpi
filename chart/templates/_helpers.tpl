@@ -611,6 +611,8 @@ Usage: {{- include "rpi.secrets.sdk.envvars" . | nindent 10 }}
   value: "true"
 - name: KeyVault__AmazonSettings__AppSettingsTag
   value: {{ .Values.secretsManagement.sdk.amazon.secretTagKey | quote }}
+- name: AWS_REGION
+  value: {{ .Values.cloudIdentity.amazon.region | default "us-east-1" | quote }}
 {{- end }}
 {{- end }}
 {{- end -}}
