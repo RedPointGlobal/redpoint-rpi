@@ -660,14 +660,38 @@ kubectl create secret generic my-ca-certs \
 <details>
 <summary><strong style="font-size:1.25em;">Image Pull Secrets</strong></summary>
 
-Image pull secrets (for private container registries) cannot be managed through CSI due to a chicken-and-egg problem: the pod needs the secret to pull its image, but CSI only syncs secrets when a pod mounts the volume.
+Image pull secrets cannot be managed through your vault (SDK or CSI). The pod needs the pull secret to download its container image before it starts, so the secret must exist as a Kubernetes Secret in the namespace before deployment.
 
-An image pull secret is only required when your cluster cannot already authenticate to the container registry. If your nodes already have access (e.g., EKS node IAM roles for ECR, AKS with `AcrPull` role on your own ACR), set `imagePullSecret.enabled: false` and no secret is needed.
+**When you need one:**
+- Pulling directly from the Redpoint Container Registry (`rg1acrpub.azurecr.io`), which requires credentials from Redpoint Support
+- Pulling from an internal registry that requires Docker credentials (Artifactory, Harbor, etc.)
 
-You need an image pull secret when:
-- **Pulling directly from the Redpoint Container Registry** (`rg1acrpub.azurecr.io`), which requires authentication credentials provided by Redpoint Support.
-- **Pulling from an internal registry that requires Docker credentials** (e.g., Artifactory, Harbor, or any registry where node-level authentication is not configured).
+**When you don't need one:**
+- Your nodes already have access to the registry (e.g., EKS node IAM roles for ECR, AKS with `AcrPull` role). Set `imagePullSecret.enabled: false`.
+- You mirror images to a registry your nodes can access natively.
 
-In either case, create the secret before deploying. The `rpihelmcli/setup.sh secrets` command will prompt you for registry URL, username, and password, then generate the image pull secret automatically as part of the secrets workflow.
+**How to create it:**
+
+When using `secretsManagement.provider: kubernetes`, the CLI (`rpihelmcli/setup.sh secrets`) will prompt for registry credentials and generate the pull secret automatically.
+
+When using `sdk` or `csi`, the CLI skips the secrets flow. Create the pull secret manually before deploying:
+
+```bash
+kubectl create secret docker-registry redpoint-rpi \
+  --docker-server=rg1acrpub.azurecr.io \
+  --docker-username=<username> \
+  --docker-password='<password>' \
+  -n <namespace>
+```
+
+Then in your overrides:
+```yaml
+global:
+  deployment:
+    images:
+      imagePullSecret:
+        enabled: true
+        name: redpoint-rpi
+```
 
 </details>

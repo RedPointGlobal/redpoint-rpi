@@ -2968,19 +2968,53 @@ cli_deploy() {
 
   echo "  ${CYAN}${BOLD}Running helm ${helm_mode}...${RESET}"
   echo ""
-  if helm "${helm_mode}" rpi "$chart" \
+
+  # Run helm in background
+  local helm_log
+  helm_log=$(mktemp)
+  helm "${helm_mode}" rpi "$chart" \
     -f "$overrides" \
     -n "$namespace" \
     --create-namespace \
     --wait \
-    --timeout 10m; then
+    --timeout 10m > "$helm_log" 2>&1 &
+  local helm_pid=$!
+
+  # Poll pod status while helm is running
+  sleep 3
+  while kill -0 "$helm_pid" 2>/dev/null; do
+    echo "  ${DIM}$(date +%H:%M:%S)${RESET} Pod status:"
+    kubectl get pods -n "$namespace" -l app.kubernetes.io/part-of=rpi --no-headers 2>/dev/null | \
+      while read -r line; do
+        local pod_name status ready
+        pod_name=$(echo "$line" | awk '{print $1}')
+        ready=$(echo "$line" | awk '{print $2}')
+        status=$(echo "$line" | awk '{print $3}')
+        if [ "$status" = "Running" ] && [[ "$ready" != *"0/"* ]]; then
+          echo "    ${GREEN}✔${RESET} ${pod_name}  ${ready}  ${status}"
+        elif [ "$status" = "Running" ]; then
+          echo "    ${YELLOW}●${RESET} ${pod_name}  ${ready}  ${status}"
+        else
+          echo "    ${CYAN}◌${RESET} ${pod_name}  ${ready}  ${status}"
+        fi
+      done
     echo ""
+    sleep 10
+  done
+
+  # Check helm exit code
+  wait "$helm_pid"
+  local helm_exit=$?
+  if [ "$helm_exit" -eq 0 ]; then
     echo "  ${GREEN}✔${RESET} Helm ${helm_mode} successful"
   else
-    echo ""
     echo "  ${RED}✘${RESET} Helm ${helm_mode} failed"
+    echo ""
+    cat "$helm_log"
+    rm -f "$helm_log"
     exit 1
   fi
+  rm -f "$helm_log"
 }
 
 # --- Pre-flight check command ---

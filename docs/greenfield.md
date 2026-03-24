@@ -201,7 +201,21 @@ rpihelmcli/setup.sh check -f overrides.yaml
 
 This checks: required tools, cluster connectivity, YAML syntax, platform, and secrets provider.
 
-### 3. Generate secrets (kubernetes provider only)
+### 3. Create image pull secret (if needed)
+
+If pulling from the Redpoint Container Registry (`rg1acrpub.azurecr.io`) or any private registry that requires credentials, create the pull secret before deploying. This applies regardless of your secrets provider.
+
+```bash
+kubectl create secret docker-registry redpoint-rpi \
+  --docker-server=rg1acrpub.azurecr.io \
+  --docker-username=<username> \
+  --docker-password='<password>' \
+  -n <namespace>
+```
+
+Skip this if your nodes already have access to the registry (e.g., ECR with node IAM roles, ACR with `AcrPull`).
+
+### 4. Generate secrets (kubernetes provider only)
 
 If using `secretsManagement.provider: kubernetes`, the CLI prompts for credentials and generates a K8s Secret:
 
@@ -212,7 +226,7 @@ kubectl apply -f secrets.yaml -n <namespace>
 
 Skip this step if using `sdk` or `csi`. Your secrets come from the vault.
 
-### 4. Dry run
+### 5. Dry run
 
 Preview the rendered manifests without deploying:
 
@@ -220,7 +234,7 @@ Preview the rendered manifests without deploying:
 rpihelmcli/setup.sh deploy -f overrides.yaml -n <namespace> --dry-run
 ```
 
-### 5. Deploy
+### 6. Deploy
 
 ```bash
 rpihelmcli/setup.sh deploy -f overrides.yaml -n <namespace>
@@ -228,7 +242,7 @@ rpihelmcli/setup.sh deploy -f overrides.yaml -n <namespace>
 
 The CLI auto-clones the chart from GitHub, creates the namespace if needed, and runs `helm install`.
 
-### 6. Verify
+### 7. Verify
 
 ```bash
 rpihelmcli/setup.sh status -n <namespace>

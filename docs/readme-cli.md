@@ -146,7 +146,7 @@ Reading configuration from: overrides.yaml
 <details>
 <summary><strong style="font-size:1.25em;">Deploy</strong></summary>
 
-Auto-clones the chart from GitHub (or reuses an existing clone), creates the namespace if needed, and runs `helm install` or `helm upgrade`.
+Auto-clones the chart from GitHub (or reuses an existing clone), creates the namespace if needed, and runs `helm install` or `helm upgrade`. Live pod status is shown while waiting for the deployment to complete.
 
 ```bash
 rpihelmcli/setup.sh deploy -f overrides.yaml -n my-namespace
@@ -166,8 +166,28 @@ Interaction CLI -- Deploy
 
   Running helm install...
 
+  01:23:45 Pod status:
+    ◌ rpi-deploymentapi-79bfb9d884-rxnqd   0/2  Init:0/1
+    ◌ rpi-interactionapi-8558b7fbc6-kqrq8  0/2  ContainerCreating
+    ◌ rpi-executionservice-8ffc9797b-t8xhj  0/2  ContainerCreating
+
+  01:23:55 Pod status:
+    ✔ rpi-deploymentapi-79bfb9d884-rxnqd   2/2  Running
+    ● rpi-interactionapi-8558b7fbc6-kqrq8  1/2  Running
+    ◌ rpi-executionservice-8ffc9797b-t8xhj  0/2  Init:0/1
+
+  01:24:05 Pod status:
+    ✔ rpi-deploymentapi-79bfb9d884-rxnqd   2/2  Running
+    ✔ rpi-interactionapi-8558b7fbc6-kqrq8  2/2  Running
+    ✔ rpi-executionservice-8ffc9797b-t8xhj  2/2  Running
+
   ✔ Helm install successful
 ```
+
+Pod status indicators:
+- ✔ Green: all containers ready
+- ● Yellow: running but not all containers ready
+- ◌ Circle: still starting (init, creating, pulling)
 
 **Dry run** (preview without deploying):
 
