@@ -13,7 +13,7 @@
 */}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 {{- $saMode := .Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
-{{- $vpSAName := "rpi-validationpods" -}}
+{{- $vpSAName := (.Values.validationPods).serviceAccountName | default "rpi-validationpods" -}}
 {{- if and (eq $saMode "per-service") ((.Values.validationPods).deployments) }}
 ---
 apiVersion: v1
@@ -78,14 +78,10 @@ spec:
         {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
     spec:
-      {{- if .serviceAccountName }}
-      serviceAccountName: {{ .serviceAccountName | quote }}
-      {{- else if $.Values.validationPods.serviceAccountName }}
-      serviceAccountName: {{ $.Values.validationPods.serviceAccountName | quote }}
-      {{- else if eq ($.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
+      {{- if eq ($.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
       serviceAccountName: {{ $.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" | quote }}
       {{- else }}
-      serviceAccountName: "rpi-validationpods"
+      serviceAccountName: {{ $vpSAName | quote }}
       {{- end }}
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
       {{- if .nodeSelector }}
