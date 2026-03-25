@@ -525,8 +525,7 @@ Usage: {{- include "rpi.cloudidentity.envvars" . | nindent 10 }}
 {{- define "rpi.cloudidentity.envvars" -}}
 {{- if .Values.cloudIdentity.enabled -}}
 {{- if eq .Values.global.deployment.platform "amazon" }}
-{{- if not .Values.cloudIdentity.amazon.useAccessKeys }}
-{{- if not .Values.cloudIdentity.amazon.usePodIdentity }}
+{{- if and (not .Values.cloudIdentity.amazon.useAccessKeys) (not .Values.cloudIdentity.amazon.usePodIdentity) }}
 - name: AWS_ROLE_ARN
   value: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
 - name: AWS_WEB_IDENTITY_TOKEN_FILE
@@ -536,7 +535,6 @@ Usage: {{- include "rpi.cloudidentity.envvars" . | nindent 10 }}
 {{- end }}
 - name: AWS_DEFAULT_REGION
   value: {{ .Values.cloudIdentity.amazon.region | quote }}
-{{- end }}
 {{- else if eq .Values.global.deployment.platform "google" }}
 {{- if .Values.cloudIdentity.google.configMapName }}
 - name: GOOGLE_APPLICATION_CREDENTIALS
