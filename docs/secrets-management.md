@@ -44,6 +44,7 @@ A validation pod is required to trigger the initial CSI sync before RPI pods can
 | Item | How it's handled |
 |:-----|:----------------|
 | Image pull secret | Create manually with `kubectl` before deploying |
+| AWS credentials (if platform is Amazon) | Create a K8s Secret with IAM access keys (`useAccessKeys: true`). Required for RPI to access Secrets Manager. |
 | Ingress TLS certificate | SecretProviderClass syncs from vault into a `kubernetes.io/tls` K8s Secret (nginx requires it) |
 | Snowflake private key (if using Snowflake) | Mounted directly into the pod from vault via CSI inline volume (no K8s Secret) |
 | Custom CA certificate (if required) | Mounted directly into the pod from vault via CSI inline volume (no K8s Secret) |
@@ -181,22 +182,32 @@ For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpoin
 </details>
 
 <details>
-<summary><strong>AWS (IRSA)</strong></summary>
+<summary><strong>AWS (Access Keys)</strong></summary>
 
-Create an IAM role with a trust policy that allows the EKS OIDC provider to assume the role for RPI service accounts. The simplest approach uses a `StringLike` wildcard:
+RPI on AWS currently uses IAM access keys to authenticate to Secrets Manager. Create an IAM user with `SecretsManagerReadWrite` permissions and store the credentials in a Kubernetes Secret before deploying:
 
-```json
-{
-  "Condition": {
-    "StringLike": {
-      "<oidc-id>:sub": "system:serviceaccount:<namespace>:rpi-*",
-      "<oidc-id>:aud": "sts.amazonaws.com"
-    }
-  }
-}
+```bash
+kubectl create secret generic rpi-aws-credentials \
+  --from-literal=AWS_Access_Key_ID=<your-access-key-id> \
+  --from-literal=AWS_Secret_Access_Key=<your-secret-access-key> \
+  -n <namespace>
 ```
 
-Attach the `SecretsManagerReadWrite` policy to the role.
+In your overrides:
+
+```yaml
+cloudIdentity:
+  enabled: true
+  serviceAccount:
+    mode: per-service
+  amazon:
+    roleArn: arn:aws:iam::<account>:role/<role-name>
+    region: us-east-1
+    useAccessKeys: true
+    accessKeySecretName: rpi-aws-credentials
+```
+
+The chart injects `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` into all RPI pods from this secret. The `roleArn` is still needed for the service account annotation used by the CSI Secrets Store provider (for Snowflake keys, TLS certs, and CA certs).
 
 For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Amazon** > **Vault Secrets Setup**.
 
