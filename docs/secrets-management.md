@@ -44,7 +44,7 @@ A validation pod is required to trigger the initial CSI sync before RPI pods can
 | Item | How it's handled |
 |:-----|:----------------|
 | Image pull secret | Create manually with `kubectl` before deploying |
-| AWS credentials (if platform is Amazon) | Create a K8s Secret with IAM access keys (`useAccessKeys: true`) when services need direct AWS API access (e.g., SQS). |
+| AWS credentials (if platform is Amazon) | Create a K8s Secret with IAM access keys (`useAccessKeys: true`). The IAM user associated with these keys needs read/write access to Amazon SQS and Amazon S3. |
 | Ingress TLS certificate | Create manually with `kubectl create secret tls` before deploying. The ingress controller requires the cert as a K8s Secret - it cannot read from vault directly. |
 | Snowflake private key (if using Snowflake) | Create manually with `kubectl create secret generic` before deploying. The `.p8` key file is mounted as a volume into execution service pods. |
 | Custom CA certificate (if required) | Create manually with `kubectl create secret generic` before deploying. The CA bundle is mounted into service pods. |
