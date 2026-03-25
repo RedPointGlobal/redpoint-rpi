@@ -48,17 +48,17 @@ A validation pod is required to trigger the initial CSI sync before RPI pods can
 <details>
 <summary><strong>sdk - Azure</strong></summary>
 
-RPI services authenticate to Azure Key Vault using Workload Identity Federation and read application secrets at runtime.
+RPI services authenticate to Azure Key Vault using Workload Identity Federation and read application secrets at runtime. The CSI Secrets Store driver with the Azure Key Vault provider works fully with Workload Identity, so file-based secrets can also be pulled from Key Vault.
 
 | Item | How it's handled |
 |:-----|:----------------|
 | Image pull secret | Create manually with `kubectl` before deploying |
-| Ingress TLS certificate | Create manually with `kubectl create secret tls` before deploying |
-| Snowflake private key (if using Snowflake) | Create manually with `kubectl create secret generic` before deploying |
-| Custom CA certificate (if required) | Create manually with `kubectl create secret generic` before deploying |
+| Ingress TLS certificate | SecretProviderClass syncs from Key Vault into a `kubernetes.io/tls` K8s Secret |
+| Snowflake private key (if using Snowflake) | Mounted directly into the pod from Key Vault via CSI inline volume |
+| Custom CA certificate (if required) | Mounted directly into the pod from Key Vault via CSI inline volume |
 | RPI application secrets | Read directly from Azure Key Vault at runtime via SDK (no K8s Secret needed) |
 
-No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert) must be created as Kubernetes Secrets since the ingress controller and volume mounts cannot read from Key Vault directly.
+No validation pods needed for application secrets. Snowflake keys and CA certs are mounted as files by the pods themselves.
 
 </details>
 
