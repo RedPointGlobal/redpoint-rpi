@@ -99,131 +99,23 @@ No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert)
 
 ---
 
+## Azure
+
 <details>
-<summary><strong style="font-size:1.25em;">SDK Provider: Prerequisites</strong></summary>
+<summary><strong style="font-size:1.25em;">SDK Prerequisites</strong></summary>
 
-When using the `sdk` provider, RPI services authenticate to your cloud vault using workload identity and read secrets at runtime. Before deploying, you need to:
+When using the `sdk` provider on Azure, RPI services authenticate to Azure Key Vault using Workload Identity Federation and read secrets at runtime. Before deploying:
 
-1. **Create a Key Vault** (or use an existing one) and store the required secrets
-2. **Create a Managed Identity** and grant it the required roles (vault access + storage access)
+1. **Create an Azure Key Vault** (or use an existing one) and store the required secrets
+2. **Create a Managed Identity** and grant it the required roles
 3. **Configure Workload Identity Federation** for each RPI service account
 
-For Azure, the managed identity needs the following role assignments:
+The managed identity needs the following role assignments:
 
 | Scope | Role(s) |
 |:------|:--------|
 | Key Vault | `Key Vault Secrets Officer` |
 | Storage Account (FileOutputDirectory) | `Reader`, `Storage Account Key Operator Service Role`, `Storage Blob Data Contributor`, `Storage File Data SMB Share Contributor` |
-
-The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Azure** / **Amazon** / **Google** > **Vault Secrets Setup** generates a setup script that handles all three steps. Select your platform, enter your environment details, and download the script.
-
-### Required Vault Secrets
-
-The secret names must match exactly. The hierarchy separator differs by platform:
-
-| Platform | Separator | Example |
-|:---------|:----------|:--------|
-| Azure Key Vault | `--` (double dash) | `ConnectionStrings--OperationalDatabase` |
-| AWS Secrets Manager | `__` (double underscore) | `ConnectionStrings__OperationalDatabase` |
-| Google Secret Manager | `--` (double dash) | `ConnectionStrings--OperationalDatabase` |
-
-> Azure Key Vault does not allow `__` in secret names, so `--` is used instead. AWS Secrets Manager stores all keys as JSON within a single secret, so `__` is used to match the .NET configuration hierarchy.
-
-The tables below use `{s}` as a placeholder for the platform-specific separator.
-
-**Database connections** (always required):
-
-| Vault Secret Name | Description |
-|:-------------------|:------------|
-| `ConnectionStrings{s}LoggingDatabase` | Full connection string to the logging database |
-| `ConnectionStrings{s}OperationalDatabase` | Full connection string to the operational database |
-| `ClusterEnvironment{s}OperationalDatabase{s}PulseDatabaseName` | Operational database name |
-| `ClusterEnvironment{s}OperationalDatabase{s}LoggingDatabaseName` | Logging database name |
-| `ClusterEnvironment{s}OperationalDatabase{s}ConnectionSettings{s}Username` | Database username |
-| `ClusterEnvironment{s}OperationalDatabase{s}ConnectionSettings{s}Password` | Database password |
-| `ClusterEnvironment{s}OperationalDatabase{s}ConnectionSettings{s}Server` | Database server hostname |
-
-**Realtime API** (if enabled):
-
-| Vault Secret Name | Description |
-|:-------------------|:------------|
-| `RealtimeAPIConfiguration{s}AppSettings{s}RealtimeAPIKey` | Your API key |
-| `RealtimeAPIConfiguration{s}AppSettings{s}RPIAuthToken` | Your auth token |
-| `RealtimeAPIConfiguration{s}CacheSettings{s}Caches{s}0{s}Settings{s}1{s}Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration{s}CacheSettings{s}Caches{s}0{s}Settings{s}1{s}Value` | Your cache connection string (MongoDB, Redis, etc.) |
-
-<details>
-<summary><strong>Azure queue secrets (Service Bus)</strong></summary>
-
-| Vault Secret Name | Value |
-|:-------------------|:------|
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `ServiceBus` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your Service Bus connection string |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `ServiceBus` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your Service Bus connection string |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Key` | `QueueType` |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Value` | `ServiceBus` |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your Service Bus connection string |
-
-</details>
-
-<details>
-<summary><strong>AWS queue secrets (Amazon SQS)</strong></summary>
-
-| Vault Secret Name | Value |
-|:-------------------|:------|
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key` | `AccessKey` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value` | Your AWS access key ID |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key` | `SecretKey` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value` | Your AWS secret access key |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key` | `AccessKey` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value` | Your AWS access key ID |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key` | `SecretKey` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value` | Your AWS secret access key |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key` | `AccessKey` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value` | Your AWS access key ID |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key` | `SecretKey` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value` | Your AWS secret access key |
-
-</details>
-
-<details>
-<summary><strong>Google queue secrets (Pub/Sub)</strong></summary>
-
-| Vault Secret Name | Value |
-|:-------------------|:------|
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `GooglePubSub` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your GCP project ID |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `GooglePubSub` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your GCP project ID |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Key` | `QueueType` |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Value` | `GooglePubSub` |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
-| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your GCP project ID |
-
-</details>
-
-**SMTP** (if sending email):
-
-| Vault Secret Name | Value |
-|:-------------------|:------|
-| `RPI{s}SMTP{s}Password` | Your SMTP password |
-
-### Workload Identity / IRSA
-
-Each RPI service runs under its own Kubernetes ServiceAccount. Your cloud identity must be configured to allow these service accounts to access the vault.
-
-<details>
-<summary><strong>Azure (Workload Identity Federation)</strong></summary>
 
 The managed identity needs a federated credential for each service account:
 
@@ -245,7 +137,193 @@ For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpoin
 </details>
 
 <details>
-<summary><strong>AWS (IRSA / Pod Identity / Access Keys)</strong></summary>
+<summary><strong style="font-size:1.25em;">Required Vault Secrets</strong></summary>
+
+Azure Key Vault does not allow `__` in secret names, so `--` is used as the hierarchy separator. The secret names must match exactly.
+
+**Database connections** (always required):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `ConnectionStrings--LoggingDatabase` | Full connection string to the logging database |
+| `ConnectionStrings--OperationalDatabase` | Full connection string to the operational database |
+| `ClusterEnvironment--OperationalDatabase--PulseDatabaseName` | Operational database name |
+| `ClusterEnvironment--OperationalDatabase--LoggingDatabaseName` | Logging database name |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username` | Database username |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` | Database password |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Server` | Database server hostname |
+
+**Realtime API** (if enabled):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key |
+| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string (MongoDB, Redis, etc.) |
+
+**Queue secrets (Service Bus):**
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `ServiceBus` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your Service Bus connection string |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `ServiceBus` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your Service Bus connection string |
+
+**Callback API** (if enabled):
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Key` | `QueueType` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Value` | `ServiceBus` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your Service Bus connection string |
+
+**SMTP** (if sending email):
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RPI--SMTP--Password` | Your SMTP password |
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">TLS Certificate</strong></summary>
+
+Store the certificate in Key Vault:
+
+```bash
+az keyvault certificate import --vault-name <vault> --name my-tls-certificate --file ingress-cert.pem
+```
+
+Define a SecretProviderClass to sync from Key Vault into a `kubernetes.io/tls` K8s Secret. Azure Key Vault splits the cert and key automatically from a single imported certificate:
+
+```yaml
+- name: ingress-tls-certificate
+  provider: azure
+  parameters:
+    clientID: <managed-identity-client-id>
+    keyvaultName: <your-keyvault>
+    resourceGroup: <your-rg>
+    subscriptionId: <your-sub>
+    tenantId: <your-tenant>
+  objects:
+  - objectName: my-tls-certificate
+    objectType: secret
+  secretObjects:
+  - secretName: ingress-tls
+    type: kubernetes.io/tls
+    data:
+    - objectName: my-tls-certificate
+      key: tls.key
+    - objectName: my-tls-certificate
+      key: tls.crt
+```
+
+A validation pod must mount this SecretProviderClass to trigger the initial sync of the K8s TLS Secret. The RPI pods themselves do not mount TLS certificates.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Snowflake Private Key</strong></summary>
+
+With SDK on Azure, the Snowflake `.p8` key is mounted directly from Key Vault via CSI inline volume. No K8s Secret is created and no validation pod is needed.
+
+Define a SecretProviderClass under `secretsManagement.csi` and set `secretProviderClassName` on the Snowflake config:
+
+```yaml
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+  csi:
+    secretProviderClasses:
+    - name: snowflake-creds
+      provider: azure
+      parameters:
+        clientID: <managed-identity-client-id>
+        keyvaultName: <your-keyvault>
+        resourceGroup: <your-rg>
+        subscriptionId: <your-sub>
+        tenantId: <your-tenant>
+        useVMManagedIdentity: "false"
+        usePodIdentity: "false"
+      objects:
+      - objectName: my-snowflake-private-key
+        objectType: secret
+        objectAlias: my-snowflake-rsakey.p8
+
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      secretName: snowflake-creds
+      mountPath: /app/snowflake-creds
+      secretProviderClassName: snowflake-creds
+      keys:
+      - keyName: my-snowflake-rsakey.p8
+```
+
+The `objectAlias` controls the filename inside the container.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Custom CA Certificate</strong></summary>
+
+With SDK on Azure, CA certificates are mounted directly from Key Vault via CSI inline volume.
+
+Store your CA bundle in Azure Key Vault, define a SecretProviderClass, and set `secretProviderClassName` on the `customCACerts` config:
+
+```yaml
+customCACerts:
+  enabled: true
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+  secretProviderClassName: ca-cert-provider
+
+secretsManagement:
+  provider: sdk
+  sdk:
+    azure:
+      vaultUri: https://myvault.vault.azure.net/
+  csi:
+    secretProviderClasses:
+    - name: ca-cert-provider
+      provider: azure
+      parameters:
+        clientID: <managed-identity-client-id>
+        keyvaultName: <your-keyvault>
+        resourceGroup: <your-rg>
+        subscriptionId: <your-sub>
+        tenantId: <your-tenant>
+      objects:
+      - objectName: my-ca-bundle
+        objectType: secret
+        objectAlias: ca-bundle.pem
+```
+
+Store the certificate in Key Vault:
+
+```bash
+az keyvault secret set --vault-name <vault> --name my-ca-bundle --file ca-bundle.pem
+```
+
+</details>
+
+---
+
+## Amazon
+
+<details>
+<summary><strong style="font-size:1.25em;">SDK Prerequisites</strong></summary>
 
 RPI on AWS supports multiple authentication methods. Choose based on your EKS configuration:
 
@@ -310,7 +388,134 @@ For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpoin
 </details>
 
 <details>
-<summary><strong>Google (Workload Identity)</strong></summary>
+<summary><strong style="font-size:1.25em;">Required Vault Secrets</strong></summary>
+
+AWS Secrets Manager stores all keys as JSON within a single secret, using `__` (double underscore) as the hierarchy separator to match the .NET configuration hierarchy. The secret names must match exactly.
+
+**Database connections** (always required):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `ConnectionStrings__LoggingDatabase` | Full connection string to the logging database |
+| `ConnectionStrings__OperationalDatabase` | Full connection string to the operational database |
+| `ClusterEnvironment__OperationalDatabase__PulseDatabaseName` | Operational database name |
+| `ClusterEnvironment__OperationalDatabase__LoggingDatabaseName` | Logging database name |
+| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username` | Database username |
+| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password` | Database password |
+| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server` | Database server hostname |
+
+**Realtime API** (if enabled):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `RealtimeAPIConfiguration__AppSettings__RealtimeAPIKey` | Your API key |
+| `RealtimeAPIConfiguration__AppSettings__RPIAuthToken` | Your auth token |
+| `RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Value` | Your cache connection string (MongoDB, Redis, etc.) |
+
+**Queue secrets (Amazon SQS):**
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key` | `AccessKey` |
+| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value` | Your AWS access key ID |
+| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key` | `SecretKey` |
+| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value` | Your AWS secret access key |
+| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key` | `AccessKey` |
+| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value` | Your AWS access key ID |
+| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key` | `SecretKey` |
+| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value` | Your AWS secret access key |
+
+**Callback API** (if enabled):
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key` | `AccessKey` |
+| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value` | Your AWS access key ID |
+| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key` | `SecretKey` |
+| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value` | Your AWS secret access key |
+
+**SMTP** (if sending email):
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RPI__SMTP__Password` | Your SMTP password |
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">TLS Certificate</strong></summary>
+
+On AWS with the SDK provider, create the ingress TLS certificate as a Kubernetes Secret directly:
+
+```bash
+kubectl create secret tls ingress-tls \
+  --cert=tls.crt --key=tls.key \
+  -n <namespace>
+```
+
+The ingress controller reads the TLS cert from this K8s Secret. No SecretProviderClass or CSI driver is needed.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Snowflake Private Key</strong></summary>
+
+On AWS with the SDK provider, create the Snowflake private key as a Kubernetes Secret directly:
+
+```bash
+kubectl create secret generic snowflake-rsa-private-key \
+  --from-file=sf_rpi_usr_private_key.p8 \
+  -n <namespace>
+```
+
+Then reference it in your overrides:
+
+```yaml
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      secretName: snowflake-rsa-private-key
+      mountPath: /app/snowflake-creds
+      keys:
+      - keyName: sf_rpi_usr_private_key.p8
+```
+
+No CSI driver or SecretProviderClass is needed. The chart mounts the key file from the K8s Secret directly.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Custom CA Certificate</strong></summary>
+
+On AWS with the SDK provider, create the CA certificate as a Kubernetes Secret directly:
+
+```bash
+kubectl create secret generic custom-ca-cert \
+  --from-file=ca-bundle.pem \
+  -n <namespace>
+```
+
+Then reference it in your overrides:
+
+```yaml
+customCACerts:
+  enabled: true
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+  secretName: custom-ca-cert
+```
+
+</details>
+
+---
+
+## Google
+
+<details>
+<summary><strong style="font-size:1.25em;">SDK Prerequisites</strong></summary>
 
 Create a GCP service account with `roles/secretmanager.secretAccessor` and bind it to the Kubernetes service accounts:
 
@@ -326,7 +531,130 @@ For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpoin
 
 </details>
 
+<details>
+<summary><strong style="font-size:1.25em;">Required Vault Secrets</strong></summary>
+
+Google Secret Manager uses `--` (double dash) as the hierarchy separator. The secret names must match exactly.
+
+**Database connections** (always required):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `ConnectionStrings--LoggingDatabase` | Full connection string to the logging database |
+| `ConnectionStrings--OperationalDatabase` | Full connection string to the operational database |
+| `ClusterEnvironment--OperationalDatabase--PulseDatabaseName` | Operational database name |
+| `ClusterEnvironment--OperationalDatabase--LoggingDatabaseName` | Logging database name |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username` | Database username |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` | Database password |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Server` | Database server hostname |
+
+**Realtime API** (if enabled):
+
+| Vault Secret Name | Description |
+|:-------------------|:------------|
+| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key |
+| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string (MongoDB, Redis, etc.) |
+
+**Queue secrets (Pub/Sub):**
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your GCP project ID |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your GCP project ID |
+
+**Callback API** (if enabled):
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Key` | `QueueType` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your GCP project ID |
+
+**SMTP** (if sending email):
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `RPI--SMTP--Password` | Your SMTP password |
+
 </details>
+
+<details>
+<summary><strong style="font-size:1.25em;">TLS Certificate</strong></summary>
+
+On Google with the SDK provider, create the ingress TLS certificate as a Kubernetes Secret directly:
+
+```bash
+kubectl create secret tls ingress-tls \
+  --cert=tls.crt --key=tls.key \
+  -n <namespace>
+```
+
+The ingress controller reads the TLS cert from this K8s Secret.
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Snowflake Private Key</strong></summary>
+
+On Google with the SDK provider, create the Snowflake private key as a Kubernetes Secret directly:
+
+```bash
+kubectl create secret generic snowflake-rsa-private-key \
+  --from-file=sf_rpi_usr_private_key.p8 \
+  -n <namespace>
+```
+
+Then reference it in your overrides:
+
+```yaml
+databases:
+  datawarehouse:
+    snowflake:
+      enabled: true
+      credentialsType: snowflake_jwt
+      secretName: snowflake-rsa-private-key
+      mountPath: /app/snowflake-creds
+      keys:
+      - keyName: sf_rpi_usr_private_key.p8
+```
+
+</details>
+
+<details>
+<summary><strong style="font-size:1.25em;">Custom CA Certificate</strong></summary>
+
+On Google with the SDK provider, create the CA certificate as a Kubernetes Secret directly:
+
+```bash
+kubectl create secret generic custom-ca-cert \
+  --from-file=ca-bundle.pem \
+  -n <namespace>
+```
+
+Then reference it in your overrides:
+
+```yaml
+customCACerts:
+  enabled: true
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+  secretName: custom-ca-cert
+```
+
+</details>
+
+---
+
+## Shared Reference
 
 <details>
 <summary><strong style="font-size:1.25em;">CSI Provider: Required Vault Keys</strong></summary>
@@ -514,19 +842,9 @@ The hostname in the connection string must match the internal service name the c
 </details>
 
 <details>
-<summary><strong style="font-size:1.25em;">Snowflake Private Key Authentication</strong></summary>
+<summary><strong style="font-size:1.25em;">Snowflake: kubernetes and csi Providers</strong></summary>
 
-Snowflake JWT authentication requires the `.p8` RSA private key file to be mounted in the container. All three providers use the file-based approach (`PRIVATE_KEY_FILE`), but the way the file gets into the pod differs.
-
-### How It Works Per Provider
-
-| Provider | Key source | Volume type | Validation pod needed? |
-|:---------|:-----------|:------------|:-----------------------|
-| **kubernetes** | CLI creates a K8s Secret from your `.p8` file | Secret volume with `subPath` | No |
-| **csi** | SecretProviderClass syncs key from vault to a K8s Secret | Secret volume with `subPath` | Yes (triggers CSI sync) |
-| **sdk** | SecretProviderClass mounts key directly via CSI inline volume | CSI inline volume | No (mounted by RPI pods directly) |
-
-All three result in the same file path inside the container. The connection string in the RPI client is always:
+Snowflake JWT authentication requires the `.p8` RSA private key file to be mounted in the container. The connection string in the RPI client is always:
 
 ```
 User=<user>;Db=<database>;Host=<host>;Account=<account>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/my-snowflake-rsakey.p8
@@ -598,240 +916,6 @@ validationPods:
     secretProviderClass: snowflake-creds
     mountPath: /home/secrets/snowflake
     volumeName: secrets-store-sf
-```
-
-### sdk Provider
-
-With SDK, RPI services read secrets from the vault at runtime. But Snowflake needs a file, not a runtime value. The chart solves this by mounting the key directly via a CSI inline volume on the RPI pods themselves, so no K8s Secret is created and no validation pod is needed.
-
-Define a SecretProviderClass under `secretsManagement.csi` (the chart renders it regardless of the main provider) and set `secretProviderClassName` on the Snowflake config:
-
-```yaml
-secretsManagement:
-  provider: sdk
-  sdk:
-    azure:
-      vaultUri: https://myvault.vault.azure.net/
-      configurationReloadIntervalSeconds: 30
-      useADTokenForDatabaseConnection: true
-  csi:
-    secretProviderClasses:
-    - name: snowflake-creds
-      provider: azure
-      parameters:
-        clientID: <managed-identity-client-id>
-        keyvaultName: <your-keyvault>
-        resourceGroup: <your-rg>
-        subscriptionId: <your-sub>
-        tenantId: <your-tenant>
-        useVMManagedIdentity: "false"
-        usePodIdentity: "false"
-      objects:
-      - objectName: my-snowflake-private-key
-        objectType: secret
-        objectAlias: my-snowflake-rsakey.p8
-
-databases:
-  datawarehouse:
-    snowflake:
-      enabled: true
-      credentialsType: snowflake_jwt
-      secretName: snowflake-creds
-      mountPath: /app/snowflake-creds
-      secretProviderClassName: snowflake-creds
-      keys:
-      - keyName: my-snowflake-rsakey.p8
-```
-
-Key differences from the CSI provider approach:
-- No `secretObjects` on the SecretProviderClass (no K8s Secret created)
-- `secretProviderClassName` tells the chart to use a CSI inline volume instead of a Secret volume
-- No validation pod needed since the CSI volume is mounted directly by the RPI pods
-- The `objectAlias` controls the filename inside the container
-
-#### AWS Example
-
-On AWS, use the AWS Secrets and Configuration Provider (ASCP) with `provider: aws` and `objectType: secretsmanager`:
-
-```yaml
-secretsManagement:
-  provider: sdk
-  sdk:
-    amazon:
-      secretTagKey: my-rpi-tag
-  csi:
-    secretProviderClasses:
-    - name: snowflake-rsa-private-key
-      provider: aws
-      objects:
-      - objectName: sf-rpi-svc-rsa-private-key
-        objectType: secretsmanager
-        objectAlias: sf_rpi_usr_private_key.p8
-
-databases:
-  datawarehouse:
-    snowflake:
-      enabled: true
-      credentialsType: snowflake_jwt
-      secretName: snowflake-rsa-private-key
-      mountPath: /app/snowflake-creds
-      secretProviderClassName: snowflake-rsa-private-key
-      keys:
-      - keyName: sf_rpi_usr_private_key.p8
-```
-
-Store the `.p8` key in AWS Secrets Manager as a binary secret:
-
-```bash
-# Get the key from Azure Key Vault (if migrating)
-# az keyvault secret show --vault-name <vault> --name <secret> --query value -o tsv > sf_rpi_usr_private_key.p8
-
-# Create in AWS Secrets Manager
-aws secretsmanager create-secret \
-  --name sf-rpi-svc-rsa-private-key \
-  --secret-binary fileb://sf_rpi_usr_private_key.p8 \
-  --region us-east-1
-```
-
-Prerequisites: the [AWS Secrets and Configuration Provider](https://github.com/aws/secrets-store-csi-driver-provider-aws) and the CSI Secrets Store Driver must be installed on your EKS cluster.
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">TLS Certificates with SDK</strong></summary>
-
-When using the SDK provider, the ingress TLS certificate must still be synced to a `kubernetes.io/tls` Kubernetes Secret because nginx reads TLS from K8s Secrets. Use a SecretProviderClass with `secretObjects` to sync from your vault.
-
-### Azure
-
-Store the certificate in Key Vault and define a SecretProviderClass:
-
-```bash
-az keyvault certificate import --vault-name <vault> --name my-tls-certificate --file ingress-cert.pem
-```
-
-### AWS
-
-On AWS with the SDK provider, create the ingress TLS certificate as a Kubernetes Secret directly:
-
-```bash
-kubectl create secret tls ingress-tls \
-  --cert=tls.crt --key=tls.key \
-  -n <namespace>
-```
-
-The ingress controller reads the TLS cert from this K8s Secret. No SecretProviderClass or CSI driver is needed.
-
-### SecretProviderClass configuration (Azure only)
-
-Azure Key Vault splits the cert and key automatically from a single imported certificate:
-
-```yaml
-- name: ingress-tls-certificate
-  provider: azure
-  parameters:
-    clientID: <managed-identity-client-id>
-    keyvaultName: <your-keyvault>
-    resourceGroup: <your-rg>
-    subscriptionId: <your-sub>
-    tenantId: <your-tenant>
-  objects:
-  - objectName: my-tls-certificate
-    objectType: secret
-  secretObjects:
-  - secretName: ingress-tls
-    type: kubernetes.io/tls
-    data:
-    - objectName: my-tls-certificate
-      key: tls.key
-    - objectName: my-tls-certificate
-      key: tls.crt
-```
-
-A validation pod must mount this SecretProviderClass to trigger the initial sync of the K8s TLS Secret. The RPI pods themselves do not mount TLS certificates.
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">Custom CA Certificates with SDK</strong></summary>
-
-When using the SDK provider, custom CA certificates can be mounted directly from your vault via CSI inline volume, just like Snowflake keys. This avoids having to create a separate Kubernetes Secret for the certificate.
-
-### Azure
-
-Store your CA bundle in Azure Key Vault, define a SecretProviderClass, and set `secretProviderClassName` on the `customCACerts` config:
-
-```yaml
-customCACerts:
-  enabled: true
-  mountPath: /usr/local/share/ca-certificates/custom
-  certFile: ca-bundle.pem
-  secretProviderClassName: ca-cert-provider
-
-secretsManagement:
-  provider: sdk
-  sdk:
-    azure:
-      vaultUri: https://myvault.vault.azure.net/
-  csi:
-    secretProviderClasses:
-    - name: ca-cert-provider
-      provider: azure
-      parameters:
-        clientID: <managed-identity-client-id>
-        keyvaultName: <your-keyvault>
-        resourceGroup: <your-rg>
-        subscriptionId: <your-sub>
-        tenantId: <your-tenant>
-      objects:
-      - objectName: my-ca-bundle
-        objectType: secret
-        objectAlias: ca-bundle.pem
-```
-
-Store the certificate in Key Vault:
-
-```bash
-# az keyvault secret set --vault-name <vault> --name my-ca-bundle --file ca-bundle.pem
-```
-
-### AWS
-
-On AWS with the SDK provider, create the CA certificate as a Kubernetes Secret directly:
-
-```bash
-kubectl create secret generic custom-ca-cert \
-  --from-file=ca-bundle.pem \
-  -n <namespace>
-```
-
-Then reference it in your overrides:
-
-```yaml
-customCACerts:
-  enabled: true
-  mountPath: /usr/local/share/ca-certificates/custom
-  certFile: ca-bundle.pem
-  secretName: custom-ca-cert
-```
-
-### Kubernetes / CSI providers
-
-When using the `kubernetes` or `csi` provider, CA certificates are mounted from a Kubernetes Secret:
-
-```yaml
-customCACerts:
-  enabled: true
-  name: my-ca-certs
-  mountPath: /usr/local/share/ca-certificates/custom
-  certFile: ca-bundle.pem
-```
-
-Create the Secret:
-```bash
-kubectl create secret generic my-ca-certs \
-  --from-file=ca-bundle.pem=ca-bundle.pem \
-  -n redpoint-rpi
 ```
 
 </details>
