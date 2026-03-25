@@ -2,7 +2,7 @@
 {{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
 {{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
-{{- $name := "keycloak" -}}
+{{- $name := "cdp-keycloak" -}}
 
 {{- if .Values.smartActivation.enabled }}
 {{- if ne (.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}

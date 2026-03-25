@@ -256,7 +256,7 @@ spec:
         - name: RPI__UserManagement__UseExternalUserManagement
           value: 'true'
         - name: RPI__UserManagement__Keycloak__Address
-          value: "http://keycloak"
+          value: "http://cdp-keycloak/auth"
         - name: RPI__UserManagement__Keycloak__Realm
           value: redpoint-mercury
         - name: RPI__UserManagement__Keycloak__ClientId

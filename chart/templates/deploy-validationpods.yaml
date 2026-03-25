@@ -47,17 +47,20 @@ metadata:
   name: {{ $name }}
   namespace: {{ $.Release.Namespace }}
   labels:
+    {{- if .selectorLabels }}
+    {{- toYaml .selectorLabels | nindent 4 }}
+    {{- else }}
     app.kubernetes.io/name: {{ $name }}
+    {{- end }}
 spec:
   replicas: 1
   selector:
     matchLabels:
+      {{- if .selectorLabels }}
+      {{- toYaml .selectorLabels | nindent 6 }}
+      {{- else }}
       app.kubernetes.io/name: {{ $name }}
-  strategy:
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
-    type: RollingUpdate
+      {{- end }}
   template:
     metadata:
       annotations:
@@ -65,11 +68,20 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
+        {{- if .selectorLabels }}
+        {{- toYaml .selectorLabels | nindent 8 }}
+        {{- else }}
         app.kubernetes.io/name: {{ $name }}
+        {{- end }}
+        {{- with .podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
     spec:
       {{- if .serviceAccountName }}
       serviceAccountName: {{ .serviceAccountName | quote }}
+      {{- else if $.Values.validationPods.serviceAccountName }}
+      serviceAccountName: {{ $.Values.validationPods.serviceAccountName | quote }}
       {{- else if eq ($.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
       serviceAccountName: {{ $.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" | quote }}
       {{- else }}
@@ -117,6 +129,8 @@ spec:
               mountPath: {{ .mountPath }}
               {{- if eq (.type | default "pvc") "csiSecret" }}
               readOnly: true
+              {{- else }}
+              readOnly: false
               {{- end }}
           resources:
             {{- if eq (.type | default "pvc") "csiSecret" }}
