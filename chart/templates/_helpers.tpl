@@ -606,9 +606,9 @@ Usage: {{- include "rpi.secrets.sdk.envvars" . | nindent 10 }}
 - name: KeyVault__Provider
   value: "Amazon"
 - name: KeyVault__UseForAppSettings
-  value: "true"
+  value: {{ .Values.secretsManagement.sdk.amazon.useForAppSettings | default "true" | quote }}
 - name: KeyVault__UseForConfigPasswords
-  value: "true"
+  value: {{ .Values.secretsManagement.sdk.amazon.useForConfigPasswords | default "true" | quote }}
 - name: KeyVault__AmazonSettings__AppSettingsTag
   value: {{ .Values.secretsManagement.sdk.amazon.secretTagKey | quote }}
 - name: AWS_REGION
