@@ -712,19 +712,19 @@ az keyvault certificate import --vault-name <vault> --name my-tls-certificate --
 
 ### AWS
 
-AWS Secrets Manager requires the certificate and private key stored as separate secrets:
+On AWS with the SDK provider, create the ingress TLS certificate as a Kubernetes Secret directly:
 
 ```bash
-aws secretsmanager create-secret --name rpi-tls-crt \
-  --secret-binary fileb://tls.crt --region us-east-1
-
-aws secretsmanager create-secret --name rpi-tls-key \
-  --secret-binary fileb://tls.key --region us-east-1
+kubectl create secret tls ingress-tls \
+  --cert=tls.crt --key=tls.key \
+  -n <namespace>
 ```
 
-### SecretProviderClass configuration
+The ingress controller reads the TLS cert from this K8s Secret. No SecretProviderClass or CSI driver is needed.
 
-**Azure** (single secret, Key Vault splits cert and key automatically):
+### SecretProviderClass configuration (Azure only)
+
+Azure Key Vault splits the cert and key automatically from a single imported certificate:
 
 ```yaml
 - name: ingress-tls-certificate
@@ -746,28 +746,6 @@ aws secretsmanager create-secret --name rpi-tls-key \
       key: tls.key
     - objectName: my-tls-certificate
       key: tls.crt
-```
-
-**AWS** (separate secrets for cert and key):
-
-```yaml
-- name: ingress-tls-certificate
-  provider: aws
-  objects:
-  - objectName: rpi-tls-crt
-    objectType: secretsmanager
-    objectAlias: tls.crt
-  - objectName: rpi-tls-key
-    objectType: secretsmanager
-    objectAlias: tls.key
-  secretObjects:
-  - secretName: ingress-tls
-    type: kubernetes.io/tls
-    data:
-    - objectName: tls.crt
-      key: tls.crt
-    - objectName: tls.key
-      key: tls.key
 ```
 
 A validation pod must mount this SecretProviderClass to trigger the initial sync of the K8s TLS Secret. The RPI pods themselves do not mount TLS certificates.
@@ -819,35 +797,22 @@ Store the certificate in Key Vault:
 
 ### AWS
 
+On AWS with the SDK provider, create the CA certificate as a Kubernetes Secret directly:
+
+```bash
+kubectl create secret generic custom-ca-cert \
+  --from-file=ca-bundle.pem \
+  -n <namespace>
+```
+
+Then reference it in your overrides:
+
 ```yaml
 customCACerts:
   enabled: true
   mountPath: /usr/local/share/ca-certificates/custom
   certFile: ca-bundle.pem
-  secretProviderClassName: ca-cert-provider
-
-secretsManagement:
-  provider: sdk
-  sdk:
-    amazon:
-      secretTagKey: my-rpi-tag
-  csi:
-    secretProviderClasses:
-    - name: ca-cert-provider
-      provider: aws
-      objects:
-      - objectName: rpi-ca-bundle
-        objectType: secretsmanager
-        objectAlias: ca-bundle.pem
-```
-
-Store the certificate in Secrets Manager:
-
-```bash
-aws secretsmanager create-secret \
-  --name rpi-ca-bundle \
-  --secret-binary fileb://ca-bundle.pem \
-  --region us-east-1
+  secretName: custom-ca-cert
 ```
 
 ### Kubernetes / CSI providers
