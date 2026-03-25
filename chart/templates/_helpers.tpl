@@ -525,7 +525,7 @@ Usage: {{- include "rpi.cloudidentity.envvars" . | nindent 10 }}
 {{- define "rpi.cloudidentity.envvars" -}}
 {{- if .Values.cloudIdentity.enabled -}}
 {{- if eq .Values.global.deployment.platform "amazon" }}
-{{- if and (not .Values.cloudIdentity.amazon.useAccessKeys) (not .Values.cloudIdentity.amazon.usePodIdentity) }}
+{{- if not .Values.cloudIdentity.amazon.usePodIdentity }}
 - name: AWS_ROLE_ARN
   value: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
 - name: AWS_WEB_IDENTITY_TOKEN_FILE
