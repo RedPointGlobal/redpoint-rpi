@@ -21,7 +21,6 @@ This chart deploys RPI on Kubernetes using Helm.
 
 | Guide | Description |
 |:------|:------------|
-| [Helm Assistant](docs/readme-mcp.md) | Web UI and MCP endpoint for AI-assisted configuration and troubleshooting |
 | [Values Guide](docs/readme-values.md) | How the two-tier values system works, override patterns, and complete values reference |
 | [Secrets Management](docs/secrets-management.md) | Providers (Kubernetes, CSI, SDK), required vault keys, and image pull secrets |
 | [Single Sign-On](docs/single-sign-on.md) | Microsoft Entra ID and OpenID Connect (Keycloak, Okta) authentication setup |
