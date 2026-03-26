@@ -556,7 +556,7 @@ Features like per-service image overrides, custom CA certificates, common annota
 - **ODBC ConfigMap**: The `odbc-config` ConfigMap, `ODBCINI` environment variable, and `postStart` lifecycle hook no longer exist.
 - **Snowflake**: Changed from ConfigMap to Secret. `ConfigMapName` is now `secretName`, `ConfigMapFilePath` is now `mountPath`.
 
-When you generate your fresh v7.7 overrides, these blocks will not be present. All data warehouse connections are now configured as connection strings in the RPI client interface after deployment. See [Step 6: Update Data Warehouse Connections](#6-update-data-warehouse-connections) in the Upgrade Steps for connection string formats and examples.
+When you generate your fresh v7.7 overrides, these blocks will not be present. All data warehouse connections are now configured as connection strings in the RPI client interface after deployment. See [Step 6: Update Data Warehouse Connections](#6-update-data-warehouse-connections) in the Perform Upgrade section for connection string formats and examples.
 
 </details>
 
@@ -575,7 +575,7 @@ The v7.7 upgrade includes a database schema migration (Step 7) that modifies you
 </details>
 
 <details>
-<summary><strong style="font-size:1.25em;">Upgrade Steps</strong></summary>
+<summary><strong style="font-size:1.25em;">Perform Upgrade</strong></summary>
 
 ### 1. Secrets Management
 
