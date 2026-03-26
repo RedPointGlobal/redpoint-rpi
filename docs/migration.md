@@ -555,7 +555,7 @@ Features like per-service image overrides, custom CA certificates, common annota
 - **Redshift**: The `databases.datawarehouse.redshift` config block no longer exists in the chart. Redshift now uses the Npgsql library instead of the ODBC driver.
 - **Databricks**: The `databases.datawarehouse.databricks` config block no longer exists in the chart.
 - **ODBC ConfigMap**: The `odbc-config` ConfigMap, `ODBCINI` environment variable, and `postStart` lifecycle hook no longer exist.
-- **Snowflake**: Changed from ConfigMap to Secret. `ConfigMapName` is now `secretName`, `ConfigMapFilePath` is now `mountPath`.
+- **Snowflake**: No longer mounted from a ConfigMap. For `kubernetes` provider: the `.p8` key is mounted from a K8s Secret (`ConfigMapName` is now `secretName`, `ConfigMapFilePath` is now `mountPath`). For `csi` and `sdk` providers: the key is mounted directly from vault via CSI inline volume (set `secretProviderClassName` in your Snowflake config). See the [Secrets Management Guide](secrets-management.md) for platform-specific examples.
 
 When you generate your fresh v7.7 overrides, these blocks will not be present. All data warehouse connections are now configured as connection strings in the RPI client interface after deployment. See [Step 6: Update Data Warehouse Connections](#6-update-data-warehouse-connections) in the Perform Upgrade section for connection string formats and examples.
 
