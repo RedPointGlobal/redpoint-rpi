@@ -525,14 +525,12 @@ Usage: {{- include "rpi.cloudidentity.envvars" . | nindent 10 }}
 {{- define "rpi.cloudidentity.envvars" -}}
 {{- if .Values.cloudIdentity.enabled -}}
 {{- if eq .Values.global.deployment.platform "amazon" }}
-{{- if not .Values.cloudIdentity.amazon.usePodIdentity }}
 - name: AWS_ROLE_ARN
   value: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
 - name: AWS_WEB_IDENTITY_TOKEN_FILE
   value: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
 - name: AWS_STS_REGIONAL_ENDPOINTS
   value: "regional"
-{{- end }}
 - name: AWS_DEFAULT_REGION
   value: {{ .Values.cloudIdentity.amazon.region | quote }}
 {{- else if eq .Values.global.deployment.platform "google" }}

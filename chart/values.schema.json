@@ -288,15 +288,7 @@
             },
             "useAccessKeys": {
               "type": "boolean",
-              "description": "Use static access keys instead of IRSA"
-            },
-            "accessKeyId": {
-              "type": "string",
-              "description": "AWS Access Key ID (when useAccessKeys is true)"
-            },
-            "secretAccessKey": {
-              "type": "string",
-              "description": "AWS Secret Access Key (when useAccessKeys is true)"
+              "description": "Inject AWS access keys from the main K8s Secret (AWS_Access_Key_ID, AWS_Secret_Access_Key)"
             }
           }
         }
