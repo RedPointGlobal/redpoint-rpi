@@ -632,16 +632,9 @@ For ArgoCD/Flux: point to the upstream chart (or a clean mirror) and keep overri
 
 ### 5. Deploy v7.7 Chart
 
-```bash
-# Update image pull secret if needed (if pulling from Redpoint ACR)
-kubectl create secret docker-registry redpoint-rpi-secrets \
-  --docker-server=rg1acrpub.azurecr.io \
-  --docker-username=<username> \
-  --docker-password='<password>' \
-  -n <namespace> \
-  --dry-run=client -o yaml | kubectl apply -f -
+If you mirror images from the Redpoint Container Registry to an internal registry (ECR, ACR, Artifactory, etc.), pull and push the v7.7 images before deploying. Your `global.deployment.images.registry` and `tag` in the overrides should point to your internal registry.
 
-# Deploy
+```bash
 helm upgrade rpi ./chart \
   -f overrides.yaml \
   -n <namespace> \
