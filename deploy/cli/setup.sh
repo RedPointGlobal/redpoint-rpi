@@ -3392,6 +3392,8 @@ AZURE_CLIENT_ID=""
 AZURE_TENANT_ID=""
 AMAZON_ROLE_ARN=""
 AMAZON_REGION=""
+AMAZON_ACCESS_KEY_ID=""
+AMAZON_SECRET_ACCESS_KEY=""
 GOOGLE_SA_EMAIL=""
 
 if [ "$PLATFORM" != "selfhosted" ]; then
@@ -3407,6 +3409,8 @@ if [ "$PLATFORM" != "selfhosted" ]; then
       amazon)
         prompt AMAZON_ROLE_ARN "IAM Role ARN for IRSA" ""
         prompt AMAZON_REGION "AWS Region" "us-east-1"
+        prompt AMAZON_ACCESS_KEY_ID "AWS Access Key ID (for SQS/S3)" ""
+        prompt_secret AMAZON_SECRET_ACCESS_KEY "AWS Secret Access Key"
         ;;
       google)
         prompt GOOGLE_SA_EMAIL "GCP Service Account email" ""
@@ -3581,6 +3585,14 @@ if [ "$MODE" = "standard" ]; then
 SECRETS_DB
 fi
 
+if [ "$PLATFORM" = "amazon" ] && [ -n "$AMAZON_ACCESS_KEY_ID" ]; then
+  cat >> "$SECRETS_FILE" << SECRETS_AWS
+  # -- AWS Access Keys --
+  AWS_Access_Key_ID: "${AMAZON_ACCESS_KEY_ID}"
+  AWS_Secret_Access_Key: "${AMAZON_SECRET_ACCESS_KEY}"
+SECRETS_AWS
+fi
+
 if [ "$REALTIME_ENABLED" = "true" ]; then
   cat >> "$SECRETS_FILE" << SECRETS_RT
   # -- Realtime API --
@@ -3696,11 +3708,13 @@ YAML
 YAML
       ;;
     amazon)
+      local _use_keys="false"
+      [ -n "$AMAZON_ACCESS_KEY_ID" ] && _use_keys="true"
       cat >> "$OUTPUT_FILE" << YAML
   amazon:
     roleArn: ${AMAZON_ROLE_ARN}
     region: ${AMAZON_REGION}
-    useAccessKeys: false
+    useAccessKeys: ${_use_keys}
 YAML
       ;;
     google)

@@ -182,10 +182,9 @@ cloudIdentity:
   amazon:
     roleArn: arn:aws:iam::my-aws-account-id:role/my-role-name
     region: us-east-1
-    # Set to true to use static access keys instead of IRSA
+    # Set to true to inject AWS access keys from the secrets K8s Secret
+    # The keys AWS_Access_Key_ID and AWS_Secret_Access_Key must exist in the secret
     useAccessKeys: false
-    accessKeyId: ""
-    secretAccessKey: ""
 
 # ============================================================
 #  SECRETS MANAGEMENT

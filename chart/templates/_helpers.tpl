@@ -556,12 +556,12 @@ Usage: {{- include "rpi.cloudidentity.awsAccessKeyEnvvars" . | nindent 10 }}
   valueFrom:
     secretKeyRef:
       key: AWS_Access_Key_ID
-      name: {{ .Values.cloudIdentity.amazon.accessKeySecretName | default "rpi-aws-credentials" }}
+      name: {{ include "rpi.secrets.secretName" . | quote }}
 - name: AWS_SECRET_ACCESS_KEY
   valueFrom:
     secretKeyRef:
       key: AWS_Secret_Access_Key
-      name: {{ .Values.cloudIdentity.amazon.accessKeySecretName | default "rpi-aws-credentials" }}
+      name: {{ include "rpi.secrets.secretName" . | quote }}
 - name: AWS_REGION
   value: {{ .Values.cloudIdentity.amazon.region | quote }}
 {{- end }}

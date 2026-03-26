@@ -70,7 +70,7 @@ RPI services authenticate to AWS Secrets Manager using IRSA or Pod Identity and 
 | Item | How it's handled |
 |:-----|:----------------|
 | Image pull secret | Create manually with `kubectl` before deploying |
-| AWS credentials | Create a K8s Secret with IAM access keys (`useAccessKeys: true`). The IAM user associated with these keys needs read/write access to Amazon SQS and Amazon S3. |
+| AWS credentials | Store `AWS_Access_Key_ID` and `AWS_Secret_Access_Key` in your vault. They are synced into the main K8s Secret alongside other application secrets. The IAM user needs read/write access to Amazon SQS and Amazon S3. |
 | Ingress TLS certificate | Create manually with `kubectl create secret tls` before deploying |
 | Snowflake private key (if using Snowflake) | Create manually with `kubectl create secret generic` before deploying |
 | Custom CA certificate (if required) | Create manually with `kubectl create secret generic` before deploying |
@@ -345,21 +345,18 @@ RPI on AWS supports multiple authentication methods. Choose based on your EKS co
 |:-------|:-------------|:------------|
 | **IRSA** | Service account annotated with IAM role ARN; JWT token injected at `/var/run/secrets/eks.amazonaws.com/serviceaccount/token` | Standard EKS managed/self-managed node groups |
 | **Pod Identity** | Credentials injected via EKS Pod Identity Agent (`AWS_CONTAINER_CREDENTIALS_FULL_URI`) | EKS Auto Mode (IRSA token not injected on auto nodes) |
-| **Access Keys** | Static IAM credentials stored in a K8s Secret, injected as env vars | When services need direct AWS API access (e.g., SQS) alongside IRSA/Pod Identity |
+| **Access Keys** | IAM credentials stored in the main K8s Secret (`AWS_Access_Key_ID`, `AWS_Secret_Access_Key`), injected as env vars | When services need direct AWS API access (e.g., SQS, S3) alongside IRSA/Pod Identity |
 
-**IRSA + Access Keys** is the most common combination. IRSA handles Secrets Manager reads, while access keys provide credentials for services like Amazon SQS.
+**IRSA + Access Keys** is the most common combination. IRSA handles Secrets Manager reads, while access keys provide credentials for services like Amazon SQS and S3.
 
 #### Setup
 
 1. **Create an IAM role** with `SecretsManagerReadWrite` permissions and an OIDC trust policy for your EKS cluster
-2. **Create IAM access keys** (if needed for SQS or other AWS services) and store them in a K8s Secret:
 
-```bash
-kubectl create secret generic rpi-aws-credentials \
-  --from-literal=AWS_Access_Key_ID=<your-access-key-id> \
-  --from-literal=AWS_Secret_Access_Key=<your-secret-access-key> \
-  -n <namespace>
-```
+2. **Store AWS access keys** in your vault. The keys `AWS_Access_Key_ID` and `AWS_Secret_Access_Key` are read from the same K8s Secret as all other application secrets:
+   - **SDK provider**: Include them in your Secrets Manager JSON secret
+   - **CSI provider**: Add them to your SecretProviderClass jmesPath/secretObjects mapping
+   - **kubernetes provider**: The CLI (`rpihelmcli/setup.sh`) prompts for them and writes them into `secrets.yaml`
 
 3. **Create file-based secrets** before deploying. These cannot be read from Secrets Manager at runtime:
 
@@ -380,7 +377,7 @@ kubectl create secret generic custom-ca-cert \
   -n <namespace>
 ```
 
-> **Why K8s Secrets for these?** The SDK provider enables RPI services to read application secrets (database credentials, connection strings, API keys) directly from Secrets Manager at runtime. However, the ingress controller, Snowflake JDBC driver, and CA trust store require secrets mounted as files and cannot call Secrets Manager themselves. These must exist as Kubernetes Secrets before deploying.
+> **Why K8s Secrets for file-based secrets?** The ingress controller, Snowflake JDBC driver, and CA trust store require secrets mounted as files and cannot call Secrets Manager themselves. These must exist as Kubernetes Secrets before deploying. On Azure, these can be synced from Key Vault via CSI SecretProviderClass instead.
 
 #### Overrides
 
@@ -393,7 +390,6 @@ cloudIdentity:
     roleArn: arn:aws:iam::<account>:role/<role-name>
     region: us-east-1
     useAccessKeys: true                    # set to false if not using SQS or other direct AWS APIs
-    accessKeySecretName: rpi-aws-credentials
     # usePodIdentity: true                 # uncomment for EKS Auto Mode (skips IRSA env vars)
 ```
 
@@ -454,6 +450,15 @@ AWS Secrets Manager stores all keys as JSON within a single secret, using `__` (
 | Vault Secret Name | Value |
 |:-------------------|:------|
 | `RPI__SMTP__Password` | Your SMTP password |
+
+**AWS Access Keys** (if `useAccessKeys: true`):
+
+| Vault Secret Name | Value |
+|:-------------------|:------|
+| `AWS_Access_Key_ID` | Your IAM access key ID |
+| `AWS_Secret_Access_Key` | Your IAM secret access key |
+
+The IAM user needs read/write access to Amazon SQS and Amazon S3.
 
 **Redpoint AI** (if enabled):
 
