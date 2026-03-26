@@ -65,7 +65,7 @@ No validation pods needed for application secrets. Snowflake keys and CA certs a
 <details>
 <summary><strong>sdk - Amazon</strong></summary>
 
-RPI services authenticate to AWS Secrets Manager using IRSA or Pod Identity and read application secrets at runtime.
+RPI services authenticate to AWS Secrets Manager using IRSA and read application secrets at runtime.
 
 | Item | How it's handled |
 |:-----|:----------------|
@@ -344,10 +344,9 @@ RPI on AWS supports multiple authentication methods. Choose based on your EKS co
 | Method | How it works | When to use |
 |:-------|:-------------|:------------|
 | **IRSA** | Service account annotated with IAM role ARN; JWT token injected at `/var/run/secrets/eks.amazonaws.com/serviceaccount/token` | Standard EKS managed/self-managed node groups |
-| **Pod Identity** | Credentials injected via EKS Pod Identity Agent (`AWS_CONTAINER_CREDENTIALS_FULL_URI`) | EKS Auto Mode (IRSA token not injected on auto nodes) |
-| **Access Keys** | IAM credentials stored in the main K8s Secret (`AWS_Access_Key_ID`, `AWS_Secret_Access_Key`), injected as env vars | When services need direct AWS API access (e.g., SQS, S3) alongside IRSA/Pod Identity |
+| **Access Keys** | IAM credentials stored in the main K8s Secret (`AWS_Access_Key_ID`, `AWS_Secret_Access_Key`), injected as env vars | When services need direct AWS API access (e.g., SQS, S3) alongside IRSA |
 
-**IRSA + Access Keys** is the most common combination. IRSA handles Secrets Manager reads, while access keys provide credentials for services like Amazon SQS and S3.
+IRSA handles Secrets Manager reads, while access keys provide credentials for services like Amazon SQS and S3.
 
 #### Setup
 
