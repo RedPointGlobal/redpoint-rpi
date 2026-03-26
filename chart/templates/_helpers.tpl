@@ -823,7 +823,7 @@ Usage: {{- include "rpi.customCACerts.volume" . | nindent 8 }}
 */}}
 {{- define "rpi.customCACerts.volume" -}}
 {{- if and .Values.customCACerts .Values.customCACerts.enabled }}
-{{- if and (eq .Values.secretsManagement.provider "sdk") .Values.customCACerts.secretProviderClassName }}
+{{- if .Values.customCACerts.secretProviderClassName }}
 - name: custom-ca-certs
   csi:
     driver: secrets-store.csi.k8s.io
