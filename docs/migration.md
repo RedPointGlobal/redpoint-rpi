@@ -721,7 +721,8 @@ Wait for `"Status": "LastRunComplete"` in the response.
 
 </details>
 
-## ArgoCD / GitOps Deployments
+<details>
+<summary><strong style="font-size:1.25em;">ArgoCD / GitOps Deployments</strong></summary>
 
 If you deploy RPI via ArgoCD or Flux, the v7.7 upgrade is a good time to simplify your setup.
 
@@ -785,6 +786,8 @@ git push internal main
 ```
 
 No merge conflicts since you are not editing the chart. Your overrides stay in the config repo and are updated independently.
+
+</details>
 
 ---
 
