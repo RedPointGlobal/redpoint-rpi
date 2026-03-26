@@ -275,7 +275,7 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" .root "name" .name "component" .component) | nindent 4 }}
   {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" .root "type" "serviceAccount") | trim }}
-  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" .root "svcCloudIdentity" (.cfg.cloudIdentity | default false)) | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" .root "svcCloudIdentity" (hasKey .cfg "cloudIdentity" | ternary .cfg.cloudIdentity false)) | trim }}
   {{- if or $saAnnotations $ciAnnotations }}
   annotations:
     {{- if $saAnnotations }}
@@ -475,13 +475,20 @@ Call this once from any top-level template to catch misconfiguration early.
 Service mesh pod annotations.
 When serviceMesh is enabled with Linkerd, merges default annotations with
 any user overrides from serviceMesh.podAnnotations. User values win.
-Usage: {{- include "rpi.serviceMesh.podAnnotations" . | nindent 8 }}
+Per-service opt-out: set serviceMesh: false on the service to skip mesh annotations.
+Usage: {{- include "rpi.serviceMesh.podAnnotations" (dict "root" . "svcServiceMesh" ($cfg.serviceMesh | default true)) | nindent 8 }}
 */}}
 {{- define "rpi.serviceMesh.podAnnotations" -}}
-{{- if .Values.serviceMesh.enabled }}
-{{- if eq (.Values.serviceMesh.provider | default "linkerd") "linkerd" }}
+{{- $root := . -}}
+{{- if hasKey . "root" }}{{- $root = .root -}}{{- end -}}
+{{- $svcMesh := true -}}
+{{- if hasKey . "svcServiceMesh" }}
+{{- if not (kindIs "invalid" .svcServiceMesh) }}{{- $svcMesh = .svcServiceMesh -}}{{- end -}}
+{{- end -}}
+{{- if and $root.Values.serviceMesh.enabled (ne ($svcMesh | toString) "false") }}
+{{- if eq ($root.Values.serviceMesh.provider | default "linkerd") "linkerd" }}
 {{- $defaults := dict "linkerd.io/inject" "enabled" "config.linkerd.io/skip-outbound-ports" "443" "config.linkerd.io/proxy-outbound-connect-timeout" "240000ms" -}}
-{{- $overrides := .Values.serviceMesh.podAnnotations | default dict -}}
+{{- $overrides := $root.Values.serviceMesh.podAnnotations | default dict -}}
 {{- $merged := mustMergeOverwrite $defaults $overrides -}}
 {{- toYaml $merged }}
 {{- end }}

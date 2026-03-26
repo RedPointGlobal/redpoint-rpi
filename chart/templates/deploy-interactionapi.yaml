@@ -126,7 +126,7 @@ spec:
         {{- with $cfg.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" ($cfg.cloudIdentity | default false)) | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim) }}{{- . | nindent 8 }}{{- end }}
       {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) .Values.serviceMesh.enabled }}
       annotations:
         {{- with .Values.commonAnnotations }}
@@ -143,7 +143,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
         {{- end }}
-        {{- include "rpi.serviceMesh.podAnnotations" . | nindent 8 }}
+        {{- include "rpi.serviceMesh.podAnnotations" (dict "root" . "svcServiceMesh" (hasKey $cfg "serviceMesh" | ternary $cfg.serviceMesh true)) | nindent 8 }}
       {{- end }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
