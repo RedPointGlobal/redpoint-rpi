@@ -487,10 +487,9 @@ Usage: {{- include "rpi.serviceMesh.podAnnotations" (dict "root" . "svcServiceMe
 {{- end -}}
 {{- if and $root.Values.serviceMesh.enabled (ne ($svcMesh | toString) "false") }}
 {{- if eq ($root.Values.serviceMesh.provider | default "linkerd") "linkerd" }}
-{{- $defaults := dict "linkerd.io/inject" "enabled" "config.linkerd.io/skip-outbound-ports" "443" "config.linkerd.io/proxy-outbound-connect-timeout" "240000ms" -}}
-{{- $overrides := $root.Values.serviceMesh.podAnnotations | default dict -}}
-{{- $merged := mustMergeOverwrite $defaults $overrides -}}
-{{- toYaml $merged }}
+{{- with $root.Values.serviceMesh.podAnnotations }}
+{{- toYaml . }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
