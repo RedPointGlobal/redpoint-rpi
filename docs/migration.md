@@ -719,7 +719,9 @@ curl -X 'GET' \
 
 Wait for `"Status": "LastRunComplete"` in the response.
 
-### 8. ArgoCD / GitOps Deployments
+</details>
+
+## ArgoCD / GitOps Deployments
 
 If you deploy RPI via ArgoCD or Flux, the v7.7 upgrade is a good time to simplify your setup.
 
@@ -784,7 +786,7 @@ git push internal main
 
 No merge conflicts since you are not editing the chart. Your overrides stay in the config repo and are updated independently.
 
-</details>
+---
 
 ## Template Customizations
 
