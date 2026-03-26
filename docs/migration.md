@@ -697,17 +697,7 @@ Driver=/app/odbc-lib/simba/spark/lib/libsparkodbc_sb64.so;SparkServerType=3;Host
 
 ### 7. Perform Database Upgrade
 
-After the v7.7 containers are running, upgrade the operational database schema:
-
-**Option A: Via the chart (recommended)**
-
-```bash
-rpihelmcli/setup.sh deploy -f overrides.yaml
-```
-
-The chart creates a Job that waits for the Deployment API to become ready, then runs the upgrade automatically.
-
-**Option B: Manual**
+After the v7.7 containers are running, upgrade the operational database schema via the Deployment API:
 
 ```bash
 DEPLOYMENT_SERVICE_URL=<prefix>-deploymentapi.<domain>
@@ -717,7 +707,7 @@ curl -X 'GET' \
   -H 'accept: text/plain'
 ```
 
-Wait for `"Status": "LastRunComplete"` in the response.
+Wait for `"Status": "LastRunComplete"` in the response. You can also open `https://<deploymentapi-host>/` in a browser to monitor the upgrade progress.
 
 </details>
 
