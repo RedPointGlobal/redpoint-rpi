@@ -125,7 +125,7 @@ spec:
         {{- with $cfg.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- with (include "rpi.cloudidentity.podLabels" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" ($cfg.cloudIdentity | default false)) | trim) }}{{- . | nindent 8 }}{{- end }}
       {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) .Values.serviceMesh.enabled }}
       annotations:
         {{- with .Values.commonAnnotations }}

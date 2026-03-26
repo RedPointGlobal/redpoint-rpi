@@ -275,7 +275,7 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" .root "name" .name "component" .component) | nindent 4 }}
   {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" .root "type" "serviceAccount") | trim }}
-  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" .root | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" .root "svcCloudIdentity" (.cfg.cloudIdentity | default false)) | trim }}
   {{- if or $saAnnotations $ciAnnotations }}
   annotations:
     {{- if $saAnnotations }}
@@ -494,26 +494,47 @@ Renders the appropriate annotation based on global.deployment.platform.
 Usage: {{- include "rpi.cloudidentity.saAnnotations" . | nindent 4 }}
 */}}
 {{- define "rpi.cloudidentity.saAnnotations" -}}
-{{- if .Values.cloudIdentity.enabled -}}
-{{- if eq .Values.global.deployment.platform "azure" }}
-azure.workload.identity/client-id: {{ .Values.cloudIdentity.azure.managedIdentityClientId | quote }}
-azure.workload.identity/tenant-id: {{ .Values.cloudIdentity.azure.tenantId | quote }}
-{{- else if eq .Values.global.deployment.platform "google" }}
-iam.gke.io/gcp-service-account: {{ .Values.cloudIdentity.google.serviceAccountEmail | quote }}
-{{- else if eq .Values.global.deployment.platform "amazon" }}
-eks.amazonaws.com/role-arn: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
+{{- $root := . -}}
+{{- if hasKey . "root" }}{{- $root = .root -}}{{- end -}}
+{{- if $root.Values.cloudIdentity.enabled -}}
+{{- $mode := $root.Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
+{{- $svcCI := true -}}
+{{- if and (eq $mode "per-service") (hasKey . "svcCloudIdentity") }}
+{{- $svcCI = .svcCloudIdentity -}}
+{{- end -}}
+{{- if $svcCI -}}
+{{- if eq $root.Values.global.deployment.platform "azure" }}
+azure.workload.identity/client-id: {{ $root.Values.cloudIdentity.azure.managedIdentityClientId | quote }}
+azure.workload.identity/tenant-id: {{ $root.Values.cloudIdentity.azure.tenantId | quote }}
+{{- else if eq $root.Values.global.deployment.platform "google" }}
+iam.gke.io/gcp-service-account: {{ $root.Values.cloudIdentity.google.serviceAccountEmail | quote }}
+{{- else if eq $root.Values.global.deployment.platform "amazon" }}
+eks.amazonaws.com/role-arn: {{ $root.Values.cloudIdentity.amazon.roleArn | quote }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}
 
 {{/*
 Pod labels for cloud identity (Azure Workload Identity webhook).
-Usage: {{- include "rpi.cloudidentity.podLabels" . | nindent 8 }}
+In shared mode: always added.
+In per-service mode: only added when the service has cloudIdentity: true.
+Usage (shared mode or backward compat): {{- include "rpi.cloudidentity.podLabels" . | nindent 8 }}
+Usage (per-service):  {{- include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" $cfg.cloudIdentity) | nindent 8 }}
 */}}
 {{- define "rpi.cloudidentity.podLabels" -}}
-{{- if .Values.cloudIdentity.enabled -}}
-{{- if eq .Values.global.deployment.platform "azure" }}
+{{- $root := . -}}
+{{- if hasKey . "root" }}{{- $root = .root -}}{{- end -}}
+{{- if $root.Values.cloudIdentity.enabled -}}
+{{- $mode := $root.Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
+{{- $svcCI := true -}}
+{{- if and (eq $mode "per-service") (hasKey . "svcCloudIdentity") }}
+{{- $svcCI = .svcCloudIdentity -}}
+{{- end -}}
+{{- if $svcCI -}}
+{{- if eq $root.Values.global.deployment.platform "azure" }}
 azure.workload.identity/use: "true"
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}

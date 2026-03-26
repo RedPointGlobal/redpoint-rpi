@@ -24,7 +24,7 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $vpSAName "component" "validation") | nindent 4 }}
   {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
-  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" . "svcCloudIdentity" ((.Values.validationPods).cloudIdentity | default true)) | trim }}
   {{- if or $saAnnotations $ciAnnotations }}
   annotations:
     {{- if $saAnnotations }}
@@ -76,7 +76,7 @@ spec:
         {{- with .podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- with (include "rpi.cloudidentity.podLabels" $ | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" $ "svcCloudIdentity" (($.Values.validationPods).cloudIdentity | default true)) | trim) }}{{- . | nindent 8 }}{{- end }}
     spec:
       {{- if eq ($.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
       serviceAccountName: {{ $.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" | quote }}
@@ -148,7 +148,7 @@ spec:
         {{- if eq (.type | default "pvc") "pvc" }}
         - name: {{ $volumeName }}
           persistentVolumeClaim:
-            claimName: {{ .claimName }}
+            claimName: {{ .claimName | default .persistentVolumeClaimName }}
         {{- else }}
         - name: {{ $volumeName }}
           csi:

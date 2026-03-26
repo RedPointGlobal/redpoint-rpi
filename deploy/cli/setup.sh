@@ -2936,41 +2936,43 @@ cli_deploy() {
     echo "  ${GREEN}✔${RESET} Namespace exists: ${namespace}"
   fi
 
-  # Apply secrets if secrets.yaml exists alongside overrides
-  local overrides_dir
-  overrides_dir="$(dirname "$overrides")"
-  local secrets_file="${overrides_dir}/secrets.yaml"
-  if [ -f "$secrets_file" ]; then
-    echo "  Applying secrets from: ${secrets_file}"
-    kubectl apply -f "$secrets_file" -n "$namespace"
-    echo "  ${GREEN}✔${RESET} Secrets applied"
-  fi
+  if [ "$dry_run" != "true" ]; then
+    # Apply secrets if secrets.yaml exists alongside overrides
+    local overrides_dir
+    overrides_dir="$(dirname "$overrides")"
+    local secrets_file="${overrides_dir}/secrets.yaml"
+    if [ -f "$secrets_file" ]; then
+      echo "  Applying secrets from: ${secrets_file}"
+      kubectl apply -f "$secrets_file" -n "$namespace"
+      echo "  ${GREEN}✔${RESET} Secrets applied"
+    fi
 
-  # Check image pull secret
-  if python3 -c "import yaml" 2>/dev/null; then
-    local pull_secret_enabled
-    pull_secret_enabled=$(read_val "$overrides" "global.deployment.images.imagePullSecret.enabled")
-    if [ "$pull_secret_enabled" = "true" ] || [ "$pull_secret_enabled" = "True" ]; then
-      local pull_secret_name
-      pull_secret_name=$(read_val "$overrides" "global.deployment.images.imagePullSecret.name")
-      pull_secret_name="${pull_secret_name:-rpi-docker-registry}"
-      if ! kubectl get secret "$pull_secret_name" -n "$namespace" &>/dev/null 2>&1; then
-        echo ""
-        echo "  ${YELLOW}Image pull secret '${pull_secret_name}' not found in namespace.${RESET}"
-        echo "  ${BOLD}Registry credentials${RESET}"
-        local reg_server reg_user reg_pass
-        read -rp "    Registry server: " reg_server
-        read -rp "    Username: " reg_user
-        read -rsp "    Password: " reg_pass
-        echo ""
-        kubectl create secret docker-registry "$pull_secret_name" \
-          --namespace "$namespace" \
-          --docker-server="$reg_server" \
-          --docker-username="$reg_user" \
-          --docker-password="$reg_pass"
-        echo "  ${GREEN}✔${RESET} Image pull secret created"
-      else
-        echo "  ${GREEN}✔${RESET} Image pull secret exists"
+    # Check image pull secret
+    if python3 -c "import yaml" 2>/dev/null; then
+      local pull_secret_enabled
+      pull_secret_enabled=$(read_val "$overrides" "global.deployment.images.imagePullSecret.enabled")
+      if [ "$pull_secret_enabled" = "true" ] || [ "$pull_secret_enabled" = "True" ]; then
+        local pull_secret_name
+        pull_secret_name=$(read_val "$overrides" "global.deployment.images.imagePullSecret.name")
+        pull_secret_name="${pull_secret_name:-rpi-docker-registry}"
+        if ! kubectl get secret "$pull_secret_name" -n "$namespace" &>/dev/null 2>&1; then
+          echo ""
+          echo "  ${YELLOW}Image pull secret '${pull_secret_name}' not found in namespace.${RESET}"
+          echo "  ${BOLD}Registry credentials${RESET}"
+          local reg_server reg_user reg_pass
+          read -rp "    Registry server: " reg_server
+          read -rp "    Username: " reg_user
+          read -rsp "    Password: " reg_pass
+          echo ""
+          kubectl create secret docker-registry "$pull_secret_name" \
+            --namespace "$namespace" \
+            --docker-server="$reg_server" \
+            --docker-username="$reg_user" \
+            --docker-password="$reg_pass"
+          echo "  ${GREEN}✔${RESET} Image pull secret created"
+        else
+          echo "  ${GREEN}✔${RESET} Image pull secret exists"
+        fi
       fi
     fi
   fi
