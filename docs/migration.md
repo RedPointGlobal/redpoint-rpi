@@ -577,17 +577,19 @@ The v7.7 upgrade includes a database schema migration (Step 7) that modifies you
 <details>
 <summary><strong style="font-size:1.25em;">Upgrade Steps</strong></summary>
 
-### 1. Determine Secrets Management
+### 1. Secrets Management
 
-Choose how RPI will access sensitive values (database credentials, connection strings, API tokens):
+Your existing secrets management setup carries forward to v7.7. No changes are required unless you want to switch providers.
 
-| Provider | Best for | Setup |
-|:---------|:---------|:------|
-| **sdk** (recommended) | Cloud deployments (Azure, AWS, GCP) | Services read secrets from vault at runtime. Simplest ongoing maintenance. |
-| **csi** | Cloud deployments that require all secrets synced to K8s | CSI driver syncs vault to K8s Secret. More YAML config, requires validation pods. |
-| **kubernetes** | Self-hosted / on-premise | CLI generates K8s Secret from user input. No vault needed. |
+| Your v7.6 setup | v7.7 action |
+|:-----------------|:------------|
+| **K8s Secrets** (created manually or via CLI) | Set `secretsManagement.provider: kubernetes`. Your existing secrets continue to work. |
+| **CSI Secrets Store** (syncing from vault) | Set `secretsManagement.provider: csi`. Move your SecretProviderClass definitions into the overrides under `secretsManagement.csi.secretProviderClasses`. |
+| **Considering SDK** (new in v7.7) | Set `secretsManagement.provider: sdk`. Requires creating vault secrets with the exact naming convention RPI expects. See the [Secrets Management Guide](secrets-management.md) for details. |
 
-For **sdk** or **csi**, you need to create the required secrets in your vault before deploying. See the [Secrets Management Guide](secrets-management.md) for the full list of required keys per feature, and use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** to generate a script that creates everything automatically.
+If staying with your current provider, your vault secrets and K8s Secrets remain as-is. The only change for CSI users is that SecretProviderClass definitions are now managed inside the Helm overrides instead of as separate YAML files.
+
+For the full list of required keys per provider, see the [Secrets Management Guide](secrets-management.md). The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** generates scripts for creating vault secrets if needed.
 
 ### 2. Prepare Cloud Identity
 

@@ -26,7 +26,7 @@ This chart deploys RPI on Kubernetes using Helm.
 | [Single Sign-On](docs/single-sign-on.md) | Microsoft Entra ID and OpenID Connect (Keycloak, Okta) authentication setup |
 | [Storage](docs/storage.md) | FileOutputDirectory, internal Redis/RabbitMQ, dynamic provisioning, EFS permissions |
 | [RPI Helm CLI](docs/readme-cli.md) | Pre-flight checks, secrets generation, deployment, status, and troubleshooting |
-| [Automation Guide](docs/readme-terraform.md) | Infrastructure-as-code modules for Azure, AWS, and GCP |
+| [Automation Guide](docs/readme-terraform.md) | CI/CD pipelines, vault secrets setup scripts, and Entra ID configuration |
 | [GitOps Guide](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |
 
 ## Resources
