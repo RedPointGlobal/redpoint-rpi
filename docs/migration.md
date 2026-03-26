@@ -662,6 +662,19 @@ After deploying v7.7, open the RPI client and update your data warehouse connect
 Host=<your-snowflake-host>;Account=<your-account>;User=<your-username>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/<your-key-file>.p8;Db=<your-database>
 ```
 
+The connection string supports additional parameters like `warehouse=`, `role=`, and `schema=`. See the [Snowflake .NET Connector docs](https://github.com/snowflakedb/snowflake-connector-net/blob/master/doc/Connecting.md) for the full list.
+
+JWT authentication requires the `.p8` RSA private key file to be mounted in the container. If you already use Snowflake with JWT, your existing key setup carries forward. If you are migrating from username/password to JWT, you need to:
+
+1. Generate an RSA key pair and register the public key with your Snowflake user(s)
+2. Make the `.p8` private key available to the chart:
+   - **kubernetes**: The CLI creates a K8s Secret from the key file
+   - **csi**: Store the key in your vault and define a SecretProviderClass. The chart mounts it directly via CSI inline volume (set `secretProviderClassName` in the Snowflake config)
+   - **sdk**: Same as CSI - store in vault, mount via CSI inline volume
+3. Enable Snowflake in your overrides under `databases.datawarehouse.snowflake`
+
+See the [Secrets Management Guide](secrets-management.md) for platform-specific examples.
+
 **Redshift** (PostgreSQL driver via Npgsql):
 
 ```
@@ -705,6 +718,71 @@ curl -X 'GET' \
 ```
 
 Wait for `"Status": "LastRunComplete"` in the response.
+
+### 8. ArgoCD / GitOps Deployments
+
+If you deploy RPI via ArgoCD or Flux, the v7.7 upgrade is a good time to simplify your setup.
+
+**If you forked the v7.6 chart:** You no longer need the fork. The v7.7 chart is designed so that all customization is done through the overrides file. No template edits should be needed. Import the upstream chart into your internal repository as a clean copy.
+
+**Import the v7.7 chart into your internal VCS:**
+
+Most organizations require charts to be imported into internal systems (Azure DevOps, Artifactory, GitLab, etc.) for security scanning and change control before deployment.
+
+```bash
+# Clone the upstream chart
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+cd redpoint-rpi
+git checkout main
+
+# Push to your internal repository
+git remote add internal https://git.yourorg.com/platform/redpoint-rpi.git
+git push internal main
+```
+
+**Recommended repository layout:**
+
+Keep the chart and your overrides in separate repositories:
+
+```
+# Chart source (clean import of upstream, no edits)
+https://git.yourorg.com/platform/redpoint-rpi.git
+
+# Your config repo (overrides per environment)
+https://git.yourorg.com/platform/rpi-config.git
+  overrides/
+    dev.yaml
+    staging.yaml
+    production.yaml
+```
+
+**Update your ArgoCD Application:**
+
+```yaml
+spec:
+  sources:
+    - repoURL: https://git.yourorg.com/platform/redpoint-rpi.git
+      targetRevision: main
+      path: chart
+      helm:
+        valueFiles:
+          - $config/overrides/production.yaml
+    - repoURL: https://git.yourorg.com/platform/rpi-config.git
+      targetRevision: main
+      ref: config
+```
+
+**Pulling future chart updates:**
+
+When Redpoint releases a chart update, pull it into your internal mirror:
+
+```bash
+cd redpoint-rpi
+git fetch origin
+git push internal main
+```
+
+No merge conflicts since you are not editing the chart. Your overrides stay in the config repo and are updated independently.
 
 </details>
 
