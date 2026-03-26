@@ -551,6 +551,7 @@ Features like per-service image overrides, custom CA certificates, common annota
 <details>
 <summary><strong style="font-size:1.25em;">Breaking Changes</strong></summary>
 
+- **Execution Service Internal Cache**: The internal cache provider has changed from **Redis** (v7.6) to **Filesystem** (v7.7). The Redis StatefulSet (`rpi-executionservice-cache`) is no longer created. The filesystem-based cache uses the **FileOutputDirectory** volume, so you must ensure the `storage.persistentVolumeClaims.FileOutputDirectory` PVC is provisioned and configured in your overrides before upgrading. If you do not have a FileOutputDirectory volume configured, the execution service will fail to cache state correctly.
 - **Redshift**: The `databases.datawarehouse.redshift` config block no longer exists in the chart. Redshift now uses the Npgsql library instead of the ODBC driver.
 - **Databricks**: The `databases.datawarehouse.databricks` config block no longer exists in the chart.
 - **ODBC ConfigMap**: The `odbc-config` ConfigMap, `ODBCINI` environment variable, and `postStart` lifecycle hook no longer exist.
