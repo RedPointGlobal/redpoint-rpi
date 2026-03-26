@@ -591,31 +591,21 @@ If staying with your current provider, your vault secrets and K8s Secrets remain
 
 For the full list of required keys per provider, see the [Secrets Management Guide](secrets-management.md). The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** generates scripts for creating vault secrets if needed.
 
-### 2. Prepare Cloud Identity
+### 2. Cloud Identity
 
-RPI services authenticate to cloud resources (vaults, storage accounts) using workload identity. Create a cloud identity and configure it with the access your deployment needs:
+If you already have cloud identity configured (Workload Identity, IRSA, etc.), your existing setup carries forward. Map it to the v7.7 overrides:
 
-**What to create:**
-- **Azure**: User-Assigned Managed Identity with the following role assignments:
+| Your v7.6 setup | v7.7 overrides |
+|:-----------------|:---------------|
+| Azure Managed Identity with Workload Identity | `cloudIdentity.azure.managedIdentityClientId` and `tenantId` |
+| AWS IAM Role with IRSA | `cloudIdentity.amazon.roleArn` and `region` |
+| GCP Service Account with Workload Identity | `cloudIdentity.google.serviceAccountEmail` |
 
-  | Scope | Role |
-  |:------|:-----|
-  | Key Vault | `Key Vault Secrets Officer` |
-  | Storage Account (FileOutputDirectory) | `Reader` |
-  | Storage Account (FileOutputDirectory) | `Storage Account Key Operator Service Role` |
-  | Storage Account (FileOutputDirectory) | `Storage Blob Data Contributor` |
-  | Storage Account (FileOutputDirectory) | `Storage File Data SMB Share Contributor` |
+Set `cloudIdentity.serviceAccount.mode` to match your current setup:
+- `shared` - one ServiceAccount for all pods (your v7.6 default if you used a single SA)
+- `per-service` - each service gets its own ServiceAccount
 
-- **AWS**: IAM Role with Secrets Manager read access and EFS/S3 access
-- **GCP**: Service Account with Secret Manager access and Filestore/GCS access
-
-**Configure workload identity federation** so each RPI service account can authenticate as the cloud identity. The services that need federation:
-
-`rpi-interactionapi`, `rpi-integrationapi`, `rpi-executionservice`, `rpi-nodemanager`, `rpi-realtimeapi`, `rpi-callbackapi`, `rpi-queuereader`, `rpi-deploymentapi`, `rpi-validationpods`
-
-Use `cloudIdentity.serviceAccount.mode: per-service` in your overrides for per-service audit trails in vault access logs.
-
-The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Vault Secrets Setup** generates a script that creates the identity, grants vault and storage access, and configures all 9 federated credentials in one step.
+No changes to your cloud identity, role assignments, or federation credentials are needed unless you are adding new services or switching providers.
 
 ### 3. Generate Overrides
 
