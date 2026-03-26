@@ -575,6 +575,74 @@ The v7.7 upgrade includes a database schema migration (Step 7) that modifies you
 </details>
 
 <details>
+<summary><strong style="font-size:1.25em;">ArgoCD / GitOps Deployments</strong></summary>
+
+If you deploy RPI via ArgoCD or Flux, the v7.7 upgrade is a good time to simplify your setup.
+
+**If you forked the v7.6 chart:** You no longer need the fork. The v7.7 chart is designed so that all customization is done through the overrides file. No template edits should be needed. Import the upstream chart into your internal repository as a clean copy.
+
+**Import the v7.7 chart into your internal VCS:**
+
+Most organizations require charts to be imported into internal systems (Azure DevOps, Artifactory, GitLab, etc.) for security scanning and change control before deployment.
+
+```bash
+# Clone the upstream chart
+git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+cd redpoint-rpi
+git checkout main
+
+# Push to your internal repository
+git remote add internal https://git.yourorg.com/platform/redpoint-rpi.git
+git push internal main
+```
+
+**Recommended repository layout:**
+
+Keep the chart and your overrides in separate repositories:
+
+```
+# Chart source (clean import of upstream, no edits)
+https://git.yourorg.com/platform/redpoint-rpi.git
+
+# Your config repo (overrides per environment)
+https://git.yourorg.com/platform/rpi-config.git
+  overrides/
+    dev.yaml
+    staging.yaml
+    production.yaml
+```
+
+**Update your ArgoCD Application:**
+
+```yaml
+spec:
+  sources:
+    - repoURL: https://git.yourorg.com/platform/redpoint-rpi.git
+      targetRevision: main
+      path: chart
+      helm:
+        valueFiles:
+          - $config/overrides/production.yaml
+    - repoURL: https://git.yourorg.com/platform/rpi-config.git
+      targetRevision: main
+      ref: config
+```
+
+**Pulling future chart updates:**
+
+When Redpoint releases a chart update, pull it into your internal mirror:
+
+```bash
+cd redpoint-rpi
+git fetch origin
+git push internal main
+```
+
+No merge conflicts since you are not editing the chart. Your overrides stay in the config repo and are updated independently.
+
+</details>
+
+<details>
 <summary><strong style="font-size:1.25em;">Perform Upgrade</strong></summary>
 
 ### 1. Secrets Management
