@@ -477,9 +477,84 @@ The IAM user needs read/write access to Amazon SQS and Amazon S3.
 </details>
 
 <details>
+<summary><strong style="font-size:1.25em;">CSI Prerequisites</strong></summary>
+
+When using the CSI provider on AWS, the AWS Secrets and Configuration Provider (ASCP) syncs secrets from Secrets Manager into Kubernetes Secrets. Before deploying, you need to:
+
+1. **Install the CSI Secrets Store Driver and ASCP** on your EKS cluster (available as an EKS addon: `aws-secrets-manager`)
+2. **Enable secret syncing** on the CSI driver (required for `secretObjects` to create K8s Secrets):
+   ```json
+   {
+     "secrets-store-csi-driver": {
+       "syncSecret": { "enabled": true },
+       "enableSecretRotation": true
+     }
+   }
+   ```
+3. **Create secrets in Secrets Manager** before deploying:
+
+**Step 1: Application secrets** (single JSON secret with all keys):
+
+```bash
+aws secretsmanager create-secret \
+  --name <your-secret-name> \
+  --description "RPI Application Secrets" \
+  --secret-string '{}' \
+  --region <your-region>
+```
+
+Then populate it with all required key-value pairs (see [Required Vault Secrets](#required-vault-secrets-1) above). The CSI SecretProviderClass uses `jmesPath` to extract individual keys from the JSON.
+
+**Step 2: TLS certificate** (two separate binary secrets for cert and key):
+
+```bash
+aws secretsmanager create-secret \
+  --name <prefix>-tls-crt \
+  --secret-binary fileb://tls.crt \
+  --region <your-region>
+
+aws secretsmanager create-secret \
+  --name <prefix>-tls-key \
+  --secret-binary fileb://tls.key \
+  --region <your-region>
+```
+
+The CSI driver syncs these into a `kubernetes.io/tls` K8s Secret for the ingress controller.
+
+**Step 3: Snowflake private key** (if using Snowflake as a data warehouse):
+
+```bash
+aws secretsmanager create-secret \
+  --name <prefix>-snowflake-key \
+  --secret-binary fileb://sf_rpi_usr_private_key.p8 \
+  --region <your-region>
+```
+
+The chart mounts this directly into pods via CSI inline volume. No K8s Secret is created.
+
+**Step 4: CA certificate bundle** (if required):
+
+```bash
+aws secretsmanager create-secret \
+  --name <prefix>-ca-bundle \
+  --secret-binary fileb://ca-bundle.pem \
+  --region <your-region>
+```
+
+Mounted directly into pods via CSI inline volume.
+
+4. **Configure IRSA** so the pod service accounts can access Secrets Manager. The IAM role needs `SecretsManagerReadWrite` policy.
+
+5. **Create a validation pod** to trigger the initial CSI sync. Without it, the K8s Secrets (`redpoint-rpi-secrets`, `ingress-tls`) won't exist and RPI pods will fail to start.
+
+For automated setup scripts, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Amazon** > **Vault Secrets Setup**.
+
+</details>
+
+<details>
 <summary><strong style="font-size:1.25em;">TLS Certificate</strong></summary>
 
-On AWS with the SDK provider, create the ingress TLS certificate as a Kubernetes Secret directly:
+**SDK provider:** Create the ingress TLS certificate as a Kubernetes Secret directly:
 
 ```bash
 kubectl create secret tls ingress-tls \
@@ -487,14 +562,41 @@ kubectl create secret tls ingress-tls \
   -n <namespace>
 ```
 
-The ingress controller reads the TLS cert from this K8s Secret. No SecretProviderClass or CSI driver is needed.
+**CSI provider:** Store the cert and key as separate binary secrets in Secrets Manager and define a SecretProviderClass that syncs them into a `kubernetes.io/tls` K8s Secret:
+
+```yaml
+secretsManagement:
+  csi:
+    secretProviderClasses:
+    - name: cert-secretprovider
+      provider: aws
+      parameters:
+        region: us-east-1
+      objects:
+      - objectName: <prefix>-tls-crt
+        objectType: secretsmanager
+        objectAlias: tls.crt
+      - objectName: <prefix>-tls-key
+        objectType: secretsmanager
+        objectAlias: tls.key
+      secretObjects:
+      - secretName: ingress-tls
+        type: kubernetes.io/tls
+        data:
+        - objectName: tls.crt
+          key: tls.crt
+        - objectName: tls.key
+          key: tls.key
+```
+
+A validation pod must mount this SecretProviderClass to trigger the sync.
 
 </details>
 
 <details>
 <summary><strong style="font-size:1.25em;">Snowflake Private Key</strong></summary>
 
-On AWS with the SDK provider, create the Snowflake private key as a Kubernetes Secret directly:
+**SDK provider:** Create the Snowflake private key as a Kubernetes Secret directly:
 
 ```bash
 kubectl create secret generic snowflake-rsa-private-key \
@@ -502,7 +604,7 @@ kubectl create secret generic snowflake-rsa-private-key \
   -n <namespace>
 ```
 
-Then reference it in your overrides:
+**CSI provider:** Store the `.p8` key as a binary secret in Secrets Manager and define a SecretProviderClass. The chart mounts it directly via CSI inline volume (no K8s Secret created):
 
 ```yaml
 databases:
@@ -510,20 +612,33 @@ databases:
     snowflake:
       enabled: true
       credentialsType: snowflake_jwt
-      secretName: snowflake-rsa-private-key
+      secretName: <your-spc-name>
       mountPath: /app/snowflake-creds
+      secretProviderClassName: <your-spc-name>
       keys:
       - keyName: sf_rpi_usr_private_key.p8
+
+secretsManagement:
+  csi:
+    secretProviderClasses:
+    - name: <your-spc-name>
+      provider: aws
+      parameters:
+        region: us-east-1
+      objects:
+      - objectName: <prefix>-snowflake-key
+        objectType: secretsmanager
+        objectAlias: sf_rpi_usr_private_key.p8
 ```
 
-No CSI driver or SecretProviderClass is needed. The chart mounts the key file from the K8s Secret directly.
+No validation pod needed. The CSI volume is mounted directly by the RPI pods.
 
 </details>
 
 <details>
 <summary><strong style="font-size:1.25em;">Custom CA Certificate</strong></summary>
 
-On AWS with the SDK provider, create the CA certificate as a Kubernetes Secret directly:
+**SDK provider:** Create the CA certificate as a Kubernetes Secret directly:
 
 ```bash
 kubectl create secret generic custom-ca-cert \
@@ -540,6 +655,30 @@ customCACerts:
   certFile: ca-bundle.pem
   secretName: custom-ca-cert
 ```
+
+**CSI provider:** Store the CA bundle as a binary secret in Secrets Manager and define a SecretProviderClass. The chart mounts it directly via CSI inline volume:
+
+```yaml
+customCACerts:
+  enabled: true
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+  secretProviderClassName: <your-ca-spc-name>
+
+secretsManagement:
+  csi:
+    secretProviderClasses:
+    - name: <your-ca-spc-name>
+      provider: aws
+      parameters:
+        region: us-east-1
+      objects:
+      - objectName: <prefix>-ca-bundle
+        objectType: secretsmanager
+        objectAlias: ca-bundle.pem
+```
+
+No validation pod needed. The CSI volume is mounted directly by the RPI pods.
 
 </details>
 
