@@ -144,6 +144,9 @@ spec:
         {{- with .Values.customLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with $cfg.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -676,6 +679,9 @@ spec:
         app: {{ $name }}-{{ $instance.name}}
         {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 8 }}
         {{- with $.Values.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $.Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with $cfg.podLabels }}

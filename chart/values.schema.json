@@ -2157,6 +2157,13 @@
         "type": "string"
       }
     },
+    "podLabels": {
+      "type": "object",
+      "description": "Labels applied to pod templates only (not Deployment metadata)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "customAnnotations": {
       "type": "object",
       "description": "Custom annotations applied to all chart resources",

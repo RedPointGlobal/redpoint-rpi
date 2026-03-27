@@ -914,6 +914,12 @@ cdpcache:
 #   team: "marketing"
 customLabels: {}
 
+# Pod-only labels (applied to pod template only, not Deployment metadata).
+# Use this for labels that should only be on pods, e.g., workload identity.
+# podLabels:
+#   azure.workload.identity/use: "true"
+podLabels: {}
+
 # customAnnotations:
 #   my-custom-annotation: "my-value"
 customAnnotations: {}
