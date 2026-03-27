@@ -668,41 +668,49 @@ rpi-internal-services
 
 {{/*
 Snowflake volume definition.
-For sdk provider with a SecretProviderClass defined, mounts via CSI inline volume.
-For kubernetes/csi providers, mounts from the Kubernetes Secret.
+For CSI inline mount (secretProviderClassName set): one CSI volume.
+For K8s Secret mount: one volume per unique secretName.
+  - Per-key secretName: each key entry can have its own secretName
+  - Fallback: uses the top-level sf.secretName for keys without their own
 Usage: {{- include "rpi.snowflake.volume" . | nindent 8 }}
 */}}
 {{- define "rpi.snowflake.volume" -}}
 {{- $sf := .Values.databases.datawarehouse.snowflake -}}
 {{- if $sf.secretProviderClassName -}}
-- name: {{ $sf.secretName }}
+- name: {{ $sf.secretName | default "snowflake-creds" }}
   csi:
     driver: secrets-store.csi.k8s.io
     readOnly: true
     volumeAttributes:
       secretProviderClass: {{ $sf.secretProviderClassName | quote }}
 {{- else -}}
-- name: {{ $sf.secretName }}
+{{- $seen := dict -}}
+{{- range $sf.keys }}
+{{- if not (hasKey $seen .secretName) }}
+{{- $_ := set $seen .secretName true }}
+- name: sf-{{ .secretName }}
   secret:
-    secretName: {{ $sf.secretName }}
+    secretName: {{ .secretName }}
+{{- end }}
+{{- end }}
 {{- end -}}
 {{- end -}}
 
 {{/*
 Snowflake volume mount.
-For sdk with CSI, mounts the directory (CSI places files by objectAlias).
-For kubernetes/csi, mounts with subPath to pick the specific key.
+For CSI inline mount: mounts the directory (CSI places files by objectAlias).
+For K8s Secret mount: mounts each key with subPath from its secret's volume.
 Usage: {{- include "rpi.snowflake.volumeMount" . | nindent 10 }}
 */}}
 {{- define "rpi.snowflake.volumeMount" -}}
 {{- $sf := .Values.databases.datawarehouse.snowflake -}}
 {{- if $sf.secretProviderClassName -}}
-- name: {{ $sf.secretName }}
+- name: {{ $sf.secretName | default "snowflake-creds" }}
   mountPath: {{ $sf.mountPath }}
   readOnly: true
 {{- else -}}
 {{- range $sf.keys }}
-- name: {{ $sf.secretName }}
+- name: sf-{{ .secretName }}
   mountPath: "{{ $sf.mountPath }}/{{ .keyName }}"
   subPath: {{ .keyName }}
 {{- end }}
