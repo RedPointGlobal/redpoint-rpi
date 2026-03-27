@@ -303,25 +303,6 @@ The chart creates the PVs and PVCs from the `persistentVolumes` block. The `exis
 
 </details>
 
-<details>
-<summary><strong>emptyDir (no persistence)</strong></summary>
-
-Simplest option. Data is cleared when the pod is deleted or rescheduled (emptyDir is tied to the pod lifecycle). Cache entries and queue messages rebuild automatically. No PVs, PVCs, or StorageClasses needed.
-
-```yaml
-queuereader:
-  internalCache:
-    provider: redis
-    type: internal
-  internalQueues:
-    provider: rabbitmq
-    type: internal
-```
-
-When neither `existingClaim` nor `volumeClaimTemplates.enabled` is set, the chart uses `emptyDir` by default.
-
-</details>
-
 ### Permissions
 
 RPI pods run as UID 7777 / GID 7777 by default. Storage volumes must be writable by this user. Key points:
