@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Ingress
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 RPI services are exposed to external traffic through Kubernetes Ingress resources. The chart supports three ingress approaches depending on your infrastructure.
 

@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Interaction Helm Assistant
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 ## Overview
 

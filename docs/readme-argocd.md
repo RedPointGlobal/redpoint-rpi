@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Deploying Redpoint RPI with ArgoCD
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 ## What is GitOps?
 

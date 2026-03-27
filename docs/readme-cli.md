@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # RPI Helm CLI
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 The RPI Helm CLI is a command-line tool for deploying and managing RPI on Kubernetes. It handles pre-flight validation, secrets generation, chart deployment, health checks, and troubleshooting.
 

@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Values and Overrides Guide
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 ## How It Works
 

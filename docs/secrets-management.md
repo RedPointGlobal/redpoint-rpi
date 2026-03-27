@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Secrets Management
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 RPI supports three secrets management providers. The provider controls how sensitive values (database credentials, connection strings, internal service passwords) are stored and consumed by the chart.
 

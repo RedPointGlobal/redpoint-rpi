@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Storage
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 RPI uses persistent storage for shared file output and optionally for internal Redis and RabbitMQ caches when distributed queue processing is enabled.
 

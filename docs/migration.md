@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Upgrading from v7.6 to v7.7
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 This guide covers upgrading an existing RPI v7.6 Helm deployment to v7.7. If you're deploying RPI for the first time, see the [Greenfield Installation](greenfield.md) guide instead.
 

@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # Single Sign-On (SSO)
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 RPI supports single sign-on through two authentication methods:
 

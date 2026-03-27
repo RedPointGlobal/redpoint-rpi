@@ -1,7 +1,7 @@
 ![redpoint_logo](../chart/images/redpoint.png)
 # New Installation (Greenfield)
 
-[< Back to main README](../README.md)
+[< Back to Home](../README.md)
 
 This guide walks through deploying RPI from scratch on a new Kubernetes cluster.
 
