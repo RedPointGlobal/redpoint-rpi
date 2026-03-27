@@ -28,8 +28,7 @@ Both modes work on all platforms. The CSI driver and volume handle format differ
 | Platform | CSI Driver | Static volumeHandle | Dynamic StorageClass Parameters |
 |:---------|:-----------|:--------------------|:-------------------------------|
 | **AWS** | `efs.csi.aws.com` | `<efs-id>::<access-point-id>` | `provisioningMode: efs-ap`, `fileSystemId`, `uid: "7777"`, `gid: "7777"` |
-| **Azure (Blob)** | `blob.csi.azure.com` | `<resourcegroup>_<storageaccount>_<container>` | Not typically used for Blob Fuse |
-| **Azure (Files)** | `file.csi.azure.com` | `<storageaccount>_<sharename>` | `skuName: Standard_LRS`, `shareName` |
+| **Azure** | `file.csi.azure.com` | `<storageaccount>_<sharename>` | `skuName: Standard_LRS`, `shareName` |
 | **Google** | `filestore.csi.storage.gke.io` | `modeInstance/<zone>/<instance>/<share>` | `tier: standard`, `network` |
 
 > RPI containers run as UID 7777. For static provisioning, create access points or file shares with ownership set to UID/GID 7777. For dynamic provisioning, set `uid` and `gid` in the StorageClass parameters.
