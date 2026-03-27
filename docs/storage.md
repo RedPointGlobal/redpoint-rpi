@@ -16,33 +16,42 @@ You are responsible for provisioning the storage based on your hosting platform'
 
 The chart supports two approaches for provisioning storage:
 
-| Mode | How it works | When to use |
-|:-----|:-------------|:------------|
-| **Static** | You define both PVs and PVCs in the overrides under `storage.persistentVolumes`. The chart creates the PV + PVC pair pointing to your pre-existing volumes (EFS access points, Azure Blob containers, etc.). | Existing infrastructure, strict control over volume handles, or when access points are pre-created with specific UID/GID ownership. |
-| **Dynamic** | You define only PVCs under `storage.persistentVolumeClaims` (or `volumeClaimTemplates` for StatefulSets) with a StorageClass. The CSI driver auto-provisions the underlying volumes and access points. No `storage.persistentVolumes` entries needed. | New deployments, simpler setup, or when the CSI driver supports auto-provisioning (e.g., EFS with `provisioningMode: efs-ap`). |
+| Mode | How it works | Who creates the PV |
+|:-----|:-------------|:-------------------|
+| **Static** | Your K8s admin pre-creates the PersistentVolume (PV) and PVC outside the chart. You provide the PVC name in the overrides. | K8s admin |
+| **Dynamic** | The chart creates a StorageClass. When a PVC is created, the CSI driver auto-provisions the PV and underlying storage (e.g., EFS access point). | CSI driver (automatic) |
 
 ### Platform Reference
 
-Both modes work on all platforms. The CSI driver and volume handle format differ by platform:
+| Platform | CSI Driver | Dynamic StorageClass Parameters |
+|:---------|:-----------|:-------------------------------|
+| **AWS** | `efs.csi.aws.com` | `provisioningMode: efs-ap`, `fileSystemId`, `uid: "7777"`, `gid: "7777"` |
+| **Azure** | `file.csi.azure.com` | `skuName: Standard_LRS`, `shareName` |
+| **Google** | `filestore.csi.storage.gke.io` | `tier: standard`, `network` |
 
-| Platform | CSI Driver | Static volumeHandle | Dynamic StorageClass Parameters |
-|:---------|:-----------|:--------------------|:-------------------------------|
-| **AWS** | `efs.csi.aws.com` | `<efs-id>::<access-point-id>` | `provisioningMode: efs-ap`, `fileSystemId`, `uid: "7777"`, `gid: "7777"` |
-| **Azure** | `file.csi.azure.com` | `<storageaccount>_<sharename>` | `skuName: Standard_LRS`, `shareName` |
-| **Google** | `filestore.csi.storage.gke.io` | `modeInstance/<zone>/<instance>/<share>` | `tier: standard`, `network` |
-
-> RPI containers run as UID 7777. For static provisioning, create access points or file shares with ownership set to UID/GID 7777. For dynamic provisioning, set `uid` and `gid` in the StorageClass parameters.
+> RPI containers run as UID 7777. For static provisioning, ensure the admin creates access points or file shares with ownership set to UID/GID 7777. For dynamic provisioning, set `uid` and `gid` in the StorageClass parameters.
 
 ### Static provisioning
 
-Define PVs and PVCs explicitly. You control the volume handles and access points:
+The approach differs by platform:
+
+**AWS / Google:** Your K8s admin pre-creates the PV and PVC. You just reference the PVC name in the overrides:
 
 ```yaml
 storage:
-  storageClass:
-    enabled: true
-    name: efs-sc
-    provisioner: efs.csi.aws.com
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: true
+      claimName: pvc-fileoutputdir          # must match the PVC created by your admin
+      mountPath: /rpifileoutputdir
+```
+
+That's it. The chart mounts the PVC into the pods. No `storageClass` or `persistentVolumes` section needed.
+
+**Azure:** The PV requires CSI driver configuration (storage account, share name, managed identity client ID, etc.) so the chart creates both the PV and PVC via the `persistentVolumes` section:
+
+```yaml
+storage:
   persistentVolumeClaims:
     FileOutputDirectory:
       enabled: true
@@ -50,20 +59,28 @@ storage:
       mountPath: /rpifileoutputdir
   persistentVolumes:
   - name: pv-fileoutputdir
-    capacity: 50Gi
+    capacity: 10Gi
     accessModes: [ReadWriteMany]
-    storageClassName: efs-sc
+    storageClassName: azurefile-csi
     reclaimPolicy: Retain
     csi:
-      driver: efs.csi.aws.com
-      volumeHandle: <efs-id>::<access-point-id>
+      driver: file.csi.azure.com
+      volumeHandle: <storageaccount>_<sharename>
+      volumeAttributes:
+        storageaccount: <your-storage-account>
+        shareName: <your-file-share>
+        clientID: <managed-identity-client-id>
+        resourcegroup: <resource-group>
+        subscriptionid: <subscription-id>
     pvc:
       claimName: pvc-fileoutputdir
 ```
 
+> The `persistentVolumes` section can also be used on AWS/Google if you prefer the chart to create the PV instead of the admin doing it manually.
+
 ### Dynamic provisioning
 
-Define only PVCs and a StorageClass with provisioning parameters. The CSI driver creates the volumes automatically:
+The chart creates a StorageClass and PVCs. The CSI driver auto-provisions the PVs:
 
 ```yaml
 storage:
@@ -83,8 +100,9 @@ storage:
       enabled: true
       claimName: pvc-fileoutputdir
       mountPath: /rpifileoutputdir
-  # No persistentVolumes needed - the CSI driver creates them
 ```
+
+No `persistentVolumes` section needed. The CSI driver creates the PV and access point automatically when the PVC is created.
 
 > For EFS dynamic provisioning, use `uid: "7777"` and `gid: "7777"` to match the UID that RPI containers run as. This ensures the auto-created access points have correct file ownership.
 
@@ -109,30 +127,18 @@ The [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** ta
 
 ### Example: AWS EFS
 
+Your K8s admin creates the EFS filesystem, access points, StorageClass, PVs, and PVCs. You reference the PVC claim names in the overrides:
+
 ```yaml
 storage:
-  storageClass:
-    enabled: true
-    name: sc-rpi-efs
-    provisioner: efs.csi.aws.com
   persistentVolumeClaims:
     FileOutputDirectory:
       enabled: true
-      claimName: rpifileoutputdir
+      claimName: pvc-fileoutputdir
       mountPath: /rpifileoutputdir
-  persistentVolumes:
-  - name: pv-rpi-efs
-    capacity: 10Gi
-    accessModes:
-    - ReadWriteMany
-    storageClassName: sc-rpi-efs
-    reclaimPolicy: Retain
-    csi:
-      driver: efs.csi.aws.com
-      volumeHandle: <your-efs-filesystem-id>
-    pvc:
-      claimName: rpifileoutputdir
 ```
+
+> **Need help setting up EFS?** The [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Amazon** > **Storage Setup (EFS)** generates a ready-to-use script that creates the EFS filesystem, access points with correct UID/GID 7777 ownership, and all the Kubernetes manifests (StorageClass, PVs, PVCs). Download it and repurpose it for your environment.
 
 ### Example: Azure Files
 
