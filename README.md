@@ -27,8 +27,7 @@ This chart deploys RPI on Kubernetes using Helm.
 | [Ingress](docs/ingress.md) | Traffic routing and TLS | Chart-managed nginx, BYO controller, AWS ALB |
 | [Storage](docs/storage.md) | Persistent volumes and provisioning | Static, dynamic, EFS, Azure Files, Filestore |
 | [RPI Helm CLI](docs/readme-cli.md) | Command-line deployment tool | Pre-flight, secrets, deploy, troubleshoot |
-| [Automation](docs/readme-terraform.md) | Scripts and pipelines | CI/CD, vault setup, Entra ID configuration |
-| [GitOps](docs/readme-argocd.md) | Declarative deployment | ArgoCD, Flux |
+| [Automation](docs/readme-terraform.md) | Scripts, pipelines, and GitOps | CI/CD, vault setup, ArgoCD, Flux |
 
 ## Resources
 
