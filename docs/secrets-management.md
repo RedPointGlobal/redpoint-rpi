@@ -278,14 +278,13 @@ databases:
     snowflake:
       enabled: true
       credentialsType: snowflake_jwt
-      secretName: snowflake-creds
       mountPath: /app/snowflake-creds
       secretProviderClassName: snowflake-creds
       keys:
       - keyName: my-snowflake-rsakey.p8
 ```
 
-The `objectAlias` controls the filename inside the container.
+The `objectAlias` in the SecretProviderClass controls the filename inside the container.
 
 </details>
 
@@ -805,10 +804,10 @@ databases:
     snowflake:
       enabled: true
       credentialsType: snowflake_jwt
-      secretName: snowflake-rsa-private-key
       mountPath: /app/snowflake-creds
       keys:
       - keyName: sf_rpi_usr_private_key.p8
+        secretName: snowflake-rsa-private-key
 ```
 
 </details>
@@ -1059,15 +1058,15 @@ databases:
     snowflake:
       enabled: true
       credentialsType: snowflake_jwt
-      secretName: snowflake-creds
       mountPath: /app/snowflake-creds
       keys:
       - keyName: my-snowflake-rsakey.p8
+        secretName: snowflake-rsa-private-key
 ```
 
 ### csi Provider
 
-Store the `.p8` private key in your vault. Define a SecretProviderClass that syncs it to a K8s Secret, and a validation pod to trigger the sync:
+Store the `.p8` private key in your vault. Define a SecretProviderClass and set `secretProviderClassName` on the Snowflake config. The key is mounted directly via CSI inline volume - no K8s Secret is created and no validation pod is needed.
 
 ```yaml
 databases:
@@ -1075,8 +1074,8 @@ databases:
     snowflake:
       enabled: true
       credentialsType: snowflake_jwt
-      secretName: snowflake-creds
       mountPath: /app/snowflake-creds
+      secretProviderClassName: snowflake-creds
       keys:
       - keyName: my-snowflake-rsakey.p8
 
@@ -1092,29 +1091,22 @@ secretsManagement:
         resourceGroup: <your-rg>
         subscriptionId: <your-sub>
         tenantId: <your-tenant>
-        useVMManagedIdentity: "false"
-        usePodIdentity: "false"
       objects:
       - objectName: my-snowflake-private-key
         objectType: secret
         objectAlias: my-snowflake-rsakey.p8
-      secretObjects:
-      - secretName: snowflake-creds
-        type: Opaque
-        data:
-        - objectName: my-snowflake-rsakey.p8
-          key: my-snowflake-rsakey.p8
+```
 
-validationPods:
-  deployments:
-  - name: deployment-sf
-    enabled: true
-    containerName: secrets
-    image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
-    type: csiSecret
-    secretProviderClass: snowflake-creds
-    mountPath: /home/secrets/snowflake
-    volumeName: secrets-store-sf
+For multi-tenant, add multiple objects to the same SecretProviderClass:
+
+```yaml
+      objects:
+      - objectName: vault-tenant1-key
+        objectType: secret
+        objectAlias: tenant1-private-key.p8
+      - objectName: vault-tenant2-key
+        objectType: secret
+        objectAlias: tenant2-private-key.p8
 ```
 
 </details>

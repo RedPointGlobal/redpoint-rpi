@@ -677,7 +677,7 @@ Usage: {{- include "rpi.snowflake.volume" . | nindent 8 }}
 {{- define "rpi.snowflake.volume" -}}
 {{- $sf := .Values.databases.datawarehouse.snowflake -}}
 {{- if $sf.secretProviderClassName -}}
-- name: {{ $sf.secretName | default "snowflake-creds" }}
+- name: {{ $sf.secretProviderClassName }}
   csi:
     driver: secrets-store.csi.k8s.io
     readOnly: true
@@ -705,7 +705,7 @@ Usage: {{- include "rpi.snowflake.volumeMount" . | nindent 10 }}
 {{- define "rpi.snowflake.volumeMount" -}}
 {{- $sf := .Values.databases.datawarehouse.snowflake -}}
 {{- if $sf.secretProviderClassName -}}
-- name: {{ $sf.secretName | default "snowflake-creds" }}
+- name: {{ $sf.secretProviderClassName }}
   mountPath: {{ $sf.mountPath }}
   readOnly: true
 {{- else -}}

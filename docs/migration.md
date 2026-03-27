@@ -493,14 +493,15 @@ databases:
     snowflake:
       enabled: true
       credentialsType: snowflake_jwt
-      secretName: snowflake-creds
       mountPath: /app/snowflake-creds
       keys:
-        - keyName: tenant1-private-key.p8
-        - keyName: tenant2-private-key.p8
+      - keyName: tenant1-private-key.p8
+        secretName: snowflake-tenant1-key
+      - keyName: tenant2-private-key.p8
+        secretName: snowflake-tenant2-key
 ```
 
-All key files are stored in one Secret and mounted to `/app/snowflake-creds/`. Each tenant's connection string in the RPI client uses:
+Each tenant has its own K8s Secret containing its `.p8` key file. Adding a new tenant is just adding a new key entry and creating the Secret - no need to edit existing secrets. Each tenant's connection string in the RPI client uses:
 
 ```
 Host=<host>;Account=<account>;User=<user>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KEY_FILE=/app/snowflake-creds/tenant1-private-key.p8;Db=<database>;
@@ -508,37 +509,32 @@ Host=<host>;Account=<account>;User=<user>;AUTHENTICATOR=snowflake_jwt;PRIVATE_KE
 
 **For kubernetes secrets provider:** The RPI Helm CLI creates the Secret and prompts for each key file.
 
-**For CSI secrets provider:** Add a Snowflake SecretProviderClass that syncs the private key(s) from your cloud vault to the same Secret:
+**For CSI or SDK secrets provider:** Set `secretProviderClassName` on the Snowflake config and define a SecretProviderClass. The keys are mounted directly via CSI inline volume - no K8s Secret needed:
 
 ```yaml
+databases:
+  datawarehouse:
+    snowflake:
+      secretProviderClassName: snowflake-keys
+
 secretsManagement:
   csi:
     secretProviderClasses:
-      - name: snowflake-secretprovider
-        provider: azure
-        parameters:
-          clientID: "<your-client-id>"
-          keyvaultName: "<your-keyvault>"
-          resourceGroup: "<your-rg>"
-          subscriptionId: "<your-sub-id>"
-          tenantId: "<your-tenant-id>"
-          useVMManagedIdentity: "false"
-          usePodIdentity: "false"
-        objects:
-          - objectName: sf-tenant1-key
-            objectType: secret
-            objectAlias: tenant1-private-key.p8
-          - objectName: sf-tenant2-key
-            objectType: secret
-            objectAlias: tenant2-private-key.p8
-        secretObjects:
-          - secretName: snowflake-creds
-            type: Opaque
-            data:
-              - objectName: tenant1-private-key.p8
-                key: tenant1-private-key.p8
-              - objectName: tenant2-private-key.p8
-                key: tenant2-private-key.p8
+    - name: snowflake-keys
+      provider: azure
+      parameters:
+        clientID: "<your-client-id>"
+        keyvaultName: "<your-keyvault>"
+        resourceGroup: "<your-rg>"
+        subscriptionId: "<your-sub-id>"
+        tenantId: "<your-tenant-id>"
+      objects:
+      - objectName: sf-tenant1-key
+        objectType: secret
+        objectAlias: tenant1-private-key.p8
+      - objectName: sf-tenant2-key
+        objectType: secret
+        objectAlias: tenant2-private-key.p8
 ```
 
 ---
@@ -555,7 +551,7 @@ Features like per-service image overrides, custom CA certificates, common annota
 - **Redshift**: The `databases.datawarehouse.redshift` config block no longer exists in the chart. Redshift now uses the Npgsql library instead of the ODBC driver.
 - **Databricks**: The `databases.datawarehouse.databricks` config block no longer exists in the chart.
 - **ODBC ConfigMap**: The `odbc-config` ConfigMap, `ODBCINI` environment variable, and `postStart` lifecycle hook no longer exist.
-- **Snowflake**: No longer mounted from a ConfigMap. For `kubernetes` provider: the `.p8` key is mounted from a K8s Secret (`ConfigMapName` is now `secretName`, `ConfigMapFilePath` is now `mountPath`). For `csi` and `sdk` providers: the key is mounted directly from vault via CSI inline volume (set `secretProviderClassName` in your Snowflake config). See the [Secrets Management Guide](secrets-management.md) for platform-specific examples.
+- **Snowflake**: No longer mounted from a ConfigMap. For `kubernetes` provider: each `.p8` key is mounted from its own K8s Secret (set `secretName` per key entry under `keys[]`). For `csi` and `sdk` providers: keys are mounted directly from vault via CSI inline volume (set `secretProviderClassName` in your Snowflake config). Multi-tenant is supported with one key per entry. See the [Secrets Management Guide](secrets-management.md) for platform-specific examples.
 
 For Redshift, Databricks, and ODBC: when you generate your fresh v7.7 overrides, these blocks will not be present. Data warehouse connections are now configured as connection strings in the RPI client interface after deployment. See [Step 6: Update Data Warehouse Connections](#6-update-data-warehouse-connections) in the Perform Upgrade section for connection string formats and examples.
 
