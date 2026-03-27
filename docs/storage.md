@@ -3,11 +3,14 @@
 
 [< Back to Home](../README.md)
 
-RPI uses persistent storage for shared file output and optionally for internal Redis and RabbitMQ caches when distributed queue processing is enabled.
+RPI uses file share storage for storing files such as those exported via interactions or selection rules to a File Output directory, custom plugins, or files shared with Redpoint Data Management (RPDM). In Azure, AWS, or Google Cloud, this storage is backed by their respective managed file share services such as Azure Files, Amazon EFS, and Google Filestore.
+
+You are responsible for provisioning the storage based on your hosting platform's offering. Once the storage has been provisioned, create a PersistentVolumeClaim (PVC) and reference its name in the overrides file.
 
 ---
 
-## Provisioning Modes
+<details>
+<summary><strong style="font-size:1.25em;">Provisioning Modes</strong></summary>
 
 The chart supports two approaches for provisioning storage:
 
@@ -83,6 +86,8 @@ storage:
 ```
 
 > For EFS dynamic provisioning, use `uid: "7777"` and `gid: "7777"` to match the UID that RPI containers run as. This ensures the auto-created access points have correct file ownership.
+
+</details>
 
 ---
 
