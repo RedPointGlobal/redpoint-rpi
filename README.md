@@ -21,14 +21,14 @@ This chart deploys RPI on Kubernetes using Helm.
 
 | Guide | Description |
 |:------|:------------|
-| [Values Guide](docs/readme-values.md) | How the two-tier values system works, override patterns, and complete values reference |
-| [Secrets Management](docs/secrets-management.md) | Providers (Kubernetes, CSI, SDK), required vault keys, and image pull secrets |
-| [Single Sign-On](docs/single-sign-on.md) | Microsoft Entra ID and OpenID Connect (Keycloak, Okta) authentication setup |
-| [Ingress](docs/ingress.md) | Chart-managed nginx, BYO ingress controller, and AWS ALB with prerequisites and examples |
-| [Storage](docs/storage.md) | FileOutputDirectory, internal Redis/RabbitMQ, dynamic provisioning, EFS permissions |
-| [RPI Helm CLI](docs/readme-cli.md) | Pre-flight checks, secrets generation, deployment, status, and troubleshooting |
-| [Automation Guide](docs/readme-terraform.md) | CI/CD pipelines, vault secrets setup scripts, and Entra ID configuration |
-| [GitOps Guide](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |
+| [Values Guide](docs/readme-values.md) | Two-tier values system and complete values reference |
+| [Secrets Management](docs/secrets-management.md) | Kubernetes, CSI, and SDK providers with required vault keys |
+| [Single Sign-On](docs/single-sign-on.md) | Microsoft Entra ID and OpenID Connect (Okta) setup |
+| [Ingress](docs/ingress.md) | Chart-managed nginx, BYO controller, and AWS ALB |
+| [Storage](docs/storage.md) | Static and dynamic provisioning across platforms |
+| [RPI Helm CLI](docs/readme-cli.md) | Pre-flight, secrets, deployment, and troubleshooting |
+| [Automation](docs/readme-terraform.md) | CI/CD pipelines and vault secrets setup scripts |
+| [GitOps](docs/readme-argocd.md) | Deploying with ArgoCD or Flux |
 
 ## Resources
 
