@@ -34,3 +34,6 @@ This chart deploys RPI on Kubernetes using Helm.
 - [RPI Product Documentation](https://docs.redpointglobal.com/rpi/)
 - [Support](mailto:support@redpointglobal.com) (RPI application issues)
 - [www.redpointglobal.com](https://www.redpointglobal.com)
+
+---
+<sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>
