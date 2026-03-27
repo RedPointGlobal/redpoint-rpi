@@ -218,3 +218,6 @@ No merge conflicts since you don't edit the chart. Your overrides stay in the co
 - **Secrets diff on every sync**: Add `ignoreDifferences` for Secrets (see Application example above).
 
 </details>
+
+---
+<sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>

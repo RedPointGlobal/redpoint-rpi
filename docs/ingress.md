@@ -323,3 +323,6 @@ cert-manager watches the Ingress, provisions the certificate, and stores it in t
 - [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) - Generate ingress configuration
 - [AWS Load Balancer Controller docs](https://kubernetes-sigs.github.io/aws-load-balancer-controller/) - ALB controller installation and configuration
 - [cert-manager docs](https://cert-manager.io/docs/) - Automated certificate management
+
+---
+<sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>

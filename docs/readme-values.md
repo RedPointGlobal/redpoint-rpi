@@ -177,3 +177,6 @@ realtimeapi:
 - [Greenfield Installation](greenfield.md) for new deployments
 - [Upgrade Guide](migration.md) for upgrading from v7.6 to v7.7
 - [Secrets Management](secrets-management.md) for CSI, SDK, and Kubernetes secrets providers
+
+---
+<sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>

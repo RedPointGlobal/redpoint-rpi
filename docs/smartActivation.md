@@ -184,3 +184,6 @@ Visit the [RPI Documentation Site]("https://docs.redpointglobal.com/rpi/") for i
 For RPI application issues, contact [support@redpointglobal.com](mailto:support@redpointglobal.com).
 
 > **Scope of Support:** Redpoint supports RPI application issues. Kubernetes infrastructure, networking, and external system configuration fall outside our support scope. Consult your IT infrastructure team or relevant technical forums for those.
+
+---
+<sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>

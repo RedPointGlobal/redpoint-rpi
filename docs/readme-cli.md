@@ -288,3 +288,6 @@ rpihelmcli/setup.sh deploy -f <overrides> [-n namespace] [-c chart-path] [--dry-
 rpihelmcli/setup.sh status [-n namespace]
 rpihelmcli/setup.sh troubleshoot [-n namespace] [symptom]
 ```
+
+---
+<sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>
