@@ -309,8 +309,7 @@ RPI pods run as UID 7777 / GID 7777 by default. Storage volumes must be writable
 
 - **Dynamic provisioning with EFS**: use `provisioningMode: efs-ap` with `gidRangeStart: 7000` / `gidRangeEnd: 8000` to auto-create access points with correct ownership
 - **Static BYO with EFS**: create EFS access points with `Uid=7777,Gid=7777`
-- **Azure Blob/Files**: the managed identity needs `Storage Blob Data Contributor` and `Storage File Data SMB Share Contributor` roles
-- **emptyDir**: no permission issues (Kubernetes handles ownership)
+- **Azure Files**: the managed identity needs `Storage File Data SMB Share Contributor` role
 
 </details>
 
