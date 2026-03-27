@@ -3,7 +3,9 @@
 
 [< Back to Home](../README.md)
 
-RPI uses file share storage for storing files such as those exported via interactions or selection rules to a File Output directory, custom plugins, or files shared with Redpoint Data Management (RPDM). In Azure, AWS, or Google Cloud, this storage is backed by their respective managed file share services such as Azure Files, Amazon EFS, and Google Filestore.
+RPI uses file share storage for storing files such as those exported via interactions or selection rules to a File Output directory, custom plugins, or files shared with Redpoint Data Management (RPDM). The execution service also uses this storage as its filesystem-based cache provider for persisting execution state. In Azure, AWS, or Google Cloud, this storage is backed by their respective managed file share services such as Azure Files, Amazon EFS, and Google Filestore.
+
+**File share storage is mandatory for a successful deployment.** Without it, file exports and the execution service cache will not function.
 
 You are responsible for provisioning the storage based on your hosting platform's offering. Once the storage has been provisioned, create a PersistentVolumeClaim (PVC) and reference its name in the overrides file.
 
