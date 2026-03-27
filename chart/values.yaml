@@ -298,8 +298,13 @@ secretsManagement:
 # ==========================
 # Storage
 # ==========================
+# Two provisioning modes:
+#   Static:  Define PVs + PVCs under persistentVolumes[]. You control volume handles.
+#   Dynamic: Define only PVCs + a StorageClass with provisioner parameters.
+#            The CSI driver auto-provisions volumes. No persistentVolumes[] needed.
+# See docs/storage.md for examples of both modes.
 storage:
-  # Optional: create a StorageClass (e.g., EFS CSI on AWS, Azure File, GCE PD)
+  # StorageClass (required for dynamic, optional for static)
   storageClass:
     enabled: false
     name: redpoint-rpi
@@ -315,8 +320,8 @@ storage:
     #   provisioningMode: efs-ap
     #   fileSystemId: fs-0123456789abcdef0
     #   directoryPerms: "755"
-    #   uid: "10001"
-    #   gid: "10001"
+    #   uid: "7777"
+    #   gid: "7777"
     #   basePath: /rpi
     #   subPathPattern: shared-data
     #   ensureUniqueDirectory: "false"

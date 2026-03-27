@@ -7,6 +7,85 @@ RPI uses persistent storage for shared file output and optionally for internal R
 
 ---
 
+## Provisioning Modes
+
+The chart supports two approaches for provisioning storage:
+
+| Mode | How it works | When to use |
+|:-----|:-------------|:------------|
+| **Static** | You define both PVs and PVCs in the overrides under `storage.persistentVolumes`. The chart creates the PV + PVC pair pointing to your pre-existing volumes (EFS access points, Azure Blob containers, etc.). | Existing infrastructure, strict control over volume handles, or when access points are pre-created with specific UID/GID ownership. |
+| **Dynamic** | You define only PVCs under `storage.persistentVolumeClaims` (or `volumeClaimTemplates` for StatefulSets) with a StorageClass. The CSI driver auto-provisions the underlying volumes and access points. No `storage.persistentVolumes` entries needed. | New deployments, simpler setup, or when the CSI driver supports auto-provisioning (e.g., EFS with `provisioningMode: efs-ap`). |
+
+### Platform Reference
+
+Both modes work on all platforms. The CSI driver and volume handle format differ by platform:
+
+| Platform | CSI Driver | Static volumeHandle | Dynamic StorageClass Parameters |
+|:---------|:-----------|:--------------------|:-------------------------------|
+| **AWS** | `efs.csi.aws.com` | `<efs-id>::<access-point-id>` | `provisioningMode: efs-ap`, `fileSystemId`, `uid: "7777"`, `gid: "7777"` |
+| **Azure (Blob)** | `blob.csi.azure.com` | `<resourcegroup>_<storageaccount>_<container>` | Not typically used for Blob Fuse |
+| **Azure (Files)** | `file.csi.azure.com` | `<storageaccount>_<sharename>` | `skuName: Standard_LRS`, `shareName` |
+| **Google** | `filestore.csi.storage.gke.io` | `modeInstance/<zone>/<instance>/<share>` | `tier: standard`, `network` |
+
+> RPI containers run as UID 7777. For static provisioning, create access points or file shares with ownership set to UID/GID 7777. For dynamic provisioning, set `uid` and `gid` in the StorageClass parameters.
+
+### Static provisioning
+
+Define PVs and PVCs explicitly. You control the volume handles and access points:
+
+```yaml
+storage:
+  storageClass:
+    enabled: true
+    name: efs-sc
+    provisioner: efs.csi.aws.com
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: true
+      claimName: pvc-fileoutputdir
+      mountPath: /rpifileoutputdir
+  persistentVolumes:
+  - name: pv-fileoutputdir
+    capacity: 50Gi
+    accessModes: [ReadWriteMany]
+    storageClassName: efs-sc
+    reclaimPolicy: Retain
+    csi:
+      driver: efs.csi.aws.com
+      volumeHandle: <efs-id>::<access-point-id>
+    pvc:
+      claimName: pvc-fileoutputdir
+```
+
+### Dynamic provisioning
+
+Define only PVCs and a StorageClass with provisioning parameters. The CSI driver creates the volumes automatically:
+
+```yaml
+storage:
+  storageClass:
+    enabled: true
+    name: efs-sc
+    provisioner: efs.csi.aws.com
+    parameters:
+      provisioningMode: efs-ap
+      fileSystemId: <your-efs-id>
+      directoryPerms: "755"
+      uid: "7777"
+      gid: "7777"
+      basePath: /rpi
+  persistentVolumeClaims:
+    FileOutputDirectory:
+      enabled: true
+      claimName: pvc-fileoutputdir
+      mountPath: /rpifileoutputdir
+  # No persistentVolumes needed - the CSI driver creates them
+```
+
+> For EFS dynamic provisioning, use `uid: "7777"` and `gid: "7777"` to match the UID that RPI containers run as. This ensures the auto-created access points have correct file ownership.
+
+---
+
 <details>
 <summary><strong style="font-size:1.25em;">FileOutputDirectory</strong></summary>
 
