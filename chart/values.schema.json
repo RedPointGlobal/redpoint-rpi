@@ -313,13 +313,9 @@
           "description": "Kubernetes secrets settings (provider: kubernetes)",
           "additionalProperties": true,
           "properties": {
-            "autoCreateSecrets": {
-              "type": "boolean",
-              "description": "Automatically create K8s secrets from values"
-            },
             "secretName": {
               "type": "string",
-              "description": "Name of the Kubernetes secret"
+              "description": "Name of the pre-created Kubernetes secret containing application credentials"
             }
           }
         },
@@ -1310,10 +1306,6 @@
           "type": "string",
           "description": "Rebrandly API key"
         },
-        "autoCreateSecrets": {
-          "type": "boolean",
-          "description": "Automatically create secrets for Rebrandly"
-        },
         "secretName": {
           "type": "string",
           "description": "Kubernetes secret name for Rebrandly credentials"
@@ -1895,10 +1887,6 @@
         "enabled": {
           "type": "boolean",
           "description": "Enable Smart Activation (CDP) services"
-        },
-        "autoCreateSecrets": {
-          "type": "boolean",
-          "description": "Automatically create secrets for Smart Activation"
         },
         "secretName": {
           "type": "string",
