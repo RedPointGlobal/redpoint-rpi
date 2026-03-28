@@ -2611,6 +2611,31 @@ SECRETS_RT
       fi
     fi
 
+    # AWS access keys (required for SQS/S3 when using amazonsqs queue provider)
+    if [ "$platform" = "amazon" ]; then
+      local use_access_keys
+      use_access_keys=$(read_val "$overrides" "cloudIdentity.amazon.useAccessKeys")
+      if [ "$rt_queue_provider" = "amazonsqs" ] || [ "$use_access_keys" = "true" ] || [ "$use_access_keys" = "True" ]; then
+        echo "  ${BOLD}AWS Access Keys${RESET}"
+        echo "  ${DIM}Required for Amazon SQS queue access. The IAM user needs SQS and S3 permissions.${RESET}"
+        local aws_access_key_id aws_secret_access_key
+        read -rp "    Access Key ID: " aws_access_key_id
+        read -rsp "    Secret Access Key: " aws_secret_access_key
+        echo ""
+        if [ -n "$aws_access_key_id" ] && [ -n "$aws_secret_access_key" ]; then
+          cat >> "$output" << SECRETS_AWS_KEYS
+  # -- AWS Access Keys --
+  AWS_Access_Key_ID: "${aws_access_key_id}"
+  AWS_Secret_Access_Key: "${aws_secret_access_key}"
+SECRETS_AWS_KEYS
+          echo "  ${GREEN}✔ AWS access keys added${RESET}"
+        else
+          echo "  ${YELLOW}Skipped. Pods using SQS will fail without these keys in the secret.${RESET}"
+        fi
+        echo ""
+      fi
+    fi
+
     # Auto-generated internal passwords
     cat >> "$output" << SECRETS_AUTO
   RealtimeAPI_RabbitMQ_Password: "${rt_rabbitmq_pass}"
@@ -2639,6 +2664,27 @@ SECRETS_AUTO
   Rebrandly_RedisPassword: "${rb_redis_pass}"
 SECRETS_REBRANDLY
     echo "  ${GREEN}✔ Rebrandly secrets added${RESET}"
+    echo ""
+  fi
+
+  # --- SMTP Password ---
+  local smtp_use_creds
+  smtp_use_creds=$(read_val "$overrides" "SMTPSettings.UseCredentials")
+  smtp_use_creds="${smtp_use_creds:-true}"
+  if [ "$smtp_use_creds" = "true" ] || [ "$smtp_use_creds" = "True" ]; then
+    echo "  ${BOLD}SMTP${RESET}"
+    local smtp_password
+    read -rsp "    SMTP password [skip]: " smtp_password
+    echo ""
+    if [ -n "$smtp_password" ]; then
+      cat >> "$output" << SECRETS_SMTP
+  # -- SMTP --
+  SMTP_Password: "${smtp_password}"
+SECRETS_SMTP
+      echo "  ${GREEN}✔ SMTP password added${RESET}"
+    else
+      echo "  ${YELLOW}Skipped. Add SMTP_Password to the secret manually if SMTP authentication is needed.${RESET}"
+    fi
     echo ""
   fi
 
