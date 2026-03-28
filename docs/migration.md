@@ -137,11 +137,10 @@ If you prefer to manage K8s secrets yourself (via Sealed Secrets, External Secre
 secretsManagement:
   provider: kubernetes
   kubernetes:
-    autoCreateSecrets: false
     secretName: my-existing-rpi-secret
 ```
 
-The chart references your secret by name without creating or modifying it. You are responsible for ensuring it contains the required keys. Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab for the full list of secret keys.
+The chart references your secret by name without creating or modifying it. You are responsible for creating it before deploying. Use the CLI (`rpihelmcli secrets -f overrides.yaml`) to generate the secret, or create it manually. See the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab for the full list of secret keys.
 
 </details>
 

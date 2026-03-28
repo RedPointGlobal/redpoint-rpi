@@ -202,7 +202,9 @@ secretsManagement:
   # Kubernetes secrets (provider: kubernetes)
   # --------------------------------------------------------
   kubernetes:
-    autoCreateSecrets: true
+    # The chart does NOT create this secret. Create it before deploying using:
+    #   rpihelmcli secrets -f overrides.yaml -n <namespace>
+    # Then: kubectl apply -f secrets.yaml -n <namespace>
     secretName: redpoint-rpi-secrets
   # --------------------------------------------------------
   # SDK - App reads from cloud vault directly (provider: sdk)
@@ -584,7 +586,6 @@ queuereader:
 rebrandly:
   enabled: false
   apiKey: my_rebrandly_api_key
-  autoCreateSecrets: true
   secretName: rpi-rebrandly
   redisSettings:
     # internal: chart-managed Redis | external: BYO Redis
@@ -849,7 +850,6 @@ redpointAI:
 # ==========================
 smartActivation:
   enabled: false
-  autoCreateSecrets: true
   secretName: rpi-smartactivation
 
 # Auth Service (Smart Activation)

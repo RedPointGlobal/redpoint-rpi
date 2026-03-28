@@ -99,6 +99,129 @@ No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert)
 
 ---
 
+## Kubernetes Provider — Creating the Application Secret
+
+The chart does **not** create the `redpoint-rpi-secrets` Kubernetes Secret. You must create it before deploying. Sensitive values should **never** be stored in your overrides file.
+
+### Recommended: Use the CLI
+
+The CLI reads your overrides file, detects which secrets are required based on your configuration (database provider, realtime cache, queue provider, SMTP, Snowflake, etc.), and prompts for each value interactively:
+
+```bash
+rpihelmcli secrets -f overrides.yaml -n redpoint-rpi
+```
+
+This generates a `secrets.yaml` file. Apply it:
+
+```bash
+kubectl apply -f secrets.yaml -n redpoint-rpi
+```
+
+The CLI automatically:
+- Builds the correct connection string format for your database provider (SQL Server, PostgreSQL, SQL Server on VM)
+- Generates random passwords for internal services (Redis, RabbitMQ)
+- Prompts for Snowflake `.p8` key files per tenant
+- Prompts for the CA certificate bundle if `customCACerts` is enabled
+- Skips sections that aren't enabled in your overrides
+
+### Manual: Create the Secret with kubectl
+
+If you prefer not to use the CLI (e.g., generating secrets in a CI/CD pipeline), create the secret manually. The secret must contain the keys that your configuration requires.
+
+**Always required:**
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redpoint-rpi-secrets
+  namespace: redpoint-rpi
+type: Opaque
+stringData:
+  # Database connection strings (format depends on provider)
+  # SQL Server:
+  ConnectionString_Logging_Database: "Server=tcp:<host>,1433;Database=<logging-db>;User ID=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+  ConnectionString_Operations_Database: "Server=tcp:<host>,1433;Database=<ops-db>;User ID=<user>;Password=<password>;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+  # PostgreSQL:
+  # ConnectionString_Logging_Database: "PostgreSQL:Server=<host>;Database=<logging-db>;User Id=<user>;Password=<password>;"
+  # ConnectionString_Operations_Database: "PostgreSQL:Server=<host>;Database=<ops-db>;User Id=<user>;Password=<password>;"
+
+  # Deployment API needs these individually
+  Operations_Database_ServerHost: "<host>"
+  Operations_Database_Server_Username: "<user>"
+  Operations_Database_Server_Password: "<password>"
+  Operations_Database_Pulse_Database_Name: "<ops-db>"
+  Operations_Database_Pulse_Logging_Database_Name: "<logging-db>"
+```
+
+**If Realtime API is enabled** (`realtimeapi.enabled: true`):
+
+```yaml
+  # Auth token (generate a random string)
+  RealtimeAPI_Auth_Token: "<random-token>"
+
+  # Cache provider connection (depends on cacheProvider.provider)
+  # MongoDB:
+  RealtimeAPI_MongoCache_ConnectionString: "mongodb+srv://<user>:<password>@<host>/<db>"
+  # Redis:
+  # RealtimeAPI_RedisCache_ConnectionString: "<host>:6379,password=<password>,abortConnect=False"
+
+  # Queue provider connection (depends on queueProvider.provider)
+  # Azure Service Bus:
+  RealtimeAPI_ServiceBus_ConnectionString: "Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=<key-name>;SharedAccessKey=<key>"
+  # Azure Event Hubs:
+  # RealtimeAPI_EventHub_ConnectionString: "Endpoint=sb://<namespace>.servicebus.windows.net/;..."
+  # Azure Storage:
+  # RealtimeAPI_AzureStorage_ConnectionString: "DefaultEndpointsProtocol=https;AccountName=..."
+```
+
+**If Queue Reader is distributed** (`queuereader.realtimeConfiguration.isDistributed: true`):
+
+```yaml
+  # Internal Redis/RabbitMQ passwords (generate random strings)
+  QueueService_RedisCache_Password: "<random-password>"
+  QueueService_RedisCache_ConnectionString: "rpi-queuereader-cache:6379,password=<same-password>,abortConnect=False"
+  QueueService_RabbitMQ_Password: "<random-password>"
+```
+
+**If SMTP uses credentials** (`SMTPSettings.UseCredentials: true`):
+
+```yaml
+  SMTP_Password: "<smtp-password>"
+```
+
+**If using AWS with access keys** (`cloudIdentity.amazon.useAccessKeys: true`):
+
+```yaml
+  AWS_Access_Key_ID: "<access-key>"
+  AWS_Secret_Access_Key: "<secret-key>"
+```
+
+**If Redpoint AI is enabled** (`redpointAI.enabled: true`):
+
+```yaml
+  RPI_NLP_API_KEY: "<azure-openai-api-key>"
+  RPI_NLP_SEARCH_KEY: "<cognitive-search-key>"
+  RPI_NLP_MODEL_CONNECTION_STRING: "<model-storage-connection-string>"
+```
+
+**If Rebrandly is enabled** (`rebrandly.enabled: true`):
+
+```yaml
+  Rebrandly_RedisPassword: "<random-password>"
+  Rebrandly_ApiKey: "<rebrandly-api-key>"
+```
+
+Apply the secret:
+
+```bash
+kubectl apply -f secrets.yaml -n redpoint-rpi
+```
+
+> **Note:** The CLI is strongly recommended over manual creation because it detects exactly which keys are needed from your overrides, formats connection strings correctly for your database provider, and generates random passwords for internal services. Manual creation risks missing required keys or using incorrect connection string formats.
+
+---
+
 ## Azure
 
 <details>
