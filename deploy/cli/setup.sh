@@ -2641,29 +2641,40 @@ SECRETS_REBRANDLY
   fi
 
   # --- Custom CA certificate ---
-  local ca_enabled ca_name ca_source ca_file
+  local ca_enabled ca_name ca_cert_file
   ca_enabled=$(read_val "$overrides" "customCACerts.enabled")
   ca_enabled="${ca_enabled:-false}"
   if [ "$ca_enabled" = "true" ] || [ "$ca_enabled" = "True" ]; then
     ca_name=$(read_val "$overrides" "customCACerts.name")
-    ca_file=$(read_val "$overrides" "customCACerts.certFile")
-    # Only prompt if not using CSI/SDK (secretProviderClassName)
+    ca_name="${ca_name:-custom-ca-cert}"
+    ca_cert_file=$(read_val "$overrides" "customCACerts.certFile")
+    ca_cert_file="${ca_cert_file:-ca-bundle.pem}"
+    # Only prompt if not using CSI inline mount
     local ca_spc
     ca_spc=$(read_val "$overrides" "customCACerts.secretProviderClassName")
-    if [ -z "$ca_spc" ] && [ -n "$ca_name" ]; then
-      echo "  ${BOLD}Custom CA certificate${RESET}"
+    if [ -z "$ca_spc" ]; then
+      echo "  ${BOLD}Custom CA certificate (Secret: ${ca_name})${RESET}"
       local ca_file_path
-      read -rp "    Path to CA bundle file (e.g., ca-bundle.pem): " ca_file_path
+      read -rp "    Path to CA bundle file (e.g., combined.pem) [skip]: " ca_file_path
       if [ -n "$ca_file_path" ] && [ -f "$ca_file_path" ]; then
-        kubectl create secret generic "$ca_name" \
-          --from-file="${ca_file:-ca-bundle.pem}=${ca_file_path}" \
-          -n "$namespace" 2>/dev/null || echo "    (already exists)"
-        echo "  ${GREEN}✔${RESET} CA certificate secret '${ca_name}' created"
-        echo ""
+        local ca_b64
+        ca_b64=$(base64 -w0 < "$ca_file_path" 2>/dev/null || base64 < "$ca_file_path")
+        cat >> "$output" << SECRETS_CA
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${ca_name}
+  namespace: ${namespace}
+type: Opaque
+data:
+  ${ca_cert_file}: ${ca_b64}
+SECRETS_CA
+        echo "  ${GREEN}✔ CA certificate secret added${RESET}"
       else
-        echo "  ${YELLOW}●${RESET} Skipped (file not found)"
-        echo ""
+        echo "  ${YELLOW}Skipped. Create the secret manually: kubectl create secret generic ${ca_name} --from-file=${ca_cert_file} -n ${namespace}${RESET}"
       fi
+      echo ""
     fi
   fi
 
@@ -2743,68 +2754,51 @@ SECRETS_TLS
     echo ""
   fi
 
-  # --- Snowflake Secret ---
-  local sf_enabled sf_secret
+  # --- Snowflake Secrets (one per tenant key) ---
+  local sf_enabled sf_spc
   sf_enabled=$(read_val "$overrides" "databases.datawarehouse.snowflake.enabled")
-  sf_secret=$(read_val "$overrides" "databases.datawarehouse.snowflake.secretName")
+  sf_spc=$(read_val "$overrides" "databases.datawarehouse.snowflake.secretProviderClassName")
 
-  if [ "$sf_enabled" = "true" ] || [ "$sf_enabled" = "True" ]; then
-    sf_secret="${sf_secret:-snowflake-creds}"
-
-    # Read key names from overrides (supports multiple tenants)
-    local sf_key_names
-    sf_key_names=$(python3 -c "
+  if { [ "$sf_enabled" = "true" ] || [ "$sf_enabled" = "True" ]; } && [ -z "$sf_spc" ]; then
+    # Read key entries (keyName + secretName) from overrides
+    local sf_keys_json
+    sf_keys_json=$(python3 -c "
 import sys, yaml
 d = yaml.safe_load(open(sys.argv[1]))
 sf = (d.get('databases') or {}).get('datawarehouse', {}).get('snowflake', {})
-keys = sf.get('keys', [])
-if not keys and sf.get('keyName'):
-    keys = [{'keyName': sf['keyName']}]
-if not keys:
-    keys = [{'keyName': 'my-snowflake-rsakey.p8'}]
-for k in keys:
-    print(k['keyName'])
+for k in sf.get('keys', []):
+    print(k.get('keyName', 'my-snowflake-rsakey.p8') + '|' + k.get('secretName', 'snowflake-rsa-private-key'))
 " "$overrides" 2>/dev/null)
 
-    echo "  ${BOLD}Snowflake RSA keys (Secret: ${sf_secret})${RESET}"
+    echo "  ${BOLD}Snowflake RSA keys${RESET}"
+    echo "  ${DIM}Each tenant key is stored in its own K8s Secret.${RESET}"
 
-    local sf_has_keys=false
-    local sf_data_block=""
-
-    while IFS= read -r sf_keyname; do
+    while IFS='|' read -r sf_keyname sf_secretname; do
       [ -z "$sf_keyname" ] && continue
+      echo ""
+      echo "  ${BOLD}${sf_keyname}${RESET} (Secret: ${sf_secretname})"
       local sf_key_path
       read -rp "    Path to ${sf_keyname} [skip]: " sf_key_path
 
       if [ -n "$sf_key_path" ] && [ -f "$sf_key_path" ]; then
-        local sf_key_content
-        sf_key_content=$(cat "$sf_key_path")
-        sf_data_block="${sf_data_block}  ${sf_keyname}: |
-$(echo "$sf_key_content" | sed 's/^/    /')
-"
-        sf_has_keys=true
-        echo "    ${GREEN}✔ ${sf_keyname} added${RESET}"
-      else
-        echo "    ${YELLOW}Skipped ${sf_keyname}${RESET}"
-      fi
-    done <<< "$sf_key_names"
-
-    if [ "$sf_has_keys" = "true" ]; then
-      cat >> "$output" << SECRETS_SF_HEADER
+        local sf_key_b64
+        sf_key_b64=$(base64 -w0 < "$sf_key_path" 2>/dev/null || base64 < "$sf_key_path")
+        cat >> "$output" << SECRETS_SF
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: ${sf_secret}
+  name: ${sf_secretname}
   namespace: ${namespace}
 type: Opaque
-stringData:
-SECRETS_SF_HEADER
-      echo "$sf_data_block" >> "$output"
-      echo "  ${GREEN}✔ Snowflake Secret added${RESET}"
-    else
-      echo "  ${YELLOW}No key files provided. Create the Secret manually.${RESET}"
-    fi
+data:
+  ${sf_keyname}: ${sf_key_b64}
+SECRETS_SF
+        echo "    ${GREEN}✔ ${sf_keyname} added${RESET}"
+      else
+        echo "    ${YELLOW}Skipped. Create manually: kubectl create secret generic ${sf_secretname} --from-file=${sf_keyname} -n ${namespace}${RESET}"
+      fi
+    done <<< "$sf_keys_json"
     echo ""
   fi
 
