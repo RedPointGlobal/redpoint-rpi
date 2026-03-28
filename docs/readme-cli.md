@@ -264,6 +264,7 @@ This renders all Kubernetes manifests to stdout so you can review them before th
 |------|-------------|
 | `-f <file>` | Overrides file (required) |
 | `-n <namespace>` | Kubernetes namespace (default: `redpoint-rpi`) |
+| `-r <name>` | Helm release name (default: `rpi`). Use different names for multiple environments, e.g. `rpi-dev`, `rpi-prod` |
 | `-c <path>` | Chart path (default: auto-clone from GitHub) |
 | `--dry-run` | Render templates without deploying |
 
@@ -338,10 +339,19 @@ rpihelmcli/setup.sh troubleshoot -n my-namespace imagepull
 ```
 rpihelmcli/setup.sh check [-f overrides.yaml]
 rpihelmcli/setup.sh secrets -f <overrides> [-o secrets.yaml] [-n namespace]
-rpihelmcli/setup.sh deploy -f <overrides> [-n namespace] [-c chart-path] [--dry-run]
+rpihelmcli/setup.sh deploy -f <overrides> [-n namespace] [-r release-name] [-c chart-path] [--dry-run]
 rpihelmcli/setup.sh status [-n namespace]
 rpihelmcli/setup.sh troubleshoot [-n namespace] [symptom]
 ```
+
+| Flag | Applies to | Description |
+|:-----|:-----------|:------------|
+| `-f <file>` | check, secrets, deploy | Overrides file |
+| `-n <namespace>` | secrets, deploy, status, troubleshoot | Kubernetes namespace (default: `redpoint-rpi`) |
+| `-r <name>` | deploy | Helm release name (default: `rpi`) |
+| `-o <file>` | secrets | Output file name (default: `secrets.yaml`) |
+| `-c <path>` | deploy | Chart directory path (default: auto-clone from GitHub) |
+| `--dry-run` | deploy | Render manifests without deploying |
 
 ---
 <sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>
