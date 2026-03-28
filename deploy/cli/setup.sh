@@ -2775,12 +2775,12 @@ for k in sf.get('keys', []):
     echo "  ${BOLD}Snowflake RSA keys${RESET}"
     echo "  ${DIM}Each tenant key is stored in its own K8s Secret.${RESET}"
 
-    while IFS='|' read -r sf_keyname sf_secretname; do
+    while IFS='|' read -r sf_keyname sf_secretname <&3; do
       [ -z "$sf_keyname" ] && continue
       echo ""
       echo "  ${BOLD}${sf_keyname}${RESET} (Secret: ${sf_secretname})"
       local sf_key_path
-      read -rp "    Path to ${sf_keyname} [skip]: " sf_key_path
+      read -rp "    Path to ${sf_keyname} [skip]: " sf_key_path </dev/tty
 
       if [ -n "$sf_key_path" ] && [ -f "$sf_key_path" ]; then
         local sf_key_b64
@@ -2800,7 +2800,7 @@ SECRETS_SF
       else
         echo "    ${YELLOW}Skipped. Create manually: kubectl create secret generic ${sf_secretname} --from-file=${sf_keyname} -n ${namespace}${RESET}"
       fi
-    done <<< "$sf_keys_json"
+    done 3<<< "$sf_keys_json"
     echo ""
   fi
 
