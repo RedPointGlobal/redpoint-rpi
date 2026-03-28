@@ -7,21 +7,75 @@ The RPI Helm CLI is a command-line tool for deploying and managing RPI on Kubern
 
 ---
 
-## Quick Start
+## Deployment Workflow
+
+The CLI guides you through the complete deployment lifecycle. Each step builds on the previous one.
+
+```
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│  1. Generate │───▶│   2. Check   │───▶│ 3. Secrets   │───▶│  4. Deploy   │───▶│  5. Status   │
+│   overrides  │    │ prerequisites│    │  generation  │    │              │    │              │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+   Web UI / CLI        CLI check          CLI secrets       CLI deploy / helm     CLI status
+```
+
+### Step 1: Generate overrides
+
+Create your overrides file using the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) (Generate tab) or the CLI. The overrides file contains **only non-default, non-sensitive values** — no passwords, no connection strings, no API keys.
+
+### Step 2: Check prerequisites
+
+```bash
+rpihelmcli/setup.sh check -f overrides.yaml
+```
+
+Validates your local tools (kubectl, helm), cluster connectivity, and overrides file structure.
+
+### Step 3: Generate and apply secrets
+
+```bash
+rpihelmcli/setup.sh secrets -f overrides.yaml -n my-namespace
+```
+
+The CLI reads your overrides, detects which secrets are required based on your configuration (database provider, Snowflake keys, CA certs, SMTP, etc.), and **prompts you for each sensitive value**. It then generates a `secrets.yaml` file containing all required Kubernetes Secrets.
+
+Apply the generated secrets:
+
+```bash
+kubectl apply -f secrets.yaml -n my-namespace
+```
+
+> **Important:** This step must be completed before deploying. The chart does not create application secrets — it only references them. If you skip this step, the deploy command will detect the missing secrets and warn you.
+
+### Step 4: Deploy
+
+```bash
+rpihelmcli/setup.sh deploy -f overrides.yaml -n my-namespace
+```
+
+The CLI auto-clones the chart, creates the namespace if needed, validates that required secrets exist, and runs `helm install`. After submitting, it polls pod status until all pods are ready.
+
+### Step 5: Check status
+
+```bash
+rpihelmcli/setup.sh status -n my-namespace
+```
+
+Shows pod health, services, and ingress endpoints.
+
+---
+
+### Quick Start
 
 Download the [CLI](https://rpi-helm-assistant.redpointcdp.com/app/static/rpihelmcli.zip) from the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com), then:
 
 ```bash
 unzip rpihelmcli.zip
-
-# Check prerequisites
-rpihelmcli/setup.sh check -f overrides.yaml
-
-# Generate secrets (kubernetes provider only)
-rpihelmcli/setup.sh secrets -f overrides.yaml
-
-# Deploy
-rpihelmcli/setup.sh deploy -f overrides.yaml -n my-namespace
+rpihelmcli/setup.sh check   -f overrides.yaml
+rpihelmcli/setup.sh secrets -f overrides.yaml -n my-namespace
+kubectl apply -f secrets.yaml -n my-namespace
+rpihelmcli/setup.sh deploy  -f overrides.yaml -n my-namespace
+rpihelmcli/setup.sh status  -n my-namespace
 ```
 
 Generate your overrides file at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com).

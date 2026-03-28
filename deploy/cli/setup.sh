@@ -43,13 +43,15 @@ if [ "${1:-}" = "check" ] || [ "${1:-}" = "status" ] || [ "${1:-}" = "troublesho
   CLI_OVERRIDES=""
   CLI_SECRETS_OUT="secrets.yaml"
   CLI_CHART="./chart"
+  CLI_RELEASE="rpi"
   CLI_DRY_RUN=false
-  while getopts "n:f:o:c:-:" _cmd_opt 2>/dev/null; do
+  while getopts "n:f:o:c:r:-:" _cmd_opt 2>/dev/null; do
     case "$_cmd_opt" in
       n) CLI_NAMESPACE="$OPTARG" ;;
       f) CLI_OVERRIDES="$OPTARG" ;;
       o) CLI_SECRETS_OUT="$OPTARG" ;;
       c) CLI_CHART="$OPTARG" ;;
+      r) CLI_RELEASE="$OPTARG" ;;
       -)
         case "$OPTARG" in
           dry-run) CLI_DRY_RUN=true ;;
@@ -70,7 +72,7 @@ while getopts "o:a:fh" opt; do
     h)
       echo "Usage: rpihelmcli/setup.sh check [-f overrides.yaml]"
       echo "       rpihelmcli/setup.sh secrets -f <overrides> [-o secrets.yaml] [-n namespace]"
-      echo "       rpihelmcli/setup.sh deploy -f <overrides> [-n namespace] [-c chart-path] [--dry-run]"
+      echo "       rpihelmcli/setup.sh deploy -f <overrides> [-n namespace] [-c chart-path] [-r release-name] [--dry-run]"
       echo "       rpihelmcli/setup.sh status [-n namespace]"
       echo "       rpihelmcli/setup.sh troubleshoot [-n namespace] [symptom]"
       echo ""
@@ -2847,11 +2849,11 @@ SECRETS_BQ
 # Deploy command: pre-flight checks + helm install/upgrade
 # ============================================================
 cli_deploy() {
-  local overrides="$1" namespace="$2" chart="$3" dry_run="$4"
+  local overrides="$1" namespace="$2" chart="$3" dry_run="$4" release="${5:-rpi}"
 
   if [ -z "$overrides" ]; then
     echo "${RED}Error: -f <overrides-file> is required.${RESET}" >&2
-    echo "Usage: rpihelmcli/setup.sh deploy -f overrides.yaml [-n namespace] [-c chart-path] [--dry-run]" >&2
+    echo "Usage: rpihelmcli/setup.sh deploy -f overrides.yaml [-n namespace] [-c chart-path] [-r release-name] [--dry-run]" >&2
     exit 1
   fi
   if [ ! -f "$overrides" ]; then
@@ -2969,6 +2971,86 @@ cli_deploy() {
         fi
       fi
     fi
+
+    # --- Pre-deploy secret validation ---
+    # Check that required secrets exist before running helm install
+    echo ""
+    echo "  ${BOLD}Pre-deploy secret checks${RESET}"
+    local _missing_secrets=false
+
+    # 1. Application secret (kubernetes provider)
+    local _sec_provider
+    _sec_provider=$(read_val "$overrides" "secretsManagement.provider")
+    _sec_provider="${_sec_provider:-kubernetes}"
+    if [ "$_sec_provider" = "kubernetes" ]; then
+      local _app_secret_name
+      _app_secret_name=$(read_val "$overrides" "secretsManagement.kubernetes.secretName")
+      _app_secret_name="${_app_secret_name:-redpoint-rpi-secrets}"
+      if ! kubectl get secret "$_app_secret_name" -n "$namespace" &>/dev/null 2>&1; then
+        echo "  ${RED}✘ Application secret '${_app_secret_name}' not found${RESET}"
+        _missing_secrets=true
+      else
+        echo "  ${GREEN}✔${RESET} Application secret: ${_app_secret_name}"
+      fi
+    fi
+
+    # 2. Snowflake key secrets
+    local _sf_enabled
+    _sf_enabled=$(read_val "$overrides" "databases.datawarehouse.snowflake.enabled")
+    local _sf_spc
+    _sf_spc=$(read_val "$overrides" "databases.datawarehouse.snowflake.secretProviderClassName")
+    if { [ "$_sf_enabled" = "true" ] || [ "$_sf_enabled" = "True" ]; } && [ -z "$_sf_spc" ]; then
+      local _sf_secrets
+      _sf_secrets=$(python3 -c "
+import sys, yaml
+d = yaml.safe_load(open(sys.argv[1]))
+sf = (d.get('databases') or {}).get('datawarehouse', {}).get('snowflake', {})
+for k in sf.get('keys', []):
+    print(k.get('secretName', 'snowflake-rsa-private-key'))
+" "$overrides" 2>/dev/null)
+      while IFS= read -r _sf_sec; do
+        [ -z "$_sf_sec" ] && continue
+        if ! kubectl get secret "$_sf_sec" -n "$namespace" &>/dev/null 2>&1; then
+          echo "  ${RED}✘ Snowflake secret '${_sf_sec}' not found${RESET}"
+          _missing_secrets=true
+        else
+          echo "  ${GREEN}✔${RESET} Snowflake secret: ${_sf_sec}"
+        fi
+      done <<< "$_sf_secrets"
+    fi
+
+    # 3. Custom CA cert secret
+    local _ca_enabled
+    _ca_enabled=$(read_val "$overrides" "customCACerts.enabled")
+    local _ca_spc
+    _ca_spc=$(read_val "$overrides" "customCACerts.secretProviderClassName")
+    if { [ "$_ca_enabled" = "true" ] || [ "$_ca_enabled" = "True" ]; } && [ -z "$_ca_spc" ]; then
+      local _ca_secret
+      _ca_secret=$(read_val "$overrides" "customCACerts.name")
+      _ca_secret="${_ca_secret:-custom-ca-cert}"
+      if ! kubectl get secret "$_ca_secret" -n "$namespace" &>/dev/null 2>&1; then
+        echo "  ${RED}✘ CA certificate secret '${_ca_secret}' not found${RESET}"
+        _missing_secrets=true
+      else
+        echo "  ${GREEN}✔${RESET} CA certificate secret: ${_ca_secret}"
+      fi
+    fi
+
+    if [ "$_missing_secrets" = "true" ]; then
+      echo ""
+      echo "  ${YELLOW}Required secrets are missing. Pods will fail to start without them.${RESET}"
+      echo "  ${DIM}Generate secrets: rpihelmcli/setup.sh secrets -f $(basename "$overrides") -n ${namespace}${RESET}"
+      echo "  ${DIM}Then apply:       kubectl apply -f secrets.yaml -n ${namespace}${RESET}"
+      echo ""
+      local _continue_anyway
+      read -rp "  Continue deploying anyway? [y/N] " _continue_anyway
+      if [[ ! "$_continue_anyway" =~ ^[Yy] ]]; then
+        echo "  ${DIM}Deploy cancelled.${RESET}"
+        exit 0
+      fi
+    else
+      echo "  ${GREEN}✔${RESET} All required secrets found"
+    fi
   fi
 
   echo ""
@@ -2977,13 +3059,13 @@ cli_deploy() {
   if [ "$dry_run" = "true" ]; then
     echo "  ${CYAN}${BOLD}Dry run: rendering templates${RESET}"
     echo ""
-    helm template rpi "$chart" -f "$overrides" -n "$namespace"
+    helm template "$release" "$chart" -f "$overrides" -n "$namespace"
     exit 0
   fi
 
   # Helm install/upgrade
   local helm_mode
-  if helm status rpi -n "$namespace" &>/dev/null; then
+  if helm status "$release" -n "$namespace" &>/dev/null; then
     helm_mode="upgrade"
   else
     helm_mode="install"
@@ -2993,7 +3075,7 @@ cli_deploy() {
   echo ""
 
   # Submit manifests without waiting
-  if ! helm "${helm_mode}" rpi "$chart" \
+  if ! helm "${helm_mode}" "$release" "$chart" \
     -f "$overrides" \
     -n "$namespace" \
     --create-namespace \
@@ -3189,7 +3271,7 @@ elif [ "${CLI_COMMAND:-}" = "secrets" ]; then
   cli_secrets "$CLI_OVERRIDES" "$CLI_SECRETS_OUT" "$CLI_NAMESPACE"
   exit 0
 elif [ "${CLI_COMMAND:-}" = "deploy" ]; then
-  cli_deploy "$CLI_OVERRIDES" "$CLI_NAMESPACE" "$CLI_CHART" "$CLI_DRY_RUN"
+  cli_deploy "$CLI_OVERRIDES" "$CLI_NAMESPACE" "$CLI_CHART" "$CLI_DRY_RUN" "$CLI_RELEASE"
   exit 0
 fi
 
