@@ -2435,7 +2435,9 @@ cli_secrets() {
   echo ""
 
   # Read configuration from overrides
-  local mode db_provider secrets_provider rt_enabled rt_cache_provider rt_queue_provider
+  local platform mode db_provider secrets_provider rt_enabled rt_cache_provider rt_queue_provider
+  platform=$(read_val "$overrides" "global.deployment.platform")
+  platform="${platform:-azure}"
   mode=$(read_val "$overrides" "global.deployment.mode")
   mode="${mode:-standard}"
   db_provider=$(read_val "$overrides" "databases.operational.provider")
@@ -2479,6 +2481,7 @@ cli_secrets() {
 
   # Show detected configuration
   echo "  ${BOLD}Detected configuration:${RESET}"
+  echo "    Platform:         ${platform}"
   echo "    Mode:             ${mode}"
   echo "    Database:         ${db_provider}"
   echo "    Secrets provider: ${secrets_provider}"
