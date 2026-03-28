@@ -29,18 +29,6 @@ This chart deploys RPI on Kubernetes using Helm.
 | [RPI Helm CLI](docs/readme-cli.md) | Command-line deployment tool | Pre-flight, secrets, deploy, troubleshoot |
 | [Automation](docs/readme-terraform.md) | Scripts, pipelines, and GitOps | CI/CD, vault setup, ArgoCD, Flux |
 
-## Deployment Workflow
-
-```bash
-rpihelmcli/setup.sh check   -f overrides.yaml                # 1. Validate prerequisites
-rpihelmcli/setup.sh secrets -f overrides.yaml -n <namespace>  # 2. Generate secrets (prompts for passwords)
-kubectl apply -f secrets.yaml -n <namespace>                  # 3. Apply secrets
-rpihelmcli/setup.sh deploy  -f overrides.yaml -n <namespace>  # 4. Deploy (validates secrets, runs helm install)
-rpihelmcli/setup.sh status  -n <namespace>                    # 5. Check pod health
-```
-
-Generate your overrides at [rpi-helm-assistant.redpointcdp.com](https://rpi-helm-assistant.redpointcdp.com). Download the CLI from the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com). See the [CLI Guide](docs/readme-cli.md) for details.
-
 ## Resources
 
 - [RPI Product Documentation](https://docs.redpointglobal.com/rpi/)
