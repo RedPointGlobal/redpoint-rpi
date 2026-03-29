@@ -108,12 +108,9 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim) }}{{- . | nindent 8 }}{{- end }}
-      {{- if or .Values.commonAnnotations .Values.customAnnotations $cfg.podAnnotations .Values.serviceMesh.enabled }}
+      {{- if or .Values.commonAnnotations $cfg.podAnnotations .Values.serviceMesh.enabled }}
       annotations:
         {{- with .Values.commonAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- with .Values.customAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- with $cfg.podAnnotations }}
@@ -264,6 +261,11 @@ spec:
             mountPath: {{ $cfg.templateTenant.templateTenantFilesPath | quote }}
           {{- end }}
           {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
+          {{- if and (eq .Values.secretsManagement.provider "csi") (eq (.Values.secretsManagement.csi.syncService | default "none") "deploymentapi") }}
+          - name: rpi-secrets-store
+            mountPath: /run/secrets/store
+            readOnly: true
+          {{- end }}
       volumes:
         - name: tempstore
           emptyDir: {}
@@ -273,6 +275,14 @@ spec:
             claimName: {{ $cfg.templateTenant.volumeClaimName | quote }}
         {{- end }}
         {{- include "rpi.customCACerts.volume" . | nindent 8 }}
+        {{- if and (eq .Values.secretsManagement.provider "csi") (eq (.Values.secretsManagement.csi.syncService | default "none") "deploymentapi") }}
+        - name: rpi-secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ (index .Values.secretsManagement.csi.secretProviderClasses 0).name | quote }}
+        {{- end }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

@@ -225,6 +225,10 @@ secretsManagement:
   csi:
     # The K8s secret name created by the CSI driver
     secretName: redpoint-rpi-secrets
+    # How the CSI sync is triggered. Options:
+    #   none          - use dedicated validation pods (default)
+    #   deploymentapi - mount CSI volume on the Deployment API pod to trigger sync
+    syncService: none
     # SecretProviderClass definitions
     secretProviderClasses:
     # ----------------------------------------------------
@@ -343,7 +347,16 @@ storage:
       claimName: rpdmuploaddirectory
       mountPath: /rpdmuploaddirectory
 
-  # Create PV + PVC pairs (for CSI-backed storage)
+  # Dynamic PVCs (no PV needed - the CSI driver auto-provisions storage)
+  # Use with a StorageClass that supports dynamic provisioning (e.g., EFS with efs-ap mode).
+  dynamicPVCs: []
+  # dynamicPVCs:
+  #   - claimName: rpi-claim
+  #     storageClassName: redpoint-rpi
+  #     accessModes: [ReadWriteMany]
+  #     storage: 5Gi
+
+  # Create PV + PVC pairs (for CSI-backed storage with static provisioning)
   persistentVolumes: []
   # persistentVolumes:
   #   - name: rpi-blob-storage
