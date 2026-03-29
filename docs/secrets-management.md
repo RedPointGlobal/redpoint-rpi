@@ -28,82 +28,12 @@ RPI supports three secrets management providers. The provider controls how sensi
 | Custom CA certificate (if required) | CLI prompts for the CA bundle file and creates a K8s Secret |
 | RPI application secrets | CLI prompts for database, realtime, SMTP credentials and creates the main K8s Secret |
 
-</details>
-
 <details>
-<summary><strong>csi</strong></summary>
-
-| Item | How it's handled |
-|:-----|:----------------|
-| Image pull secret | Create manually with `kubectl` before deploying |
-| Ingress TLS certificate | SecretProviderClass syncs from vault into a `kubernetes.io/tls` K8s Secret |
-| Snowflake private key (if using Snowflake) | SecretProviderClass syncs from vault into a K8s Secret, mounted as a volume |
-| Custom CA certificate (if required) | SecretProviderClass syncs from vault into a K8s Secret |
-| RPI application secrets | SecretProviderClass syncs all keys from vault into a K8s Secret |
-
-A validation pod is required to trigger the initial CSI sync before RPI pods can start.
-
-</details>
-
-<details>
-<summary><strong>sdk - Azure</strong></summary>
-
-RPI services authenticate to Azure Key Vault using Workload Identity Federation and read application secrets at runtime. The CSI Secrets Store driver with the Azure Key Vault provider works fully with Workload Identity, so file-based secrets can also be pulled from Key Vault.
-
-| Item | How it's handled |
-|:-----|:----------------|
-| Image pull secret | Create manually with `kubectl` before deploying |
-| Ingress TLS certificate | SecretProviderClass syncs from Key Vault into a `kubernetes.io/tls` K8s Secret |
-| Snowflake private key (if using Snowflake) | Mounted directly into the pod from Key Vault via CSI inline volume |
-| Custom CA certificate (if required) | Mounted directly into the pod from Key Vault via CSI inline volume |
-| RPI application secrets | Read directly from Azure Key Vault at runtime via SDK (no K8s Secret needed) |
-
-No validation pods needed for application secrets. Snowflake keys and CA certs are mounted as files by the pods themselves.
-
-</details>
-
-<details>
-<summary><strong>sdk - Amazon</strong></summary>
-
-RPI services authenticate to AWS Secrets Manager using IRSA and read application secrets at runtime.
-
-| Item | How it's handled |
-|:-----|:----------------|
-| Image pull secret | Create manually with `kubectl` before deploying |
-| AWS credentials | Store `AWS_Access_Key_ID` and `AWS_Secret_Access_Key` in your vault alongside other application secrets. The IAM user needs read/write access to Amazon SQS and Amazon S3. |
-| Ingress TLS certificate | Create manually with `kubectl create secret tls` before deploying |
-| Snowflake private key (if using Snowflake) | Create manually with `kubectl create secret generic` before deploying |
-| Custom CA certificate (if required) | Create manually with `kubectl create secret generic` before deploying |
-| RPI application secrets | Read directly from AWS Secrets Manager at runtime via SDK (no K8s Secret needed) |
-
-No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert) must be created as Kubernetes Secrets since the ingress controller and volume mounts cannot read from Secrets Manager directly.
-
-</details>
-
-<details>
-<summary><strong>sdk - Google</strong></summary>
-
-RPI services authenticate to Google Secret Manager using GKE Workload Identity and read application secrets at runtime.
-
-| Item | How it's handled |
-|:-----|:----------------|
-| Image pull secret | Create manually with `kubectl` before deploying |
-| Ingress TLS certificate | Create manually with `kubectl create secret tls` before deploying |
-| Snowflake private key (if using Snowflake) | Create manually with `kubectl create secret generic` before deploying |
-| Custom CA certificate (if required) | Create manually with `kubectl create secret generic` before deploying |
-| RPI application secrets | Read directly from Google Secret Manager at runtime via SDK (no K8s Secret needed) |
-
-No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert) must be created as Kubernetes Secrets since the ingress controller and volume mounts cannot read from Secret Manager directly.
-
-</details>
-
----
-
-## Kubernetes Provider — Creating the Application Secret
+<summary><strong>Creating the Application Secret</strong></summary>
 
 The chart does **not** create the `redpoint-rpi-secrets` Kubernetes Secret. You must create it before deploying. Sensitive values should **never** be stored in your overrides file.
 
-### Recommended: Use the CLI
+#### Recommended: Use the CLI
 
 The CLI reads your overrides file, detects which secrets are required based on your configuration (database provider, realtime cache, queue provider, SMTP, Snowflake, etc.), and prompts for each value interactively:
 
@@ -124,7 +54,7 @@ The CLI automatically:
 - Prompts for the CA certificate bundle if `customCACerts` is enabled
 - Skips sections that aren't enabled in your overrides
 
-### Manual: Create the Secret with kubectl
+#### Manual: Create the Secret with kubectl
 
 If you prefer not to use the CLI (e.g., generating secrets in a CI/CD pipeline), create the secret manually. The secret must contain the keys that your configuration requires.
 
@@ -219,6 +149,77 @@ kubectl apply -f secrets.yaml -n redpoint-rpi
 ```
 
 > **Note:** The CLI is strongly recommended over manual creation because it detects exactly which keys are needed from your overrides, formats connection strings correctly for your database provider, and generates random passwords for internal services. Manual creation risks missing required keys or using incorrect connection string formats.
+
+</details>
+
+</details>
+
+<details>
+<summary><strong>csi</strong></summary>
+
+| Item | How it's handled |
+|:-----|:----------------|
+| Image pull secret | Create manually with `kubectl` before deploying |
+| Ingress TLS certificate | SecretProviderClass syncs from vault into a `kubernetes.io/tls` K8s Secret |
+| Snowflake private key (if using Snowflake) | SecretProviderClass syncs from vault into a K8s Secret, mounted as a volume |
+| Custom CA certificate (if required) | SecretProviderClass syncs from vault into a K8s Secret |
+| RPI application secrets | SecretProviderClass syncs all keys from vault into a K8s Secret |
+
+A validation pod is required to trigger the initial CSI sync before RPI pods can start.
+
+</details>
+
+<details>
+<summary><strong>sdk - Azure</strong></summary>
+
+RPI services authenticate to Azure Key Vault using Workload Identity Federation and read application secrets at runtime. The CSI Secrets Store driver with the Azure Key Vault provider works fully with Workload Identity, so file-based secrets can also be pulled from Key Vault.
+
+| Item | How it's handled |
+|:-----|:----------------|
+| Image pull secret | Create manually with `kubectl` before deploying |
+| Ingress TLS certificate | SecretProviderClass syncs from Key Vault into a `kubernetes.io/tls` K8s Secret |
+| Snowflake private key (if using Snowflake) | Mounted directly into the pod from Key Vault via CSI inline volume |
+| Custom CA certificate (if required) | Mounted directly into the pod from Key Vault via CSI inline volume |
+| RPI application secrets | Read directly from Azure Key Vault at runtime via SDK (no K8s Secret needed) |
+
+No validation pods needed for application secrets. Snowflake keys and CA certs are mounted as files by the pods themselves.
+
+</details>
+
+<details>
+<summary><strong>sdk - Amazon</strong></summary>
+
+RPI services authenticate to AWS Secrets Manager using EKS Pod Identity and read application secrets at runtime.
+
+| Item | How it's handled |
+|:-----|:----------------|
+| Image pull secret | Create manually with `kubectl` before deploying |
+| AWS credentials | Store `AWS_Access_Key_ID` and `AWS_Secret_Access_Key` in your vault alongside other application secrets. The IAM user needs read/write access to Amazon SQS and Amazon S3. |
+| Ingress TLS certificate | Mounted directly into the pod from Secrets Manager via CSI inline volume |
+| Snowflake private key (if using Snowflake) | Mounted directly into the pod from Secrets Manager via CSI inline volume |
+| Custom CA certificate (if required) | Mounted directly into the pod from Secrets Manager via CSI inline volume |
+| RPI application secrets | Read directly from AWS Secrets Manager at runtime via SDK (no K8s Secret needed) |
+
+No validation pods needed for application secrets. Snowflake keys, TLS certs, and CA certs are mounted as files by the pods themselves via CSI inline volumes defined in the overrides.
+
+</details>
+
+<details>
+<summary><strong>sdk - Google</strong></summary>
+
+RPI services authenticate to Google Secret Manager using GKE Workload Identity and read application secrets at runtime.
+
+| Item | How it's handled |
+|:-----|:----------------|
+| Image pull secret | Create manually with `kubectl` before deploying |
+| Ingress TLS certificate | Create manually with `kubectl create secret tls` before deploying |
+| Snowflake private key (if using Snowflake) | Create manually with `kubectl create secret generic` before deploying |
+| Custom CA certificate (if required) | Create manually with `kubectl create secret generic` before deploying |
+| RPI application secrets | Read directly from Google Secret Manager at runtime via SDK (no K8s Secret needed) |
+
+No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert) must be created as Kubernetes Secrets since the ingress controller and volume mounts cannot read from Secret Manager directly.
+
+</details>
 
 ---
 
