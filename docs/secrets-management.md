@@ -599,10 +599,9 @@ The IAM user needs read/write access to Amazon SQS and Amazon S3.
 <details>
 <summary><strong style="font-size:1.25em;">CSI Prerequisites</strong></summary>
 
-When using the CSI provider on AWS, the AWS Secrets and Configuration Provider (ASCP) syncs secrets from Secrets Manager into Kubernetes Secrets. Before deploying, you need to:
+When using the CSI provider on AWS, the AWS Secrets and Configuration Provider (ASCP) syncs secrets from Secrets Manager into Kubernetes Secrets. Before deploying:
 
-1. **Install the CSI Secrets Store Driver and ASCP** on your EKS cluster (available as an EKS addon: `aws-secrets-manager`)
-2. **Enable secret syncing** on the CSI driver (required for `secretObjects` to create K8s Secrets):
+1. **Install the CSI Secrets Store Driver and ASCP** on your EKS cluster (available as an EKS addon: `aws-secrets-manager`). Enable secret syncing:
    ```json
    {
      "secrets-store-csi-driver": {
@@ -611,63 +610,144 @@ When using the CSI provider on AWS, the AWS Secrets and Configuration Provider (
      }
    }
    ```
-3. **Create secrets in Secrets Manager** before deploying:
 
-**Step 1: Application secrets** (single JSON secret with all keys):
+2. **Create a single JSON secret in Secrets Manager** containing all required application keys:
 
 ```bash
 aws secretsmanager create-secret \
   --name <your-secret-name> \
   --description "RPI Application Secrets" \
-  --secret-string '{}' \
+  --secret-string '{
+    "ConnectionString_Logging_Database": "<connection-string>",
+    "ConnectionString_Operations_Database": "<connection-string>",
+    "Operations_Database_Server_Password": "<password>",
+    "Operations_Database_Pulse_Database_Name": "<db-name>",
+    "Operations_Database_Pulse_Logging_Database_Name": "<logging-db-name>",
+    "Operations_Database_Server_Username": "<username>",
+    "Operations_Database_ServerHost": "<host>",
+    "RealtimeAPI_Auth_Token": "<token>",
+    "RealtimeAPI_MongoCache_ConnectionString": "<mongodb-connection-string>",
+    "SMTP_Password": "<smtp-password>",
+    "AWS_Access_Key_ID": "<access-key>",
+    "AWS_Secret_Access_Key": "<secret-key>"
+  }' \
   --region <your-region>
 ```
 
-Then populate it with all required key-value pairs (see [Required Vault Secrets](#required-vault-secrets-1) above). The CSI SecretProviderClass uses `jmesPath` to extract individual keys from the JSON.
+Add optional keys as needed: `Rebrandly_ApiKey`, `Rebrandly_RedisPassword`, `RPI_SMTP_Username`.
 
-**Step 2: TLS certificate** (two separate binary secrets for cert and key):
+> **Secret key naming by provider and platform:**
+>
+> | Provider | Platform | Format | Example |
+> |:---------|:---------|:-------|:--------|
+> | **CSI** | Amazon | Single underscore (mapped via jmesPath objectAlias) | `ConnectionString_Logging_Database` |
+> | **CSI** | Azure | Hyphenated (Key Vault doesn't allow underscores, mapped via objectAlias) | `V7-ConnectionString-LoggingDatabase` |
+> | **SDK** | Amazon | Double underscore `__` matching .NET config hierarchy | `ClusterEnvironment__OperationalDatabase__LoggingDatabaseName` |
+> | **SDK** | Azure | Double dash `--` matching .NET config hierarchy (Key Vault doesn't allow underscores) | `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` |
+>
+> CSI keys are synced into a K8s Secret and consumed via `secretKeyRef` - the alias names must match what the chart templates expect. SDK keys are read directly into the .NET configuration system at runtime - the names must match the .NET environment variable hierarchy.
+
+3. **Create a pod identity association** for the service account that triggers the CSI sync. The ASCP uses EKS Pod Identity to authenticate to Secrets Manager:
 
 ```bash
-aws secretsmanager create-secret \
-  --name <prefix>-tls-crt \
-  --secret-binary fileb://tls.crt \
-  --region <your-region>
-
-aws secretsmanager create-secret \
-  --name <prefix>-tls-key \
-  --secret-binary fileb://tls.key \
-  --region <your-region>
+aws eks create-pod-identity-association \
+  --cluster-name <cluster> --namespace <namespace> \
+  --service-account <sa-name> --role-arn <role-arn>
 ```
 
-The CSI driver syncs these into a `kubernetes.io/tls` K8s Secret for the ingress controller.
+If using `syncService: deploymentapi`, create the association for `rpi-deploymentapi`. If using validation pods, create it for `rpi-validationpods`.
 
-**Step 3: Snowflake private key** (if using Snowflake as a data warehouse):
+4. **IAM role** must have `SecretsManagerReadWrite` policy and a trust policy allowing `pods.eks.amazonaws.com`:
 
-```bash
-aws secretsmanager create-secret \
-  --name <prefix>-snowflake-key \
-  --secret-binary fileb://sf_rpi_usr_private_key.p8 \
-  --region <your-region>
+```json
+{
+  "Effect": "Allow",
+  "Principal": { "Service": "pods.eks.amazonaws.com" },
+  "Action": ["sts:AssumeRole", "sts:TagSession"]
+}
 ```
 
-The chart mounts this directly into pods via CSI inline volume. No K8s Secret is created.
+5. **Configure the SecretProviderClass** with `usePodIdentity: "true"` and `jmesPath` to extract individual keys from the JSON secret:
 
-**Step 4: CA certificate bundle** (if required):
-
-```bash
-aws secretsmanager create-secret \
-  --name <prefix>-ca-bundle \
-  --secret-binary fileb://ca-bundle.pem \
-  --region <your-region>
+```yaml
+secretsManagement:
+  provider: csi
+  csi:
+    secretName: redpoint-rpi-secrets
+    syncService: deploymentapi   # or: none (use validation pods)
+    secretProviderClasses:
+    - name: redpoint-rpi-secrets
+      provider: aws
+      parameters:
+        region: us-east-1
+        usePodIdentity: "true"
+      objects:
+      - objectName: <your-secret-name>
+        objectType: secretsmanager
+        jmesPath:
+        - path: ConnectionString_Logging_Database
+          objectAlias: ConnectionString_Logging_Database
+        - path: ConnectionString_Operations_Database
+          objectAlias: ConnectionString_Operations_Database
+        - path: Operations_Database_Server_Password
+          objectAlias: Operations_Database_Server_Password
+        - path: Operations_Database_Pulse_Database_Name
+          objectAlias: Operations_Database_Pulse_Database_Name
+        - path: Operations_Database_Pulse_Logging_Database_Name
+          objectAlias: Operations_Database_Pulse_Logging_Database_Name
+        - path: Operations_Database_Server_Username
+          objectAlias: Operations_Database_Server_Username
+        - path: Operations_Database_ServerHost
+          objectAlias: Operations_Database_ServerHost
+        - path: RealtimeAPI_Auth_Token
+          objectAlias: RealtimeAPI_Auth_Token
+        - path: SMTP_Password
+          objectAlias: SMTP_Password
+        - path: AWS_Access_Key_ID
+          objectAlias: AWS_Access_Key_ID
+        - path: AWS_Secret_Access_Key
+          objectAlias: AWS_Secret_Access_Key
+        - path: RealtimeAPI_MongoCache_ConnectionString
+          objectAlias: RealtimeAPI_MongoCache_ConnectionString
+      secretObjects:
+      - secretName: redpoint-rpi-secrets
+        type: Opaque
+        data:
+        - objectName: ConnectionString_Logging_Database
+          key: ConnectionString_Logging_Database
+        - objectName: ConnectionString_Operations_Database
+          key: ConnectionString_Operations_Database
+        - objectName: Operations_Database_Server_Password
+          key: Operations_Database_Server_Password
+        - objectName: Operations_Database_Pulse_Database_Name
+          key: Operations_Database_Pulse_Database_Name
+        - objectName: Operations_Database_Pulse_Logging_Database_Name
+          key: Operations_Database_Pulse_Logging_Database_Name
+        - objectName: Operations_Database_Server_Username
+          key: Operations_Database_Server_Username
+        - objectName: Operations_Database_ServerHost
+          key: Operations_Database_ServerHost
+        - objectName: RealtimeAPI_Auth_Token
+          key: RealtimeAPI_Auth_Token
+        - objectName: SMTP_Password
+          key: SMTP_Password
+        - objectName: AWS_Access_Key_ID
+          key: AWS_Access_Key_ID
+        - objectName: AWS_Secret_Access_Key
+          key: AWS_Secret_Access_Key
+        - objectName: RealtimeAPI_MongoCache_ConnectionString
+          key: RealtimeAPI_MongoCache_ConnectionString
 ```
 
-Mounted directly into pods via CSI inline volume.
+Add optional keys to both `jmesPath` and `secretObjects` as needed: `Rebrandly_ApiKey`, `Rebrandly_RedisPassword`, `RPI_SMTP_Username`.
 
-4. **Configure IRSA** so the pod service accounts can access Secrets Manager. The IAM role needs `SecretsManagerReadWrite` policy.
+> **Important:** Every `jmesPath` path must exist in the Secrets Manager secret. A missing key causes the entire CSI mount to fail.
 
-5. **Create a validation pod** to trigger the initial CSI sync. Without it, the K8s Secrets (`redpoint-rpi-secrets`, `ingress-tls`) won't exist and RPI pods will fail to start.
+6. **CSI sync trigger** - choose one approach:
+   - `syncService: deploymentapi` - the Deployment API pod mounts the CSI volume on startup, triggering the sync. No validation pods needed.
+   - `syncService: none` (default) - use dedicated validation pods to trigger the sync before RPI pods start.
 
-For automated setup scripts, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Amazon** > **Vault Secrets Setup**.
+**Additional file-based secrets** (TLS cert, Snowflake keys, CA cert) require separate Secrets Manager secrets and their own SecretProviderClasses. See the sections below.
 
 </details>
 
