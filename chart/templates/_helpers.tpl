@@ -284,7 +284,7 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" .root "name" .name "component" .component) | nindent 4 }}
   {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" .root "type" "serviceAccount") | trim }}
-  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" .root "svcCloudIdentity" (hasKey .cfg "cloudIdentity" | ternary .cfg.cloudIdentity false)) | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" .root) | trim }}
   {{- if or $saAnnotations $ciAnnotations }}
   annotations:
     {{- if $saAnnotations }}
@@ -512,12 +512,6 @@ Usage: {{- include "rpi.cloudidentity.saAnnotations" . | nindent 4 }}
 {{- $root := . -}}
 {{- if hasKey . "root" }}{{- $root = .root -}}{{- end -}}
 {{- if $root.Values.cloudIdentity.enabled -}}
-{{- $mode := $root.Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
-{{- $svcCI := true -}}
-{{- if and (eq $mode "per-service") (hasKey . "svcCloudIdentity") }}
-{{- $svcCI = .svcCloudIdentity -}}
-{{- end -}}
-{{- if $svcCI -}}
 {{- if eq $root.Values.global.deployment.platform "azure" }}
 azure.workload.identity/client-id: {{ $root.Values.cloudIdentity.azure.managedIdentityClientId | quote }}
 azure.workload.identity/tenant-id: {{ $root.Values.cloudIdentity.azure.tenantId | quote }}
@@ -525,7 +519,6 @@ azure.workload.identity/tenant-id: {{ $root.Values.cloudIdentity.azure.tenantId 
 iam.gke.io/gcp-service-account: {{ $root.Values.cloudIdentity.google.serviceAccountEmail | quote }}
 {{- else if eq $root.Values.global.deployment.platform "amazon" }}
 eks.amazonaws.com/role-arn: {{ $root.Values.cloudIdentity.amazon.roleArn | quote }}
-{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}
@@ -541,15 +534,8 @@ Usage (per-service):  {{- include "rpi.cloudidentity.podLabels" (dict "root" . "
 {{- $root := . -}}
 {{- if hasKey . "root" }}{{- $root = .root -}}{{- end -}}
 {{- if $root.Values.cloudIdentity.enabled -}}
-{{- $mode := $root.Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
-{{- $svcCI := true -}}
-{{- if and (eq $mode "per-service") (hasKey . "svcCloudIdentity") }}
-{{- $svcCI = .svcCloudIdentity -}}
-{{- end -}}
-{{- if $svcCI -}}
 {{- if eq $root.Values.global.deployment.platform "azure" }}
 azure.workload.identity/use: "true"
-{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}

@@ -22,9 +22,9 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
   {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
-  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" .) | trim }}
   {{- $mongoIamArn := "" }}
-  {{- if eq (($cfg.cacheProvider).mongodb.authMechanism | default "default") "iamRole" }}
+  {{- if and (not .Values.cloudIdentity.enabled) (eq (($cfg.cacheProvider).mongodb.authMechanism | default "default") "iamRole") }}
   {{- $mongoIamArn = ($cfg.cacheProvider).mongodb.roleArn | default "" }}
   {{- end }}
   {{- if or $saAnnotations $ciAnnotations $mongoIamArn }}
@@ -307,7 +307,7 @@ spec:
           {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
           {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
           {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
-          {{- if eq ($cfg.cacheProvider.mongodb.authMechanism | default "default") "iamRole" }}
+          {{- if and (not .Values.cloudIdentity.enabled) (eq ($cfg.cacheProvider.mongodb.authMechanism | default "default") "iamRole") }}
           - name: AWS_ROLE_ARN
             value: {{ $cfg.cacheProvider.mongodb.roleArn | quote }}
           - name: AWS_STS_REGIONAL_ENDPOINTS
