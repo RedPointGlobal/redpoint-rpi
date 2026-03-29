@@ -11,7 +11,37 @@
 
 {{- $dwEnabled := (include "redpoint.DatawarehouseProviders" .) | eq "true" -}}
 {{- $dw := .Values.databases.datawarehouse | default dict -}}
-{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "api" "cfg" $cfg) }}
+{{- if $cfg.serviceAccount.enabled }}
+{{- if $cfg.enabled }}
+{{- if ne (.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim }}
+  {{- $mongoIamArn := "" }}
+  {{- if eq (($cfg.cacheProvider).mongodb.authMechanism | default "default") "iamRole" }}
+  {{- $mongoIamArn = ($cfg.cacheProvider).mongodb.roleArn | default "" }}
+  {{- end }}
+  {{- if or $saAnnotations $ciAnnotations $mongoIamArn }}
+  annotations:
+    {{- if $mongoIamArn }}
+    eks.amazonaws.com/role-arn: {{ $mongoIamArn | quote }}
+    {{- end }}
+    {{- if $saAnnotations }}
+    {{- $saAnnotations | nindent 4 }}
+    {{- end }}
+    {{- if $ciAnnotations }}
+    {{- $ciAnnotations | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 
 ---
 {{- if $cfg.podDisruptionBudget.enabled }}
@@ -168,7 +198,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $name }}
-                    {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup) | nindent 10 }}
+                    {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup "enabled" $cfg.enableProbes) | nindent 10 }}
           image: {{ include "rpi.image" (dict "root" . "name" $name) }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
@@ -277,6 +307,14 @@ spec:
           {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
           {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
           {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
+          {{- if eq ($cfg.cacheProvider.mongodb.authMechanism | default "default") "iamRole" }}
+          - name: AWS_ROLE_ARN
+            value: {{ $cfg.cacheProvider.mongodb.roleArn | quote }}
+          - name: AWS_STS_REGIONAL_ENDPOINTS
+            value: "regional"
+          - name: AWS_DEFAULT_REGION
+            value: {{ $cfg.cacheProvider.mongodb.region | default "us-east-1" | quote }}
+          {{- end }}
           {{- include "rpi.customCACerts.envVar" . | nindent 10 }}
           {{- if eq .Values.global.deployment.platform "google" }}
           {{- if .Values.cloudIdentity.enabled }}

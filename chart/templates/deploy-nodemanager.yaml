@@ -327,7 +327,7 @@ spec:
         image: {{ include "rpi.image" (dict "root" . "name" $name) }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         name: {{ $name }}
-        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup) | nindent 8 }}
+        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup "enabled" $cfg.enableProbes) | nindent 8 }}
         ports:
         - containerPort: 8080
           name: web-port

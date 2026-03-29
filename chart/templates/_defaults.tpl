@@ -57,8 +57,8 @@ httpGet:
   scheme: HTTP
 initialDelaySeconds: 60
 periodSeconds: 15
-timeoutSeconds: 3
-failureThreshold: 3
+timeoutSeconds: 5
+failureThreshold: 5
 successThreshold: 1
 {{- end -}}
 
@@ -85,8 +85,8 @@ httpGet:
   scheme: HTTP
 initialDelaySeconds: 10
 periodSeconds: 10
-timeoutSeconds: 2
-failureThreshold: 35
+timeoutSeconds: 5
+failureThreshold: 60
 successThreshold: 1
 {{- end -}}
 

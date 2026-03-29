@@ -143,7 +143,7 @@ spec:
       - name: {{ $name }}
         image: {{ include "rpi.image" (dict "root" . "name" $name) }}
         {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
-        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup) | nindent 8 }}
+        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup "enabled" $cfg.enableProbes) | nindent 8 }}
         imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         env:
         {{- if .Values.global.deployment.podTimezone }}

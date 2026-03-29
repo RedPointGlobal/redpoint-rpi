@@ -146,9 +146,17 @@ lifecycle:
 
 {{/*
 Container probes (liveness, readiness, startup) from merged config.
-Usage: {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup) | nindent 8 }}
+Usage: {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup "enabled" true) | nindent 8 }}
+Pass "enabled" false to disable all probes for a service (e.g., deploymentapi.enableProbes: false).
 */}}
 {{- define "rpi.block.probes" -}}
+{{- $probesEnabled := true -}}
+{{- if hasKey . "enabled" -}}
+  {{- if not (kindIs "invalid" .enabled) -}}
+    {{- $probesEnabled = not (eq (toString .enabled) "false") -}}
+  {{- end -}}
+{{- end -}}
+{{- if $probesEnabled }}
 {{- if .liveness.enabled }}
 livenessProbe:
   httpGet:
@@ -181,6 +189,7 @@ startupProbe:
   periodSeconds: {{ .startup.periodSeconds }}
   initialDelaySeconds: {{ .startup.initialDelaySeconds }}
   timeoutSeconds: {{ .startup.timeoutSeconds }}
+{{- end }}
 {{- end }}
 {{- end -}}
 
@@ -554,8 +563,6 @@ Usage: {{- include "rpi.cloudidentity.envvars" . | nindent 10 }}
 {{- if eq .Values.global.deployment.platform "amazon" }}
 - name: AWS_ROLE_ARN
   value: {{ .Values.cloudIdentity.amazon.roleArn | quote }}
-- name: AWS_WEB_IDENTITY_TOKEN_FILE
-  value: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
 - name: AWS_STS_REGIONAL_ENDPOINTS
   value: "regional"
 - name: AWS_DEFAULT_REGION
