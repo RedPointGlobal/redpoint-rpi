@@ -19,15 +19,14 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ## Additional Guides
 
-| Guide | Description | Covers |
-|:------|:------------|:-------|
-| [Values Guide](docs/readme-values.md) | Two-tier values system and complete reference | Override patterns, defaults, per-service config |
-| [Secrets Management](docs/secrets-management.md) | Kubernetes, CSI, and SDK providers | Vault keys, CSI setup, image pull secrets |
-| [Single Sign-On](docs/single-sign-on.md) | Identity provider integration | Microsoft Entra ID, Okta, Keycloak |
-| [Ingress](docs/ingress.md) | Traffic routing and TLS | Chart-managed nginx, BYO controller, AWS ALB |
-| [Storage](docs/storage.md) | Persistent volumes and provisioning | Static, dynamic, EFS, Azure Files, Filestore |
-| [RPI Helm CLI](docs/readme-cli.md) | Command-line deployment tool | Pre-flight, secrets, deploy, troubleshoot |
-| [Automation](docs/readme-terraform.md) | Scripts, pipelines, and GitOps | CI/CD, vault setup, ArgoCD, Flux |
+| Guide | Description |
+|:------|:------------|
+| [Secrets Management](docs/secrets-management.md) | Kubernetes, CSI, and SDK providers - vault keys, CSI setup, image pull secrets |
+| [Single Sign-On](docs/single-sign-on.md) | Microsoft Entra ID, Okta, Keycloak |
+| [Ingress](docs/ingress.md) | Chart-managed nginx, BYO controller, AWS ALB |
+| [Storage](docs/storage.md) | Static and dynamic provisioning - EFS, Azure Files, Filestore |
+| [RPI Helm CLI](docs/readme-cli.md) | Pre-flight checks, secrets generation, deployment, troubleshooting |
+| [Automation](docs/readme-terraform.md) | CI/CD, vault setup, ArgoCD, Flux |
 
 ## Resources
 

@@ -202,25 +202,25 @@ secretsManagement:
         syncSecret: "true"
         enable-secret-rotation: "true"
       objects:
-      - objectName: V7-ConnectionString-Operations-Database
+      - objectName: ConnectionString-Operations-Database
         objectType: secret
         objectAlias: ConnectionString_Operations_Database
-      - objectName: V7-ConnectionString-LoggingDatabase
+      - objectName: ConnectionString-LoggingDatabase
         objectType: secret
         objectAlias: ConnectionString_Logging_Database
-      - objectName: V7-Operations-Database-ServerHost
+      - objectName: Operations-Database-ServerHost
         objectType: secret
         objectAlias: Operations_Database_ServerHost
-      - objectName: V7-Operations-Database-Server-Username
+      - objectName: Operations-Database-Server-Username
         objectType: secret
         objectAlias: Operations_Database_Server_Username
-      - objectName: V7-Operations-Database-Server-Password
+      - objectName: Operations-Database-Server-Password
         objectType: secret
         objectAlias: Operations_Database_Server_Password
-      - objectName: V7-Operations-Database-Pulse-Database-Name
+      - objectName: Operations-Database-Pulse-Database-Name
         objectType: secret
         objectAlias: Operations_Database_Pulse_Database_Name
-      - objectName: V7-Operations-Database-Pulse-Logging-Database-Name
+      - objectName: Operations-Database-Pulse-Logging-Database-Name
         objectType: secret
         objectAlias: Operations_Database_Pulse_Logging_Database_Name
       # Add additional keys based on your enabled features (see tables above)
@@ -1194,7 +1194,7 @@ The chart templates reference specific keys from the `redpoint-rpi-secrets` K8s 
 | Provider | Platform | Format | Example |
 |:---------|:---------|:-------|:--------|
 | **CSI** | Amazon | Single underscore (mapped via jmesPath objectAlias) | `ConnectionString_Logging_Database` |
-| **CSI** | Azure | Hyphenated (Key Vault doesn't allow underscores, mapped via objectAlias) | `V7-ConnectionString-LoggingDatabase` |
+| **CSI** | Azure | Hyphenated (Key Vault doesn't allow underscores, mapped via objectAlias) | `ConnectionString-LoggingDatabase` |
 | **SDK** | Amazon | Double underscore `__` matching .NET config hierarchy | `ClusterEnvironment__OperationalDatabase__LoggingDatabaseName` |
 | **SDK** | Azure | Double dash `--` matching .NET config hierarchy (Key Vault doesn't allow underscores) | `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` |
 
