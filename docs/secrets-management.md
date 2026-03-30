@@ -177,62 +177,7 @@ A validation pod is required to trigger the initial CSI sync before RPI pods can
 
 #### Required Vault Keys
 
-When `secretsManagement.provider: csi`, the CSI Secrets Store Driver syncs secrets from your vault into a Kubernetes Secret. The chart templates reference specific keys from that secret, so the names must match exactly.
-
-1. You store secrets in your vault (e.g., Azure Key Vault)
-2. You define a SecretProviderClass with `objects` (what to fetch) and `secretObjects` (what K8s Secret to create)
-3. A validation pod mounts the SecretProviderClass to trigger the sync
-4. The CSI driver creates the Kubernetes Secret, and RPI pods read from it
-
-Azure Key Vault uses `--` (double dash) as the separator since it does not allow underscores in secret names.
-
-| Platform | Separator | Example vault secret name |
-|:---------|:----------|:--------------------------|
-| Azure Key Vault | `--` (double dash) | `ConnectionStrings--OperationalDatabase` |
-
-**Always required:**
-
-| Key | Description |
-|:----|:------------|
-| `ConnectionString_Operations_Database` | Full connection string to the operational database |
-| `ConnectionString_Logging_Database` | Full connection string to the logging database |
-| `Operations_Database_ServerHost` | Database server hostname |
-| `Operations_Database_Server_Username` | Database username |
-| `Operations_Database_Server_Password` | Database password |
-| `Operations_Database_Pulse_Database_Name` | Operational database name |
-| `Operations_Database_Pulse_Logging_Database_Name` | Logging database name |
-
-**Realtime API** (if enabled):
-
-| Key | Description |
-|:----|:------------|
-| `RealtimeAPI_Auth_Token` | Authentication token for API access |
-| `ConnectionString_RealtimeApi_OAuth` | OAuth database connection string (if using OAuth) |
-| `RealtimeAPI_MongoCache_ConnectionString` | MongoDB connection string (if mongodb cache) |
-| `RealtimeAPI_MongoCache_ConnectionKey` | MongoDB connection key (if mongodb cache) |
-| `RealtimeAPI_ServiceBus_ConnectionString` | Service Bus connection string (if azureservicebus queue) |
-| `RealtimeAPI_RabbitMQ_Password` | RabbitMQ password (if rabbitmq queue, internal) |
-
-**SMTP** (if using credentials): `SMTP_Password`
-
-**Redpoint AI** (if enabled):
-
-| Key | Description |
-|:----|:------------|
-| `RPI_NLP_API_KEY` | Azure OpenAI API key |
-| `RPI_NLP_SEARCH_KEY` | Azure Cognitive Search key |
-| `RPI_NLP_MODEL_CONNECTION_STRING` | Model storage connection string (Azure Blob) |
-
-**Rebrandly** (if enabled): `Rebrandly--ApiKey`
-
-**Distributed Queue** (if `queuereader.realtimeConfiguration.isDistributed: true`):
-
-| Key | Description |
-|:----|:------------|
-| `QueueService_RedisCache_Password` | Internal Redis password for queue reader cache |
-| `QueueService_RedisCache_ConnectionString` | Internal Redis connection string (format: `rpi-queuereader-cache:6379,password=<password>,abortConnect=False`) |
-| `QueueService_RabbitMQ_Password` | Internal RabbitMQ password for queue reader |
-| `Rebrandly_RedisPassword` | Internal Redis password for Rebrandly (if rebrandly enabled) |
+See [Required Secret Keys](#required-secret-keys) in Common Reference for the full list of keys per feature. The keys are the same across all platforms - only the vault secret naming format differs (see [Secret Key Naming](#secret-key-naming-by-provider-and-platform)).
 
 #### SecretProviderClass Example: Azure Key Vault
 
@@ -1183,6 +1128,65 @@ customCACerts:
 ---
 
 ## Common Reference
+
+<details>
+<summary><strong>Required Secret Keys</strong></summary>
+
+The chart templates reference specific keys from the `redpoint-rpi-secrets` K8s Secret via `secretKeyRef`. These key names must match exactly regardless of platform or provider. Add keys based on which features are enabled.
+
+**Always required:**
+
+| Key | Description |
+|:----|:------------|
+| `ConnectionString_Operations_Database` | Full connection string to the operational database |
+| `ConnectionString_Logging_Database` | Full connection string to the logging database |
+| `Operations_Database_ServerHost` | Database server hostname |
+| `Operations_Database_Server_Username` | Database username |
+| `Operations_Database_Server_Password` | Database password |
+| `Operations_Database_Pulse_Database_Name` | Operational database name |
+| `Operations_Database_Pulse_Logging_Database_Name` | Logging database name |
+
+**Realtime API** (if `realtimeapi.enabled: true`):
+
+| Key | Description |
+|:----|:------------|
+| `RealtimeAPI_Auth_Token` | Authentication token for API access |
+| `ConnectionString_RealtimeApi_OAuth` | OAuth database connection string (if using OAuth auth type) |
+| `RealtimeAPI_MongoCache_ConnectionString` | MongoDB connection string (if mongodb cache) |
+| `RealtimeAPI_MongoCache_ConnectionKey` | MongoDB connection key (if mongodb cache) |
+| `RealtimeAPI_ServiceBus_ConnectionString` | Service Bus connection string (if azureservicebus queue) |
+| `RealtimeAPI_EventHub_ConnectionString` | Event Hub connection string (if azureeventhubs queue) |
+| `RealtimeAPI_AzureStorage_ConnectionString` | Azure Storage connection string (if azurestorage queue) |
+| `RealtimeAPI_RabbitMQ_Password` | RabbitMQ password (if rabbitmq queue, internal) |
+| `AWS_Access_Key_ID` | AWS access key (if amazonsqs queue) |
+| `AWS_Secret_Access_Key` | AWS secret key (if amazonsqs queue) |
+
+**SMTP** (if `SMTPSettings.UseCredentials: true`): `SMTP_Password`
+
+**Redpoint AI** (if `redpointAI.enabled: true`):
+
+| Key | Description |
+|:----|:------------|
+| `RPI_NLP_API_KEY` | Azure OpenAI API key |
+| `RPI_NLP_SEARCH_KEY` | Azure Cognitive Search key |
+| `RPI_NLP_MODEL_CONNECTION_STRING` | Model storage connection string (Azure Blob) |
+
+**Rebrandly** (if `rebrandly.enabled: true`):
+
+| Key | Description |
+|:----|:------------|
+| `Rebrandly_ApiKey` | Rebrandly API key |
+| `Rebrandly_RedisPassword` | Internal Redis password for Rebrandly |
+
+**Distributed Queue** (if `queuereader.realtimeConfiguration.isDistributed: true`):
+
+| Key | Description |
+|:----|:------------|
+| `QueueService_RedisCache_Password` | Internal Redis password for queue reader cache |
+| `QueueService_RedisCache_ConnectionString` | Internal Redis connection string (format: `rpi-queuereader-cache:6379,password=<password>,abortConnect=False`) |
+| `QueueService_RabbitMQ_Password` | Internal RabbitMQ password for queue reader |
+
+</details>
 
 <details>
 <summary><strong>Secret Key Naming by Provider and Platform</strong></summary>
