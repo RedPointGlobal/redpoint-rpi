@@ -149,8 +149,6 @@ Apply the secret:
 kubectl apply -f secrets.yaml -n redpoint-rpi
 ```
 
-> **Note:** The CLI is strongly recommended over manual creation because it detects exactly which keys are needed from your overrides, formats connection strings correctly for your database provider, and generates random passwords for internal services. Manual creation risks missing required keys or using incorrect connection string formats.
-
 </details>
 
 ---
@@ -238,6 +236,8 @@ Azure Key Vault uses `--` (double dash) as the separator since it does not allow
 
 #### SecretProviderClass Example: Azure Key Vault
 
+Azure Key Vault uses `--` (double dash) as the separator in secret names since it does not allow underscores. The `objectAlias` maps these to the underscore-based keys the chart expects in the K8s Secret.
+
 ```yaml
 secretsManagement:
   provider: csi
@@ -254,26 +254,28 @@ secretsManagement:
         tenantId: <your-tenant-id>
         useVMManagedIdentity: "false"
         usePodIdentity: "false"
+        syncSecret: "true"
+        enable-secret-rotation: "true"
       objects:
-      - objectName: ConnectionString-Operations-Database
+      - objectName: V7-ConnectionString-Operations-Database
         objectType: secret
         objectAlias: ConnectionString_Operations_Database
-      - objectName: ConnectionString-Logging-Database
+      - objectName: V7-ConnectionString-LoggingDatabase
         objectType: secret
         objectAlias: ConnectionString_Logging_Database
-      - objectName: Operations-Database-ServerHost
+      - objectName: V7-Operations-Database-ServerHost
         objectType: secret
         objectAlias: Operations_Database_ServerHost
-      - objectName: Operations-Database-Server-Username
+      - objectName: V7-Operations-Database-Server-Username
         objectType: secret
         objectAlias: Operations_Database_Server_Username
-      - objectName: Operations-Database-Server-Password
+      - objectName: V7-Operations-Database-Server-Password
         objectType: secret
         objectAlias: Operations_Database_Server_Password
-      - objectName: Operations-Database-Pulse-Database-Name
+      - objectName: V7-Operations-Database-Pulse-Database-Name
         objectType: secret
         objectAlias: Operations_Database_Pulse_Database_Name
-      - objectName: Operations-Database-Pulse-Logging-Database-Name
+      - objectName: V7-Operations-Database-Pulse-Logging-Database-Name
         objectType: secret
         objectAlias: Operations_Database_Pulse_Logging_Database_Name
       # Add additional keys based on your enabled features (see tables above)
@@ -297,8 +299,6 @@ secretsManagement:
           key: Operations_Database_Pulse_Logging_Database_Name
         # Add additional keys to match the objects list above
 ```
-
-Note: Azure Key Vault secret names cannot contain underscores. Use hyphens in `objectName` and `objectAlias` to map to the underscore-based keys the chart expects.
 
 Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Azure** > **Vault Secrets Setup** to generate a script that creates all required vault secrets.
 
