@@ -1,5 +1,5 @@
 # ============================================================
-# REDPOINT INTERACTION (RPI) — User Configuration
+# REDPOINT INTERACTION (RPI) - User Configuration
 # ============================================================
 # Only set the values you need to customize. All internal
 # defaults (health probes, security contexts, logging levels,
@@ -50,6 +50,31 @@ resources:
     memory: 256Mi
   limits:
     memory: 3Gi
+
+# ==========================
+# Per-Service Overridable Settings
+# ==========================
+# These settings are defined in _defaults.tpl and can be overridden per service.
+# Example: deploymentapi.enableProbes, executionservice.replicas, etc.
+#
+# Common per-service settings:
+#   enableProbes: true          # Set to false to disable all probes (liveness, readiness, startup)
+#   replicas: 1                 # Number of pod replicas
+#   enableRPIAuthentication: true
+#   enableSwagger: true
+#   serviceMesh: true/false     # Per-service Linkerd opt-out
+#   cloudIdentity: true/false   # Per-service cloud identity opt-in (per-service mode only)
+#   autoscaling:
+#     enabled: false
+#     type: hpa
+#     minReplicas: 2
+#     maxReplicas: 5
+#   resources:
+#     requests: { cpu: 50m, memory: 256Mi }
+#     limits: { memory: 3Gi }
+#   logging:
+#     default: Error
+#     database: Error
 
 # ==========================
 # Pod Anti-Affinity
@@ -412,8 +437,8 @@ realtimeapi:
       databaseName: <my-realtime-cache-db>
       collectionName: <my-realtime-cache-collection>
       # Authentication mechanism for MongoDB Atlas.
-      #   default  — username/password in the connection string
-      #   iamRole  — AWS IAM via MONGODB-AWS (passwordless auth on Amazon EKS)
+      #   default  - username/password in the connection string
+      #   iamRole  - AWS IAM via MONGODB-AWS (passwordless auth on Amazon EKS)
       #             Requires roleArn below. The chart adds the eks.amazonaws.com/role-arn
       #             annotation to the Realtime API's ServiceAccount and injects AWS env vars
       #             (AWS_ROLE_ARN, AWS_STS_REGIONAL_ENDPOINTS, AWS_DEFAULT_REGION) into the pod.
@@ -720,7 +745,7 @@ ingress:
   privateLink:
     azure:
       enabled: false
-  # Service hostnames — subdomains are prepended to domain,
+  # Service hostnames - subdomains are prepended to domain,
   # values containing a dot are used as FQDNs (e.g., mpulse.example.com)
   hosts:
     config: rpi-deploymentapi

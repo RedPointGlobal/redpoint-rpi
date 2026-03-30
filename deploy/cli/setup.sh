@@ -1320,7 +1320,6 @@ add_secrets_management() {
       local block="secretsManagement:
   provider: ${provider}
   kubernetes:
-    autoCreateSecrets: false
     secretName: ${secret_name}"
 
       if [ "$provider" = "sdk" ]; then
@@ -3790,7 +3789,6 @@ global:
 secretsManagement:
   provider: kubernetes
   kubernetes:
-    autoCreateSecrets: false
     secretName: ${SECRET_NAME}
 YAML
 

@@ -21,7 +21,7 @@ The CLI guides you through the complete deployment lifecycle. Each step builds o
 
 ### Step 1: Generate overrides
 
-Create your overrides file using the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) (Generate tab) or the CLI. The overrides file contains **only non-default, non-sensitive values** — no passwords, no connection strings, no API keys.
+Create your overrides file using the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) (Generate tab) or the CLI. The overrides file contains **only non-default, non-sensitive values** - no passwords, no connection strings, no API keys.
 
 ### Step 2: Check prerequisites
 
@@ -45,7 +45,7 @@ Apply the generated secrets:
 kubectl apply -f secrets.yaml -n my-namespace
 ```
 
-> **Important:** This step must be completed before deploying. The chart does not create application secrets — it only references them. If you skip this step, the deploy command will detect the missing secrets and warn you.
+> **Important:** This step must be completed before deploying. The chart does not create application secrets - it only references them. If you skip this step, the deploy command will detect the missing secrets and warn you.
 
 ### Step 4: Deploy
 
