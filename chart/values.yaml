@@ -721,7 +721,8 @@ SMTPSettings:
   EnableSSL: true
   UseCredentials: true
   SMTP_Username: your_smtp_server_username
-  SMTP_Password: your_smtp_server_password
+  # SMTP_Password is stored in the K8s Secret, not here.
+  # See Required Secret Keys in secrets-management.md: SMTP_Password
 
 # ============================================================
 #  INGRESS
@@ -893,19 +894,19 @@ nodeProvisioning:
 # ==========================
 redpointAI:
   enabled: false
+  # Sensitive values (ApiKey, SearchKey, ConnectionString) are stored in the K8s Secret,
+  # not here. See Required Secret Keys in secrets-management.md:
+  #   RPI_NLP_API_KEY, RPI_NLP_SEARCH_KEY, RPI_NLP_MODEL_CONNECTION_STRING
   naturalLanguage:
-    ApiKey: <my-openai-key>
     ApiBase: https://example.openai.azure.com/
     ApiVersion: 2023-07-01-preview
     ChatGptEngine: gpt-5.1
     ChatGptTemp: 0.5
   cognitiveSearch:
     SearchEndpoint: https://example.search.windows.net
-    SearchKey: <my-cognitivesearch-key>
     VectorSearchProfile: vector-profile-000000000000
     VectorSearchConfig: vector-config-000000000000
   modelStorage:
-    ConnectionString: DefaultEndpointsProtocol=https;AccountName=my_account_name;AccountKey=my_account_access_key
     EmbeddingsModel: text-embedding-ada-002
     ModelDimensions: 1536
     ContainerName: my_blob_container_name
