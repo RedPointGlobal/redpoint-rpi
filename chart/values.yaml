@@ -29,12 +29,13 @@ global:
         name: redpoint-rpi
       # Utility image for jobs (upgrade, post-install, validation pods)
       net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
-      # Per-service image overrides
-      # When set, the value is used verbatim instead of {registry}/{service-name}:{tag}.
-      # Useful for flat registries (e.g., ECR with all images in a single repo).
+      # Per-service image overrides (full URI, used verbatim, no tag appended)
       # overrides:
       #   rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524
-      #   rpi-realtimeapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:realtimeapi-7.7.20260220.1524
+      # Per-service image name overrides (replaces just the service name in {registry}/{name}:{tag})
+      # nameOverrides:
+      #   rpi-deploymentapi: redpoint-interaction-configuration-editor
+      #   rpi-interactionapi: redpoint-interaction-client
     # Optional: set the pod's timezone (e.g., "America/New_York"); leave empty to use default UTC
     podTimezone: "" #
 

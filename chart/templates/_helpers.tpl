@@ -788,14 +788,19 @@ Usage: {{- include "rpi.platform.dbProviderEnvvar" . | nindent 10 }}
 
 {{/*
 Resolve the container image for a service.
-Uses a per-service override if set under global.deployment.images.overrides.<name>,
-otherwise constructs {registry}/{name}:{tag}.
+Priority:
+  1. overrides.<name>: full URI used verbatim (no tag appended)
+  2. nameOverrides.<name>: constructs {registry}/{nameOverride}:{tag}
+  3. default: constructs {registry}/{name}:{tag}
 Usage: {{ include "rpi.image" (dict "root" . "name" $name) }}
 */}}
 {{- define "rpi.image" -}}
 {{- $overrides := .root.Values.global.deployment.images.overrides | default dict -}}
+{{- $nameOverrides := .root.Values.global.deployment.images.nameOverrides | default dict -}}
 {{- if hasKey $overrides .name -}}
 {{ index $overrides .name }}
+{{- else if hasKey $nameOverrides .name -}}
+{{ .root.Values.global.deployment.images.registry }}/{{ index $nameOverrides .name }}:{{ .root.Values.global.deployment.images.tag }}
 {{- else -}}
 {{ .root.Values.global.deployment.images.registry }}/{{ .name }}:{{ .root.Values.global.deployment.images.tag }}
 {{- end -}}
