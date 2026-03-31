@@ -41,7 +41,7 @@ global:
       tag: "7.7.20260220.1524"
 ```
 
-The chart constructs each image as `{registry}/{service-name}:{tag}` automatically. No template edits required, regardless of registry provider. To extract the full list of images for pre-pulling or mirroring:
+The chart constructs each image as `{registry}/{service-name}:{tag}` automatically, with two exceptions: `rpi-redis` resolves to `{registry}/rediscache:{tag}` and `rpi-rabbitmq` resolves to `{registry}/rabbitmq:{tag}`. When mirroring images to a private registry, use these actual image names, not the service names. No template edits required, regardless of registry provider. To extract the full list of images for pre-pulling or mirroring:
 
 ```bash
 helm template rpi ./chart -f overrides.yaml | grep "image:" | sort -u
@@ -76,9 +76,16 @@ No template edits required for either mode.
 
 | Mode | How it works | Credentials in values.yaml? |
 |:-----|:-------------|:----------------------------|
-| `kubernetes` (default) | Chart creates a K8s Secret from your values | Yes (or pre-create the secret yourself) |
+| `kubernetes` (default) | You create a K8s Secret using the CLI or manually before deploying | No (CLI prompts for credentials at deploy time) |
 | `sdk` | Apps read directly from your cloud vault at runtime | No |
 | `csi` | CSI Secret Store driver syncs vault secrets to a K8s Secret | No |
+
+For CSI mode, the `syncService` option controls how the CSI volume is mounted to trigger secret sync:
+
+| `syncService` value | Behavior |
+|:--------------------|:---------|
+| `none` (default) | Requires separate validation pods to mount the CSI volume and trigger sync |
+| `deploymentapi` | Mounts the CSI volume on the Deployment API pod instead of using separate validation pods |
 
 **To eliminate credentials from your values file entirely**, use `sdk` or `csi`:
 
@@ -131,7 +138,7 @@ secretsManagement:
 <details>
 <summary><strong>Example: Pre-created Kubernetes Secret (no credentials in values)</strong></summary>
 
-If you prefer to manage K8s secrets yourself (via Sealed Secrets, External Secrets Operator, or manual creation), disable auto-creation and point the chart to your existing secret:
+If you prefer to manage K8s secrets yourself (via Sealed Secrets, External Secrets Operator, or manual creation), point the chart to your existing secret:
 
 ```yaml
 secretsManagement:
@@ -143,6 +150,8 @@ secretsManagement:
 The chart references your secret by name without creating or modifying it. You are responsible for creating it before deploying. Use the CLI (`rpihelmcli secrets -f overrides.yaml`) to generate the secret, or create it manually. See the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab for the full list of secret keys.
 
 </details>
+
+> **Important:** The `databases.operational` fields in `values.yaml` (`server_host`, `server_username`, `server_password`, etc.) are only used by the CLI when generating the Kubernetes Secret. The chart templates don't read them directly -- services pull connection details from the K8s Secret via `secretKeyRef` (keys like `Operations_Database_ServerHost`, `Operations_Database_Server_Password`). If you set these values in your overrides but don't create the secret, pods will fail to start.
 
 ### Flat container registries (per-service image overrides)
 
@@ -185,18 +194,33 @@ Image resolution priority: `overrides` (full URI) > `nameOverrides` (name only) 
 
 **Before:** Connecting to databases or internal services that use private/internal certificate authorities required manually editing deploy templates to add volume mounts and environment variables for the CA bundle.
 
-**Now:** The `customCACerts` section mounts a ConfigMap or Secret containing your CA certificates into all core service pods:
+**Now:** The `customCACerts` section mounts a Kubernetes Secret with your CA certificates into all RPI pods:
 
 ```yaml
 customCACerts:
   enabled: true
-  source: configMap           # configMap | secret
-  name: my-internal-ca        # name of the ConfigMap or Secret
+  name: my-internal-ca        # name of the Kubernetes Secret containing the CA bundle
   mountPath: /usr/local/share/ca-certificates/custom
   certFile: ca-bundle.pem     # optional: sets SSL_CERT_FILE env var
 ```
 
-Create the ConfigMap from your CA bundle, then reference it in your overrides. The chart handles the volume mount, volume definition, and optional `SSL_CERT_FILE` environment variable automatically.
+Create the Secret from your CA bundle, then reference it in your overrides. The chart takes care of the volume mount and the optional `SSL_CERT_FILE` env var.
+
+```bash
+kubectl create secret generic my-internal-ca \
+  --from-file=ca-bundle.pem=/path/to/your/ca-bundle.pem \
+  -n redpoint-rpi
+```
+
+For CSI/SDK providers, you can mount the CA certificate directly from your vault via CSI inline volume instead of a pre-created Secret:
+
+```yaml
+customCACerts:
+  enabled: true
+  secretProviderClassName: my-ca-spc   # mounts via CSI instead of a K8s Secret
+  mountPath: /usr/local/share/ca-certificates/custom
+  certFile: ca-bundle.pem
+```
 
 ### Ingress annotations passthrough
 
@@ -356,12 +380,19 @@ serviceMesh:
   - name: aks-rpi-queuereader
 ```
 
-When enabled, the chart automatically adds these pod annotations to all RPI deployments:
-- `linkerd.io/inject: enabled` (per-pod proxy injection)
-- `config.linkerd.io/skip-outbound-ports: "443"` (skip TLS for outbound HTTPS)
-- `config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"` (proxy timeout)
+When enabled, the chart renders whatever you put in `serviceMesh.podAnnotations` on all RPI pod templates. Set the annotations you need in your overrides:
 
-These annotations are overridable via `serviceMesh.podAnnotations`, and can be disabled per-service using that service's `podAnnotations` (e.g., `deploymentapi.podAnnotations: { linkerd.io/inject: disabled }`).
+```yaml
+serviceMesh:
+  enabled: true
+  provider: linkerd
+  podAnnotations:
+    linkerd.io/inject: enabled
+    config.linkerd.io/skip-outbound-ports: "443"
+    config.linkerd.io/proxy-outbound-connect-timeout: "240000ms"
+```
+
+To disable injection for a specific service, override its `podAnnotations` (e.g., `deploymentapi.podAnnotations: { linkerd.io/inject: disabled }`).
 
 The `servers` list generates Linkerd `Server` CRDs for L7 traffic policy. Each server is automatically paired with an `AuthorizationPolicy` and `NetworkAuthentication` to allow unmeshed traffic (e.g. from your ingress controller). Server options can be set at `serverDefaults` level or overridden per server:
 
@@ -410,11 +441,41 @@ helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
 
 ---
 
+### Internal service passwords (Redis and RabbitMQ)
+
+The chart runs its own Redis and RabbitMQ instances for the Queue Reader and Realtime API. Passwords for these are auto-generated and stored in a Kubernetes Secret called `rpi-internal-services`. This secret is created regardless of your secrets provider (`kubernetes`, `csi`, or `sdk`).
+
+The secret has `helm.sh/resource-policy: keep` so it persists across upgrades, and uses `lookup` to avoid regenerating passwords on each `helm upgrade`. You don't need to create or manage these passwords yourself.
+
+---
+
+### MongoDB MONGODB-AWS authentication
+
+If you use MongoDB Atlas on AWS, the Realtime API can authenticate using the MONGODB-AWS mechanism instead of a password. Set `authMechanism: iamRole` and the chart adds the IAM role ARN and STS endpoint settings to the Realtime API pods:
+
+```yaml
+realtimeapi:
+  cacheProvider:
+    mongodb:
+      authMechanism: iamRole
+      roleArn: arn:aws:iam::123456789:role/redpoint-rpi-mongo
+      region: us-east-1
+```
+
+| `authMechanism` | Behavior |
+|:-----------------|:---------|
+| (empty/default) | Standard username/password authentication via the connection string in the K8s Secret |
+| `iamRole` | MONGODB-AWS authentication. The pod assumes the IAM role to talk to MongoDB Atlas. No password needed in the connection string. |
+
+If `cloudIdentity.enabled` is true, the IAM role comes from the cloud identity config. If `cloudIdentity.enabled` is false, the chart annotates the Realtime API service account with the `roleArn` for IRSA and adds the required AWS environment variables.
+
+---
+
 ### Execution Service internal cache changed to filesystem
 
 **Before:** The Execution Service used Redis as its internal cache by default, requiring a separate Redis StatefulSet for execution state management.
 
-**Now:** The default internal cache provider is `filesystem`, which uses the same persistent volume mounted for the FileOutputDirectory. This simplifies the deployment by removing the need for a dedicated Redis instance for execution state.
+**Now:** The default internal cache provider is `filesystem`, which uses the same persistent volume as the FileOutputDirectory. No separate Redis instance is needed for execution state.
 
 ```yaml
 executionservice:
@@ -448,7 +509,7 @@ realtimeapi:
       console: "false"
 ```
 
-This allows you to see detailed plugin and endpoint logs while keeping core framework logging quiet, solving the common problem of log noise in production environments with custom plugins.
+You can turn up plugin and endpoint logs without flooding your output with framework noise.
 
 ---
 
@@ -812,6 +873,8 @@ rpihelmcli/setup.sh troubleshoot -n redpoint-rpi
 
 If you customized probes, logging levels, security contexts, or other internal settings in v7.6, these are now set directly under the matching top-level key in your overrides file. Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to browse every available key.
 
+
+</details>
 
 </details>
 
