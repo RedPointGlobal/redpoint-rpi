@@ -126,7 +126,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $QueueReaderMQ }}
-          image: {{ .Values.global.deployment.images.registry }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
+          image: {{ include "rpi.image" (dict "root" . "name" "rpi-rabbitmq") }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - name: amqp
@@ -343,7 +343,7 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: {{ $RealtimeapiMQ }}
-          image: {{ .Values.global.deployment.images.registry }}/rabbitmq:{{ .Values.global.deployment.images.tag }}
+          image: {{ include "rpi.image" (dict "root" . "name" "rpi-rabbitmq") }}
           imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - name: amqp

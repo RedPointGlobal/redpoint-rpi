@@ -792,12 +792,17 @@ Usage: {{ include "rpi.image" (dict "root" . "name" $name) }}
 {{- define "rpi.image" -}}
 {{- $overrides := .root.Values.global.deployment.images.overrides | default dict -}}
 {{- $nameOverrides := .root.Values.global.deployment.images.nameOverrides | default dict -}}
+{{- $defaultNames := dict "rpi-redis" "rediscache" "rpi-rabbitmq" "rabbitmq" -}}
 {{- if hasKey $overrides .name -}}
 {{ index $overrides .name }}
 {{- else if hasKey $nameOverrides .name -}}
 {{ .root.Values.global.deployment.images.registry }}/{{ index $nameOverrides .name }}:{{ .root.Values.global.deployment.images.tag }}
 {{- else -}}
-{{ .root.Values.global.deployment.images.registry }}/{{ .name }}:{{ .root.Values.global.deployment.images.tag }}
+{{- $imageName := .name -}}
+{{- if hasKey $defaultNames .name -}}
+{{- $imageName = index $defaultNames .name -}}
+{{- end -}}
+{{ .root.Values.global.deployment.images.registry }}/{{ $imageName }}:{{ .root.Values.global.deployment.images.tag }}
 {{- end -}}
 {{- end -}}
 

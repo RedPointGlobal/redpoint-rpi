@@ -161,7 +161,7 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: {{ $QueueReadercacheName }}
-          image: {{ .Values.global.deployment.images.registry }}/rediscache:{{ .Values.global.deployment.images.tag }}
+          image: {{ include "rpi.image" (dict "root" . "name" "rpi-redis") }}
           imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
           ports:
             - containerPort: 6379
