@@ -163,6 +163,24 @@ global:
 
 Services without an override continue to use the default pattern. You can override one service or all of them.
 
+If your images are in the same registry with the same tag but use different names (e.g., Artifactory with custom image names), use `nameOverrides` instead. This replaces just the image name while keeping the global registry and tag:
+
+```yaml
+global:
+  deployment:
+    images:
+      registry: myregistry.artifactory.com/rpi
+      tag: "7.7.20260325.1550"
+      nameOverrides:
+        rpi-deploymentapi: redpoint-interaction-configuration-editor
+        rpi-interactionapi: redpoint-interaction-client
+        rpi-executionservice: redpoint-interaction-execution-service
+```
+
+Result: `myregistry.artifactory.com/rpi/redpoint-interaction-configuration-editor:7.7.20260325.1550`
+
+Image resolution priority: `overrides` (full URI) > `nameOverrides` (name only) > default (`{registry}/{service-name}:{tag}`).
+
 ### Custom CA certificates
 
 **Before:** Connecting to databases or internal services that use private/internal certificate authorities required manually editing deploy templates to add volume mounts and environment variables for the CA bundle.

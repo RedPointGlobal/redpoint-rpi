@@ -29,10 +29,17 @@ global:
         name: redpoint-rpi
       # Utility image for jobs (upgrade, post-install, validation pods)
       net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
-      # Per-service image overrides (full URI, used verbatim, no tag appended)
+      # Image resolution priority: overrides > nameOverrides > default ({registry}/{service-name}:{tag})
+      #
+      # overrides: Full URI per service, used verbatim (no registry/tag appended).
+      #   Use when images are in different registries or have custom tags.
       # overrides:
       #   rpi-interactionapi: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:interactionapi-7.7.20260220.1524
-      # Per-service image name overrides (replaces just the service name in {registry}/{name}:{tag})
+      #   rpi-redis: 123456789.dkr.ecr.us-east-1.amazonaws.com/rpi:rediscache-7.7.20260220.1524
+      #
+      # nameOverrides: Replaces just the image name, keeps global registry and tag.
+      #   Use when images are in the same registry with the same tag but different names.
+      #   Result: {registry}/{nameOverride}:{tag}
       # nameOverrides:
       #   rpi-deploymentapi: redpoint-interaction-configuration-editor
       #   rpi-interactionapi: redpoint-interaction-client
