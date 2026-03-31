@@ -146,6 +146,8 @@ ingress:
 
 Everything else (probes, security contexts, resource defaults, rollout strategies, logging) is managed by the chart automatically. Override only what you need.
 
+> **Tip:** The Generate tab covers the most common settings. For additional options (custom annotations, pod anti-affinity, node selectors, tolerations, Karpenter, service mesh, custom CA certs, per-service tuning, etc.), check the **Reference** tab in the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) for the full list of top-level keys you can add to your overrides.
+
 ### Container images
 
 All services share a single `repository` and `tag`. The chart builds each image path automatically:
