@@ -63,7 +63,7 @@ cloudIdentity:
 
 | Mode | Behavior |
 |:-----|:---------|
-| `shared` | All pods use the single SA specified in `name`. Simplest for workload identity -- only one federation credential needed. |
+| `shared` | All pods use the single SA specified in `name`. Only one federation credential needed. |
 | `per-service` | Each service gets its own SA (e.g., `rpi-realtimeapi`, `rpi-interactionapi`). Enables per-service audit trails in vault access logs, least-privilege access policies per service, and independent credential rotation. This is the default. |
 
 No template edits required for either mode.
@@ -151,7 +151,7 @@ The chart references your secret by name without creating or modifying it. You a
 
 </details>
 
-> **Important:** The `databases.operational` fields in `values.yaml` (`server_host`, `server_username`, `server_password`, etc.) are only used by the CLI when generating the Kubernetes Secret. The chart templates don't read them directly -- services pull connection details from the K8s Secret via `secretKeyRef` (keys like `Operations_Database_ServerHost`, `Operations_Database_Server_Password`). If you set these values in your overrides but don't create the secret, pods will fail to start.
+> **Important:** The `databases.operational` fields in `values.yaml` (`server_host`, `server_username`, `server_password`, etc.) are only used by the CLI when generating the Kubernetes Secret. The chart templates don't read them directly. Services pull connection details from the K8s Secret via `secretKeyRef` (keys like `Operations_Database_ServerHost`, `Operations_Database_Server_Password`). If you set these values in your overrides but don't create the secret, pods will fail to start.
 
 ### Flat container registries (per-service image overrides)
 
@@ -361,7 +361,7 @@ Use this together with `nodeSelector` and `tolerations` to ensure RPI pods land 
 
 **Before:** Using Linkerd required manually annotating every deployment with proxy injection and timeout settings, either by editing templates or using namespace-level injection (which affected non-RPI pods too).
 
-**Now:** The `serviceMesh` section enables per-pod Linkerd proxy injection and configuration for all RPI deployments. The `serverDefaults` block sets shared settings for all servers, and each server entry only needs a `name` -- the chart auto-derives `podSelector` from the name (e.g., `aks-rpi-realtimeapi` produces `app.kubernetes.io/name: rpi-realtimeapi`):
+**Now:** The `serviceMesh` section enables per-pod Linkerd proxy injection and configuration for all RPI deployments. The `serverDefaults` block sets shared settings for all servers, and each server entry only needs a `name`. The chart derives `podSelector` from the name, e.g. `aks-rpi-realtimeapi` produces `app.kubernetes.io/name: rpi-realtimeapi`:
 
 ```yaml
 serviceMesh:
@@ -403,7 +403,7 @@ The `servers` list generates Linkerd `Server` CRDs for L7 traffic policy. Each s
 | `allowUnauthenticated` | `true` | When true, creates AuthorizationPolicy + NetworkAuthentication to allow unmeshed clients. Set to false to require mTLS only. Settable in `serverDefaults` or per server. |
 | `networks` | All (`0.0.0.0/0`, `::/0`) | Custom CIDR list for NetworkAuthentication. Restricts which source IPs can reach the server. Settable in `serverDefaults` or per server. |
 
-**With overrides** -- set defaults for all servers, then override specific ones:
+**With overrides** (set defaults for all servers, then override specific ones):
 
 ```yaml
 serviceMesh:
@@ -762,7 +762,7 @@ Use the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Ge
 
 ### 4. Pull v7.7 Chart
 
-Clone or mirror the upstream chart repository. If you forked the v7.6 chart, you no longer need the fork -- all customization is now done through the overrides file.
+Clone or mirror the upstream chart repository. If you forked the v7.6 chart, you no longer need the fork. All customization is done through the overrides file now.
 
 ```bash
 git clone https://github.com/RedPointGlobal/redpoint-rpi.git
