@@ -1,0 +1,195 @@
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "messageq")) -}}
+{{- $name := "cdp-messageq" -}}
+
+{{- if .Values.smartActivation.enabled }}
+{{- if $cfg.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "messaging") | nindent 4 }}
+spec:
+  minAvailable: {{ $cfg.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "messaging") | nindent 4 }}
+data:
+  rabbitmq.conf: |
+    # Default RabbitMQ configuration
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
+    loopback_users.guest = false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "messaging") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  clusterIP: None
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "messaging") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  serviceName: {{ $name }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "messaging") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    spec:
+      terminationGracePeriodSeconds: 90
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["cdp-init"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: {{ $name }}
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "rpi.image" (dict "root" . "name" $name) }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+              protocol: TCP
+            - name: management
+              containerPort: 15672
+              protocol: TCP
+          resources:
+            limits:
+              memory: {{ $cfg.resources.limits.memory }}
+            requests:
+              cpu: {{ $cfg.resources.requests.cpu }}
+              memory: {{ $cfg.resources.requests.memory }}
+          env:
+            {{- if .Values.global.deployment.podTimezone }}
+            - name: TZ
+              value: {{ .Values.global.deployment.podTimezone | quote }}
+            {{- end }}
+            {{- include "rpi.cdp.keyVaultEnv" . | nindent 12 }}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rpi.secrets.secretName" . | quote }}
+                  key: CDP_RabbitMQ_Password
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ $cfg.username }}
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: /
+            - name: RABBITMQ_ERLANG_COOKIE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rpi.secrets.secretName" . | quote }}
+                  key: CDP_RabbitMQ_ErlangCookie
+            {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 12 }}{{- end }}
+          volumeMounts:
+            - name: {{ $name }}-data
+              mountPath: /data
+            - name: {{ $name }}-config
+              mountPath: /config
+          livenessProbe:
+            exec:
+              command:
+              - "rabbitmq-diagnostics"
+              - "-q"
+              - "ping"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- include "rpi.container.securityContext" (dict "sc" $cfg.securityContext) | nindent 10 }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $cfg.securityContext "noFsGroup" true "noSupplementalGroups" true) | nindent 6 }}
+      volumes:
+        - name: {{ $name }}-config
+          configMap:
+            name: {{ $name }}-config
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ $name }}-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ $cfg.volumeClaimTemplates.storage | quote }}
+{{- end }}

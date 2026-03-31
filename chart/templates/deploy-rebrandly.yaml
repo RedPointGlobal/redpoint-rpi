@@ -1,0 +1,347 @@
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "rebrandly")) -}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
+{{- $readiness := fromYaml (include "rpi.merged.readinessProbe" .) -}}
+{{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
+{{- $topo := fromYaml (include "rpi.merged.topologySpreadConstraints" .) -}}
+{{- $diag := fromYaml (include "rpi.merged.diagnosticsMode" .) -}}
+{{- $name := "rpi-rebrandly" -}}
+{{- $cacheName := "rpi-rebrandly-cache" -}}
+
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "api" "cfg" $cfg) }}
+
+---
+{{- if $cfg.enabled }}
+{{- if eq $cfg.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $cfg.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+{{- if eq $cfg.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq $cfg.type "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    {{- with $cfg.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+  {{- with .Values.customAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  {{- if eq $cfg.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: {{ $name }}
+      previewService: {{ $name }}-preview
+      autoPromotionEnabled: {{ $cfg.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ $cfg.rollout.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim) }}{{- . | nindent 8 }}{{- end }}
+      {{- if or .Values.commonAnnotations $cfg.podAnnotations .Values.serviceMesh.enabled }}
+      annotations:
+        {{- with .Values.commonAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- include "rpi.serviceMesh.podAnnotations" (dict "root" . "svcServiceMesh" (hasKey $cfg "serviceMesh" | ternary $cfg.serviceMesh true)) | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
+      {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
+      {{- if $topo.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ $topo.maxSkew }}
+          topologyKey: {{ $topo.topologyKey }}
+          whenUnsatisfiable: {{ $topo.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      {{- end }}
+      containers:
+      - name: {{ $name }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
+        {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
+        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup "enabled" $cfg.enableProbes) | nindent 8 }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        env:
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
+        - name: Rebrandly__BaseUrl
+          value: {{ $cfg.baseUrl | quote }}
+        - name: Rebrandly__EnterpriseBaseUrl
+          value: {{ $cfg.enterpriseBaseUrl | quote }}
+        {{- if not (eq $.Values.secretsManagement.provider "sdk") }}
+        - name: Rebrandly__ApiKey
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" $ | quote }}
+              key: Rebrandly_ApiKey
+        {{- end }}
+        - name: Redis__Hostname
+          value: {{ $cfg.redisSettings.hostname | quote }}
+#        - name: Redis__Username
+#          value: {{ $cfg.redisSettings.username | quote }}
+        {{- if not $cfg.redisSettings.useAzureCredentials }}
+        - name: Redis__Password
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.internalSecretName" $ | quote }}
+              key: Rebrandly_RedisPassword
+        {{- end }}
+        - name: Redis__Port
+          value: {{ $cfg.redisSettings.port | quote }}
+        - name: UseAzureCredentials
+          value: {{ $cfg.redisSettings.useAzureCredentials | quote }}
+        - name: Logging_LogLevel_Default
+          value: {{ $cfg.logging.default | quote }}
+        - name: Logging_LogLevel_Microsoft_AspNetCore
+          value: {{ $cfg.logging.aspNetCore | quote }}
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        {{- if $cfg.resources.enabled }}
+        resources:
+          {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
+          limits:
+            {{- with $cfg.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and $cfg.resources.requests (ne $cfg.resources.requests.enabled false) }}
+          requests:
+            {{- with $cfg.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- end }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+
+---
+{{- if $cfg.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $cacheName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $cacheName "component" "api") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: {{ $cacheName }}
+  ports:
+    - port: 6379
+      targetPort: 6379
+      protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $cacheName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $cacheName "component" "api") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    {{- with $cfg.customLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  serviceName: {{ $cacheName }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $cacheName }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $cacheName "component" "api") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with $cfg.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rpi-rebrandly"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rpi-rebrandly
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: rpi-rebrandly
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: rpirebrandlycache
+          image: {{ include "rpi.image" (dict "root" . "name" "rpi-redis") }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: 6379
+              name: redis
+          resources:
+            limits:
+              cpu: {{ $cfg.redisSettings.resources.limits.cpu | quote }}
+              memory: {{ $cfg.redisSettings.resources.limits.memory | quote }}
+            requests:
+              cpu: {{ $cfg.redisSettings.resources.requests.cpu | quote }}
+              memory: {{ $cfg.redisSettings.resources.requests.memory | quote }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rpi.secrets.internalSecretName" $ | quote }}
+                  key: Rebrandly_RedisPassword
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          volumeMounts:
+            {{- if $cfg.redisSettings.volumeClaimTemplates.enabled }}
+            - name: {{ $cacheName }}-data
+              mountPath: /data
+            {{- end }}
+            {{- if not $cfg.redisSettings.volumeClaimTemplates.enabled }}
+            - name: {{ $cacheName }}-data
+              mountPath: /data
+            {{- end }}
+      volumes:
+        {{- if not $cfg.redisSettings.volumeClaimTemplates.enabled }}
+        - name: {{ $cacheName }}-data
+          emptyDir: {}
+        {{- end }}
+  {{- if $cfg.redisSettings.volumeClaimTemplates.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ $cacheName }}-data
+      spec:
+        accessModes:
+          - {{ $cfg.redisSettings.volumeClaimTemplates.accessModes | quote }}
+        resources:
+          requests:
+            storage: {{ $cfg.redisSettings.volumeClaimTemplates.size | quote }}
+        storageClassName: {{ $cfg.redisSettings.volumeClaimTemplates.storageClassName | quote }}
+  {{- end }}
+{{- end }}

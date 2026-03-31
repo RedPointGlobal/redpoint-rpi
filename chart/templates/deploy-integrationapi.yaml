@@ -1,0 +1,497 @@
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "integrationapi")) -}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
+{{- $readiness := fromYaml (include "rpi.merged.readinessProbe" .) -}}
+{{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
+{{- $topo := fromYaml (include "rpi.merged.topologySpreadConstraints" .) -}}
+{{- $diag := fromYaml (include "rpi.merged.diagnosticsMode" .) -}}
+{{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- $name := "rpi-integrationapi" -}}
+{{- $dwEnabled := (include "redpoint.DatawarehouseProviders" .) | eq "true" -}}
+{{- $dw := .Values.databases.datawarehouse | default dict -}}
+
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "api" "cfg" $cfg) }}
+
+---
+{{- if $cfg.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+spec:
+  maxUnavailable: {{ $cfg.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+{{- end }}
+
+
+---
+{{- if $cfg.enabled }}
+{{- if eq $cfg.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $cfg.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+{{- if eq $cfg.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq $cfg.type "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    {{- with .Values.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+  {{- with .Values.customAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not $cfg.autoscaling.enabled }}
+  replicas: {{ $cfg.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  {{- if eq $cfg.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: {{ $name }}
+      previewService: {{ $name }}-preview
+      autoPromotionEnabled: {{ $cfg.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ $cfg.rollout.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim) }}{{- . | nindent 8 }}{{- end }}
+      {{- if or .Values.commonAnnotations $cfg.podAnnotations (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) .Values.serviceMesh.enabled }}
+      annotations:
+        {{- with .Values.commonAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if (or .Values.customMetrics.enabled $cfg.customMetrics.enabled) }}
+        prometheus.io/scrape: {{ or .Values.customMetrics.enabled $cfg.customMetrics.prometheus_scrape | quote }}
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        {{- end }}
+        {{- include "rpi.serviceMesh.podAnnotations" (dict "root" . "svcServiceMesh" (hasKey $cfg "serviceMesh" | ternary $cfg.serviceMesh true)) | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
+      {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
+      {{- if $topo.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ $topo.maxSkew }}
+          topologyKey: {{ $topo.topologyKey }}
+          whenUnsatisfiable: {{ $topo.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      {{- end }}
+      containers:
+      - env:
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
+        - name: Logging__LogLevel__Default
+          value: {{ $cfg.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ $cfg.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ $cfg.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ $cfg.logging.rpiError | quote }}
+        - name: Logging__Console__LogLevel__Default
+          value: {{ $cfg.logging.Console | quote }}
+        - name: Authentication__EnableRPIAuthentication
+          value: {{ $cfg.enableRPIAuthentication | quote }}
+        - name: RPI__DateTimeSource
+          value: {{ .Values.databases.operational.dateTimeSource | default "OperatingSystem" | quote }}
+        {{- if $diag.copytoAzureBlob.enabled }}
+        - name: RPI__Diagnostics__CopyToAzure__IsEnabled
+          value: "true"
+        - name: RPI__Diagnostics__CopyToAzure__StorageAccount
+          value: {{ $diag.copytoAzureBlob.accountName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AccessKey
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: CopyToAzureBlobAccessKey
+        - name: RPI__Diagnostics__CopyToAzure__ContainerName
+          value: {{ $diag.copytoAzureBlob.containerName | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__BlobServiceEndpoint
+          value: {{ $diag.copytoAzureBlob.blobServiceEndpoint | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__EnableCdn
+          value: {{ $diag.copytoAzureBlob.enableCdn | quote }}
+        - name: RPI__Diagnostics__CopyToAzure__AzureUseDataLakeStorageGen2
+          value: {{ $diag.copytoAzureBlob.UseDataLakeStorageGen2 | quote }}
+        {{- end }}
+        {{- if $diag.copytoSftp.enabled }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPHost
+          value: {{ $diag.copytoSftp.sftpHost | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPUsername
+          value: {{ $diag.copytoSftp.sftpUsername | quote }}
+        - name: RPI__Diagnostics__CopyToSFTP__SecureFTPPassword
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: CopyToSFTPSecureFTPPassword
+        - name: RPI__Diagnostics__CopyToSFTP__PortNumberNumber
+          value: {{ $diag.copytoSftp.sftpPort | quote }}
+        - name: RPI__Diagnostics__UseSFTP
+          value: "true"
+        - name: RPI__Diagnostics__CopyToSFTP__IsEnabled
+          value: "true"
+        {{- end }}
+        {{- if $diag.dotNetTools.enabled }}
+        - name: DOTNET_BUNDLE_EXTRACT_BASE_DIR
+          value: {{ $diag.dotNetTools.extractionBaseDir | quote }} 
+        - name: RPI__Diagnostics__UseDotNetTools__Path
+          value: {{  $diag.dotNetTools.path  | quote }}
+        - name: RPI__Diagnostics__UseDotNetTools__UseCounters
+          value: {{ $diag.dotNetTools.useCounters | quote }}
+        - name: RPI__Diagnostics__UseDotNetTools__CounterProviderList
+          value: '["System.Runtime", "Microsoft.Extensions.Diagnostics.ResourceMonitoring"]'
+        - name: RPI__Diagnostics__UseDotNetTools__UseGcDump
+          value: {{ $diag.dotNetTools.useGcDump | quote }}
+        {{- end }}
+        - name: Authentication__RPIAuthentication__AuthorizationHost
+          value: "https://{{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.integration "domain" $ingCfg.domain) }}"
+        {{- if $cfg.authMetaHttpEnabled }}
+        - name: Authentication__RPIAuthentication__AuthMetaHttpHost
+          value: "http://{{ $name }}"
+        - name: Authentication__RPIAuthentication__EnableTransportSecurityRequirement
+          value: "false"
+        {{- end }}
+        - name: EnableSwagger
+          value: {{ $cfg.enableSwagger | quote }}
+        {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
+        {{- end }}
+        {{- end }}
+        {{- if .Values.OpenIdProviders.enabled }}
+        {{- if eq .Values.OpenIdProviders.name "keycloak" }}
+        - name: RPI__UserManagement__UseExternalUserManagement
+          value: 'true'
+        - name: RPI__UserManagement__Keycloak__Address
+          value: "http://cdp-keycloak/auth"
+        - name: RPI__UserManagement__Keycloak__Realm
+          value: redpoint-mercury
+        - name: RPI__UserManagement__Keycloak__ClientId
+          value: rpi-service
+        - name: RPI__UserManagement__Keycloak__ClientSecret
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: CDP_Keycloak_Client_Secret
+        - name: Authentication__OpenIdProviders__0__Name
+          value: "Keycloak"
+        - name: Authentication__OpenIdProviders__0__AuthorizationHost
+          value: {{ .Values.OpenIdProviders.authorizationHost | quote }}
+        - name: Authentication__OpenIdProviders__0__ClientID
+          value: {{ .Values.OpenIdProviders.clientID | quote }}
+        - name: Authentication__OpenIdProviders__0__Audience
+          value: "redpoint_dcc_internal"
+        - name: Authentication__OpenIdProviders__0__RedirectURL
+          value: {{ .Values.OpenIdProviders.redirectURL | quote }}
+        - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
+          value: {{ .Values.OpenIdProviders.enableRefreshTokens | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateIssuer
+          value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateAudience
+          value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
+          value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
+        - name: Authentication__OpenIdProviders__0__MetadataHost
+          value: "http://keycloak/auth/realms/redpoint-mercury"
+#        {{- range $index, $scope := .Values.OpenIdProviders.customScopes }}
+#        - name: Authentication__OpenIdProviders__0__CustomScopes__{{ $index }}
+#          value: {{ $scope | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.OpenIdProviders.enabled }}
+        {{- if eq .Values.OpenIdProviders.name "Okta" }}
+        - name: Authentication__OpenIdProviders__0__Name
+          value: "Okta"
+        - name: Authentication__OpenIdProviders__0__AuthorizationHost
+          value: {{ .Values.OpenIdProviders.authorizationHost | quote }}
+        - name: Authentication__OpenIdProviders__0__ClientID
+          value: {{ .Values.OpenIdProviders.clientID | quote }}
+        - name: Authentication__OpenIdProviders__0__Audience
+          value: {{ .Values.OpenIdProviders.audience | quote }}
+        - name: Authentication__OpenIdProviders__0__RedirectURL
+          value: {{ .Values.OpenIdProviders.redirectURL | quote }}
+        - name: Authentication__OpenIdProviders__0__EnableRefreshTokens
+          value: {{ .Values.OpenIdProviders.enableRefreshTokens | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateIssuer
+          value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
+        - name: Authentication__OpenIdProviders__0__ValidateAudience
+          value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
+          value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
+        {{- range $index, $scope := .Values.OpenIdProviders.customScopes }}
+        - name: Authentication__OpenIdProviders__0__CustomScopes__{{ $index }}
+          value: {{ $scope | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.MicrosoftEntraID.enabled }}
+        - name: Authentication__Microsoft__Enable
+          value: "true"
+        - name: Authentication__Microsoft__APIApplicationID
+          value: {{ .Values.MicrosoftEntraID.interaction_api_id | quote }}
+        - name: Authentication__Microsoft__ClientApplicationID
+          value: {{ .Values.MicrosoftEntraID.interaction_client_id | quote }}
+        - name: Authentication__Microsoft__TenantID
+          value: {{ .Values.MicrosoftEntraID.tenant_id | quote }}
+        {{- end }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: CONNECTIONSTRINGS__LOGGINGDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Logging_Database
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+        - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+          valueFrom:
+            secretKeyRef:
+              key: ConnectionString_Operations_Database
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+        {{- end }} 
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        - name: RPI_OperationalDatabaseType
+          value: "PostgreSQL"
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
+        - name: RPI__FileOutput__Directory
+          value: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
+        {{- end }}
+        {{- if .Values.redpointAI.enabled }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: RPI__NLP__ApiKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_API_KEY
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+        - name: RPI__NLP__SearchKey
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_SEARCH_KEY
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+        - name: RPI__NLP__Model__ConnectionString
+          valueFrom:
+            secretKeyRef:
+              key:  RPI_NLP_MODEL_CONNECTION_STRING
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.redpointAI.enabled }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: RPI__NLP__ApiBase
+          value: {{ .Values.redpointAI.naturalLanguage.ApiBase | quote }} 
+        - name: RPI__NLP__ApiVersion
+          value: {{ .Values.redpointAI.naturalLanguage.ApiVersion | quote }}
+        - name: RPI__NLP__ChatGptEngine
+          value: {{ .Values.redpointAI.naturalLanguage.ChatGptEngine | quote }} 
+        - name: RPI__NLP__ChatGptTemp
+          value: {{ .Values.redpointAI.naturalLanguage.ChatGptTemp | quote }}
+        - name: RPI__NLP__SearchEndpoint
+          value: {{ .Values.redpointAI.cognitiveSearch.SearchEndpoint | quote }} 
+        - name: RPI__NLP__EmbeddingsModel
+          value: {{ .Values.redpointAI.modelStorage.EmbeddingsModel | quote }}
+        - name: RPI__NLP__Model__ModelDimensions
+          value: {{ .Values.redpointAI.modelStorage.ModelDimensions | quote }}
+        - name: RPI__NLP__Model__ContainerName
+          value: {{ .Values.redpointAI.modelStorage.ContainerName | quote }}
+        - name: RPI__NLP__Model__BlobFolder
+          value: {{ .Values.redpointAI.modelStorage.BlobFolder | quote }}
+        {{- end }}
+        {{- end }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        name: {{ $name }}
+        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup "enabled" $cfg.enableProbes) | nindent 8 }}
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
+        {{- if $cfg.resources.enabled }}
+        resources:
+          {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
+          limits:
+            {{- with $cfg.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and $cfg.resources.requests (ne $cfg.resources.requests.enabled false) }}
+          requests:
+            {{- with $cfg.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- end }}
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+          {{- if (($dw.bigquery | default dict).enabled | default false) }}
+          {{- range .Values.databases.datawarehouse.bigquery.connections }}
+          {{- if eq .credentialsType "serviceAccount" }}
+          - name: {{ .configMapName | quote }}
+            mountPath: {{ .ConfigMapFilePath }}/{{ .keyName }}
+            subPath: {{ .keyName }}
+            readOnly: true
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- if (($dw.snowflake | default dict).enabled | default false) }}
+          {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
+          {{- include "rpi.snowflake.volumeMount" . | nindent 10 }}
+          {{- end }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}    
+          - name: fileoutputdirectory
+            mountPath: {{  .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}  
+          - name: realtimeplugins
+            mountPath: {{ .Values.storage.persistentVolumeClaims.Plugins.mountPath }}
+          {{- end }}
+          {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+          - name: rpdmuploaddirectory
+            mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
+          {{- end }}
+          {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+        {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        {{- range .Values.databases.datawarehouse.bigquery.connections }}
+        {{- if eq .credentialsType "serviceAccount" }}
+        - name: {{ .configMapName | quote }}
+          configMap:
+            name: {{ .configMapName | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if (($dw.snowflake | default dict).enabled | default false) }}
+        {{- if eq .Values.databases.datawarehouse.snowflake.credentialsType "snowflake_jwt" }}
+        {{- include "rpi.snowflake.volume" . | nindent 8 }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
+        - name: fileoutputdirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.Plugins.enabled }}
+        - name: realtimeplugins
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.Plugins.claimName }}
+        {{- end }}
+        {{- if .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.enabled }}
+        - name: rpdmuploaddirectory
+          persistentVolumeClaim:
+            claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
+        {{- end }}
+        {{- include "rpi.customCACerts.volume" . | nindent 8 }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

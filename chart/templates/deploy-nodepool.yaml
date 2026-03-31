@@ -1,0 +1,51 @@
+{{- if .Values.nodeProvisioning.enabled }}
+{{- if eq (.Values.nodeProvisioning.provider | default "karpenter") "karpenter" }}
+{{- $np := .Values.nodeProvisioning.karpenter.nodePool }}
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: {{ $np.name | default "redpoint-nodepool" }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" ($np.name | default "redpoint-nodepool") "component" "node-provisioning") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+spec:
+  template:
+    {{- if $np.labels }}
+    metadata:
+      labels:
+        {{- toYaml $np.labels | nindent 8 }}
+    {{- end }}
+    spec:
+      nodeClassRef:
+        group: {{ $np.nodeClassRef.group | default "karpenter.k8s.aws" }}
+        kind: {{ $np.nodeClassRef.kind | default "EC2NodeClass" }}
+        name: {{ $np.nodeClassRef.name | default "default" }}
+      {{- if $np.expireAfter }}
+      expireAfter: {{ $np.expireAfter }}
+      {{- end }}
+      {{- with $np.startupTaints }}
+      startupTaints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $np.taints }}
+      taints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $np.requirements }}
+      requirements:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- with $np.disruption }}
+  disruption:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $np.limits }}
+  limits:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if $np.weight }}
+  weight: {{ $np.weight }}
+  {{- end }}
+{{- end }}
+{{- end }}

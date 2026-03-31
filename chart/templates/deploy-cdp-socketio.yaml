@@ -1,0 +1,226 @@
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "socketio")) -}}
+{{- $kcCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
+{{- $name := "cdp-socketio" -}}
+
+{{- if .Values.smartActivation.enabled }}
+{{- if ne (.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "websocket") | nindent 4 }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
+  {{- if or $saAnnotations $ciAnnotations }}
+  annotations:
+    {{- if $saAnnotations }}
+    {{- $saAnnotations | nindent 4 }}
+    {{- end }}
+    {{- if $ciAnnotations }}
+    {{- $ciAnnotations | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if $cfg.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "websocket") | nindent 4 }}
+spec:
+  minAvailable: {{ $cfg.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+{{- end }} 
+{{- end }}
+
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if eq $cfg.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "websocket") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8930
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "websocket") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8930
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+{{- if eq $cfg.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq $cfg.type "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "websocket") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- with .Values.customAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  {{- if eq $cfg.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: {{ $name }}
+      previewService: {{ $name }}-preview
+      autoPromotionEnabled: {{ $cfg.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ $cfg.rollout.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "websocket") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }} 
+        {{- end }}
+      {{- if or .Values.commonAnnotations }}
+      annotations:
+        {{- with .Values.commonAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $cfg.securityContext "noSupplementalGroups" true) | nindent 6 }}
+      {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      containers:
+      - name: {{ $name }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        {{- if $cfg.resources.enabled }}
+        resources:
+          {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
+          limits:
+            {{- with $cfg.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and $cfg.resources.requests (ne $cfg.resources.requests.enabled false) }}
+          requests:
+            {{- with $cfg.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        ports: 
+        - containerPort: 8930 
+        {{- include "rpi.container.securityContext" (dict "sc" $cfg.securityContext) | nindent 8 }}
+        env: 
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
+        {{- include "rpi.cdp.keyVaultEnv" . | nindent 8 }}
+        - name: SOCKETIO_HOST
+          value: 0.0.0.0
+        - name: SOCKETIO_PORT
+          value: "8930"
+        - name: REDPOINT_MERCURY_REALM
+          value: {{ $kcCfg.realm_name }}
+        - name: KEYCLOAK_HOST
+          value: {{ $kcCfg.hostname | quote }}
+        - name: KEYCLOAK_PORT
+          value: {{ $kcCfg.service.port | quote }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: MONGO_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: CDP_Mongo_ConnectionString
+        {{- end }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

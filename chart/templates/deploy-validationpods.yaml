@@ -1,0 +1,161 @@
+{{/*
+  Validation Pods
+  Lightweight validation pods that verify storage mounts and CSI secret mounts
+  are working correctly. Each entry needs only a name, type, and mount target.
+  Security context, imagePullSecrets, and workload identity labels are inherited
+  from chart globals. All other fields are optional per-entry overrides.
+
+  Two types:
+    pvc       — Mounts a PersistentVolumeClaim and writes a test file in a loop
+    csiSecret — Mounts a CSI SecretProviderClass volume and sleeps
+
+  Enabled via: validationPods.enabled: true
+*/}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- $saMode := .Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
+{{- $vpSAName := (.Values.validationPods).serviceAccountName | default "rpi-validationpods" -}}
+{{- if and (eq $saMode "per-service") ((.Values.validationPods).deployments) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $vpSAName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $vpSAName "component" "validation") | nindent 4 }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" (dict "root" . "svcCloudIdentity" ((.Values.validationPods).cloudIdentity | default true)) | trim }}
+  {{- if or $saAnnotations $ciAnnotations }}
+  annotations:
+    {{- if $saAnnotations }}
+    {{- $saAnnotations | nindent 4 }}
+    {{- end }}
+    {{- if $ciAnnotations }}
+    {{- $ciAnnotations | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- range (.Values.validationPods).deployments }}
+{{- if ne (.enabled | toString) "false" }}
+{{- $name := .name }}
+{{- $containerName := .containerName | default $name }}
+{{- $volumeName := .volumeName | default $name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- if .selectorLabels }}
+    {{- toYaml .selectorLabels | nindent 4 }}
+    {{- else }}
+    app.kubernetes.io/name: {{ $name }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- if .selectorLabels }}
+      {{- toYaml .selectorLabels | nindent 6 }}
+      {{- else }}
+      app.kubernetes.io/name: {{ $name }}
+      {{- end }}
+  template:
+    metadata:
+      annotations:
+        {{- with .podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- if .selectorLabels }}
+        {{- toYaml .selectorLabels | nindent 8 }}
+        {{- else }}
+        app.kubernetes.io/name: {{ $name }}
+        {{- end }}
+        {{- with .podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" $ "svcCloudIdentity" (($.Values.validationPods).cloudIdentity | default true)) | trim) }}{{- . | nindent 8 }}{{- end }}
+    spec:
+      {{- if eq ($.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
+      serviceAccountName: {{ $.Values.cloudIdentity.serviceAccount.name | default "redpoint-rpi" | quote }}
+      {{- else }}
+      serviceAccountName: {{ $vpSAName | quote }}
+      {{- end }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
+      {{- if .nodeSelector }}
+      nodeSelector:
+        {{- toYaml .nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .tolerations }}
+      tolerations:
+        {{- toYaml .tolerations | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $containerName }}
+          image: {{ .image | default $.Values.global.deployment.images.net_utils }}
+          imagePullPolicy: "Always"
+          {{- if $secCtx.enabled }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          {{- end }}
+          {{- if .command }}
+          command:
+            {{- toYaml .command | nindent 12 }}
+          {{- else if eq (.type | default "pvc") "pvc" }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do echo $(date) >> {{ .mountPath }}/outfile; sleep 1; done
+          {{- else }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do sleep 30; done
+          {{- end }}
+          {{- with .args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: {{ $volumeName }}
+              mountPath: {{ .mountPath }}
+              {{- if eq (.type | default "pvc") "csiSecret" }}
+              readOnly: true
+              {{- else }}
+              readOnly: false
+              {{- end }}
+          resources:
+            {{- if eq (.type | default "pvc") "csiSecret" }}
+            requests:
+              memory: 250Mi
+              cpu: 64m
+            limits:
+              memory: 750Mi
+              cpu: 256m
+            {{- else }}
+            requests:
+              memory: 512Mi
+              cpu: 500m
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+            {{- end }}
+      volumes:
+        {{- if eq (.type | default "pvc") "pvc" }}
+        - name: {{ $volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .claimName | default .persistentVolumeClaimName }}
+        {{- else }}
+        - name: {{ $volumeName }}
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ .secretProviderClass | quote }}
+        {{- end }}
+{{- end }}
+{{- end }}

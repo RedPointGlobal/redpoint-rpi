@@ -1,0 +1,434 @@
+{{- $rtCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
+{{- $qrCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "queuereader")) -}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- $QueueReaderMQ := "rpi-queuereader-rabbitmq" -}}
+{{- $RealtimeapiMQ := "rpi-realtimeapi-rabbitmq" -}}
+
+{{- if $qrCfg.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $QueueReaderMQ }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $QueueReaderMQ "component" "messaging") | nindent 4 }}
+spec:
+  maxUnavailable: {{ $qrCfg.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $QueueReaderMQ }}
+{{- end }}
+
+---
+{{- if $qrCfg.enabled }}
+{{- if $qrCfg.realtimeConfiguration.isDistributed }}
+{{- if eq $qrCfg.internalQueues.provider "rabbitmq" }}
+{{- if eq $qrCfg.internalQueues.type "internal" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $QueueReaderMQ }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $QueueReaderMQ "component" "messaging") | nindent 4 }}
+data:
+  rabbitmq.conf: |
+    # Default RabbitMQ configuration
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
+    loopback_users.guest = false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $QueueReaderMQ }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $QueueReaderMQ "component" "messaging") | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+  selector:
+    app.kubernetes.io/name: {{ $QueueReaderMQ }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $QueueReaderMQ }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $QueueReaderMQ "component" "messaging") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+spec:
+  serviceName: {{ $QueueReaderMQ }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $QueueReaderMQ }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $QueueReaderMQ "component" "messaging") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    spec:
+      terminationGracePeriodSeconds: 90
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rpi-queuereader"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: {{ $QueueReaderMQ }}
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $QueueReaderMQ }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      containers:
+        - name: {{ $QueueReaderMQ }}
+          image: {{ include "rpi.image" (dict "root" . "name" "rpi-rabbitmq") }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+              protocol: TCP
+            - name: management
+              containerPort: 15672
+              protocol: TCP
+          {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.enabled }}
+          resources:
+            {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.limits }}
+            limits:
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.limits.cpu }}
+              cpu: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.limits.cpu | quote }}
+              {{- end }}
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.limits.memory }}
+              memory: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.limits.memory }}
+              {{- end }}
+            {{- end }}
+            {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.requests }}
+            requests:
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.requests.cpu | quote }}
+              cpu: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.requests.cpu }}
+              {{- end }}
+              {{- if $qrCfg.internalQueues.rabbitmqSettings.resources.requests.memory }}
+              memory: {{ $qrCfg.internalQueues.rabbitmqSettings.resources.requests.memory }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ $qrCfg.internalQueues.rabbitmqSettings.username | quote }}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rpi.secrets.internalSecretName" . | quote }}
+                  key: QueueService_RabbitMQ_Password
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: "/"
+            - name: RABBITMQ_CONFIG_FILE
+              value: "/config/rabbitmq.conf"
+          volumeMounts:
+            - name: {{ $QueueReaderMQ }}-data
+              mountPath: /data
+            - name: {{ $QueueReaderMQ }}-config
+              mountPath: /config
+          livenessProbe:
+            exec:
+              command:
+              - "rabbitmq-diagnostics"
+              - "-q"
+              - "ping"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          securityContext:
+            allowPrivilegeEscalation: false
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noFsGroup" true "noSupplementalGroups" true) | nindent 6 }}
+      volumes:
+        - name: {{ $QueueReaderMQ }}-config
+          configMap:
+            name: {{ $QueueReaderMQ }}-config
+        {{- if $qrCfg.internalQueues.rabbitmqSettings.existingClaim }}
+        - name: {{ $QueueReaderMQ }}-data
+          persistentVolumeClaim:
+            claimName: {{ $qrCfg.internalQueues.rabbitmqSettings.existingClaim }}
+        {{- else if not $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.enabled }}
+        - name: {{ $QueueReaderMQ }}-data
+          emptyDir: {}
+        {{- end }}
+  {{- if and $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.enabled (not $qrCfg.internalQueues.rabbitmqSettings.existingClaim) }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ $QueueReaderMQ }}-data
+      spec:
+        accessModes:
+          - {{ $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.accessModes | default "ReadWriteOnce" }}
+        {{- if $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.storageClassName }}
+        storageClassName: {{ $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $qrCfg.internalQueues.rabbitmqSettings.volumeClaimTemplates.storage | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if eq $rtCfg.queueProvider.provider "rabbitmq" }}
+{{- if eq $rtCfg.queueProvider.rabbitmq.type "internal" }}
+{{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $RealtimeapiMQ }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $RealtimeapiMQ  "component" "messaging") | nindent 4 }}
+spec:
+  maxUnavailable: {{ $rtCfg.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $RealtimeapiMQ }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $rtCfg.enabled }}
+{{- if eq $rtCfg.queueProvider.provider "rabbitmq" }}
+{{- if eq $rtCfg.queueProvider.rabbitmq.type "internal" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $RealtimeapiMQ }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $RealtimeapiMQ  "component" "messaging") | nindent 4 }}
+data:
+  rabbitmq.conf: |
+    # Default RabbitMQ configuration
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
+    loopback_users.guest = false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $RealtimeapiMQ }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $RealtimeapiMQ  "component" "messaging") | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+  selector:
+    app.kubernetes.io/name: {{ $RealtimeapiMQ }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $RealtimeapiMQ }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $RealtimeapiMQ  "component" "messaging") | nindent 4 }}
+spec:
+  serviceName: {{ $RealtimeapiMQ }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $RealtimeapiMQ }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $RealtimeapiMQ  "component" "messaging") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    spec:
+      terminationGracePeriodSeconds: 90
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: ["rpi-realtimeapi"]
+                topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: {{ $RealtimeapiMQ }}
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $RealtimeapiMQ }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: {{ $RealtimeapiMQ }}
+          image: {{ include "rpi.image" (dict "root" . "name" "rpi-rabbitmq") }}
+          imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+              protocol: TCP
+            - name: management
+              containerPort: 15672
+              protocol: TCP
+          {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.enabled }}
+          resources:
+            {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.limits }}
+            limits:
+              {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.cpu }}
+              cpu: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.cpu | quote }}
+              {{- end }}
+              {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.memory }}
+              memory: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.limits.memory }}
+              {{- end }}
+            {{- end }}
+            {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.requests }}
+            requests:
+              {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.cpu | quote }}
+              cpu: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.cpu }}
+              {{- end }}
+              {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.memory }}
+              memory: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.resources.requests.memory }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.username | quote }}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rpi.secrets.internalSecretName" . | quote }}
+                  key: RealtimeAPI_RabbitMQ_Password
+            - name: RABBITMQ_DEFAULT_VHOST
+              value: "/"
+            - name: RABBITMQ_CONFIG_FILE
+              value: "/config/rabbitmq.conf"
+          volumeMounts:
+            - name: {{ $RealtimeapiMQ }}-data
+              mountPath: /data
+            - name: {{ $RealtimeapiMQ }}-config
+              mountPath: /config
+          livenessProbe:
+            exec:
+              command:
+              - "rabbitmq-diagnostics"
+              - "-q"
+              - "ping"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          securityContext:
+            allowPrivilegeEscalation: false
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noFsGroup" true "noSupplementalGroups" true) | nindent 6 }}
+      volumes:
+        - name: {{ $RealtimeapiMQ }}-config
+          configMap:
+            name: {{ $RealtimeapiMQ }}-config
+        {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.existingClaim }}
+        - name: {{ $RealtimeapiMQ }}-data
+          persistentVolumeClaim:
+            claimName: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.existingClaim }}
+        {{- else if not $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled }}
+        - name: {{ $RealtimeapiMQ }}-data
+          emptyDir: {}
+        {{- end }}
+  {{- if and $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.enabled (not $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.existingClaim) }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ $RealtimeapiMQ }}-data
+      spec:
+        accessModes:
+          - {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.accessModes | default "ReadWriteOnce" }}
+        {{- if $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.storageClassName }}
+        storageClassName: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.volumeClaimTemplates.storage | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

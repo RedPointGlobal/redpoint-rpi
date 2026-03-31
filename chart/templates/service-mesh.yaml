@@ -1,0 +1,79 @@
+{{/*
+  Service Mesh Integration
+  Generates Server CRDs for Linkerd (or other supported mesh providers).
+  Each Server is optionally paired with an AuthorizationPolicy and
+  NetworkAuthentication to allow unmeshed (ingress) traffic.
+
+  serverDefaults provides shared settings (port, proxyProtocol, networks,
+  allowUnauthenticated) that apply to all servers. Per-server values override.
+
+  If podSelector is not set on a server entry, it is derived from the name
+  by looking for "rpi-<service>" in the name and setting
+  app.kubernetes.io/name: rpi-<service>.
+
+  Enabled via: serviceMesh.enabled: true
+*/}}
+{{- if .Values.serviceMesh.enabled }}
+{{- if eq .Values.serviceMesh.provider "linkerd" }}
+{{- $defaults := .Values.serviceMesh.serverDefaults | default dict }}
+{{- range .Values.serviceMesh.servers }}
+{{- $srv := mustMergeOverwrite (deepCopy $defaults) . }}
+{{- $podSelector := $srv.podSelector | default dict }}
+{{- if not $podSelector }}
+{{- $svcName := regexFind "rpi-[a-z]+" $srv.name }}
+{{- if $svcName }}
+{{- $podSelector = dict "app.kubernetes.io/name" $svcName }}
+{{- end }}
+{{- end }}
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: {{ $srv.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" $ "name" $srv.name "component" "service-mesh") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- toYaml $podSelector | nindent 6 }}
+  port: {{ $srv.port | default 8080 }}
+  proxyProtocol: {{ $srv.proxyProtocol | default "HTTP/1" }}
+{{- if ne ($srv.allowUnauthenticated | toString) "false" }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ $srv.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" $ "name" $srv.name "component" "service-mesh") | nindent 4 }}
+spec:
+  targetRef:
+    group: policy.linkerd.io
+    kind: Server
+    name: {{ $srv.name }}
+  requiredAuthenticationRefs:
+  - name: {{ $srv.name }}
+    kind: NetworkAuthentication
+    group: policy.linkerd.io
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: NetworkAuthentication
+metadata:
+  name: {{ $srv.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" $ "name" $srv.name "component" "service-mesh") | nindent 4 }}
+spec:
+  networks:
+  {{- if $srv.networks }}
+  {{- toYaml $srv.networks | nindent 2 }}
+  {{- else }}
+  - cidr: 0.0.0.0/0
+  - cidr: ::/0
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

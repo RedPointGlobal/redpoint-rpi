@@ -1,0 +1,304 @@
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "deploymentapi")) -}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
+{{- $readiness := fromYaml (include "rpi.merged.readinessProbe" .) -}}
+{{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
+{{- $topo := fromYaml (include "rpi.merged.topologySpreadConstraints" .) -}}
+{{- $diag := fromYaml (include "rpi.merged.diagnosticsMode" .) -}}
+{{- $name := "rpi-deploymentapi" -}}
+
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "api" "cfg" $cfg) }}
+
+---
+{{- if $cfg.enabled }}
+{{- if eq $cfg.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $cfg.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+{{- if eq $cfg.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq $cfg.type "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+    {{- with .Values.customLabels }}
+    {{- toYaml . | nindent 4 }} 
+    {{- end }}
+  {{- with .Values.customAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  {{- if eq $cfg.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: {{ $name }}
+      previewService: {{ $name }}-preview
+      autoPromotionEnabled: {{ $cfg.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ $cfg.rollout.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "api") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim) }}{{- . | nindent 8 }}{{- end }}
+      {{- if or .Values.commonAnnotations $cfg.podAnnotations .Values.serviceMesh.enabled }}
+      annotations:
+        {{- with .Values.commonAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $cfg.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- include "rpi.serviceMesh.podAnnotations" (dict "root" . "svcServiceMesh" (hasKey $cfg "serviceMesh" | ternary $cfg.serviceMesh true)) | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ $cfg.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $secCtx) | nindent 6 }}
+      {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
+      {{- if $topo.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ $topo.maxSkew }}
+          topologyKey: {{ $topo.topologyKey }}
+          whenUnsatisfiable: {{ $topo.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      {{- end }}
+      containers:
+      - name: {{ $name }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
+        {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
+        {{- include "rpi.block.probes" (dict "liveness" $liveness "readiness" $readiness "startup" $startup "enabled" $cfg.enableProbes) | nindent 8 }}
+        imagePullPolicy: {{  .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        env:
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
+        - name: Logging__LogLevel__Default
+          value: {{ $cfg.logging.default | quote }}
+        - name: Logging__Database__LogLevel__Default
+          value: {{ $cfg.logging.database | quote }}
+        - name: Logging__Database__RPITrace
+          value: {{ $cfg.logging.rpiTrace | quote }}
+        - name: Logging__Database__RPIError
+          value: {{ $cfg.logging.rpiError | quote }}
+        - name: Logging__Console__LogLevel__Default
+          value: {{ $cfg.logging.Console | quote }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: Operations_Database_Pulse_Database_Name
+        - name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: Operations_Database_Pulse_Logging_Database_Name
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: Operations_Database_ServerHost
+        {{- end }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
+          value: "true"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__DatabaseSchema
+          value: {{ .Values.databases.operational.databaseSchema | default "dbo" | quote }}
+        {{- if .Values.databases.operational.encrypt | default false }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt
+          value: "true"
+        {{- end }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__TrustServerCertificate
+          value: "true"
+        {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "amazon" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AmazonRDSSQL"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "AzureSQLDatabase"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        {{- if eq .Values.global.deployment.platform "google" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "GoogleCloudSQL"
+        {{- end }}
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "postgresql" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "PostgreSQL"
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+          value: "5432"
+        {{- end }}
+        {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
+        - name: ClusterEnvironment__OperationalDatabase__DatabaseType
+          value: "SQLServer"
+        {{- end }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: Operations_Database_Server_Username
+        - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: Operations_Database_Server_Password
+        {{- end }}
+        ports:
+        - containerPort: 8080
+          name: web-port
+          protocol: TCP
+        {{- if $cfg.resources.enabled }}
+        resources:
+          {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
+          limits:
+            {{- with $cfg.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and $cfg.resources.requests (ne $cfg.resources.requests.enabled false) }}
+          requests:
+            {{- with $cfg.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- end }}
+        volumeMounts:
+          - name: tempstore
+            mountPath: /tmp
+          {{- if $cfg.templateTenant.useTemplateFiles }}
+          - name: templatetenantfiles
+            mountPath: {{ $cfg.templateTenant.templateTenantFilesPath | quote }}
+          {{- end }}
+          {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
+          {{- if and (eq .Values.secretsManagement.provider "csi") (eq (.Values.secretsManagement.csi.syncService | default "none") "deploymentapi") }}
+          - name: rpi-secrets-store
+            mountPath: /run/secrets/store
+            readOnly: true
+          {{- end }}
+      volumes:
+        - name: tempstore
+          emptyDir: {}
+        {{- if $cfg.templateTenant.useTemplateFiles }}
+        - name: templatetenantfiles
+          persistentVolumeClaim:
+            claimName: {{ $cfg.templateTenant.volumeClaimName | quote }}
+        {{- end }}
+        {{- include "rpi.customCACerts.volume" . | nindent 8 }}
+        {{- if and (eq .Values.secretsManagement.provider "csi") (eq (.Values.secretsManagement.csi.syncService | default "none") "deploymentapi") }}
+        - name: rpi-secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ (index .Values.secretsManagement.csi.secretProviderClasses 0).name | quote }}
+        {{- end }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}
+
+
+
+
+
+
+

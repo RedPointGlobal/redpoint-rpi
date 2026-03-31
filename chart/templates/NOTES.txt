@@ -1,0 +1,25 @@
+{{- include "rpi.validateConfig" . -}}
+{{- $v := .Values.global.deployment.images.tag -}}
+{{- $ns := .Release.Namespace -}}
+
+  Redpoint RPI {{ $v }}
+  Release:   {{ .Release.Name }}
+  Namespace: {{ $ns }}
+  Platform:  {{ .Values.global.deployment.platform }}
+
+  Quick checks:
+
+    kubectl get pods -n {{ $ns }}
+    kubectl get ingress -n {{ $ns }}
+
+  Watch pod status:
+
+    rpihelmcli/setup.sh status -n {{ $ns }}
+
+  Troubleshoot:
+
+    kubectl logs -n {{ $ns }} -l app.kubernetes.io/part-of=rpi --tail=50
+    kubectl get events -n {{ $ns }} --sort-by='.lastTimestamp'
+
+  Docs:  https://docs.redpointglobal.com/rpi/
+  Help:  support@redpointglobal.com

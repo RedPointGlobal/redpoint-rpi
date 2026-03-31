@@ -1,0 +1,271 @@
+{{- $cfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
+{{- $liveness := fromYaml (include "rpi.merged.livenessProbe" .) -}}
+{{- $startup := fromYaml (include "rpi.merged.startupProbe" .) -}}
+{{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- $name := "cdp-keycloak" -}}
+
+{{- if .Values.smartActivation.enabled }}
+{{- if ne (.Values.cloudIdentity.serviceAccount.mode | default "per-service") "shared" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
+  {{- $saAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "serviceAccount") | trim }}
+  {{- $ciAnnotations := include "rpi.cloudidentity.saAnnotations" . | trim }}
+  {{- if or $saAnnotations $ciAnnotations }}
+  annotations:
+    {{- if $saAnnotations }}
+    {{- $saAnnotations | nindent 4 }}
+    {{- end }}
+    {{- if $ciAnnotations }}
+    {{- $ciAnnotations | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if $cfg.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
+spec:
+  minAvailable: {{ $cfg.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+{{- end }}     
+{{- end }}  
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if eq $cfg.type "rollout" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-preview
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $cfg.service.port }}
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+{{- if eq $cfg.type "rollout" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+{{- end }}
+{{- if eq $cfg.type "deployment" }}
+apiVersion: apps/v1
+kind: Deployment
+{{- end }}
+metadata:
+  labels:
+    {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 4 }}
+    app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+  {{- with .Values.customAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  {{- if eq $cfg.type "deployment" }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: {{ $cfg.rollingUpdate.maxUnavailable | default "25%" }}
+      maxSurge: {{ $cfg.rollingUpdate.maxSurge | default "25%" }}
+  progressDeadlineSeconds: {{ $cfg.progressDeadlineSeconds | default 600 }}
+  {{- end }}
+  {{- if eq $cfg.type "rollout" }}
+  strategy:
+    blueGreen:
+      activeService: {{ $name }}
+      previewService: {{ $name }}-preview
+      autoPromotionEnabled: {{ $cfg.rollout.autoPromotionEnabled }}
+  revisionHistoryLimit: {{ $cfg.rollout.revisionHistoryLimit }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "smartactivation.componentLabels" (dict "root" . "name" $name "component" "authservice") | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.global.deployment.images.tag | quote }}
+        {{- with .Values.customLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- if or .Values.commonAnnotations }}
+      annotations:
+        {{- with .Values.commonAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+      {{- include "rpi.pod.securityContext" (dict "sc" $cfg.securityContext "noSupplementalGroups" true) | nindent 6 }}
+      terminationGracePeriodSeconds: 120
+      {{- include "rpi.podAntiAffinity" (dict "root" . "name" $name) | nindent 6 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+      containers:
+      - name: {{ $name }}
+        image: {{ include "rpi.image" (dict "root" . "name" $name) }}
+        imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        livenessProbe:
+          httpGet:
+            path: /auth/health/live
+            port: 9000
+          periodSeconds: {{ $liveness.periodSeconds }}
+          timeoutSeconds: {{ $liveness.timeoutSeconds }}
+          failureThreshold: {{ $liveness.failureThreshold }}
+        startupProbe:
+          httpGet:
+            path: /auth/health/live
+            port: 9000
+            scheme: HTTP
+          periodSeconds: {{ $startup.periodSeconds }}
+          failureThreshold: {{ $startup.failureThreshold }}
+        {{- if $cfg.resources.enabled }}
+        resources:
+          {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
+          limits:
+            {{- with $cfg.resources.limits.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.limits.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if and $cfg.resources.requests (ne $cfg.resources.requests.enabled false) }}
+          requests:
+            {{- with $cfg.resources.requests.cpu }}
+            cpu: {{ . }}
+            {{- end }}
+            {{- with $cfg.resources.requests.memory }}
+            memory: {{ . }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        ports:
+        - containerPort: 8080
+        {{- if $cfg.securityContext.enabled }}
+        securityContext:
+          privileged: {{ $cfg.securityContext.privileged }}
+          allowPrivilegeEscalation: {{ $cfg.securityContext.allowPrivilegeEscalation }}
+          readOnlyRootFilesystem: {{ $cfg.securityContext.readOnlyRootFilesystem }}
+          {{- $kcAppArmor := $cfg.securityContext.appArmorProfile | default $.Values.securityContext.appArmorProfile }}
+          {{- if $kcAppArmor }}
+          appArmorProfile:
+            type: {{ $kcAppArmor }}
+          {{- end }}
+        {{- end }}
+        env:
+        {{- if .Values.global.deployment.podTimezone }}
+        - name: TZ
+          value: {{ .Values.global.deployment.podTimezone | quote }}
+        {{- end }}
+        {{- include "rpi.cdp.keyVaultEnv" . | nindent 8 }}
+        {{- if eq .Values.databases.operational.provider "sqlserver" }}
+        - name: KEYCLOAK_DATABASE_VENDOR
+          value: mssql
+        - name: KC_DB
+          value: "mssql"
+        - name: KC_DB_URL
+          value: "jdbc:sqlserver://{{ .Values.databases.operational.server_host }};databaseName={{ $cfg.database_name }};"
+        - name: KC_DB_USERNAME
+          value: {{ .Values.databases.operational.server_username | quote }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: Operations_Database_Server_Password
+        {{- end }}
+        {{- end }}
+        - name: KEYCLOAK_PRODUCTION
+          value: "false"
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          value: {{ $cfg.username | quote }}
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: CDP_Keycloak_Admin_Password
+        - name: KEYCLOAK_EXTRA_ARGS
+          value: "-Dkeycloak.frontendUrl=https://{{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.smartactivation "domain" $ingCfg.domain) }}"
+        - name: KEYCLOAK_DATABASE_NAME
+          value: {{ $cfg.database_name | quote }}
+        - name: KEYCLOAK_PROXY_HEADERS
+          value: "xforwarded"
+        - name: KEYCLOAK_HOSTNAME_STRICT
+          value: 'false'
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
+{{- end }}

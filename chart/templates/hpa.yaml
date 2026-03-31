@@ -1,0 +1,508 @@
+{{- $rtCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "realtimeapi")) -}}
+{{- $cbCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "callbackapi")) -}}
+{{- $execCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "executionservice")) -}}
+{{- $iaCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "interactionapi")) -}}
+{{- $intCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "integrationapi")) -}}
+{{- $nmCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "nodemanager")) -}}
+{{- $qrCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "queuereader")) -}}
+{{- $authCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "authservice")) -}}
+{{- $kcCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "keycloak")) -}}
+{{- $saCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "servicesapi")) -}}
+{{- $sioCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "socketio")) -}}
+{{- $uiCfg := fromYaml (include "rpi.merged.service" (dict "root" . "name" "uiservice")) -}}
+{{- if $execCfg.autoscaling.enabled }}
+{{- if eq $execCfg.autoscaling.type "hpa" }}
+{{- if $execCfg.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-executionservice
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-executionservice" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $cbCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-executionservice
+    {{- end }}
+    {{- if eq $cbCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-executionservice
+    {{- end }}
+  minReplicas: {{ $execCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $execCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $execCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $execCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $execCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $execCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $iaCfg.autoscaling.enabled }}
+{{- if eq $iaCfg.autoscaling.type "hpa" }}
+{{- if $iaCfg.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-interactionapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-interactionapi" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $iaCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-interactionapi
+    {{- end }}
+    {{- if eq $iaCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-interactionapi
+    {{- end }}
+  minReplicas: {{ $iaCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $iaCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $iaCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $iaCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $iaCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $iaCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $intCfg.autoscaling.enabled }}
+{{- if eq $intCfg.autoscaling.type "hpa" }}
+{{- if $intCfg.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-integrationapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-integrationapi" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $intCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-integrationapi
+    {{- end }}
+    {{- if eq $intCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-integrationapi
+    {{- end }}
+  minReplicas: {{ $intCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $intCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $intCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $intCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $intCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $intCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $rtCfg.autoscaling.enabled }}
+{{- if eq $rtCfg.autoscaling.type "hpa" }}
+{{- if $rtCfg.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-realtimeapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-realtimeapi" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $rtCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-realtimeapi
+    {{- end }}
+    {{- if eq $rtCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-realtimeapi
+    {{- end }}
+  minReplicas: {{ $rtCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $rtCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $rtCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $rtCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $rtCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $rtCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $cbCfg.autoscaling.enabled }}
+{{- if eq $cbCfg.autoscaling.type "hpa" }}
+{{- if $cbCfg.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-callbackapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-callbackapi" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $cbCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-callbackapi
+    {{- end }}
+    {{- if eq $cbCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-callbackapi
+    {{- end }}
+  minReplicas: {{ $cbCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $cbCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $cbCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $cbCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $cbCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $cbCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $qrCfg.autoscaling.enabled }}
+{{- if $qrCfg.enabled }}
+{{- if eq $qrCfg.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-queuereader
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-queuereader" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $qrCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-queuereader
+    {{- end }}
+    {{- if eq $qrCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-queuereader
+    {{- end }}
+  minReplicas: {{ $qrCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $qrCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $qrCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $qrCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $qrCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $qrCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if $nmCfg.autoscaling.enabled }}
+{{- if $nmCfg.enabled }}
+{{- if eq $nmCfg.autoscaling.type "hpa" }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rpi-nodemanager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-nodemanager" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $nmCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rpi-nodemanager
+    {{- end }}
+    {{- if eq $nmCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: rpi-nodemanager
+    {{- end }}
+  minReplicas: {{ $nmCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $nmCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $nmCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $nmCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $nmCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $nmCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if $sioCfg.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-socketio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "cdp-socketio" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $sioCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-socketio
+    {{- end }}
+    {{- if eq $sioCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-socketio
+    {{- end }}
+  minReplicas: {{ $sioCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $sioCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $sioCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $sioCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $sioCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $sioCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if $authCfg.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-authservice
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "cdp-authservice" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $authCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-authservice
+    {{- end }}
+    {{- if eq $authCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-authservice
+    {{- end }}
+  minReplicas: {{ $authCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $authCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $authCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $authCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $authCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $authCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if $saCfg.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-servicesapi
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "cdp-servicesapi" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $saCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-servicesapi
+    {{- end }}
+    {{- if eq $saCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-servicesapi
+    {{- end }}
+  minReplicas: {{ $saCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $saCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $saCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $saCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $saCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $saCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- if .Values.smartActivation.enabled }}
+{{- if $uiCfg.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cdp-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "cdp-ui" "component" "hpa") | nindent 4 }}
+spec:
+  scaleTargetRef:
+    {{- if eq $uiCfg.type "deployment" }}
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cdp-ui
+    {{- end }}
+    {{- if eq $uiCfg.type "rollout" }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: cdp-ui
+    {{- end }}
+  minReplicas: {{ $uiCfg.autoscaling.minReplicas }}
+  maxReplicas: {{ $uiCfg.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $uiCfg.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $uiCfg.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $uiCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $uiCfg.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
