@@ -430,15 +430,6 @@ serviceMesh:
 
 No template edits required.
 
-### Ingress domain from external sources
-
-The `ingress.domain` field accepts any value, including those resolved from external sources. If your domain is managed via AWS Secrets Manager or another external system, resolve it before running Helm and pass it with `--set`:
-
-```bash
-DOMAIN=$(aws secretsmanager get-secret-value --secret-id my-domain-secret --query SecretString --output text)
-helm upgrade rpi ./chart -f overrides.yaml --set ingress.domain=$DOMAIN
-```
-
 ---
 
 ### Internal service passwords (Redis and RabbitMQ)
