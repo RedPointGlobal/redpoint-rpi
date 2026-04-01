@@ -972,84 +972,118 @@ No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert)
 
 #### Prerequisites
 
-Create a GCP service account with `roles/secretmanager.secretAccessor` and bind it to the Kubernetes service accounts:
+**1. Enable the Secret Manager API:**
 
 ```bash
-gcloud iam service-accounts add-iam-policy-binding <sa>@<project>.iam.gserviceaccount.com \
-  --role roles/iam.workloadIdentityUser \
-  --member "serviceAccount:<project>.svc.id.goog[<namespace>/rpi-interactionapi]"
+gcloud services enable secretmanager.googleapis.com --project <your-project-id>
 ```
 
-Repeat for each RPI service account, or use `mode: shared` for a single binding.
+**2. Create a GCP service account for RPI:**
+
+```bash
+gcloud iam service-accounts create redpoint-rpi \
+  --display-name "Redpoint RPI Workload Identity" \
+  --project <your-project-id>
+```
+
+**3. Grant Secret Manager access to the service account:**
+
+```bash
+# Read secret values
+gcloud projects add-iam-policy-binding <your-project-id> \
+  --member "serviceAccount:redpoint-rpi@<your-project-id>.iam.gserviceaccount.com" \
+  --role "roles/secretmanager.secretAccessor"
+
+# List/discover secrets (required for SDK secret discovery)
+gcloud projects add-iam-policy-binding <your-project-id> \
+  --member "serviceAccount:redpoint-rpi@<your-project-id>.iam.gserviceaccount.com" \
+  --role "roles/secretmanager.viewer"
+```
+
+**4. Bind each Kubernetes service account to the GCP service account via Workload Identity:**
+
+```bash
+SA_EMAIL="redpoint-rpi@<your-project-id>.iam.gserviceaccount.com"
+
+for KSA in rpi-interactionapi rpi-integrationapi rpi-executionservice \
+           rpi-nodemanager rpi-realtimeapi rpi-callbackapi \
+           rpi-queuereader rpi-deploymentapi; do
+  gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
+    --role roles/iam.workloadIdentityUser \
+    --member "serviceAccount:<your-project-id>.svc.id.goog[<namespace>/$KSA]"
+done
+```
+
+If using `mode: shared`, only one binding is needed for the shared SA name instead of the loop above.
 
 For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Google** > **Vault Secrets Setup**.
 
 #### Required Vault Secrets
 
-Google Secret Manager uses `__` (double underscore) as the hierarchy separator. The secret names must match exactly.
+Google Secret Manager uses `--` (double dash) as the hierarchy separator. The secret names must match exactly. This differs from Azure Key Vault (`--`) and AWS Secrets Manager (tag-based, flat JSON keys).
 
 **Database connections** (always required):
 
 | Vault Secret Name | Description |
 |:-------------------|:------------|
-| `ConnectionStrings__LoggingDatabase` | Full connection string to the logging database |
-| `ConnectionStrings__OperationalDatabase` | Full connection string to the operational database |
-| `ClusterEnvironment__OperationalDatabase__PulseDatabaseName` | Operational database name |
-| `ClusterEnvironment__OperationalDatabase__LoggingDatabaseName` | Logging database name |
-| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username` | Database username |
-| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password` | Database password |
-| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server` | Database server hostname |
+| `ConnectionStrings--LoggingDatabase` | Full connection string to the logging database |
+| `ConnectionStrings--OperationalDatabase` | Full connection string to the operational database |
+| `ClusterEnvironment--OperationalDatabase--PulseDatabaseName` | Operational database name |
+| `ClusterEnvironment--OperationalDatabase--LoggingDatabaseName` | Logging database name |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username` | Database username |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` | Database password |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Server` | Database server hostname |
 
 **Realtime API** (if enabled):
 
 | Vault Secret Name | Description |
 |:-------------------|:------------|
-| `RealtimeAPIConfiguration__AppSettings__RealtimeAPIKey` | Your API key |
-| `RealtimeAPIConfiguration__AppSettings__RPIAuthToken` | Your auth token |
-| `RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Value` | Your cache connection string (MongoDB, Redis, etc.) |
+| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key |
+| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string (MongoDB, Redis, etc.) |
 
 **Queue secrets (Pub/Sub):**
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key` | `QueueType` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value` | `GooglePubSub` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value` | Your GCP project ID |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key` | `QueueType` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value` | `GooglePubSub` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value` | Your GCP project ID |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your GCP project ID |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your GCP project ID |
 
 **Callback API** (if enabled):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key` | `QueueType` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value` | `GooglePubSub` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key` | `ConnectionString` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value` | Your GCP project ID |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Key` | `QueueType` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your GCP project ID |
 
 **SMTP** (if sending email):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `RPI__SMTP__Password` | Your SMTP password |
+| `RPI--SMTP--Password` | Your SMTP password |
 
 **Redpoint AI** (if enabled):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `RPI__NLP__ApiKey` | Your Azure OpenAI API key |
-| `RPI__NLP__SearchKey` | Your Azure Cognitive Search key |
-| `RPI__NLP__ModelConnectionString` | Model storage connection string (Azure Blob) |
+| `RPI--NLP--ApiKey` | Your Azure OpenAI API key |
+| `RPI--NLP--SearchKey` | Your Azure Cognitive Search key |
+| `RPI--NLP--ModelConnectionString` | Model storage connection string (Azure Blob) |
 
 **Rebrandly** (if enabled):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `Rebrandly__ApiKey` | Your Rebrandly API key |
+| `Rebrandly--ApiKey` | Your Rebrandly API key |
 
 </details>
 
