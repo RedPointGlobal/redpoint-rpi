@@ -558,6 +558,8 @@ Usage: {{- include "rpi.cloudidentity.envvars" . | nindent 10 }}
 - name: GOOGLE_APPLICATION_CREDENTIALS
   value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
 {{- end }}
+- name: CloudIdentity__Google__ProjectId
+  value: {{ .Values.cloudIdentity.google.projectId | quote }}
 {{- end }}
 {{- end }}
 {{- end -}}
