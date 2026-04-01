@@ -19,3 +19,5 @@ deploy/terraform/modules/*/.terraform.lock.hcl
 deploy/terraform/modules/*/generated-values.yaml
 deploy/terraform/examples/*/.terraform/
 deploy/terraform/examples/*/.terraform.lock.hcl
+.Identifier
+.identifier
