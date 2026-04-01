@@ -1197,6 +1197,7 @@ spec:
               mountPath: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.mountPath }}
             {{- end }}
             {{- include "rpi.customCACerts.volumeMount" . | nindent 12 }}
+            {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 12 }}
       volumes:
         - name: tempstore
           emptyDir: {}
@@ -1230,6 +1231,7 @@ spec:
             claimName: {{ .Values.storage.persistentVolumeClaims.DataManagementUploadDirectory.claimName }}
         {{- end }}
         {{- include "rpi.customCACerts.volume" . | nindent 8 }}
+        {{- include "rpi.cloudidentity.googleVolumes" . | nindent 8 }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

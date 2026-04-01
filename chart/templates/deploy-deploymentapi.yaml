@@ -261,6 +261,7 @@ spec:
             mountPath: {{ $cfg.templateTenant.templateTenantFilesPath | quote }}
           {{- end }}
           {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
+          {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 10 }}
           {{- if and (eq .Values.secretsManagement.provider "csi") (eq (.Values.secretsManagement.csi.syncService | default "none") "deploymentapi") }}
           - name: rpi-secrets-store
             mountPath: /run/secrets/store
@@ -275,6 +276,7 @@ spec:
             claimName: {{ $cfg.templateTenant.volumeClaimName | quote }}
         {{- end }}
         {{- include "rpi.customCACerts.volume" . | nindent 8 }}
+        {{- include "rpi.cloudidentity.googleVolumes" . | nindent 8 }}
         {{- if and (eq .Values.secretsManagement.provider "csi") (eq (.Values.secretsManagement.csi.syncService | default "none") "deploymentapi") }}
         - name: rpi-secrets-store
           csi:
@@ -295,10 +297,3 @@ spec:
           value: {{ .Values.nodeSelector.value }}
       {{- end }}
 {{- end }}
-
-
-
-
-
-
-
