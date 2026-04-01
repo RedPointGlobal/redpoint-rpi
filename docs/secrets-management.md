@@ -986,70 +986,70 @@ For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpoin
 
 #### Required Vault Secrets
 
-Google Secret Manager uses `__` (double underscore) as the hierarchy separator. The secret names must match exactly.
+Google Secret Manager uses `--` (double dash) as the hierarchy separator. The secret names must match exactly. This differs from Azure Key Vault (`--`) and AWS Secrets Manager (tag-based, flat JSON keys).
 
 **Database connections** (always required):
 
 | Vault Secret Name | Description |
 |:-------------------|:------------|
-| `ConnectionStrings__LoggingDatabase` | Full connection string to the logging database |
-| `ConnectionStrings__OperationalDatabase` | Full connection string to the operational database |
-| `ClusterEnvironment__OperationalDatabase__PulseDatabaseName` | Operational database name |
-| `ClusterEnvironment__OperationalDatabase__LoggingDatabaseName` | Logging database name |
-| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username` | Database username |
-| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password` | Database password |
-| `ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server` | Database server hostname |
+| `ConnectionStrings--LoggingDatabase` | Full connection string to the logging database |
+| `ConnectionStrings--OperationalDatabase` | Full connection string to the operational database |
+| `ClusterEnvironment--OperationalDatabase--PulseDatabaseName` | Operational database name |
+| `ClusterEnvironment--OperationalDatabase--LoggingDatabaseName` | Logging database name |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username` | Database username |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` | Database password |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Server` | Database server hostname |
 
 **Realtime API** (if enabled):
 
 | Vault Secret Name | Description |
 |:-------------------|:------------|
-| `RealtimeAPIConfiguration__AppSettings__RealtimeAPIKey` | Your API key |
-| `RealtimeAPIConfiguration__AppSettings__RPIAuthToken` | Your auth token |
-| `RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration__CacheSettings__Caches__0__Settings__1__Value` | Your cache connection string (MongoDB, Redis, etc.) |
+| `RealtimeAPIConfiguration--AppSettings--RealtimeAPIKey` | Your API key |
+| `RealtimeAPIConfiguration--AppSettings--RPIAuthToken` | Your auth token |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--CacheSettings--Caches--0--Settings--1--Value` | Your cache connection string (MongoDB, Redis, etc.) |
 
 **Queue secrets (Pub/Sub):**
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key` | `QueueType` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value` | `GooglePubSub` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value` | Your GCP project ID |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key` | `QueueType` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value` | `GooglePubSub` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key` | `ConnectionString` |
-| `RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value` | Your GCP project ID |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ClientQueueSettings--Settings--1--Value` | Your GCP project ID |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Key` | `QueueType` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `RealtimeAPIConfiguration--Queues--ListenerQueueSettings--Settings--1--Value` | Your GCP project ID |
 
 **Callback API** (if enabled):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key` | `QueueType` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value` | `GooglePubSub` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key` | `ConnectionString` |
-| `CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value` | Your GCP project ID |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Key` | `QueueType` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--0--Value` | `GooglePubSub` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Key` | `ConnectionString` |
+| `CallbackServiceConfig--QueueProvider--CallbackServiceQueueSettings--Settings--1--Value` | Your GCP project ID |
 
 **SMTP** (if sending email):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `RPI__SMTP__Password` | Your SMTP password |
+| `RPI--SMTP--Password` | Your SMTP password |
 
 **Redpoint AI** (if enabled):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `RPI__NLP__ApiKey` | Your Azure OpenAI API key |
-| `RPI__NLP__SearchKey` | Your Azure Cognitive Search key |
-| `RPI__NLP__ModelConnectionString` | Model storage connection string (Azure Blob) |
+| `RPI--NLP--ApiKey` | Your Azure OpenAI API key |
+| `RPI--NLP--SearchKey` | Your Azure Cognitive Search key |
+| `RPI--NLP--ModelConnectionString` | Model storage connection string (Azure Blob) |
 
 **Rebrandly** (if enabled):
 
 | Vault Secret Name | Value |
 |:-------------------|:------|
-| `Rebrandly__ApiKey` | Your Rebrandly API key |
+| `Rebrandly--ApiKey` | Your Rebrandly API key |
 
 </details>
 
