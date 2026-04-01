@@ -972,15 +972,49 @@ No validation pods needed. File-based secrets (TLS cert, Snowflake key, CA cert)
 
 #### Prerequisites
 
-Create a GCP service account with `roles/secretmanager.secretAccessor` and bind it to the Kubernetes service accounts:
+**1. Enable the Secret Manager API:**
 
 ```bash
-gcloud iam service-accounts add-iam-policy-binding <sa>@<project>.iam.gserviceaccount.com \
-  --role roles/iam.workloadIdentityUser \
-  --member "serviceAccount:<project>.svc.id.goog[<namespace>/rpi-interactionapi]"
+gcloud services enable secretmanager.googleapis.com --project <your-project-id>
 ```
 
-Repeat for each RPI service account, or use `mode: shared` for a single binding.
+**2. Create a GCP service account for RPI:**
+
+```bash
+gcloud iam service-accounts create redpoint-rpi \
+  --display-name "Redpoint RPI Workload Identity" \
+  --project <your-project-id>
+```
+
+**3. Grant Secret Manager access to the service account:**
+
+```bash
+# Read secret values
+gcloud projects add-iam-policy-binding <your-project-id> \
+  --member "serviceAccount:redpoint-rpi@<your-project-id>.iam.gserviceaccount.com" \
+  --role "roles/secretmanager.secretAccessor"
+
+# List/discover secrets (required for SDK secret discovery)
+gcloud projects add-iam-policy-binding <your-project-id> \
+  --member "serviceAccount:redpoint-rpi@<your-project-id>.iam.gserviceaccount.com" \
+  --role "roles/secretmanager.viewer"
+```
+
+**4. Bind each Kubernetes service account to the GCP service account via Workload Identity:**
+
+```bash
+SA_EMAIL="redpoint-rpi@<your-project-id>.iam.gserviceaccount.com"
+
+for KSA in rpi-interactionapi rpi-integrationapi rpi-executionservice \
+           rpi-nodemanager rpi-realtimeapi rpi-callbackapi \
+           rpi-queuereader rpi-deploymentapi; do
+  gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
+    --role roles/iam.workloadIdentityUser \
+    --member "serviceAccount:<your-project-id>.svc.id.goog[<namespace>/$KSA]"
+done
+```
+
+If using `mode: shared`, only one binding is needed for the shared SA name instead of the loop above.
 
 For automated setup, use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab > **Google** > **Vault Secrets Setup**.
 
