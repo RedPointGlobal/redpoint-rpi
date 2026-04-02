@@ -27,7 +27,8 @@ Once compiled, the DLL is uploaded to shared storage and mounted into the Realti
 
 ## Plugin Types
 
-### Decision Plugins
+<details>
+<summary><strong>Decision Plugins</strong></summary>
 
 These hook into the decision flow at three points: before the decision, after the decision, and after all Smart Asset decisions complete.
 
@@ -70,9 +71,10 @@ Runs after all decisions for a Smart Asset request complete. Use it to process t
 | **Outputs** | Collection of Decision Results |
 | **Configuration Type** | `SmartAssetResults` |
 
----
+</details>
 
-### Event Plugins
+<details>
+<summary><strong>Event Plugins</strong></summary>
 
 Process or modify any realtime event (e.g. Page Visit).
 
@@ -85,9 +87,10 @@ Process or modify any realtime event (e.g. Page Visit).
 | **Outputs** | Realtime Event |
 | **Configuration Type** | `Event` |
 
----
+</details>
 
-### Form Plugins
+<details>
+<summary><strong>Form Plugins</strong></summary>
 
 Process or modify web form submission data before RPI ingests it.
 
@@ -100,9 +103,10 @@ Process or modify web form submission data before RPI ingests it.
 | **Outputs** | Form Data |
 | **Configuration Type** | N/A |
 
----
+</details>
 
-### Visitor Profile Plugins
+<details>
+<summary><strong>Visitor Profile Plugins</strong></summary>
 
 Process or modify visitor profiles when they are added or updated via the Visitor Registration endpoint.
 
@@ -115,9 +119,10 @@ Process or modify visitor profiles when they are added or updated via the Visito
 | **Outputs** | Visitor Profile |
 | **Configuration Type** | `Visitor` |
 
----
+</details>
 
-### Geolocation Plugins
+<details>
+<summary><strong>Geolocation Plugins</strong></summary>
 
 Integrate external geolocation providers for use in realtime decisions. These only need a plugin class (no factory).
 
@@ -143,9 +148,10 @@ Resolves an IP address to longitude/latitude for geolocation-based decisions.
 | **Inputs** | IP Address |
 | **Outputs** | Long/Lat |
 
----
+</details>
 
-## Helm Chart Configuration
+<details>
+<summary><strong>Helm Chart Configuration</strong></summary>
 
 ### 1. Mount the plugin DLL
 
@@ -206,9 +212,10 @@ realtimeapi:
 helm upgrade redpoint-rpi ./chart -f overrides.yaml -n redpoint-rpi
 ```
 
----
+</details>
 
-## Logging
+<details>
+<summary><strong>Logging</strong></summary>
 
 Use the `TraceLogHelper` class from `RedPoint.Resonance.Web.Shared.Logging` to log from your plugin:
 
@@ -235,6 +242,8 @@ realtimeapi:
     realtimeapi:
       plugins: Information    # Error, Warning, Information, Debug, Trace
 ```
+
+</details>
 
 ---
 
