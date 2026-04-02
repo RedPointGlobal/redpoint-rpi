@@ -267,12 +267,6 @@ spec:
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
         {{- end }}
-        {{- if eq .Values.global.deployment.platform "google" }}
-        {{- if .Values.cloudIdentity.enabled }}
-        - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
-        {{- end }}
-        {{- end }}
         {{- if eq .Values.global.deployment.platform "azure" }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         - name: GOOGLE_APPLICATION_CREDENTIALS
