@@ -76,13 +76,29 @@ Before generating your overrides, set up your OIDC provider and gather the follo
 | **Redirect URL** | Your RPI Interaction API URL, e.g. `https://rpi-interactionapi.example.com` |
 | **Custom Scopes** | Keycloak: `openid`, `profile`. Okta: `api://<client-id>/Interaction.Clients` |
 
-> **Important:** Complete your identity provider setup **before** generating your overrides so you have the required values ready.
+> **Important:** Complete your identity provider setup so you have the required values ready before configuring the chart.
 
-### Generate Your Overrides
+### Add to Your Overrides
 
-Once you have the values above, go to the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 8: Services** > **OpenID Connect** and enter them. They will be included in your generated `overrides.yaml` automatically.
+**New deployment:** Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 8: Services** > **OpenID Connect** to include SSO in your initial overrides.
 
-For all available `OpenIdProviders` configuration keys, see the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab.
+**Existing deployment:** Add the `openIdProviders` block to your existing overrides file and run `helm upgrade`. No need to regenerate the full file. Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab to find the available `openIdProviders` keys and copy them into your overrides.
+
+```yaml
+# Add to your existing overrides file
+interactionapi:
+  openIdProviders:
+    - name: <your-provider-name>
+      authority: <your-authority-url>
+      clientId: <your-client-id>
+      scopes: openid profile email
+```
+
+Then apply:
+
+```bash
+helm upgrade redpoint-rpi ./chart -f overrides.yaml -n redpoint-rpi
+```
 
 
 </details>

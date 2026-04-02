@@ -21,7 +21,7 @@ The CLI guides you through the complete deployment lifecycle. Each step builds o
 
 ### Step 1: Generate overrides
 
-Create your overrides file using the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) (Generate tab) or the CLI. The overrides file contains **only non-default, non-sensitive values** - no passwords, no connection strings, no API keys.
+Create your overrides file using the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab. The overrides file contains **only non-default, non-sensitive values** - no passwords, no connection strings, no API keys. To add settings after the initial generation, find the keys in the **Reference** tab and add them to your existing overrides file.
 
 ### Step 2: Check prerequisites
 

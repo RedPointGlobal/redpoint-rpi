@@ -128,7 +128,7 @@ In Claude Code or the Web UI's Chat tab, just ask questions in plain English. In
 <details>
 <summary><strong>Generate Overrides</strong></summary>
 
-Use the Web UI Generate tab to build your overrides visually, or ask the Chat/MCP assistant:
+Use the Web UI **Generate** tab to build your initial overrides visually, or ask the Chat/MCP assistant. To add settings to an existing overrides file, use the **Reference** tab to find the keys you need.
 
 > "Generate an RPI overrides file for Azure with MongoDB cache and Azure Service Bus"
 >
