@@ -26,6 +26,7 @@ This chart deploys RPI on Kubernetes using Helm.
 | [Ingress](docs/ingress.md) | Chart-managed nginx, BYO controller, AWS ALB |
 | [Storage](docs/storage.md) | Static and dynamic provisioning - EFS, Azure Files, Filestore |
 | [RPI Helm CLI](docs/readme-cli.md) | Pre-flight checks, secrets generation, deployment, troubleshooting |
+| [Custom Plugins](docs/plugins.md) | Realtime API plugins: decision, event, form, visitor profile, geolocation |
 | [Automation](docs/readme-terraform.md) | CI/CD, vault setup, ArgoCD, Flux |
 
 ## Resources
