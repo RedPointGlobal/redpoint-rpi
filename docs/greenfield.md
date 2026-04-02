@@ -175,7 +175,6 @@ If your cluster uses a corporate proxy or self-signed certificates, mount your C
 ```yaml
 customCACerts:
   enabled: true
-  source: configMap
   name: my-ca-bundle
   mountPath: /usr/local/share/ca-certificates/custom
   certFile: ca-bundle.pem

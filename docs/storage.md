@@ -121,9 +121,11 @@ A shared volume mounted by execution service, node manager, and queue reader pod
 | AWS | `efs.csi.aws.com` |
 | Google | `filestore.csi.storage.gke.io` |
 
-### Using the Generate tab
+### Configuring storage
 
-The [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 5: Storage** lets you configure PVCs and PVs. The chart creates the PersistentVolume and PersistentVolumeClaim resources from your overrides.
+**New deployment:** Use the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Generate** tab > **Step 5: Storage** to include storage in your initial overrides.
+
+**Existing deployment:** Add the `storage` block to your existing overrides file using the keys from the [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) **Reference** tab, then run `helm upgrade`.
 
 ### Example: AWS EFS
 

@@ -189,17 +189,30 @@
                   "type": "string",
                   "description": "Credentials type (e.g., snowflake_jwt)"
                 },
-                "ConfigMapName": {
+                "mountPath": {
                   "type": "string",
-                  "description": "ConfigMap name containing Snowflake credentials"
+                  "description": "Mount path for Snowflake key files (default: /app/snowflake-creds)"
                 },
-                "keyName": {
+                "secretProviderClassName": {
                   "type": "string",
-                  "description": "Key file name within the ConfigMap"
+                  "description": "CSI SecretProviderClass name for mounting keys from vault"
                 },
-                "ConfigMapFilePath": {
-                  "type": "string",
-                  "description": "Mount path for the ConfigMap"
+                "keys": {
+                  "type": "array",
+                  "description": "Snowflake private key files. Each entry has keyName and optional secretName.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "keyName": {
+                        "type": "string",
+                        "description": "Key file name (e.g. tenant1-private-key.p8)"
+                      },
+                      "secretName": {
+                        "type": "string",
+                        "description": "K8s Secret containing the key file (kubernetes provider only)"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -218,12 +231,13 @@
         },
         "serviceAccount": {
           "type": "object",
-          "description": "ServiceAccount configuration. create=true uses one shared SA; create=false creates per-service SAs.",
+          "description": "ServiceAccount configuration. shared=one SA for all pods; per-service=each service gets its own SA.",
           "additionalProperties": true,
           "properties": {
-            "create": {
-              "type": "boolean",
-              "description": "Create a single shared ServiceAccount for all services"
+            "mode": {
+              "type": "string",
+              "enum": ["shared", "per-service"],
+              "description": "shared: one SA for all pods. per-service: each service gets its own SA."
             },
             "name": {
               "type": "string",
