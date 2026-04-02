@@ -713,8 +713,8 @@ OpenIdProviders:
   validateIssuer: false
   validateAudience: true
   logoutIdTokenParameter: id_token_hint
-  customScopes:
-    - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
+  # customScopes:
+  #   - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
   supportsUserManagement: false
 
 # ==========================
