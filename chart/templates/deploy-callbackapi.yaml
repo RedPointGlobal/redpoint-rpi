@@ -276,6 +276,12 @@ spec:
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
+        {{- if eq .Values.global.deployment.platform "azure" }}
+        {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
+        {{- end }}
+        {{- end }}
         {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
@@ -372,12 +378,12 @@ spec:
               key: RealtimeAPI_EventHub_ConnectionString
         {{- end }}
         {{- end }}
-        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         {{- if eq $rtCfg.queueProvider.provider "googlepubsub" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
           value: "RedPoint.Google.Server"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
           value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
           value: "ProjectId"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
@@ -804,6 +810,12 @@ spec:
         {{- include "rpi.cloudidentity.envvars" $ | nindent 8 }}
         {{- include "rpi.cloudidentity.awsAccessKeyEnvvars" $ | nindent 8 }}
         {{- include "rpi.customCACerts.envVar" $ | nindent 8 }}
+        {{- if eq $.Values.global.deployment.platform "azure" }}
+        {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "{{ $.Values.cloudIdentity.google.configMapFilePath }}/{{ $.Values.cloudIdentity.google.keyName }}"
+        {{- end }}
+        {{- end }}
         {{- if not (eq $.Values.secretsManagement.provider "sdk") }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
@@ -902,12 +914,12 @@ spec:
               key: RealtimeAPI_EventHub_ConnectionString
         {{- end }}
         {{- end }}
-        {{- if not (eq $.Values.secretsManagement.provider "sdk") }}
         {{- if eq $rtCfg.queueProvider.provider "googlepubsub" }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Assembly
           value: "RedPoint.Google.Server"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Type
           value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+        {{- if not (eq $.Values.secretsManagement.provider "sdk") }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
           value: "ProjectId"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value

@@ -313,12 +313,6 @@ spec:
             value: {{ $cfg.cacheProvider.mongodb.region | default "us-east-1" | quote }}
           {{- end }}
           {{- include "rpi.customCACerts.envVar" . | nindent 10 }}
-          {{- if eq .Values.global.deployment.platform "google" }}
-          {{- if .Values.cloudIdentity.enabled }}
-          - name: GOOGLE_APPLICATION_CREDENTIALS 
-            value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
-          {{- end }}
-          {{- end }}
           {{- if eq .Values.global.deployment.platform "azure" }}
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
           - name: GOOGLE_APPLICATION_CREDENTIALS
@@ -626,18 +620,22 @@ spec:
             value: "RedPoint.Google.Server"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Type
             value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+          {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key
             value: "ProjectId"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value
             value: {{ $cfg.queueProvider.googlepubsub.projectId | quote }}
+          {{- end }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Assembly
             value: "RedPoint.Google.Server"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Type
             value: "RedPoint.Google.Server.GooglePubSub.GooglePubSubFactory"
+          {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key
             value: "ProjectId"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value
             value: {{ $cfg.queueProvider.googlepubsub.projectId | quote }}
+          {{- end }}
           {{- end }}
           {{- if eq $cfg.cacheProvider.provider "mongodb" }}
           {{- if  $cfg.cacheProvider.enabled }}
