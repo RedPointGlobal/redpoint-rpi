@@ -27,8 +27,8 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
-      # Utility image for jobs (upgrade, post-install, validation pods)
-      net_utils: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
+      # To override the utility image (net-utils) used by jobs and validation pods,
+      # use images.overrides or images.nameOverrides. Defaults to {registry}/net-utils:latest.
       # Image resolution priority: overrides > nameOverrides > default ({registry}/{service-name}:{tag})
       #
       # overrides: Full URI per service, used verbatim (no registry/tag appended).
@@ -713,8 +713,8 @@ OpenIdProviders:
   validateIssuer: false
   validateAudience: true
   logoutIdTokenParameter: id_token_hint
-  customScopes:
-    - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
+  # customScopes:
+  #   - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
   supportsUserManagement: false
 
 # ==========================

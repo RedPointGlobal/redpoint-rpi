@@ -94,7 +94,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $containerName }}
-          image: {{ .image | default $.Values.global.deployment.images.net_utils }}
+          image: {{ .image | default (printf "%s/net-utils:latest" $.Values.global.deployment.images.registry) }}
           imagePullPolicy: "Always"
           {{- if $secCtx.enabled }}
           securityContext:
