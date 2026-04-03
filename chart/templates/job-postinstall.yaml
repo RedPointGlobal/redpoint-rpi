@@ -81,7 +81,7 @@ spec:
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noSupplementalGroups" true) | nindent 6 }}
       containers:
       - name: postinstall
-        image: {{ .Values.global.deployment.images.net_utils }}
+        image: {{ printf "%s/net-utils:latest" .Values.global.deployment.images.registry }}
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
         env:
