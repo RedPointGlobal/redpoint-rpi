@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJyZzFhY3JwdWIuYXp1cmVjci5pbyI6eyJ1c2VybmFtZSI6InRvcGFuZ2EiLCJwYXNzd29yZCI6IkJUNkZReWVzeXRZdzNVbm5Wc1htcElueklSYitQU1FTNGFnUlhKcG1hTitBQ1JCeUd2clciLCJhdXRoIjoiZEc5d1lXNW5ZVHBDVkRaR1VYbGxjM2wwV1hjelZXNXVWbk5ZYlhCSmJucEpVbUlyVUZOUlV6UmhaMUpZU25CdFlVNHJRVU5TUW5sSGRuSlgifX19
+kind: Secret
+metadata:
+  name: image-pull-secret
+  namespace: qarc-0c6e94
+type: kubernetes.io/dockerconfigjson

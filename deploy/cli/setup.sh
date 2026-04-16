@@ -219,6 +219,16 @@ gen_password() {
   fi
 }
 
+gen_uuid() {
+  local hex
+  if command -v openssl &> /dev/null; then
+    hex=$(openssl rand -hex 16)
+  else
+    hex=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')
+  fi
+  printf '%s-%s-%s-%s-%s' "${hex:0:8}" "${hex:8:4}" "${hex:12:4}" "${hex:16:4}" "${hex:20:12}"
+}
+
 # ============================================================
 # File mode: read values from YAML input instead of prompting
 # ============================================================
@@ -2566,7 +2576,7 @@ SECRETS_DB
   # --- Realtime API secrets ---
   if [ "$rt_enabled" = "true" ] || [ "$rt_enabled" = "True" ]; then
     local rt_auth_token rt_rabbitmq_pass rt_redis_pass qs_redis_pass qs_rabbitmq_pass
-    rt_auth_token=$(gen_password)
+    rt_auth_token=$(gen_uuid)
     rt_rabbitmq_pass=$(gen_password)
     rt_redis_pass=$(gen_password)
     qs_redis_pass=$(gen_password)
@@ -3630,7 +3640,7 @@ QS_RABBITMQ_PASSWORD=""
 
 QUEUE_PREFIX=""
 if [ "$REALTIME_ENABLED" = "true" ]; then
-  RT_AUTH_TOKEN=$(gen_password)
+  RT_AUTH_TOKEN=$(gen_uuid)
   RT_RABBITMQ_PASSWORD=$(gen_password)
   RT_REDIS_CACHE_PASSWORD=$(gen_password)
   QS_REDIS_PASSWORD=$(gen_password)
