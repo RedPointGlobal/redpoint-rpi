@@ -101,7 +101,7 @@ If deploying into an existing VNet, you also need:
 
 The agent verifies these keys exist in Key Vault (populated by the Bicep template for database secrets, or by you for other services):
 
-**Auto-populated by Bicep:**
+**Auto-populated by Bicep (infrastructure provisioning):**
 - `ConnectionString-Operations-Database`
 - `ConnectionString-Logging-Database`
 - `Operations-Database-Server-Password`
@@ -109,13 +109,41 @@ The agent verifies these keys exist in Key Vault (populated by the Bicep templat
 - `Operations-Database-Server-Username`
 - `Operations-Database-Pulse-Database-Name`
 - `Operations-Database-Pulse-Logging-Database-Name`
-- `SMTP-Password`
+- `SMTP-Password` (empty)
 - `RealtimeAPI-ServiceBus-ConnectionString` (if Service Bus created by Bicep)
+- `RealtimeAPI-MongoCache-ConnectionString` (if internal MongoDB deployed by chart)
 
-**You populate (if Realtime API enabled):**
-- `RealtimeAPI-Auth-Token` (must be UUID format)
-- `RealtimeAPI-MongoCache-ConnectionString` (if MongoDB cache)
-- `RealtimeAPI-RedisCache-ConnectionString` (if external Redis cache)
+**Auto-populated by agent (Phase 5):**
+- `RPI-Admin-Username` -- initial admin user (`coreuser`)
+- `RPI-Admin-Password` -- auto-generated, change after first login
+- `RealtimeAPI-Auth-Token` -- auto-generated UUID
+- `RPI-Tenant-ClientID` -- first tenant's client ID
+- `RPI-Tenant-Name` -- first tenant's name
+- `RPI-License-ActivationKey` -- placeholder until user provides the actual key
+
+**You provide after deployment:**
+- `RPI-License-ActivationKey` -- update with your actual license activation key, then run `/deploy-rpi resume`
+
+## Resume Mode
+
+After deployment, the Execution Service and Node Manager will be unhealthy until the license is activated. The agent defers license activation because the key is typically not available at deployment time.
+
+Once you have the license key:
+
+```bash
+# 1. Store the key in Key Vault
+az keyvault secret set --vault-name <kv-name> --name RPI-License-ActivationKey --value <your-key>
+
+# 2. Run the agent in resume mode
+/deploy-rpi resume
+```
+
+The agent reads the key from Key Vault, activates the license, and verifies all services become healthy.
+
+Additional resume commands:
+- `/deploy-rpi resume` -- activate license
+- `/deploy-rpi resume add-tenant <name>` -- add another tenant
+- `/deploy-rpi resume status` -- check deployment health
 
 ## Files
 

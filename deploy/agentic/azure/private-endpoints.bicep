@@ -12,6 +12,8 @@ param sqlServerId string
 param keyVaultId string
 param serviceBusId string
 param storageAccountId string
+param skipSqlPe bool = false
+param skipServiceBusPe bool = false
 param useExistingDnsZones bool
 param existingDnsZoneResourceGroup string
 param existingDnsZoneSubscriptionId string
@@ -54,7 +56,7 @@ resource dnsZoneStorage 'Microsoft.Network/privateDnsZones@2024-06-01' = if (!us
 // ── Private Endpoints ──────────────────────────────────────
 
 // SQL Server
-resource peSql 'Microsoft.Network/privateEndpoints@2024-01-01' = {
+resource peSql 'Microsoft.Network/privateEndpoints@2024-01-01' = if (!skipSqlPe) {
   name: '${prefix}-pe-sql'
   location: location
   tags: tags
@@ -66,7 +68,7 @@ resource peSql 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   }
 }
 
-resource dnsGroupSql 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = {
+resource dnsGroupSql 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = if (!skipSqlPe) {
   parent: peSql
   name: 'default'
   properties: {
@@ -100,7 +102,7 @@ resource dnsGroupKv 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@202
 }
 
 // Service Bus
-resource peSb 'Microsoft.Network/privateEndpoints@2024-01-01' = {
+resource peSb 'Microsoft.Network/privateEndpoints@2024-01-01' = if (!skipServiceBusPe) {
   name: '${prefix}-pe-sb'
   location: location
   tags: tags
@@ -112,7 +114,7 @@ resource peSb 'Microsoft.Network/privateEndpoints@2024-01-01' = {
   }
 }
 
-resource dnsGroupSb 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = {
+resource dnsGroupSb 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = if (!skipServiceBusPe) {
   parent: peSb
   name: 'default'
   properties: {

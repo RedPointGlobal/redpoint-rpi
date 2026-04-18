@@ -24,12 +24,42 @@ param location string = deployment().location
 @description('Unique environment name (e.g., prod, staging, dev). Drives deterministic resource naming.')
 param environmentName string
 
-@description('Database admin username')
-param databaseUsername string
+@description('Database admin username (used when creating a new SQL Server)')
+param databaseUsername string = 'rpiadmin'
 
-@description('Database admin password')
+@description('Database admin password (used when creating a new SQL Server)')
 @secure()
-param databasePassword string
+param databasePassword string = newGuid()
+
+// ── Existing Infrastructure ────────────────────────────────
+
+@description('Use an existing AKS cluster instead of creating one')
+param useExistingCluster bool = false
+
+@description('Name of the existing AKS cluster (required when useExistingCluster=true)')
+param existingClusterName string = ''
+
+@description('Resource group of the existing AKS cluster (required when useExistingCluster=true)')
+param existingClusterResourceGroup string = ''
+
+@description('Use an existing database server instead of creating one')
+param useExistingDatabase bool = false
+
+@description('FQDN of the existing database server (required when useExistingDatabase=true)')
+param existingDatabaseServerFQDN string = ''
+
+@description('Name of the existing Pulse database')
+param existingPulseDatabaseName string = ''
+
+@description('Name of the existing Pulse Logging database')
+param existingPulseLoggingDatabaseName string = ''
+
+@description('Use an existing Service Bus namespace instead of creating one')
+param useExistingServiceBus bool = false
+
+@description('Connection string of the existing Service Bus namespace (required when useExistingServiceBus=true)')
+@secure()
+param existingServiceBusConnectionString string = ''
 
 // ── Networking ─────────────────────────────────────────────
 
@@ -110,6 +140,15 @@ module resources 'resources.bicep' = {
     managedIdentityPrincipalId: identity.outputs.principalId
     databaseUsername: databaseUsername
     databasePassword: databasePassword
+    useExistingCluster: useExistingCluster
+    existingClusterName: existingClusterName
+    existingClusterResourceGroup: existingClusterResourceGroup
+    useExistingDatabase: useExistingDatabase
+    existingDatabaseServerFQDN: existingDatabaseServerFQDN
+    existingPulseDatabaseName: existingPulseDatabaseName
+    existingPulseLoggingDatabaseName: existingPulseLoggingDatabaseName
+    useExistingServiceBus: useExistingServiceBus
+    existingServiceBusConnectionString: existingServiceBusConnectionString
     serviceBusSku: serviceBusSku
     useExistingVnet: useExistingVnet
     existingAksSubnetId: existingAksSubnetId
@@ -128,10 +167,12 @@ module privateEndpoints 'private-endpoints.bicep' = if (enablePrivateEndpoints) 
     location: location
     tags: tags
     peSubnetId: useExistingVnet ? existingPeSubnetId : resources.outputs.peSubnetId
-    sqlServerId: resources.outputs.sqlServerId
+    sqlServerId: useExistingDatabase ? '' : resources.outputs.sqlServerId
     keyVaultId: resources.outputs.keyVaultId
-    serviceBusId: resources.outputs.serviceBusId
+    serviceBusId: useExistingServiceBus ? '' : resources.outputs.serviceBusId
     storageAccountId: resources.outputs.storageAccountId
+    skipSqlPe: useExistingDatabase
+    skipServiceBusPe: useExistingServiceBus
     useExistingDnsZones: useExistingDnsZones
     existingDnsZoneResourceGroup: existingDnsZoneResourceGroup
     existingDnsZoneSubscriptionId: existingDnsZoneSubscriptionId

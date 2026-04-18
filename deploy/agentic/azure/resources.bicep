@@ -14,6 +14,16 @@ param managedIdentityPrincipalId string
 param databaseUsername string
 @secure()
 param databasePassword string
+param useExistingCluster bool
+param existingClusterName string
+param existingClusterResourceGroup string
+param useExistingDatabase bool
+param existingDatabaseServerFQDN string
+param existingPulseDatabaseName string
+param existingPulseLoggingDatabaseName string
+param useExistingServiceBus bool
+@secure()
+param existingServiceBusConnectionString string
 param serviceBusSku string
 param useExistingVnet bool
 param existingAksSubnetId string
@@ -22,9 +32,16 @@ param existingPeSubnetId string
 
 // ── Variables ──────────────────────────────────────────────
 
-var pulseDatabaseName = 'Pulse_${substring(prefix, 4, 6)}'
-var pulseLoggingDatabaseName = '${pulseDatabaseName}_Logging'
+var createCluster = !useExistingCluster
+var createDatabase = !useExistingDatabase
+var createServiceBus = !useExistingServiceBus
+
+var pulseDatabaseName = useExistingDatabase ? existingPulseDatabaseName : 'Pulse_${substring(prefix, 4, 6)}'
+var pulseLoggingDatabaseName = useExistingDatabase ? existingPulseLoggingDatabaseName : '${pulseDatabaseName}_Logging'
 var storageAccountName = replace('str${prefix}', '-', '')
+
+// Placeholder value for existing infrastructure secrets the user must replace
+var placeholderValue = '<replace-with-your-value-then-restart-pods>'
 
 // ── VNet (created only when not using an existing one) ─────
 
@@ -66,7 +83,7 @@ var peSubnetIdResolved = useExistingVnet ? existingPeSubnetId : vnet.properties.
 
 // ── AKS Automatic ──────────────────────────────────────────
 
-resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-03-02-preview' = {
+resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-03-02-preview' = if (createCluster) {
   name: 'aks-${prefix}'
   location: location
   tags: tags
@@ -136,11 +153,15 @@ resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' =
 }
 
 // Seed database secrets in Key Vault
+// When using existing infrastructure, secrets are seeded with placeholder values.
+// The user updates them in Key Vault post-deployment and restarts pods.
 resource secretOpsConnStr 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'ConnectionString-Operations-Database'
   properties: {
-    value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${pulseDatabaseName};User ID=${databaseUsername};Password=${databasePassword};Encrypt=True;TrustServerCertificate=True;'
+    value: createDatabase
+      ? 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${pulseDatabaseName};User ID=${databaseUsername};Password=${databasePassword};Encrypt=True;TrustServerCertificate=True;'
+      : placeholderValue
   }
 }
 
@@ -148,26 +169,32 @@ resource secretLogConnStr 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'ConnectionString-Logging-Database'
   properties: {
-    value: 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${pulseLoggingDatabaseName};User ID=${databaseUsername};Password=${databasePassword};Encrypt=True;TrustServerCertificate=True;'
+    value: createDatabase
+      ? 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${pulseLoggingDatabaseName};User ID=${databaseUsername};Password=${databasePassword};Encrypt=True;TrustServerCertificate=True;'
+      : placeholderValue
   }
 }
 
 resource secretDbPassword 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'Operations-Database-Server-Password'
-  properties: { value: databasePassword }
+  properties: { value: createDatabase ? databasePassword : placeholderValue }
 }
 
 resource secretDbUsername 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'Operations-Database-Server-Username'
-  properties: { value: databaseUsername }
+  properties: { value: createDatabase ? databaseUsername : placeholderValue }
 }
 
 resource secretDbHost 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'Operations-Database-ServerHost'
-  properties: { value: sqlServer.properties.fullyQualifiedDomainName }
+  properties: {
+    value: createDatabase
+      ? sqlServer.properties.fullyQualifiedDomainName
+      : (empty(existingDatabaseServerFQDN) ? placeholderValue : existingDatabaseServerFQDN)
+  }
 }
 
 resource secretPulseDb 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
@@ -188,9 +215,9 @@ resource secretSmtpPassword 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   properties: { value: '' }
 }
 
-// ── Azure SQL Server ───────────────────────────────────────
+// ── Azure SQL Server (conditional) ─────────────────────────
 
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
+resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (createDatabase) {
   name: 'sql-${prefix}'
   location: location
   tags: tags
@@ -202,23 +229,23 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }
 }
 
-resource sqlDbPulse 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+resource sqlDbPulse 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createDatabase) {
   parent: sqlServer
-  name: pulseDatabaseName
+  name: createDatabase ? pulseDatabaseName : 'placeholder'
   location: location
   tags: tags
   sku: { name: 'S2', tier: 'Standard' }
 }
 
-resource sqlDbLogging 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+resource sqlDbLogging 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createDatabase) {
   parent: sqlServer
-  name: pulseLoggingDatabaseName
+  name: createDatabase ? pulseLoggingDatabaseName : 'placeholder'
   location: location
   tags: tags
   sku: { name: 'S0', tier: 'Standard' }
 }
 
-resource sqlFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
+resource sqlFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = if (createDatabase) {
   parent: sqlServer
   name: 'AllowAzureServices'
   properties: {
@@ -227,9 +254,9 @@ resource sqlFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = 
   }
 }
 
-// ── Azure Service Bus ──────────────────────────────────────
+// ── Azure Service Bus (conditional) ────────────────────────
 
-resource serviceBus 'Microsoft.ServiceBus/namespaces@2024-01-01' = {
+resource serviceBus 'Microsoft.ServiceBus/namespaces@2024-01-01' = if (createServiceBus) {
   name: 'sb-${prefix}'
   location: location
   tags: tags
@@ -246,13 +273,13 @@ var queueNames = [
   'RPICallbackApiQueue'
 ]
 
-resource sbQueues 'Microsoft.ServiceBus/namespaces/queues@2024-01-01' = [for name in queueNames: {
+resource sbQueues 'Microsoft.ServiceBus/namespaces/queues@2024-01-01' = [for name in queueNames: if (createServiceBus) {
   parent: serviceBus
   name: name
   properties: { maxDeliveryCount: 10 }
 }]
 
-resource sbAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2024-01-01' = {
+resource sbAuthRule 'Microsoft.ServiceBus/namespaces/AuthorizationRules@2024-01-01' = if (createServiceBus) {
   parent: serviceBus
   name: 'rpi-send-listen'
   properties: {
@@ -265,7 +292,7 @@ resource secretServiceBus 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'RealtimeAPI-ServiceBus-ConnectionString'
   properties: {
-    value: sbAuthRule.listKeys().primaryConnectionString
+    value: createServiceBus ? sbAuthRule.listKeys().primaryConnectionString : (empty(existingServiceBusConnectionString) ? placeholderValue : existingServiceBusConnectionString)
   }
 }
 
@@ -324,14 +351,14 @@ resource agcAssociation 'Microsoft.ServiceNetworking/trafficControllers/associat
 
 // ── Outputs ────────────────────────────────────────────────
 
-output aksClusterName string = aksCluster.name
-output sqlServerId string = sqlServer.id
-output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
+output aksClusterName string = createCluster ? aksCluster.name : existingClusterName
+output sqlServerId string = createDatabase ? sqlServer.id : ''
+output sqlServerFqdn string = createDatabase ? sqlServer.properties.fullyQualifiedDomainName : existingDatabaseServerFQDN
 output keyVaultId string = keyVault.id
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
-output serviceBusId string = serviceBus.id
-output serviceBusNamespace string = '${serviceBus.name}.servicebus.windows.net'
+output serviceBusId string = createServiceBus ? serviceBus.id : ''
+output serviceBusNamespace string = createServiceBus ? '${serviceBus.name}.servicebus.windows.net' : 'existing'
 output storageAccountId string = storageAccount.id
 output storageAccountName string = storageAccount.name
 output agcName string = agc.name

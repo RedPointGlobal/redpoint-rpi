@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "15630435043603668124"
+      "templateHash": "7509220374392760617"
     }
   },
   "parameters": {
@@ -24,14 +24,79 @@
     },
     "databaseUsername": {
       "type": "string",
+      "defaultValue": "rpiadmin",
       "metadata": {
-        "description": "Database admin username"
+        "description": "Database admin username (used when creating a new SQL Server)"
       }
     },
     "databasePassword": {
       "type": "securestring",
+      "defaultValue": "[newGuid()]",
       "metadata": {
-        "description": "Database admin password"
+        "description": "Database admin password (used when creating a new SQL Server)"
+      }
+    },
+    "useExistingCluster": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Use an existing AKS cluster instead of creating one"
+      }
+    },
+    "existingClusterName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the existing AKS cluster (required when useExistingCluster=true)"
+      }
+    },
+    "existingClusterResourceGroup": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource group of the existing AKS cluster (required when useExistingCluster=true)"
+      }
+    },
+    "useExistingDatabase": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Use an existing database server instead of creating one"
+      }
+    },
+    "existingDatabaseServerFQDN": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "FQDN of the existing database server (required when useExistingDatabase=true)"
+      }
+    },
+    "existingPulseDatabaseName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the existing Pulse database"
+      }
+    },
+    "existingPulseLoggingDatabaseName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the existing Pulse Logging database"
+      }
+    },
+    "useExistingServiceBus": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Use an existing Service Bus namespace instead of creating one"
+      }
+    },
+    "existingServiceBusConnectionString": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Connection string of the existing Service Bus namespace (required when useExistingServiceBus=true)"
       }
     },
     "useExistingVnet": {
@@ -226,6 +291,33 @@
           "databasePassword": {
             "value": "[parameters('databasePassword')]"
           },
+          "useExistingCluster": {
+            "value": "[parameters('useExistingCluster')]"
+          },
+          "existingClusterName": {
+            "value": "[parameters('existingClusterName')]"
+          },
+          "existingClusterResourceGroup": {
+            "value": "[parameters('existingClusterResourceGroup')]"
+          },
+          "useExistingDatabase": {
+            "value": "[parameters('useExistingDatabase')]"
+          },
+          "existingDatabaseServerFQDN": {
+            "value": "[parameters('existingDatabaseServerFQDN')]"
+          },
+          "existingPulseDatabaseName": {
+            "value": "[parameters('existingPulseDatabaseName')]"
+          },
+          "existingPulseLoggingDatabaseName": {
+            "value": "[parameters('existingPulseLoggingDatabaseName')]"
+          },
+          "useExistingServiceBus": {
+            "value": "[parameters('useExistingServiceBus')]"
+          },
+          "existingServiceBusConnectionString": {
+            "value": "[parameters('existingServiceBusConnectionString')]"
+          },
           "serviceBusSku": {
             "value": "[parameters('serviceBusSku')]"
           },
@@ -249,7 +341,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "440287713467349164"
+              "templateHash": "4228220387837833373"
             }
           },
           "parameters": {
@@ -277,6 +369,33 @@
             "databasePassword": {
               "type": "securestring"
             },
+            "useExistingCluster": {
+              "type": "bool"
+            },
+            "existingClusterName": {
+              "type": "string"
+            },
+            "existingClusterResourceGroup": {
+              "type": "string"
+            },
+            "useExistingDatabase": {
+              "type": "bool"
+            },
+            "existingDatabaseServerFQDN": {
+              "type": "string"
+            },
+            "existingPulseDatabaseName": {
+              "type": "string"
+            },
+            "existingPulseLoggingDatabaseName": {
+              "type": "string"
+            },
+            "useExistingServiceBus": {
+              "type": "bool"
+            },
+            "existingServiceBusConnectionString": {
+              "type": "securestring"
+            },
             "serviceBusSku": {
               "type": "string"
             },
@@ -294,9 +413,13 @@
             }
           },
           "variables": {
-            "pulseDatabaseName": "[format('Pulse_{0}', substring(parameters('prefix'), 4, 6))]",
-            "pulseLoggingDatabaseName": "[format('{0}_Logging', variables('pulseDatabaseName'))]",
+            "createCluster": "[not(parameters('useExistingCluster'))]",
+            "createDatabase": "[not(parameters('useExistingDatabase'))]",
+            "createServiceBus": "[not(parameters('useExistingServiceBus'))]",
+            "pulseDatabaseName": "[if(parameters('useExistingDatabase'), parameters('existingPulseDatabaseName'), format('Pulse_{0}', substring(parameters('prefix'), 4, 6)))]",
+            "pulseLoggingDatabaseName": "[if(parameters('useExistingDatabase'), parameters('existingPulseLoggingDatabaseName'), format('{0}_Logging', variables('pulseDatabaseName')))]",
             "storageAccountName": "[replace(format('str{0}', parameters('prefix')), '-', '')]",
+            "placeholderValue": "<replace-with-your-value-then-restart-pods>",
             "queueNames": [
               "RPIWebFormSubmission",
               "RPIWebEvents",
@@ -351,6 +474,7 @@
               }
             },
             {
+              "condition": "[variables('createCluster')]",
               "type": "Microsoft.ContainerService/managedClusters",
               "apiVersion": "2024-03-02-preview",
               "name": "[format('aks-{0}', parameters('prefix'))]",
@@ -433,7 +557,7 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'ConnectionString-Operations-Database')]",
               "properties": {
-                "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseDatabaseName'), parameters('databaseUsername'), parameters('databasePassword'))]"
+                "value": "[if(variables('createDatabase'), format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseDatabaseName'), parameters('databaseUsername'), parameters('databasePassword')), variables('placeholderValue'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
@@ -445,7 +569,7 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'ConnectionString-Logging-Database')]",
               "properties": {
-                "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseLoggingDatabaseName'), parameters('databaseUsername'), parameters('databasePassword'))]"
+                "value": "[if(variables('createDatabase'), format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseLoggingDatabaseName'), parameters('databaseUsername'), parameters('databasePassword')), variables('placeholderValue'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
@@ -457,7 +581,7 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-Server-Password')]",
               "properties": {
-                "value": "[parameters('databasePassword')]"
+                "value": "[if(variables('createDatabase'), parameters('databasePassword'), variables('placeholderValue'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
@@ -468,7 +592,7 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-Server-Username')]",
               "properties": {
-                "value": "[parameters('databaseUsername')]"
+                "value": "[if(variables('createDatabase'), parameters('databaseUsername'), variables('placeholderValue'))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
@@ -479,7 +603,7 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-ServerHost')]",
               "properties": {
-                "value": "[reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName]"
+                "value": "[if(variables('createDatabase'), reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, if(empty(parameters('existingDatabaseServerFQDN')), variables('placeholderValue'), parameters('existingDatabaseServerFQDN')))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
@@ -520,6 +644,7 @@
               ]
             },
             {
+              "condition": "[variables('createDatabase')]",
               "type": "Microsoft.Sql/servers",
               "apiVersion": "2023-08-01-preview",
               "name": "[format('sql-{0}', parameters('prefix'))]",
@@ -533,9 +658,10 @@
               }
             },
             {
+              "condition": "[variables('createDatabase')]",
               "type": "Microsoft.Sql/servers/databases",
               "apiVersion": "2023-08-01-preview",
-              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), variables('pulseDatabaseName'))]",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), if(variables('createDatabase'), variables('pulseDatabaseName'), 'placeholder'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "sku": {
@@ -547,9 +673,10 @@
               ]
             },
             {
+              "condition": "[variables('createDatabase')]",
               "type": "Microsoft.Sql/servers/databases",
               "apiVersion": "2023-08-01-preview",
-              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), variables('pulseLoggingDatabaseName'))]",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), if(variables('createDatabase'), variables('pulseLoggingDatabaseName'), 'placeholder'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "sku": {
@@ -561,6 +688,7 @@
               ]
             },
             {
+              "condition": "[variables('createDatabase')]",
               "type": "Microsoft.Sql/servers/firewallRules",
               "apiVersion": "2023-08-01-preview",
               "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), 'AllowAzureServices')]",
@@ -573,6 +701,7 @@
               ]
             },
             {
+              "condition": "[variables('createServiceBus')]",
               "type": "Microsoft.ServiceBus/namespaces",
               "apiVersion": "2024-01-01",
               "name": "[format('sb-{0}', parameters('prefix'))]",
@@ -588,6 +717,7 @@
                 "name": "sbQueues",
                 "count": "[length(variables('queueNames'))]"
               },
+              "condition": "[variables('createServiceBus')]",
               "type": "Microsoft.ServiceBus/namespaces/queues",
               "apiVersion": "2024-01-01",
               "name": "[format('{0}/{1}', format('sb-{0}', parameters('prefix')), variables('queueNames')[copyIndex()])]",
@@ -599,6 +729,7 @@
               ]
             },
             {
+              "condition": "[variables('createServiceBus')]",
               "type": "Microsoft.ServiceBus/namespaces/AuthorizationRules",
               "apiVersion": "2024-01-01",
               "name": "[format('{0}/{1}', format('sb-{0}', parameters('prefix')), 'rpi-send-listen')]",
@@ -617,7 +748,7 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'RealtimeAPI-ServiceBus-ConnectionString')]",
               "properties": {
-                "value": "[listKeys(resourceId('Microsoft.ServiceBus/namespaces/AuthorizationRules', format('sb-{0}', parameters('prefix')), 'rpi-send-listen'), '2024-01-01').primaryConnectionString]"
+                "value": "[if(variables('createServiceBus'), listKeys(resourceId('Microsoft.ServiceBus/namespaces/AuthorizationRules', format('sb-{0}', parameters('prefix')), 'rpi-send-listen'), '2024-01-01').primaryConnectionString, if(empty(parameters('existingServiceBusConnectionString')), variables('placeholderValue'), parameters('existingServiceBusConnectionString')))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
@@ -694,15 +825,15 @@
           "outputs": {
             "aksClusterName": {
               "type": "string",
-              "value": "[format('aks-{0}', parameters('prefix'))]"
+              "value": "[if(variables('createCluster'), format('aks-{0}', parameters('prefix')), parameters('existingClusterName'))]"
             },
             "sqlServerId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              "value": "[if(variables('createDatabase'), resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '')]"
             },
             "sqlServerFqdn": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName]"
+              "value": "[if(variables('createDatabase'), reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, parameters('existingDatabaseServerFQDN'))]"
             },
             "keyVaultId": {
               "type": "string",
@@ -718,11 +849,11 @@
             },
             "serviceBusId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}', parameters('prefix')))]"
+              "value": "[if(variables('createServiceBus'), resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}', parameters('prefix'))), '')]"
             },
             "serviceBusNamespace": {
               "type": "string",
-              "value": "[format('{0}.servicebus.windows.net', format('sb-{0}', parameters('prefix')))]"
+              "value": "[if(variables('createServiceBus'), format('{0}.servicebus.windows.net', format('sb-{0}', parameters('prefix'))), 'existing')]"
             },
             "storageAccountId": {
               "type": "string",
@@ -778,17 +909,19 @@
             "value": "[variables('tags')]"
           },
           "peSubnetId": "[if(parameters('useExistingVnet'), createObject('value', parameters('existingPeSubnetId')), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.peSubnetId.value))]",
-          "sqlServerId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.sqlServerId.value]"
-          },
+          "sqlServerId": "[if(parameters('useExistingDatabase'), createObject('value', ''), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.sqlServerId.value))]",
           "keyVaultId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.keyVaultId.value]"
           },
-          "serviceBusId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.serviceBusId.value]"
-          },
+          "serviceBusId": "[if(parameters('useExistingServiceBus'), createObject('value', ''), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.serviceBusId.value))]",
           "storageAccountId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "skipSqlPe": {
+            "value": "[parameters('useExistingDatabase')]"
+          },
+          "skipServiceBusPe": {
+            "value": "[parameters('useExistingServiceBus')]"
           },
           "useExistingDnsZones": {
             "value": "[parameters('useExistingDnsZones')]"
@@ -810,7 +943,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "12130537351478429811"
+              "templateHash": "13340632514560833179"
             }
           },
           "parameters": {
@@ -837,6 +970,14 @@
             },
             "storageAccountId": {
               "type": "string"
+            },
+            "skipSqlPe": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "skipServiceBusPe": {
+              "type": "bool",
+              "defaultValue": false
             },
             "useExistingDnsZones": {
               "type": "bool"
@@ -892,6 +1033,7 @@
               "tags": "[parameters('tags')]"
             },
             {
+              "condition": "[not(parameters('skipSqlPe'))]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('{0}-pe-sql', parameters('prefix'))]",
@@ -915,6 +1057,7 @@
               }
             },
             {
+              "condition": "[not(parameters('skipSqlPe'))]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('{0}/{1}', format('{0}-pe-sql', parameters('prefix')), 'default')]",
@@ -976,6 +1119,7 @@
               ]
             },
             {
+              "condition": "[not(parameters('skipServiceBusPe'))]",
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2024-01-01",
               "name": "[format('{0}-pe-sb', parameters('prefix'))]",
@@ -999,6 +1143,7 @@
               }
             },
             {
+              "condition": "[not(parameters('skipServiceBusPe'))]",
               "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
               "apiVersion": "2024-01-01",
               "name": "[format('{0}/{1}', format('{0}-pe-sb', parameters('prefix')), 'default')]",
