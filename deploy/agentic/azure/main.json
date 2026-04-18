@@ -1,0 +1,1125 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "15630435043603668124"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[deployment().location]",
+      "metadata": {
+        "description": "Azure region for deployment"
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique environment name (e.g., prod, staging, dev). Drives deterministic resource naming."
+      }
+    },
+    "databaseUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Database admin username"
+      }
+    },
+    "databasePassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Database admin password"
+      }
+    },
+    "useExistingVnet": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Use an existing VNet instead of creating one"
+      }
+    },
+    "existingAksSubnetId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource ID of existing subnet for AKS nodes (required when useExistingVnet=true). Min /16."
+      }
+    },
+    "existingAgcSubnetId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource ID of existing subnet for Application Gateway for Containers (required when useExistingVnet=true). Min /24. Must be delegated to Microsoft.ServiceNetworking/trafficControllers."
+      }
+    },
+    "existingPeSubnetId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource ID of existing subnet for private endpoints (required when useExistingVnet=true). Min /24."
+      }
+    },
+    "enablePrivateEndpoints": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable private endpoints for SQL, Key Vault, Service Bus, and Storage"
+      }
+    },
+    "useExistingDnsZones": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Use existing private DNS zones instead of creating new ones"
+      }
+    },
+    "existingDnsZoneResourceGroup": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource group containing existing private DNS zones"
+      }
+    },
+    "existingDnsZoneSubscriptionId": {
+      "type": "string",
+      "defaultValue": "[subscription().subscriptionId]",
+      "metadata": {
+        "description": "Subscription ID containing existing private DNS zones (defaults to deployment subscription)"
+      }
+    },
+    "serviceBusSku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Standard",
+        "Premium"
+      ],
+      "metadata": {
+        "description": "Service Bus SKU"
+      }
+    }
+  },
+  "variables": {
+    "uniqueSuffix": "[substring(uniqueString(subscription().subscriptionId, parameters('location'), parameters('environmentName')), 0, 6)]",
+    "prefix": "[format('rpi-{0}', variables('uniqueSuffix'))]",
+    "tags": {
+      "redpoint-rpi": "agentic",
+      "rpi-environment-id": "[variables('uniqueSuffix')]",
+      "environment": "[parameters('environmentName')]",
+      "managed-by": "bicep"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[format('rg-{0}', variables('prefix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('rpi-identity-{0}', variables('uniqueSuffix'))]",
+      "resourceGroup": "[format('rg-{0}', variables('prefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "16467222445072146942"
+            }
+          },
+          "parameters": {
+            "prefix": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('id-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('prefix')))]"
+            },
+            "clientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('prefix'))), '2023-01-31').clientId]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('prefix'))), '2023-01-31').principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('prefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('rpi-resources-{0}', variables('uniqueSuffix'))]",
+      "resourceGroup": "[format('rg-{0}', variables('prefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "managedIdentityId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-identity-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.id.value]"
+          },
+          "managedIdentityClientId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-identity-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.clientId.value]"
+          },
+          "managedIdentityPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-identity-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.principalId.value]"
+          },
+          "databaseUsername": {
+            "value": "[parameters('databaseUsername')]"
+          },
+          "databasePassword": {
+            "value": "[parameters('databasePassword')]"
+          },
+          "serviceBusSku": {
+            "value": "[parameters('serviceBusSku')]"
+          },
+          "useExistingVnet": {
+            "value": "[parameters('useExistingVnet')]"
+          },
+          "existingAksSubnetId": {
+            "value": "[parameters('existingAksSubnetId')]"
+          },
+          "existingAgcSubnetId": {
+            "value": "[parameters('existingAgcSubnetId')]"
+          },
+          "existingPeSubnetId": {
+            "value": "[parameters('existingPeSubnetId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "440287713467349164"
+            }
+          },
+          "parameters": {
+            "prefix": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "managedIdentityId": {
+              "type": "string"
+            },
+            "managedIdentityClientId": {
+              "type": "string"
+            },
+            "managedIdentityPrincipalId": {
+              "type": "string"
+            },
+            "databaseUsername": {
+              "type": "string"
+            },
+            "databasePassword": {
+              "type": "securestring"
+            },
+            "serviceBusSku": {
+              "type": "string"
+            },
+            "useExistingVnet": {
+              "type": "bool"
+            },
+            "existingAksSubnetId": {
+              "type": "string"
+            },
+            "existingAgcSubnetId": {
+              "type": "string"
+            },
+            "existingPeSubnetId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "pulseDatabaseName": "[format('Pulse_{0}', substring(parameters('prefix'), 4, 6))]",
+            "pulseLoggingDatabaseName": "[format('{0}_Logging', variables('pulseDatabaseName'))]",
+            "storageAccountName": "[replace(format('str{0}', parameters('prefix')), '-', '')]",
+            "queueNames": [
+              "RPIWebFormSubmission",
+              "RPIWebEvents",
+              "RPIWebCacheData",
+              "RPIWebRecommendations",
+              "RPIQueueListener",
+              "RPICallbackApiQueue"
+            ]
+          },
+          "resources": [
+            {
+              "condition": "[not(parameters('useExistingVnet'))]",
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-01-01",
+              "name": "[format('vnet-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.0.0.0/8"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "snet-aks",
+                    "properties": {
+                      "addressPrefix": "10.0.0.0/16"
+                    }
+                  },
+                  {
+                    "name": "snet-agc",
+                    "properties": {
+                      "addressPrefix": "10.1.0.0/24",
+                      "delegations": [
+                        {
+                          "name": "agc-delegation",
+                          "properties": {
+                            "serviceName": "Microsoft.ServiceNetworking/trafficControllers"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "snet-pe",
+                    "properties": {
+                      "addressPrefix": "10.1.1.0/24"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.ContainerService/managedClusters",
+              "apiVersion": "2024-03-02-preview",
+              "name": "[format('aks-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Automatic"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "agentPoolProfiles": [
+                  {
+                    "name": "systempool",
+                    "mode": "System",
+                    "count": 3,
+                    "vnetSubnetID": "[if(parameters('useExistingVnet'), parameters('existingAksSubnetId'), reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('prefix'))), '2024-01-01').subnets[0].id)]"
+                  }
+                ],
+                "networkProfile": {
+                  "networkPlugin": "azure",
+                  "networkPolicy": "calico"
+                },
+                "oidcIssuerProfile": {
+                  "enabled": true
+                },
+                "securityProfile": {
+                  "workloadIdentity": {
+                    "enabled": true
+                  }
+                },
+                "addonProfiles": {
+                  "azureKeyvaultSecretsProvider": {
+                    "enabled": true,
+                    "config": {
+                      "enableSecretRotation": "true",
+                      "rotationPollInterval": "2m"
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[format('kv-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 7
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix'))), parameters('managedIdentityId'), 'KeyVaultSecretsOfficer')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'ConnectionString-Operations-Database')]",
+              "properties": {
+                "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseDatabaseName'), parameters('databaseUsername'), parameters('databasePassword'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'ConnectionString-Logging-Database')]",
+              "properties": {
+                "value": "[format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseLoggingDatabaseName'), parameters('databaseUsername'), parameters('databasePassword'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-Server-Password')]",
+              "properties": {
+                "value": "[parameters('databasePassword')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-Server-Username')]",
+              "properties": {
+                "value": "[parameters('databaseUsername')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-ServerHost')]",
+              "properties": {
+                "value": "[reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-Pulse-Database-Name')]",
+              "properties": {
+                "value": "[variables('pulseDatabaseName')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-Pulse-Logging-Database-Name')]",
+              "properties": {
+                "value": "[variables('pulseLoggingDatabaseName')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'SMTP-Password')]",
+              "properties": {
+                "value": ""
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Sql/servers",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('sql-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "administratorLogin": "[parameters('databaseUsername')]",
+                "administratorLoginPassword": "[parameters('databasePassword')]",
+                "version": "12.0",
+                "minimalTlsVersion": "1.2"
+              }
+            },
+            {
+              "type": "Microsoft.Sql/servers/databases",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), variables('pulseDatabaseName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "S2",
+                "tier": "Standard"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Sql/servers/databases",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), variables('pulseLoggingDatabaseName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "S0",
+                "tier": "Standard"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), 'AllowAzureServices')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces",
+              "apiVersion": "2024-01-01",
+              "name": "[format('sb-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('serviceBusSku')]",
+                "tier": "[parameters('serviceBusSku')]"
+              }
+            },
+            {
+              "copy": {
+                "name": "sbQueues",
+                "count": "[length(variables('queueNames'))]"
+              },
+              "type": "Microsoft.ServiceBus/namespaces/queues",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('sb-{0}', parameters('prefix')), variables('queueNames')[copyIndex()])]",
+              "properties": {
+                "maxDeliveryCount": 10
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces/AuthorizationRules",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('sb-{0}', parameters('prefix')), 'rpi-send-listen')]",
+              "properties": {
+                "rights": [
+                  "Send",
+                  "Listen"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'RealtimeAPI-ServiceBus-ConnectionString')]",
+              "properties": {
+                "value": "[listKeys(resourceId('Microsoft.ServiceBus/namespaces/AuthorizationRules', format('sb-{0}', parameters('prefix')), 'rpi-send-listen'), '2024-01-01').primaryConnectionString]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.ServiceBus/namespaces/AuthorizationRules', format('sb-{0}', parameters('prefix')), 'rpi-send-listen')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[variables('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'rpifileoutput')]",
+              "properties": {
+                "shareQuota": 50
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceNetworking/trafficControllers",
+              "apiVersion": "2023-11-01",
+              "name": "[format('agc-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.ServiceNetworking/trafficControllers/frontends",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', format('agc-{0}', parameters('prefix')), format('fe-{0}', parameters('prefix')))]",
+              "location": "[parameters('location')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceNetworking/trafficControllers', format('agc-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceNetworking/trafficControllers/associations",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', format('agc-{0}', parameters('prefix')), format('assoc-{0}', parameters('prefix')))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "associationType": "subnets",
+                "subnet": {
+                  "id": "[if(parameters('useExistingVnet'), parameters('existingAgcSubnetId'), reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('prefix'))), '2024-01-01').subnets[1].id)]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceNetworking/trafficControllers', format('agc-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('prefix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "aksClusterName": {
+              "type": "string",
+              "value": "[format('aks-{0}', parameters('prefix'))]"
+            },
+            "sqlServerId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+            },
+            "sqlServerFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName]"
+            },
+            "keyVaultId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]"
+            },
+            "keyVaultName": {
+              "type": "string",
+              "value": "[format('kv-{0}', parameters('prefix'))]"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix'))), '2023-07-01').vaultUri]"
+            },
+            "serviceBusId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ServiceBus/namespaces', format('sb-{0}', parameters('prefix')))]"
+            },
+            "serviceBusNamespace": {
+              "type": "string",
+              "value": "[format('{0}.servicebus.windows.net', format('sb-{0}', parameters('prefix')))]"
+            },
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "value": "[variables('storageAccountName')]"
+            },
+            "agcName": {
+              "type": "string",
+              "value": "[format('agc-{0}', parameters('prefix'))]"
+            },
+            "peSubnetId": {
+              "type": "string",
+              "value": "[if(parameters('useExistingVnet'), parameters('existingPeSubnetId'), reference(resourceId('Microsoft.Network/virtualNetworks', format('vnet-{0}', parameters('prefix'))), '2024-01-01').subnets[2].id)]"
+            },
+            "pulseDatabaseName": {
+              "type": "string",
+              "value": "[variables('pulseDatabaseName')]"
+            },
+            "pulseLoggingDatabaseName": {
+              "type": "string",
+              "value": "[variables('pulseLoggingDatabaseName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-identity-{0}', variables('uniqueSuffix')))]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('prefix')))]"
+      ]
+    },
+    {
+      "condition": "[parameters('enablePrivateEndpoints')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('rpi-pe-{0}', variables('uniqueSuffix'))]",
+      "resourceGroup": "[format('rg-{0}', variables('prefix'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "prefix": {
+            "value": "[variables('prefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "peSubnetId": "[if(parameters('useExistingVnet'), createObject('value', parameters('existingPeSubnetId')), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.peSubnetId.value))]",
+          "sqlServerId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.sqlServerId.value]"
+          },
+          "keyVaultId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.keyVaultId.value]"
+          },
+          "serviceBusId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.serviceBusId.value]"
+          },
+          "storageAccountId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.storageAccountId.value]"
+          },
+          "useExistingDnsZones": {
+            "value": "[parameters('useExistingDnsZones')]"
+          },
+          "existingDnsZoneResourceGroup": {
+            "value": "[parameters('existingDnsZoneResourceGroup')]"
+          },
+          "existingDnsZoneSubscriptionId": {
+            "value": "[parameters('existingDnsZoneSubscriptionId')]"
+          },
+          "subscriptionId": {
+            "value": "[subscription().subscriptionId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "12130537351478429811"
+            }
+          },
+          "parameters": {
+            "prefix": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "peSubnetId": {
+              "type": "string"
+            },
+            "sqlServerId": {
+              "type": "string"
+            },
+            "keyVaultId": {
+              "type": "string"
+            },
+            "serviceBusId": {
+              "type": "string"
+            },
+            "storageAccountId": {
+              "type": "string"
+            },
+            "useExistingDnsZones": {
+              "type": "bool"
+            },
+            "existingDnsZoneResourceGroup": {
+              "type": "string"
+            },
+            "existingDnsZoneSubscriptionId": {
+              "type": "string"
+            },
+            "subscriptionId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "existingDnsRg": "[parameters('existingDnsZoneResourceGroup')]",
+            "dnsZoneIdSql": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', 'privatelink.database.windows.net'), '')]",
+            "dnsZoneIdKv": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net'), '')]",
+            "dnsZoneIdSb": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', 'privatelink.servicebus.windows.net'), '')]",
+            "dnsZoneIdStorage": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage)), '')]"
+          },
+          "resources": [
+            {
+              "condition": "[not(parameters('useExistingDnsZones'))]",
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "privatelink.database.windows.net",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "condition": "[not(parameters('useExistingDnsZones'))]",
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "privatelink.vaultcore.azure.net",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "condition": "[not(parameters('useExistingDnsZones'))]",
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "privatelink.servicebus.windows.net",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "condition": "[not(parameters('useExistingDnsZones'))]",
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "[format('privatelink.file.{0}', environment().suffixes.storage)]",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}-pe-sql', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('peSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-pe-sql', parameters('prefix'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('sqlServerId')]",
+                      "groupIds": [
+                        "sqlServer"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('{0}-pe-sql', parameters('prefix')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config",
+                    "properties": {
+                      "privateDnsZoneId": "[if(parameters('useExistingDnsZones'), variables('dnsZoneIdSql'), resourceId('Microsoft.Network/privateDnsZones', 'privatelink.database.windows.net'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.database.windows.net')]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-pe-sql', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}-pe-kv', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('peSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-pe-kv', parameters('prefix'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('keyVaultId')]",
+                      "groupIds": [
+                        "vault"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('{0}-pe-kv', parameters('prefix')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config",
+                    "properties": {
+                      "privateDnsZoneId": "[if(parameters('useExistingDnsZones'), variables('dnsZoneIdKv'), resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-pe-kv', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}-pe-sb', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('peSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-pe-sb', parameters('prefix'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('serviceBusId')]",
+                      "groupIds": [
+                        "namespace"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('{0}-pe-sb', parameters('prefix')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config",
+                    "properties": {
+                      "privateDnsZoneId": "[if(parameters('useExistingDnsZones'), variables('dnsZoneIdSb'), resourceId('Microsoft.Network/privateDnsZones', 'privatelink.servicebus.windows.net'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.servicebus.windows.net')]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-pe-sb', parameters('prefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}-pe-storage', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('peSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-pe-storage', parameters('prefix'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('storageAccountId')]",
+                      "groupIds": [
+                        "file"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('{0}-pe-storage', parameters('prefix')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config",
+                    "properties": {
+                      "privateDnsZoneId": "[if(parameters('useExistingDnsZones'), variables('dnsZoneIdStorage'), resourceId('Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage)))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-pe-storage', parameters('prefix')))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix')))]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', format('rg-{0}', variables('prefix')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[format('rg-{0}', variables('prefix'))]"
+    },
+    "environmentId": {
+      "type": "string",
+      "value": "[variables('uniqueSuffix')]"
+    },
+    "aksClusterName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.aksClusterName.value]"
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.sqlServerFqdn.value]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.keyVaultName.value]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.keyVaultUri.value]"
+    },
+    "serviceBusNamespace": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.serviceBusNamespace.value]"
+    },
+    "managedIdentityClientId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-identity-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.clientId.value]"
+    },
+    "managedIdentityPrincipalId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-identity-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.principalId.value]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.storageAccountName.value]"
+    },
+    "agcName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.agcName.value]"
+    },
+    "pulseDatabaseName": {
+      "type": "string",
+      "value": "[format('Pulse_{0}', variables('uniqueSuffix'))]"
+    },
+    "pulseLoggingDatabaseName": {
+      "type": "string",
+      "value": "[format('Pulse_{0}_Logging', variables('uniqueSuffix'))]"
+    }
+  }
+}
