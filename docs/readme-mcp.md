@@ -144,7 +144,7 @@ The agent can provision new infrastructure or use existing resources. By default
 | Managed Identity | Always created. Pod authentication to Key Vault. | |
 | Private Endpoints | Created for new resources. Skipped for existing. | |
 
-The Bicep templates are in [`deploy/agentic/azure/`](../deploy/agentic/azure/).
+The Bicep templates are managed by the Helm Assistant and fetched automatically by the agent during deployment -- no files are added to your chart repository.
 
 </details>
 

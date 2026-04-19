@@ -332,7 +332,7 @@ The validation pod mounts the CSI volume on startup, which triggers the driver t
 
 ### Infrastructure provisioning
 
-If using the [Agentic Deployment](readme-mcp.md#agentic-deployment), the Bicep templates in `deploy/agentic/azure/` provision the AGC resource, frontend, subnet association, and all required networking automatically.
+If using the [Agentic Deployment](readme-mcp.md#agentic-deployment), the Helm Assistant provisions the AGC resource, frontend, subnet association, and all required networking automatically -- no manual Bicep setup required.
 
 </details>
 
