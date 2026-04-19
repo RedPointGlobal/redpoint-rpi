@@ -228,11 +228,7 @@ With Claude Code connected to the MCP server, use the `/deploy-rpi` command:
 /deploy-rpi Deploy RPI on Azure in East US 2, SQL Server, Realtime API with MongoDB cache and Service Bus, private ingress on mycompany.com
 ```
 
-Claude Code calls the MCP tools for planning and knowledge, then executes `az`, `kubectl`, and `helm` commands locally on your machine where you're already authenticated. Your credentials never leave your terminal.
-
-**Option B: Web UI**
-
-Use the **Agentic** tab to get setup instructions and connect Claude Code to the MCP server. The tab walks through installation, connection, and example commands.
+The assistant can plan and drive end-to-end RPI deployments. It provisions Azure infrastructure (AKS, SQL, Key Vault, Service Bus, Application Gateway for Containers), generates Helm overrides, and walks you through the deployment without handling your credentials. Refer to the **Agentic** tab for instructions on how to connect Claude Code to the MCP server.
 
 ### Security
 
