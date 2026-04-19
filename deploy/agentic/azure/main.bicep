@@ -24,10 +24,14 @@ param location string = deployment().location
 @description('Unique environment name (e.g., prod, staging, dev). Drives deterministic resource naming.')
 param environmentName string
 
-@description('Database admin username (used when creating a new SQL Server)')
+@description('Database type')
+@allowed(['sqlserver', 'postgresql'])
+param databaseType string = 'sqlserver'
+
+@description('Database admin username')
 param databaseUsername string = 'rpiadmin'
 
-@description('Database admin password (used when creating a new SQL Server)')
+@description('Database admin password')
 @secure()
 param databasePassword string = newGuid()
 
@@ -138,6 +142,7 @@ module resources 'resources.bicep' = {
     managedIdentityId: identity.outputs.id
     managedIdentityClientId: identity.outputs.clientId
     managedIdentityPrincipalId: identity.outputs.principalId
+    databaseType: databaseType
     databaseUsername: databaseUsername
     databasePassword: databasePassword
     useExistingCluster: useExistingCluster
@@ -167,11 +172,13 @@ module privateEndpoints 'private-endpoints.bicep' = if (enablePrivateEndpoints) 
     location: location
     tags: tags
     peSubnetId: useExistingVnet ? existingPeSubnetId : resources.outputs.peSubnetId
-    sqlServerId: useExistingDatabase ? '' : resources.outputs.sqlServerId
+    sqlServerId: databaseType == 'sqlserver' ? resources.outputs.sqlServerId : ''
+    postgresServerId: databaseType == 'postgresql' ? resources.outputs.postgresServerId : ''
     keyVaultId: resources.outputs.keyVaultId
     serviceBusId: useExistingServiceBus ? '' : resources.outputs.serviceBusId
     storageAccountId: resources.outputs.storageAccountId
-    skipSqlPe: useExistingDatabase
+    skipSqlPe: useExistingDatabase || databaseType != 'sqlserver'
+    skipPostgresPe: useExistingDatabase || databaseType != 'postgresql'
     skipServiceBusPe: useExistingServiceBus
     useExistingDnsZones: useExistingDnsZones
     existingDnsZoneResourceGroup: existingDnsZoneResourceGroup
@@ -185,7 +192,7 @@ module privateEndpoints 'private-endpoints.bicep' = if (enablePrivateEndpoints) 
 output resourceGroupName string = rg.name
 output environmentId string = uniqueSuffix
 output aksClusterName string = resources.outputs.aksClusterName
-output sqlServerFqdn string = resources.outputs.sqlServerFqdn
+output databaseServerFqdn string = resources.outputs.databaseServerFqdn
 output keyVaultName string = resources.outputs.keyVaultName
 output keyVaultUri string = resources.outputs.keyVaultUri
 output serviceBusNamespace string = resources.outputs.serviceBusNamespace

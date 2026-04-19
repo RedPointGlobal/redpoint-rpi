@@ -11,6 +11,8 @@ param tags object
 param managedIdentityId string
 param managedIdentityClientId string
 param managedIdentityPrincipalId string
+@allowed(['sqlserver', 'postgresql'])
+param databaseType string
 param databaseUsername string
 @secure()
 param databasePassword string
@@ -35,6 +37,8 @@ param existingPeSubnetId string
 var createCluster = !useExistingCluster
 var createDatabase = !useExistingDatabase
 var createServiceBus = !useExistingServiceBus
+var createSqlServer = createDatabase && databaseType == 'sqlserver'
+var createPostgresServer = createDatabase && databaseType == 'postgresql'
 
 var pulseDatabaseName = useExistingDatabase ? existingPulseDatabaseName : 'Pulse_${substring(prefix, 4, 6)}'
 var pulseLoggingDatabaseName = useExistingDatabase ? existingPulseLoggingDatabaseName : '${pulseDatabaseName}_Logging'
@@ -153,6 +157,11 @@ resource kvRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   }
 }
 
+// Resolved database FQDN (handles SQL Server, PostgreSQL, and existing)
+var dbServerFqdn = !createDatabase
+  ? (empty(existingDatabaseServerFQDN) ? placeholderValue : existingDatabaseServerFQDN)
+  : (createSqlServer ? sqlServer.properties.fullyQualifiedDomainName : postgresServer.properties.fullyQualifiedDomainName)
+
 // Seed database secrets in Key Vault
 // When using existing infrastructure, secrets are seeded with placeholder values.
 // The user updates them in Key Vault post-deployment and restarts pods.
@@ -160,9 +169,9 @@ resource secretOpsConnStr 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'ConnectionString-Operations-Database'
   properties: {
-    value: createDatabase
+    value: !createDatabase ? placeholderValue : (databaseType == 'sqlserver'
       ? 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${pulseDatabaseName};User ID=${databaseUsername};Password=${databasePassword};Encrypt=True;TrustServerCertificate=True;'
-      : placeholderValue
+      : 'Host=${postgresServer.properties.fullyQualifiedDomainName};Port=5432;Database=${pulseDatabaseName};Username=${databaseUsername};Password=${databasePassword};SSL Mode=Require;Trust Server Certificate=true;')
   }
 }
 
@@ -170,9 +179,9 @@ resource secretLogConnStr 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'ConnectionString-Logging-Database'
   properties: {
-    value: createDatabase
+    value: !createDatabase ? placeholderValue : (databaseType == 'sqlserver'
       ? 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${pulseLoggingDatabaseName};User ID=${databaseUsername};Password=${databasePassword};Encrypt=True;TrustServerCertificate=True;'
-      : placeholderValue
+      : 'Host=${postgresServer.properties.fullyQualifiedDomainName};Port=5432;Database=${pulseLoggingDatabaseName};Username=${databaseUsername};Password=${databasePassword};SSL Mode=Require;Trust Server Certificate=true;')
   }
 }
 
@@ -191,11 +200,7 @@ resource secretDbUsername 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
 resource secretDbHost 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'Operations-Database-ServerHost'
-  properties: {
-    value: createDatabase
-      ? sqlServer.properties.fullyQualifiedDomainName
-      : (empty(existingDatabaseServerFQDN) ? placeholderValue : existingDatabaseServerFQDN)
-  }
+  properties: { value: dbServerFqdn }
 }
 
 resource secretPulseDb 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
@@ -218,7 +223,7 @@ resource secretSmtpPassword 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
 
 // ── Azure SQL Server (conditional) ─────────────────────────
 
-resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (createDatabase) {
+resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (createSqlServer) {
   name: 'sql-${prefix}'
   location: location
   tags: tags
@@ -231,7 +236,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (createDataba
 }
 
 // Elastic pool for Pulse databases (General Purpose: Gen5, 2 vCores)
-resource sqlElasticPool 'Microsoft.Sql/servers/elasticPools@2023-08-01-preview' = if (createDatabase) {
+resource sqlElasticPool 'Microsoft.Sql/servers/elasticPools@2023-08-01-preview' = if (createSqlServer) {
   parent: sqlServer
   name: 'ep-${prefix}'
   location: location
@@ -250,9 +255,9 @@ resource sqlElasticPool 'Microsoft.Sql/servers/elasticPools@2023-08-01-preview' 
   }
 }
 
-resource sqlDbPulse 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createDatabase) {
+resource sqlDbPulse 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createSqlServer) {
   parent: sqlServer
-  name: createDatabase ? pulseDatabaseName : 'placeholder'
+  name: pulseDatabaseName
   location: location
   tags: tags
   sku: { name: 'GP_Gen5', tier: 'GeneralPurpose', family: 'Gen5', capacity: 0 }
@@ -261,9 +266,9 @@ resource sqlDbPulse 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (c
   }
 }
 
-resource sqlDbLogging 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createDatabase) {
+resource sqlDbLogging 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createSqlServer) {
   parent: sqlServer
-  name: createDatabase ? pulseLoggingDatabaseName : 'placeholder'
+  name: pulseLoggingDatabaseName
   location: location
   tags: tags
   sku: { name: 'GP_Gen5', tier: 'GeneralPurpose', family: 'Gen5', capacity: 0 }
@@ -272,8 +277,43 @@ resource sqlDbLogging 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if 
   }
 }
 
-resource sqlFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = if (createDatabase) {
+resource sqlFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = if (createSqlServer) {
   parent: sqlServer
+  name: 'AllowAzureServices'
+  properties: {
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
+  }
+}
+
+// ── Azure PostgreSQL Flexible Server (conditional) ─────────
+
+resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = if (createPostgresServer) {
+  name: 'pg-${prefix}'
+  location: location
+  tags: tags
+  sku: { name: 'Standard_B2ms', tier: 'Burstable' }
+  properties: {
+    version: '16'
+    administratorLogin: databaseUsername
+    administratorLoginPassword: databasePassword
+    storage: { storageSizeGB: 32 }
+    backup: { backupRetentionDays: 7 }
+  }
+}
+
+resource pgDbPulse 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-12-01-preview' = if (createPostgresServer) {
+  parent: postgresServer
+  name: pulseDatabaseName
+}
+
+resource pgDbLogging 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-12-01-preview' = if (createPostgresServer) {
+  parent: postgresServer
+  name: pulseLoggingDatabaseName
+}
+
+resource pgFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-12-01-preview' = if (createPostgresServer) {
+  parent: postgresServer
   name: 'AllowAzureServices'
   properties: {
     startIpAddress: '0.0.0.0'
@@ -379,8 +419,9 @@ resource agcAssociation 'Microsoft.ServiceNetworking/trafficControllers/associat
 // ── Outputs ────────────────────────────────────────────────
 
 output aksClusterName string = createCluster ? aksCluster.name : existingClusterName
-output sqlServerId string = createDatabase ? sqlServer.id : ''
-output sqlServerFqdn string = createDatabase ? sqlServer.properties.fullyQualifiedDomainName : existingDatabaseServerFQDN
+output sqlServerId string = createSqlServer ? sqlServer.id : ''
+output postgresServerId string = createPostgresServer ? postgresServer.id : ''
+output databaseServerFqdn string = !createDatabase ? existingDatabaseServerFQDN : (createSqlServer ? sqlServer.properties.fullyQualifiedDomainName : postgresServer.properties.fullyQualifiedDomainName)
 output keyVaultId string = keyVault.id
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri

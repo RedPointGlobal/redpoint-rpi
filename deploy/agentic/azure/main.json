@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "16872699032694434963"
+      "templateHash": "9176882889364460321"
     }
   },
   "parameters": {
@@ -22,18 +22,29 @@
         "description": "Unique environment name (e.g., prod, staging, dev). Drives deterministic resource naming."
       }
     },
+    "databaseType": {
+      "type": "string",
+      "defaultValue": "sqlserver",
+      "allowedValues": [
+        "sqlserver",
+        "postgresql"
+      ],
+      "metadata": {
+        "description": "Database type"
+      }
+    },
     "databaseUsername": {
       "type": "string",
       "defaultValue": "rpiadmin",
       "metadata": {
-        "description": "Database admin username (used when creating a new SQL Server)"
+        "description": "Database admin username"
       }
     },
     "databasePassword": {
       "type": "securestring",
       "defaultValue": "[newGuid()]",
       "metadata": {
-        "description": "Database admin password (used when creating a new SQL Server)"
+        "description": "Database admin password"
       }
     },
     "useExistingCluster": {
@@ -285,6 +296,9 @@
           "managedIdentityPrincipalId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-identity-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.principalId.value]"
           },
+          "databaseType": {
+            "value": "[parameters('databaseType')]"
+          },
           "databaseUsername": {
             "value": "[parameters('databaseUsername')]"
           },
@@ -341,7 +355,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "4777145041060497143"
+              "templateHash": "7265010554106796622"
             }
           },
           "parameters": {
@@ -362,6 +376,13 @@
             },
             "managedIdentityPrincipalId": {
               "type": "string"
+            },
+            "databaseType": {
+              "type": "string",
+              "allowedValues": [
+                "sqlserver",
+                "postgresql"
+              ]
             },
             "databaseUsername": {
               "type": "string"
@@ -416,6 +437,8 @@
             "createCluster": "[not(parameters('useExistingCluster'))]",
             "createDatabase": "[not(parameters('useExistingDatabase'))]",
             "createServiceBus": "[not(parameters('useExistingServiceBus'))]",
+            "createSqlServer": "[and(variables('createDatabase'), equals(parameters('databaseType'), 'sqlserver'))]",
+            "createPostgresServer": "[and(variables('createDatabase'), equals(parameters('databaseType'), 'postgresql'))]",
             "pulseDatabaseName": "[if(parameters('useExistingDatabase'), parameters('existingPulseDatabaseName'), format('Pulse_{0}', substring(parameters('prefix'), 4, 6)))]",
             "pulseLoggingDatabaseName": "[if(parameters('useExistingDatabase'), parameters('existingPulseLoggingDatabaseName'), format('{0}_Logging', variables('pulseDatabaseName')))]",
             "storageAccountName": "[replace(format('str{0}', parameters('prefix')), '-', '')]",
@@ -560,10 +583,11 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'ConnectionString-Operations-Database')]",
               "properties": {
-                "value": "[if(variables('createDatabase'), format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseDatabaseName'), parameters('databaseUsername'), parameters('databasePassword')), variables('placeholderValue'))]"
+                "value": "[if(not(variables('createDatabase')), variables('placeholderValue'), if(equals(parameters('databaseType'), 'sqlserver'), format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseDatabaseName'), parameters('databaseUsername'), parameters('databasePassword')), format('Host={0};Port=5432;Database={1};Username={2};Password={3};SSL Mode=Require;Trust Server Certificate=true;', reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix'))), '2023-12-01-preview').fullyQualifiedDomainName, variables('pulseDatabaseName'), parameters('databaseUsername'), parameters('databasePassword'))))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix')))]",
                 "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
               ]
             },
@@ -572,10 +596,11 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'ConnectionString-Logging-Database')]",
               "properties": {
-                "value": "[if(variables('createDatabase'), format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseLoggingDatabaseName'), parameters('databaseUsername'), parameters('databasePassword')), variables('placeholderValue'))]"
+                "value": "[if(not(variables('createDatabase')), variables('placeholderValue'), if(equals(parameters('databaseType'), 'sqlserver'), format('Server=tcp:{0},1433;Initial Catalog={1};User ID={2};Password={3};Encrypt=True;TrustServerCertificate=True;', reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, variables('pulseLoggingDatabaseName'), parameters('databaseUsername'), parameters('databasePassword')), format('Host={0};Port=5432;Database={1};Username={2};Password={3};SSL Mode=Require;Trust Server Certificate=true;', reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix'))), '2023-12-01-preview').fullyQualifiedDomainName, variables('pulseLoggingDatabaseName'), parameters('databaseUsername'), parameters('databasePassword'))))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix')))]",
                 "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
               ]
             },
@@ -606,10 +631,11 @@
               "apiVersion": "2023-07-01",
               "name": "[format('{0}/{1}', format('kv-{0}', parameters('prefix')), 'Operations-Database-ServerHost')]",
               "properties": {
-                "value": "[if(variables('createDatabase'), reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, if(empty(parameters('existingDatabaseServerFQDN')), variables('placeholderValue'), parameters('existingDatabaseServerFQDN')))]"
+                "value": "[if(not(variables('createDatabase')), if(empty(parameters('existingDatabaseServerFQDN')), variables('placeholderValue'), parameters('existingDatabaseServerFQDN')), if(variables('createSqlServer'), reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix'))), '2023-12-01-preview').fullyQualifiedDomainName))]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}', parameters('prefix')))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix')))]",
                 "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
               ]
             },
@@ -647,7 +673,7 @@
               ]
             },
             {
-              "condition": "[variables('createDatabase')]",
+              "condition": "[variables('createSqlServer')]",
               "type": "Microsoft.Sql/servers",
               "apiVersion": "2023-08-01-preview",
               "name": "[format('sql-{0}', parameters('prefix'))]",
@@ -661,7 +687,7 @@
               }
             },
             {
-              "condition": "[variables('createDatabase')]",
+              "condition": "[variables('createSqlServer')]",
               "type": "Microsoft.Sql/servers/elasticPools",
               "apiVersion": "2023-08-01-preview",
               "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), format('ep-{0}', parameters('prefix')))]",
@@ -684,10 +710,10 @@
               ]
             },
             {
-              "condition": "[variables('createDatabase')]",
+              "condition": "[variables('createSqlServer')]",
               "type": "Microsoft.Sql/servers/databases",
               "apiVersion": "2023-08-01-preview",
-              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), if(variables('createDatabase'), variables('pulseDatabaseName'), 'placeholder'))]",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), variables('pulseDatabaseName'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "sku": {
@@ -705,10 +731,10 @@
               ]
             },
             {
-              "condition": "[variables('createDatabase')]",
+              "condition": "[variables('createSqlServer')]",
               "type": "Microsoft.Sql/servers/databases",
               "apiVersion": "2023-08-01-preview",
-              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), if(variables('createDatabase'), variables('pulseLoggingDatabaseName'), 'placeholder'))]",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), variables('pulseLoggingDatabaseName'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "sku": {
@@ -726,7 +752,7 @@
               ]
             },
             {
-              "condition": "[variables('createDatabase')]",
+              "condition": "[variables('createSqlServer')]",
               "type": "Microsoft.Sql/servers/firewallRules",
               "apiVersion": "2023-08-01-preview",
               "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), 'AllowAzureServices')]",
@@ -736,6 +762,60 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "condition": "[variables('createPostgresServer')]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('pg-{0}', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_B2ms",
+                "tier": "Burstable"
+              },
+              "properties": {
+                "version": "16",
+                "administratorLogin": "[parameters('databaseUsername')]",
+                "administratorLoginPassword": "[parameters('databasePassword')]",
+                "storage": {
+                  "storageSizeGB": 32
+                },
+                "backup": {
+                  "backupRetentionDays": 7
+                }
+              }
+            },
+            {
+              "condition": "[variables('createPostgresServer')]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', format('pg-{0}', parameters('prefix')), variables('pulseDatabaseName'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "condition": "[variables('createPostgresServer')]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', format('pg-{0}', parameters('prefix')), variables('pulseLoggingDatabaseName'))]",
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "condition": "[variables('createPostgresServer')]",
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/firewallRules",
+              "apiVersion": "2023-12-01-preview",
+              "name": "[format('{0}/{1}', format('pg-{0}', parameters('prefix')), 'AllowAzureServices')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix')))]"
               ]
             },
             {
@@ -867,11 +947,15 @@
             },
             "sqlServerId": {
               "type": "string",
-              "value": "[if(variables('createDatabase'), resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '')]"
+              "value": "[if(variables('createSqlServer'), resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '')]"
             },
-            "sqlServerFqdn": {
+            "postgresServerId": {
               "type": "string",
-              "value": "[if(variables('createDatabase'), reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, parameters('existingDatabaseServerFQDN'))]"
+              "value": "[if(variables('createPostgresServer'), resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix'))), '')]"
+            },
+            "databaseServerFqdn": {
+              "type": "string",
+              "value": "[if(not(variables('createDatabase')), parameters('existingDatabaseServerFQDN'), if(variables('createSqlServer'), reference(resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix'))), '2023-08-01-preview').fullyQualifiedDomainName, reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', format('pg-{0}', parameters('prefix'))), '2023-12-01-preview').fullyQualifiedDomainName))]"
             },
             "keyVaultId": {
               "type": "string",
@@ -947,7 +1031,8 @@
             "value": "[variables('tags')]"
           },
           "peSubnetId": "[if(parameters('useExistingVnet'), createObject('value', parameters('existingPeSubnetId')), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.peSubnetId.value))]",
-          "sqlServerId": "[if(parameters('useExistingDatabase'), createObject('value', ''), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.sqlServerId.value))]",
+          "sqlServerId": "[if(equals(parameters('databaseType'), 'sqlserver'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.sqlServerId.value), createObject('value', ''))]",
+          "postgresServerId": "[if(equals(parameters('databaseType'), 'postgresql'), createObject('value', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.postgresServerId.value), createObject('value', ''))]",
           "keyVaultId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.keyVaultId.value]"
           },
@@ -956,7 +1041,10 @@
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.storageAccountId.value]"
           },
           "skipSqlPe": {
-            "value": "[parameters('useExistingDatabase')]"
+            "value": "[or(parameters('useExistingDatabase'), not(equals(parameters('databaseType'), 'sqlserver')))]"
+          },
+          "skipPostgresPe": {
+            "value": "[or(parameters('useExistingDatabase'), not(equals(parameters('databaseType'), 'postgresql')))]"
           },
           "skipServiceBusPe": {
             "value": "[parameters('useExistingServiceBus')]"
@@ -981,7 +1069,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "13340632514560833179"
+              "templateHash": "5237502342905811271"
             }
           },
           "parameters": {
@@ -1000,6 +1088,10 @@
             "sqlServerId": {
               "type": "string"
             },
+            "postgresServerId": {
+              "type": "string",
+              "defaultValue": ""
+            },
             "keyVaultId": {
               "type": "string"
             },
@@ -1010,6 +1102,10 @@
               "type": "string"
             },
             "skipSqlPe": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "skipPostgresPe": {
               "type": "bool",
               "defaultValue": false
             },
@@ -1033,6 +1129,7 @@
           "variables": {
             "existingDnsRg": "[parameters('existingDnsZoneResourceGroup')]",
             "dnsZoneIdSql": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', 'privatelink.database.windows.net'), '')]",
+            "dnsZoneIdPg": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', 'privatelink.postgres.database.azure.com'), '')]",
             "dnsZoneIdKv": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net'), '')]",
             "dnsZoneIdSb": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', 'privatelink.servicebus.windows.net'), '')]",
             "dnsZoneIdStorage": "[if(parameters('useExistingDnsZones'), resourceId(parameters('existingDnsZoneSubscriptionId'), variables('existingDnsRg'), 'Microsoft.Network/privateDnsZones', format('privatelink.file.{0}', environment().suffixes.storage)), '')]"
@@ -1067,6 +1164,14 @@
               "type": "Microsoft.Network/privateDnsZones",
               "apiVersion": "2024-06-01",
               "name": "[format('privatelink.file.{0}', environment().suffixes.storage)]",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "condition": "[and(not(parameters('useExistingDnsZones')), not(parameters('skipPostgresPe')))]",
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2024-06-01",
+              "name": "privatelink.postgres.database.azure.com",
               "location": "global",
               "tags": "[parameters('tags')]"
             },
@@ -1112,6 +1217,50 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.database.windows.net')]",
                 "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-pe-sql', parameters('prefix')))]"
+              ]
+            },
+            {
+              "condition": "[not(parameters('skipPostgresPe'))]",
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}-pe-pg', parameters('prefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('peSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('{0}-pe-pg', parameters('prefix'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('postgresServerId')]",
+                      "groupIds": [
+                        "postgresqlServer"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "condition": "[not(parameters('skipPostgresPe'))]",
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('{0}-pe-pg', parameters('prefix')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config",
+                    "properties": {
+                      "privateDnsZoneId": "[if(parameters('useExistingDnsZones'), variables('dnsZoneIdPg'), resourceId('Microsoft.Network/privateDnsZones', 'privatelink.postgres.database.azure.com'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.postgres.database.azure.com')]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-pe-pg', parameters('prefix')))]"
               ]
             },
             {
@@ -1264,9 +1413,9 @@
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.aksClusterName.value]"
     },
-    "sqlServerFqdn": {
+    "databaseServerFqdn": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.sqlServerFqdn.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}', variables('prefix'))), 'Microsoft.Resources/deployments', format('rpi-resources-{0}', variables('uniqueSuffix'))), '2025-04-01').outputs.databaseServerFqdn.value]"
     },
     "keyVaultName": {
       "type": "string",

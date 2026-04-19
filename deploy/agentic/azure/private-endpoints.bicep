@@ -9,10 +9,12 @@ param location string
 param tags object
 param peSubnetId string
 param sqlServerId string
+param postgresServerId string = ''
 param keyVaultId string
 param serviceBusId string
 param storageAccountId string
 param skipSqlPe bool = false
+param skipPostgresPe bool = false
 param skipServiceBusPe bool = false
 param useExistingDnsZones bool
 param existingDnsZoneResourceGroup string
@@ -23,6 +25,7 @@ param subscriptionId string
 
 var existingDnsRg = existingDnsZoneResourceGroup
 var dnsZoneIdSql = useExistingDnsZones ? resourceId(existingDnsZoneSubscriptionId, existingDnsRg, 'Microsoft.Network/privateDnsZones', 'privatelink.database.windows.net') : ''
+var dnsZoneIdPg = useExistingDnsZones ? resourceId(existingDnsZoneSubscriptionId, existingDnsRg, 'Microsoft.Network/privateDnsZones', 'privatelink.postgres.database.azure.com') : ''
 var dnsZoneIdKv = useExistingDnsZones ? resourceId(existingDnsZoneSubscriptionId, existingDnsRg, 'Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net') : ''
 var dnsZoneIdSb = useExistingDnsZones ? resourceId(existingDnsZoneSubscriptionId, existingDnsRg, 'Microsoft.Network/privateDnsZones', 'privatelink.servicebus.windows.net') : ''
 var dnsZoneIdStorage = useExistingDnsZones ? resourceId(existingDnsZoneSubscriptionId, existingDnsRg, 'Microsoft.Network/privateDnsZones', 'privatelink.file.${environment().suffixes.storage}') : ''
@@ -53,6 +56,12 @@ resource dnsZoneStorage 'Microsoft.Network/privateDnsZones@2024-06-01' = if (!us
   tags: tags
 }
 
+resource dnsZonePg 'Microsoft.Network/privateDnsZones@2024-06-01' = if (!useExistingDnsZones && !skipPostgresPe) {
+  name: 'privatelink.postgres.database.azure.com'
+  location: 'global'
+  tags: tags
+}
+
 // ── Private Endpoints ──────────────────────────────────────
 
 // SQL Server
@@ -74,6 +83,29 @@ resource dnsGroupSql 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@20
   properties: {
     privateDnsZoneConfigs: [
       { name: 'config', properties: { privateDnsZoneId: useExistingDnsZones ? dnsZoneIdSql : dnsZoneSql.id } }
+    ]
+  }
+}
+
+// PostgreSQL
+resource pePg 'Microsoft.Network/privateEndpoints@2024-01-01' = if (!skipPostgresPe) {
+  name: '${prefix}-pe-pg'
+  location: location
+  tags: tags
+  properties: {
+    subnet: { id: peSubnetId }
+    privateLinkServiceConnections: [
+      { name: '${prefix}-pe-pg', properties: { privateLinkServiceId: postgresServerId, groupIds: ['postgresqlServer'] } }
+    ]
+  }
+}
+
+resource dnsGroupPg 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = if (!skipPostgresPe) {
+  parent: pePg
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      { name: 'config', properties: { privateDnsZoneId: useExistingDnsZones ? dnsZoneIdPg : dnsZonePg.id } }
     ]
   }
 }
