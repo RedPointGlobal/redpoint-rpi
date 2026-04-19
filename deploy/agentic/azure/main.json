@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "7509220374392760617"
+      "templateHash": "16872699032694434963"
     }
   },
   "parameters": {
@@ -341,7 +341,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "4228220387837833373"
+              "templateHash": "4777145041060497143"
             }
           },
           "parameters": {
@@ -484,7 +484,10 @@
                 "name": "Automatic"
               },
               "identity": {
-                "type": "SystemAssigned"
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('managedIdentityId'))]": {}
+                }
               },
               "properties": {
                 "agentPoolProfiles": [
@@ -497,7 +500,7 @@
                 ],
                 "networkProfile": {
                   "networkPlugin": "azure",
-                  "networkPolicy": "calico"
+                  "networkPolicy": "azure"
                 },
                 "oidcIssuerProfile": {
                   "enabled": true
@@ -659,16 +662,45 @@
             },
             {
               "condition": "[variables('createDatabase')]",
+              "type": "Microsoft.Sql/servers/elasticPools",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), format('ep-{0}', parameters('prefix')))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "GP_Gen5",
+                "tier": "GeneralPurpose",
+                "family": "Gen5",
+                "capacity": 2
+              },
+              "properties": {
+                "perDatabaseSettings": {
+                  "minCapacity": 0,
+                  "maxCapacity": 2
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
+              ]
+            },
+            {
+              "condition": "[variables('createDatabase')]",
               "type": "Microsoft.Sql/servers/databases",
               "apiVersion": "2023-08-01-preview",
               "name": "[format('{0}/{1}', format('sql-{0}', parameters('prefix')), if(variables('createDatabase'), variables('pulseDatabaseName'), 'placeholder'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "sku": {
-                "name": "S2",
-                "tier": "Standard"
+                "name": "GP_Gen5",
+                "tier": "GeneralPurpose",
+                "family": "Gen5",
+                "capacity": 0
+              },
+              "properties": {
+                "elasticPoolId": "[resourceId('Microsoft.Sql/servers/elasticPools', format('sql-{0}', parameters('prefix')), format('ep-{0}', parameters('prefix')))]"
               },
               "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/elasticPools', format('sql-{0}', parameters('prefix')), format('ep-{0}', parameters('prefix')))]",
                 "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
               ]
             },
@@ -680,10 +712,16 @@
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "sku": {
-                "name": "S0",
-                "tier": "Standard"
+                "name": "GP_Gen5",
+                "tier": "GeneralPurpose",
+                "family": "Gen5",
+                "capacity": 0
+              },
+              "properties": {
+                "elasticPoolId": "[resourceId('Microsoft.Sql/servers/elasticPools', format('sql-{0}', parameters('prefix')), format('ep-{0}', parameters('prefix')))]"
               },
               "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/elasticPools', format('sql-{0}', parameters('prefix')), format('ep-{0}', parameters('prefix')))]",
                 "[resourceId('Microsoft.Sql/servers', format('sql-{0}', parameters('prefix')))]"
               ]
             },

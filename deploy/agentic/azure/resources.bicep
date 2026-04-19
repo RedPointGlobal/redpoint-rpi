@@ -91,7 +91,8 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-03-02-previ
     name: 'Automatic'
   }
   identity: {
-    type: 'SystemAssigned'
+    type: 'UserAssigned'
+    userAssignedIdentities: { '${managedIdentityId}': {} }
   }
   properties: {
     agentPoolProfiles: [
@@ -104,7 +105,7 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-03-02-previ
     ]
     networkProfile: {
       networkPlugin: 'azure'
-      networkPolicy: 'calico'
+      networkPolicy: 'azure'
     }
     oidcIssuerProfile: {
       enabled: true
@@ -229,12 +230,35 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = if (createDataba
   }
 }
 
+// Elastic pool for Pulse databases (General Purpose: Gen5, 2 vCores)
+resource sqlElasticPool 'Microsoft.Sql/servers/elasticPools@2023-08-01-preview' = if (createDatabase) {
+  parent: sqlServer
+  name: 'ep-${prefix}'
+  location: location
+  tags: tags
+  sku: {
+    name: 'GP_Gen5'
+    tier: 'GeneralPurpose'
+    family: 'Gen5'
+    capacity: 2
+  }
+  properties: {
+    perDatabaseSettings: {
+      minCapacity: 0
+      maxCapacity: 2
+    }
+  }
+}
+
 resource sqlDbPulse 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createDatabase) {
   parent: sqlServer
   name: createDatabase ? pulseDatabaseName : 'placeholder'
   location: location
   tags: tags
-  sku: { name: 'S2', tier: 'Standard' }
+  sku: { name: 'GP_Gen5', tier: 'GeneralPurpose', family: 'Gen5', capacity: 0 }
+  properties: {
+    elasticPoolId: sqlElasticPool.id
+  }
 }
 
 resource sqlDbLogging 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if (createDatabase) {
@@ -242,7 +266,10 @@ resource sqlDbLogging 'Microsoft.Sql/servers/databases@2023-08-01-preview' = if 
   name: createDatabase ? pulseLoggingDatabaseName : 'placeholder'
   location: location
   tags: tags
-  sku: { name: 'S0', tier: 'Standard' }
+  sku: { name: 'GP_Gen5', tier: 'GeneralPurpose', family: 'Gen5', capacity: 0 }
+  properties: {
+    elasticPoolId: sqlElasticPool.id
+  }
 }
 
 resource sqlFirewall 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = if (createDatabase) {
