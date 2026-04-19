@@ -163,10 +163,11 @@ Both the MCP server and the Web UI expose the same set of tools:
 | `rpi_troubleshoot` | Diagnoses issues using pod logs, events, secrets, and ingress configuration |
 | `rpi_docs_search` | Searches the official RPI product documentation by keyword |
 | `rpi_docs_fetch` | Fetches a specific page from the RPI documentation site |
-| `rpi_deploy_plan` | Generates a deployment plan: Bicep parameters, Helm overrides, vault checklist, and infrastructure commands. Called twice — first pre-infra (infra command + UUID), then post-infra with Bicep outputs (`tenantId`, `managedIdentityClientId`) to produce fully-populated overrides. |
-| `rpi_preflight` | Returns platform-specific preflight checks to run before deploying |
-| `rpi_diagnose` | Analyzes pod logs and events to diagnose deployment issues with root cause and fix |
-| `rpi_handoff` | Generates a structured deployment handoff report |
+| `rpi_deploy_plan` | Generates a deployment plan: Bicep bundle `fetchCommand`, `infraCommand` (with `--no-wait`), Helm overrides, vault checklist, and watch commands. Called twice — first pre-infra (infra command + UUID), then post-infra with Bicep outputs (`tenantId`, `managedIdentityClientId`) to produce fully-populated overrides. |
+| `rpi_deploy_preflight` | Returns platform-specific preflight checks to run before deploying |
+| `rpi_deploy_status` | Summarizes an in-flight Bicep deployment into structured progress (completed / in-progress / failed resources with friendly labels). The agent polls this every ~60s during infra provisioning so the customer sees live status instead of a silent 10-15 minute wait. |
+| `rpi_deploy_diagnose` | Analyzes pod logs and events to diagnose deployment issues with root cause and fix |
+| `rpi_deploy_handoff` | Generates a structured deployment handoff report |
 
 For usage examples, run `/rpi-examples` in Claude Code.
 
