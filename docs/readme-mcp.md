@@ -163,7 +163,7 @@ Both the MCP server and the Web UI expose the same set of tools:
 | `rpi_troubleshoot` | Diagnoses issues using pod logs, events, secrets, and ingress configuration |
 | `rpi_docs_search` | Searches the official RPI product documentation by keyword |
 | `rpi_docs_fetch` | Fetches a specific page from the RPI documentation site |
-| `rpi_deploy_plan` | Generates a complete deployment plan: Bicep parameters, Helm overrides, vault checklist, and infrastructure commands |
+| `rpi_deploy_plan` | Generates a deployment plan: Bicep parameters, Helm overrides, vault checklist, and infrastructure commands. Called twice — first pre-infra (infra command + UUID), then post-infra with Bicep outputs (`tenantId`, `managedIdentityClientId`) to produce fully-populated overrides. |
 | `rpi_preflight` | Returns platform-specific preflight checks to run before deploying |
 | `rpi_diagnose` | Analyzes pod logs and events to diagnose deployment issues with root cause and fix |
 | `rpi_handoff` | Generates a structured deployment handoff report |

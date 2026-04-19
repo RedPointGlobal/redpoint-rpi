@@ -101,7 +101,7 @@ param serviceBusSku string = 'Standard'
 
 // ── Variables ──────────────────────────────────────────────
 
-var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, location, environmentName), 0, 6)
+var uniqueSuffix = toLower(substring(environmentName, 0, 6))
 var prefix = 'rpi-${uniqueSuffix}'
 var tags = {
   'redpoint-rpi': 'agentic'
