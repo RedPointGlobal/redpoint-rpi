@@ -8,7 +8,7 @@
 The **Interaction Helm Assistant** is an AI-powered assistant that helps you configure, deploy, and troubleshoot your RPI installation. It provides two ways to interact with the same set of tools:
 
 - **Web UI:** A browser-based interface with form-based tools, AI chat, and file management. No installation required.
-- **MCP (Claude Code / Claude Desktop):** Connect via the Model Context Protocol for a terminal-based AI experience powered by Claude.
+- **Agentic (Claude Code / Claude Desktop):** Connect via the Model Context Protocol. The assistant can plan and drive end-to-end RPI deployments.
 
 Both interfaces access the same underlying tools and search the official [RPI documentation](https://docs.redpointglobal.com/rpi) and the local chart documentation.
 
@@ -44,9 +44,9 @@ The Web UI includes six tabs:
 </details>
 
 <details>
-<summary><strong style="font-size:1.25em;">Option B: MCP (Claude Code)</strong></summary>
+<summary><strong style="font-size:1.25em;">Option B: Agentic (Claude Code)</strong></summary>
 
-Use this option if you have Claude Code or another MCP-compatible client (Claude Desktop, Cursor, Windsurf, etc.).
+Use this option to connect Claude Code (or another MCP-compatible client) to the assistant for agentic deployments, configuration, and troubleshooting.
 
 ### Prerequisites
 
