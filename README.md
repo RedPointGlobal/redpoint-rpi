@@ -9,11 +9,11 @@ This chart deploys RPI on Kubernetes using Helm.
 
 ## Choose Your Path
 
-| | New Installation | Upgrading from v7.6 | AI-Assisted | Agentic (Azure) |
-|:---|:---|:---|:---|:---|
-| **Guide** | [Greenfield](docs/greenfield.md) | [Upgrade](docs/migration.md) | [Helm Assistant](docs/readme-mcp.md) | [Agentic Deployment](deploy/agentic/azure/README.md) |
-| **When to use** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment | Any scenario -- validates configs, generates overrides, diagnoses issues | Fully automated -- agent provisions Azure infrastructure and deploys RPI end-to-end |
-| **Infrastructure** | You provision | Existing | Guides you | Agent creates AKS, SQL, Key Vault, Service Bus, AGC, Private Endpoints |
+| | New Installation | Upgrading from v7.6 | AI-Assisted |
+|:---|:---|:---|:---|
+| **Guide** | [Greenfield Installation](docs/greenfield.md) | [Upgrade Guide](docs/migration.md) | [Helm Assistant](docs/readme-mcp.md) |
+| **When to use** | New cluster, databases, cache, and queue providers | Existing v7.6 deployment with existing infrastructure | Any scenario. Validates configs, generates overrides, diagnoses issues, answers questions, and runs [agentic deployments](docs/readme-mcp.md#agentic-deployment) |
+| **Databases** | Created from scratch | Existing databases are reused | Generates the correct database configuration for your platform |
 
 ---
 
