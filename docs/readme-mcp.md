@@ -39,7 +39,7 @@ The Web UI includes six tabs:
 | **Automate** | Generate Terraform modules and CI/CD pipeline files (GitHub Actions, Azure DevOps, GitLab CI) from your overrides. |
 | **Reference** | Searchable browser for every configurable key in the Helm chart with defaults. |
 | **Chat** | Natural language assistant. Ask questions about RPI features, chart configuration, deployment, and troubleshooting. |
-| **Agentic** | AI-driven end-to-end deployment planner. Generates infrastructure commands (Bicep), Helm overrides, vault checklist, and step-by-step instructions. Pairs with the `/deploy-rpi` Claude Code command for fully automated deployments. |
+| **Agentic** | End-to-end deployment using the RPI Deploy Agent. Provisions Azure infrastructure, deploys the Helm chart, initializes the cluster, and activates the license. Connect Claude Code to get started. |
 
 </details>
 
