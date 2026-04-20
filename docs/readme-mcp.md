@@ -166,6 +166,7 @@ Both the MCP server and the Web UI expose the same set of tools:
 | `rpi_deploy_plan` | Generates a deployment plan: Bicep bundle `fetchCommand`, `infraCommand` (with `--no-wait`), Helm overrides, vault checklist, and watch commands. Called twice — first pre-infra (infra command + UUID), then post-infra with Bicep outputs (`tenantId`, `managedIdentityClientId`) to produce fully-populated overrides. |
 | `rpi_deploy_preflight` | Returns platform-specific preflight checks to run before deploying |
 | `rpi_deploy_status` | Summarizes an in-flight Bicep deployment into structured progress (completed / in-progress / failed resources with friendly labels). The agent polls this every ~60s during infra provisioning so the customer sees live status instead of a silent 10-15 minute wait. |
+| `rpi_deploy_resume` | Detects the state of an interrupted deployment (session exit, closed terminal) and returns the next phase + recovered values. Used by `/deploy-rpi resume` — recovers `deploymentUuid` from resource group tags and Bicep outputs, so the customer never has to re-enter anything. |
 | `rpi_deploy_diagnose` | Analyzes pod logs and events to diagnose deployment issues with root cause and fix |
 | `rpi_deploy_handoff` | Generates a structured deployment handoff report |
 
