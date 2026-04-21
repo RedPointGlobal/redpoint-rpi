@@ -2304,6 +2304,10 @@
           "type": "boolean",
           "description": "Enable automatic database upgrade"
         },
+        "image": {
+          "type": "string",
+          "description": "Full image URI for the upgrade job (used verbatim, no registry/tag appended). Leave empty to use the chart default {registry}/net-utils:latest."
+        },
         "notification": {
           "type": "object",
           "description": "Email notification settings for upgrade completion",

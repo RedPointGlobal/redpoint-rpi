@@ -48,7 +48,7 @@ spec:
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noSupplementalGroups" true) | nindent 6 }}
       containers:
       - name: db-upgrade
-        image: {{ printf "%s/net-utils:latest" .Values.global.deployment.images.registry }}
+        image: {{ $cfg.image | default (printf "%s/net-utils:latest" .Values.global.deployment.images.registry) }}
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
         {{- if $cfg.notification.enabled }}

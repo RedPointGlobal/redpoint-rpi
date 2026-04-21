@@ -1159,6 +1159,10 @@ resources:
 {{/* ------ Database Upgrade Job ------ */}}
 {{- define "rpi.defaults.databaseUpgrade" -}}
 enabled: false
+# Empty = chart default ({registry}/net-utils:latest). Set to a full image URI to
+# override — used verbatim, no registry/tag appended. Useful on clusters where
+# Deployment Safeguards reject :latest tags.
+image: ""
 deploymentapiHost: rpi-deploymentapi
 deploymentapiPort: "80"
 healthPath: /health/ready
