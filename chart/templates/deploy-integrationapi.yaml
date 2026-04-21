@@ -282,14 +282,12 @@ spec:
           value: {{ .Values.OpenIdProviders.validateIssuer | quote }}
         - name: Authentication__OpenIdProviders__0__ValidateAudience
           value: {{ .Values.OpenIdProviders.validateAudience | quote }}
+        - name: Authentication__OpenIdProviders__0__SupportsUserManagement
+          value: {{ .Values.OpenIdProviders.supportsUserManagement | quote }}
         - name: Authentication__OpenIdProviders__0__LogoutIdTokenParameter
           value: {{ .Values.OpenIdProviders.logoutIdTokenParameter | quote }}
         - name: Authentication__OpenIdProviders__0__MetadataHost
           value: "http://cdp-keycloak/auth/realms/redpoint-mercury"
-#        {{- range $index, $scope := .Values.OpenIdProviders.customScopes }}
-#        - name: Authentication__OpenIdProviders__0__CustomScopes__{{ $index }}
-#          value: {{ $scope | quote }}
-        {{- end }}
         {{- end }}
         {{- end }}
         {{- if .Values.OpenIdProviders.enabled }}
