@@ -1202,7 +1202,7 @@ databases:
       autoIamAuthn: false
       terminationGracePeriod: "30s"
       credentialsSecret:
-        enabled: false       # Workload Identity is the default — leave false for prod
+        enabled: false       # Workload Identity is the default. Leave false for prod
         secretName: ""       # Required if enabled=true
         key: service_account.json
       resources:

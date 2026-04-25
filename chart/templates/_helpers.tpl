@@ -590,7 +590,7 @@ Usage: {{- include "rpi.cloudidentity.awsAccessKeyEnvvars" . | nindent 10 }}
 {{- end -}}
 
 {{/*
-SDK vault env vars — only when secretsManagement.provider == "sdk".
+SDK vault env vars. Only when secretsManagement.provider == "sdk".
 Configures the app to read secrets from the cloud vault at runtime.
 Usage: {{- include "rpi.secrets.sdk.envvars" . | nindent 10 }}
 */}}
@@ -636,7 +636,7 @@ Usage: {{- include "rpi.secrets.sdk.envvars" . | nindent 10 }}
 {{- end -}}
 
 {{/*
-Resolve the K8s secret name — works for kubernetes and csi modes.
+Resolve the K8s secret name. Works for kubernetes and csi modes.
 Usage: {{ include "rpi.secrets.secretName" . }}
 */}}
 {{- define "rpi.secrets.secretName" -}}

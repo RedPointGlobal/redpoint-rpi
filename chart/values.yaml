@@ -165,7 +165,7 @@ databases:
       # Graceful shutdown window; proxy drains connections before exiting.
       terminationGracePeriod: "30s"
       # Authentication mode:
-      # - Default (credentialsSecret.enabled=false): Workload Identity — pod SA must be bound to
+      # - Default (credentialsSecret.enabled=false): Workload Identity. Pod SA must be bound to
       #   a GCP SA with roles/cloudsql.client.
       # - credentialsSecret.enabled=true: proxy reads a service-account key file from the mounted
       #   Kubernetes Secret (less secure; intended for dev/non-prod).
