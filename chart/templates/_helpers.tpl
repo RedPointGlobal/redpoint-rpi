@@ -951,7 +951,7 @@ Usage: {{- include "rpi.block.cloudSqlProxy.envVars" . | nindent 8 }}
 {{- $provider := .Values.databases.operational.provider -}}
 {{- $port := $cfg.port | default (eq $provider "sqlserver" | ternary 1433 5432) -}}
 {{- $secret := include "rpi.secrets.secretName" . -}}
-# Cloud SQL Auth Proxy overrides — Server/Port style (deploymentapi reads these).
+# Cloud SQL Auth Proxy overrides. Server/Port style (deploymentapi reads these).
 - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
   value: "127.0.0.1"
 - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
@@ -978,7 +978,7 @@ Usage: {{- include "rpi.block.cloudSqlProxy.envVars" . | nindent 8 }}
       name: {{ $secret | quote }}
       key: Operations_Database_Pulse_Logging_Database_Name
 # Full connection-string overrides (every service except deploymentapi reads these).
-# Format depends on the underlying database engine — Cloud SQL Auth Proxy v2 supports
+# Format depends on the underlying database engine. Cloud SQL Auth Proxy v2 supports
 # both PostgreSQL and SQL Server with the same binary.
 {{- if eq $provider "postgresql" }}
 - name: CONNECTIONSTRINGS__OPERATIONALDATABASE
@@ -997,7 +997,7 @@ Usage: {{- include "rpi.block.cloudSqlProxy.envVars" . | nindent 8 }}
 {{/*
 Native K8s sidecar container spec for Cloud SQL Auth Proxy. Emitted as an
 element of initContainers[] with restartPolicy: Always (K8s >= 1.29 native
-sidecar pattern — clean startup/shutdown ordering relative to the main app).
+sidecar pattern with clean startup/shutdown ordering relative to the main app).
 Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
 */}}
 {{- define "rpi.block.cloudSqlProxy.sidecar" -}}
