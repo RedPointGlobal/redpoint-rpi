@@ -148,7 +148,7 @@ databases:
       image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.2
       # port: 5432                                             # auto: 5432 (postgresql) / 1433 (sqlserver)
       privateIp: true
-      autoIamAuthn: false
+      autoIamAuthn: false                                      # PostgreSQL-only. Adds --auto-iam-authn to the proxy. Customer's vault must set DB user to the GCP SA email and leave password empty. SA must be a Cloud SQL IAM user.
       terminationGracePeriod: "30s"
       # Auth: Workload Identity is the default. To use a SA key file instead,
       # set cloudIdentity.google.configMapName (and keyName) above; the proxy

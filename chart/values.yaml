@@ -148,8 +148,16 @@ databases:
     # right connection-string format based on `databases.operational.provider`.
     #
     # Activation gate: global.deployment.platform=google AND enabled=true
-    #                  AND provider in {postgresql, sqlserver}.
-    # If any condition is false, NONE of the sidecar/override logic renders.
+    #                  AND provider in {postgresql, sqlserver}
+    #                  AND secretsManagement.provider=sdk (chart will fail if not).
+    #
+    # Cloud SQL Auth Proxy is supported only with secretsManagement.provider=sdk.
+    # The proxy and the SDK secret provider share the same cloud-native security
+    # realm (vault-backed, IAM-bound). The chart's job here is to inject the proxy
+    # sidecar; ALL connection-string env vars come from your vault. Configure your
+    # vault entries (ConnectionString_Operations_Database, ConnectionString_Logging_
+    # Database, Operations_Database_ServerHost, etc.) so the host points at
+    # 127.0.0.1 and the port matches `cloudSqlProxy.port` (default 5432 / 1433).
     cloudSqlProxy:
       enabled: false
       # Required when enabled: "<project>:<region>:<instance>"
@@ -160,7 +168,13 @@ databases:
       # port: 5432
       # Use the Cloud SQL instance's private IP (requires VPC peering between GKE and Cloud SQL).
       privateIp: true
-      # Use IAM database authentication instead of password auth. Requires additional IAM setup.
+      # Use IAM database authentication instead of password auth. PostgreSQL only;
+      # ignored for SQL Server (Cloud SQL for SQL Server doesn't expose IAM DB auth via
+      # the proxy). When true, the chart uses `cloudIdentity.google.serviceAccountEmail`
+      # as the DB user and omits the password segment from the connection string; the
+      # proxy injects an IAM token at connection time. Requires the SA email to be
+      # registered as a Cloud SQL IAM user with the right grants:
+      #   gcloud sql users create <sa-email> --type=cloud_iam_service_account ...
       autoIamAuthn: false
       # Graceful shutdown window; proxy drains connections before exiting.
       terminationGracePeriod: "30s"

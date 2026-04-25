@@ -932,65 +932,12 @@ template output for existing deployments is unchanged.
 {{- define "rpi.cloudSqlProxy.enabled" -}}
 {{- $cfg := (.Values.databases.operational.cloudSqlProxy | default dict) -}}
 {{- $provider := .Values.databases.operational.provider | default "" -}}
+{{- $secretsProvider := .Values.secretsManagement.provider | default "" -}}
 {{- if and (eq (.Values.global.deployment.platform | default "") "google") ($cfg.enabled | default false) (or (eq $provider "postgresql") (eq $provider "sqlserver")) -}}
+{{- if ne $secretsProvider "sdk" -}}
+{{- fail "databases.operational.cloudSqlProxy.enabled=true requires secretsManagement.provider=sdk. The Cloud SQL Auth Proxy assumes the same cloud-native security realm as the SDK secret provider (vault-backed, IAM-bound). It is not supported with secretsManagement.provider=kubernetes." -}}
+{{- end -}}
 true
-{{- end -}}
-{{- end -}}
-
-{{/*
-Env var overrides that point the app at the local Cloud SQL Auth Proxy.
-In .NET config, env vars override values from other config sources (incl.
-secret-manager-backed sources in SDK mode), so this flips the host/port
-without requiring the customer to mutate their Google Secret Manager
-entries. No-op unless the gate is true.
-Usage: {{- include "rpi.block.cloudSqlProxy.envVars" . | nindent 8 }}
-*/}}
-{{- define "rpi.block.cloudSqlProxy.envVars" -}}
-{{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" -}}
-{{- $cfg := .Values.databases.operational.cloudSqlProxy -}}
-{{- $provider := .Values.databases.operational.provider -}}
-{{- $port := $cfg.port | default (eq $provider "sqlserver" | ternary 1433 5432) -}}
-{{- $secret := include "rpi.secrets.secretName" . -}}
-# Cloud SQL Auth Proxy overrides. Server/Port style (deploymentapi reads these).
-- name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
-  value: "127.0.0.1"
-- name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
-  value: {{ $port | quote }}
-# Helper env vars used to compose the full connection strings below via $(VAR) substitution.
-- name: _RPI_CSP_USER
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secret | quote }}
-      key: Operations_Database_Server_Username
-- name: _RPI_CSP_PASS
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secret | quote }}
-      key: Operations_Database_Server_Password
-- name: _RPI_CSP_OPS_DB
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secret | quote }}
-      key: Operations_Database_Pulse_Database_Name
-- name: _RPI_CSP_LOG_DB
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secret | quote }}
-      key: Operations_Database_Pulse_Logging_Database_Name
-# Full connection-string overrides (every service except deploymentapi reads these).
-# Format depends on the underlying database engine. Cloud SQL Auth Proxy v2 supports
-# both PostgreSQL and SQL Server with the same binary.
-{{- if eq $provider "postgresql" }}
-- name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-  value: "Host=127.0.0.1;Port={{ $port }};Database=$(_RPI_CSP_OPS_DB);Username=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);SSL Mode=Disable"
-- name: CONNECTIONSTRINGS__LOGGINGDATABASE
-  value: "Host=127.0.0.1;Port={{ $port }};Database=$(_RPI_CSP_LOG_DB);Username=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);SSL Mode=Disable"
-{{- else if eq $provider "sqlserver" }}
-- name: CONNECTIONSTRINGS__OPERATIONALDATABASE
-  value: "Server=tcp:127.0.0.1,{{ $port }};Initial Catalog=$(_RPI_CSP_OPS_DB);User ID=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);Encrypt=False;TrustServerCertificate=True;"
-- name: CONNECTIONSTRINGS__LOGGINGDATABASE
-  value: "Server=tcp:127.0.0.1,{{ $port }};Initial Catalog=$(_RPI_CSP_LOG_DB);User ID=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);Encrypt=False;TrustServerCertificate=True;"
-{{- end }}
 {{- end -}}
 {{- end -}}
 
@@ -1042,34 +989,10 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
       drop: ["ALL"]
   {{- if $useGoogleSaKey }}
   volumeMounts:
-  - name: cloud-sql-sa-key
+  - name: {{ .Values.cloudIdentity.google.configMapName | quote }}
     mountPath: {{ $googleSaPath | quote }}
     subPath: {{ $googleSaKey | default "service_account.json" | quote }}
     readOnly: true
   {{- end }}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Pod volume for the Cloud SQL Auth Proxy service-account key. Reuses the
-platform-wide Google SA ConfigMap (cloudIdentity.google.configMapName +
-cloudIdentity.google.keyName). Activates only when cloudIdentity is enabled
-on the google platform with a configMapName set; otherwise the proxy
-authenticates via Workload Identity and no volume is emitted.
-Usage: {{- include "rpi.block.cloudSqlProxy.volume" . | nindent 6 }}
-*/}}
-{{- define "rpi.block.cloudSqlProxy.volume" -}}
-{{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" -}}
-{{- $useGoogleSaKey := and .Values.cloudIdentity.enabled (eq .Values.global.deployment.platform "google") (.Values.cloudIdentity.google.configMapName | toString | ne "") -}}
-{{- $googleSaCm := .Values.cloudIdentity.google.configMapName -}}
-{{- $googleSaKey := .Values.cloudIdentity.google.keyName | default "service_account.json" -}}
-{{- if $useGoogleSaKey }}
-- name: cloud-sql-sa-key
-  configMap:
-    name: {{ $googleSaCm | quote }}
-    items:
-    - key: {{ $googleSaKey | quote }}
-      path: {{ $googleSaKey | quote }}
-{{- end -}}
 {{- end -}}
 {{- end -}}

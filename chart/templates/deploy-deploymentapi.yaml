@@ -172,13 +172,11 @@ spec:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: Operations_Database_Pulse_Logging_Database_Name
-        {{- if ne (include "rpi.cloudSqlProxy.enabled" .) "true" }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
           valueFrom:
             secretKeyRef:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: Operations_Database_ServerHost
-        {{- end }}
         {{- end }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__IsUsingCredentials
           value: "true"
@@ -215,10 +213,8 @@ spec:
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
           value: "PostgreSQL"
-        {{- if ne (include "rpi.cloudSqlProxy.enabled" .) "true" }}
         - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
           value: "5432"
-        {{- end }}
         {{- end }}
         {{- if eq .Values.databases.operational.provider "sqlserveronvm" }}
         - name: ClusterEnvironment__OperationalDatabase__DatabaseType
@@ -236,7 +232,6 @@ spec:
               name: {{ include "rpi.secrets.secretName" . | quote }}
               key: Operations_Database_Server_Password
         {{- end }}
-        {{- include "rpi.block.cloudSqlProxy.envVars" . | nindent 8 }}
         ports:
         - containerPort: 8080
           name: web-port
@@ -294,7 +289,6 @@ spec:
             volumeAttributes:
               secretProviderClass: {{ (index .Values.secretsManagement.csi.secretProviderClasses 0).name | quote }}
         {{- end }}
-        {{- include "rpi.block.cloudSqlProxy.volume" . | nindent 8 }}
       {{- if .Values.nodeSelector.enabled }}
       nodeSelector:
         {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}

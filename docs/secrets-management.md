@@ -1157,21 +1157,33 @@ customCACerts:
 
 For deployments on **GKE with PostgreSQL or SQL Server on Cloud SQL**, the chart can inject a [Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/mysql/connect-kubernetes-engine) sidecar next to every pod that talks to the operational database. The proxy establishes an mTLS-encrypted tunnel to Cloud SQL and exposes a local endpoint (`127.0.0.1:<port>`) that the app connects to like a normal database instance. This removes the need to put credentials in the connection string or expose Cloud SQL to the public internet.
 
-The Cloud SQL Auth Proxy v2 binary speaks both PostgreSQL and SQL Server, so the chart automatically picks the right connection-string format based on `databases.operational.provider`. The activation gate is intentionally narrow. The sidecar and the connection-string rewrites are **only** rendered when **all** of the following are true:
+The Cloud SQL Auth Proxy is supported only when **secrets management is in `sdk` mode**. The proxy and the SDK secret provider share the same cloud-native security realm (vault-backed, IAM-bound), so the chart enforces this with a `helm` validation. The activation gate requires **all** of the following:
 
 - `global.deployment.platform: google`
 - `databases.operational.provider: postgresql` **or** `sqlserver`
 - `databases.operational.cloudSqlProxy.enabled: true`
+- `secretsManagement.provider: sdk` (chart fails with a clear error otherwise)
 
-If any condition is false, nothing about this feature renders and the chart behaves exactly as it does today for every other platform and provider.
+If any condition is false the proxy is not injected and the chart behaves exactly as it does today for every other platform and provider.
 
 #### How it works
 
-When active, the chart does three things:
+When active, the chart does two things:
 
 1. **Injects a native Kubernetes sidecar** (`initContainers[*].restartPolicy: Always`, requires K8s 1.29+) running the `cloud-sql-proxy` binary in every RPI pod that talks to the operational DB: `rpi-deploymentapi`, `rpi-interactionapi`, `rpi-integrationapi`, `rpi-executionservice`, `rpi-nodemanager`, `rpi-queuereader`, `rpi-realtimeapi`, and `rpi-callbackapi`.
-2. **Rewrites the connection env vars** so the app connects to `127.0.0.1:<port>` instead of the Cloud SQL instance's FQDN. For the deployment API (which uses individual `ConnectionSettings__*` env vars), the chart sets `Server=127.0.0.1` and `Port=<proxyPort>`. For the other services (which use full `CONNECTIONSTRINGS__OPERATIONALDATABASE` / `CONNECTIONSTRINGS__LOGGINGDATABASE` strings), the chart composes new strings from the existing username/password/database-name secrets with the host hardcoded to `127.0.0.1`. The connection-string format differs by engine: `Host=...;Port=...;Database=...;...;SSL Mode=Disable` for PostgreSQL, and `Server=tcp:127.0.0.1,<port>;Initial Catalog=...;User ID=...;Password=...;Encrypt=False;TrustServerCertificate=True;` for SQL Server.
-3. **Adds a volume** for the service-account key file (only when `cloudIdentity.enabled=true` and `cloudIdentity.google.configMapName` is set; the default is Workload Identity and requires no volume).
+2. **Mounts the Google SA key file into the proxy sidecar** when `cloudIdentity.google.configMapName` is set (otherwise Workload Identity). The mount path matches the value of `GOOGLE_APPLICATION_CREDENTIALS` the app already reads, reusing the same ConfigMap and avoiding a duplicate volume.
+
+The chart does **not** inject any database connection-string env vars. In `sdk` mode the .NET app reads them directly from your vault. **You configure your vault entries** so the connection points at `127.0.0.1` and the matching proxy port:
+
+| Vault key | Value when proxy is active |
+|---|---|
+| `Operations_Database_ServerHost` | `127.0.0.1` |
+| `Operations_Database_Server_Username` | DB user (or the GCP SA email when using IAM DB auth) |
+| `Operations_Database_Server_Password` | DB password (or empty when using IAM DB auth) |
+| `Operations_Database_Pulse_Database_Name` | Pulse DB name |
+| `Operations_Database_Pulse_Logging_Database_Name` | Pulse logging DB name |
+| `ConnectionString_Operations_Database` | `PostgreSQL:Server=127.0.0.1;Port=5432;Database=<pulse>;User Id=<user>;Password=<pass>;` (PostgreSQL) or `Server=tcp:127.0.0.1,1433;Database=<pulse>;User ID=<user>;Password=<pass>;Encrypt=False;TrustServerCertificate=True;` (SQL Server) |
+| `ConnectionString_Logging_Database` | Same shape, different DB name |
 
 #### Authentication modes
 
@@ -1198,7 +1210,10 @@ databases:
       port: 5432
       # Use the instance's private IP (requires VPC peering between GKE and Cloud SQL)
       privateIp: true
-      # Use IAM database authentication (pod SA identity is the DB user)
+      # Use IAM database authentication (PostgreSQL only). When true, the chart uses
+      # cloudIdentity.google.serviceAccountEmail as the DB user and omits the password
+      # from the connection string; the proxy injects an IAM token at connection time.
+      # Requires the SA email to be registered as a Cloud SQL IAM user.
       autoIamAuthn: false
       terminationGracePeriod: "30s"
       # Auth: Workload Identity is the default. To use a SA key file instead,
