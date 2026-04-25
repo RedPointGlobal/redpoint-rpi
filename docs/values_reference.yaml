@@ -136,11 +136,13 @@ databases:
     server_password: <my-database-server-password>
     pulse_database_name: <my-pulse-database-name>
     pulse_logging_database_name: <my-logging-database-name>
-    encrypt: true
+    encrypt: true                                                # SQL Server + cloudSqlProxy: MUST be set to false (loopback proxy is plaintext; TLS happens proxy <-> Cloud SQL only)
 
     # Google Cloud SQL Auth Proxy (GKE only; PostgreSQL or SQL Server).
     # Activates only when global.deployment.platform=google AND enabled=true
-    # AND provider in {postgresql, sqlserver}. See docs/secrets-management.md
+    # AND provider in {postgresql, sqlserver} AND secretsManagement.provider=sdk.
+    # SQL Server: also set `encrypt: false` above and use `tcp:127.0.0.1,1433`
+    # (comma, not colon) in your vault `Server` entry. See docs/secrets-management.md
     # for full setup details.
     cloudSqlProxy:
       enabled: false

@@ -1175,15 +1175,24 @@ When active, the chart does two things:
 
 The chart does **not** inject any database connection-string env vars. In `sdk` mode the .NET app reads them directly from your vault. **You configure your vault entries** so the connection points at `127.0.0.1` and the matching proxy port:
 
-| Vault key | Value when proxy is active |
+| Vault key (Google Secret Manager: `--` instead of `:`) | Value when proxy is active |
 |---|---|
-| `Operations_Database_ServerHost` | `127.0.0.1` |
-| `Operations_Database_Server_Username` | DB user (or the GCP SA email when using IAM DB auth) |
-| `Operations_Database_Server_Password` | DB password (or empty when using IAM DB auth) |
-| `Operations_Database_Pulse_Database_Name` | Pulse DB name |
-| `Operations_Database_Pulse_Logging_Database_Name` | Pulse logging DB name |
-| `ConnectionString_Operations_Database` | `PostgreSQL:Server=127.0.0.1;Port=5432;Database=<pulse>;User Id=<user>;Password=<pass>;` (PostgreSQL) or `Server=tcp:127.0.0.1,1433;Database=<pulse>;User ID=<user>;Password=<pass>;Encrypt=False;TrustServerCertificate=True;` (SQL Server) |
-| `ConnectionString_Logging_Database` | Same shape, different DB name |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Server` | `tcp:127.0.0.1,1433` (SQL Server) **or** `127.0.0.1` (PostgreSQL). **No `Server=` prefix in this field**, just the host value; the .NET app composes it into the connection string. |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Username` | DB user (or the GCP SA email when using IAM DB auth on PostgreSQL) |
+| `ClusterEnvironment--OperationalDatabase--ConnectionSettings--Password` | DB password (or empty when using IAM DB auth on PostgreSQL) |
+| `ClusterEnvironment--OperationalDatabase--PulseDatabaseName` | Pulse DB name |
+| `ClusterEnvironment--OperationalDatabase--LoggingDatabaseName` | Pulse logging DB name |
+| `ConnectionStrings--OperationalDatabase` | `PostgreSQL:Server=127.0.0.1;Port=5432;Database=<pulse>;User Id=<user>;Password=<pass>;` (PostgreSQL) **or** `Server=tcp:127.0.0.1,1433;Database=<pulse>;User ID=<user>;Password=<pass>;Encrypt=False;TrustServerCertificate=True;` (SQL Server) |
+| `ConnectionStrings--LoggingDatabase` | Same shape, different DB name |
+
+#### SQL Server gotchas
+
+A few things specific to SQL Server + cloudSqlProxy that bite people:
+
+1. **`databases.operational.encrypt: false` is required** in your overrides. The chart's default is `true`, which emits `ClusterEnvironment__OperationalDatabase__ConnectionSettings__SQLServerSettings__Encrypt=true`. With that, `Microsoft.Data.SqlClient` v4+ tries to negotiate TLS during pre-login. The loopback proxy has no inbound cert and the handshake fails (`A connection was successfully established with the server, but then an error occurred during the pre-login handshake`). Encryption on the wire is still handled by the proxy → Cloud SQL leg via mTLS — the loopback hop just needs to stay plaintext.
+2. **Server syntax must use a comma, not a colon** — `tcp:127.0.0.1,1433`. SqlClient accepts `Server=tcp:host,port` (comma) but `Server=tcp:host:port` (colon) is not standard syntax and will silently fail to open a TCP connection. Symptom: deployment hangs at "Executing SQL for database 'Pulse'" and the `cloud-sql-proxy` log shows zero connection events after "ready for new connections".
+3. **No IAM database authentication.** Cloud SQL for SQL Server doesn't expose IAM DB auth via the proxy; `autoIamAuthn: true` is silently ignored on the proxy side. You need a real SQL Server login + password in the vault. Set `autoIamAuthn: false` to be explicit.
+4. **Add `Encrypt=False;TrustServerCertificate=True;`** to the `ConnectionStrings--*` entries. Same reason as #1 — the loopback hop is plaintext; the proxy handles encryption upstream.
 
 #### Authentication modes
 

@@ -154,10 +154,24 @@ databases:
     # Cloud SQL Auth Proxy is supported only with secretsManagement.provider=sdk.
     # The proxy and the SDK secret provider share the same cloud-native security
     # realm (vault-backed, IAM-bound). The chart's job here is to inject the proxy
-    # sidecar; ALL connection-string env vars come from your vault. Configure your
-    # vault entries (ConnectionString_Operations_Database, ConnectionString_Logging_
-    # Database, Operations_Database_ServerHost, etc.) so the host points at
-    # 127.0.0.1 and the port matches `cloudSqlProxy.port` (default 5432 / 1433).
+    # sidecar; ALL connection-string env vars come from your vault. Configure the
+    # vault entries (ConnectionStrings--OperationalDatabase, ConnectionStrings--
+    # LoggingDatabase, ClusterEnvironment--OperationalDatabase--ConnectionSettings--
+    # Server, etc.) so the host points at 127.0.0.1 and the port matches
+    # `cloudSqlProxy.port` (default 5432 / 1433).
+    #
+    # SQL Server gotchas (apply if provider=sqlserver):
+    #   * Set `databases.operational.encrypt: false` in your overrides. The default
+    #     is `true`, which makes Microsoft.Data.SqlClient negotiate TLS during
+    #     pre-login. The loopback proxy is plaintext and SqlClient bails with
+    #     "an error occurred during the pre-login handshake". Encryption on the
+    #     wire is still handled by the proxy → Cloud SQL leg via mTLS.
+    #   * Use comma-port syntax: `Server=tcp:127.0.0.1,1433` (NOT `:1433`). The
+    #     colon form fails to parse and the proxy log will show zero connections.
+    #   * Cloud SQL for SQL Server does NOT support IAM DB auth via the proxy.
+    #     Leave `autoIamAuthn: false` and put a real SQL login/password in the vault.
+    #   * Vault `ConnectionStrings--*` entries should include
+    #     `Encrypt=False;TrustServerCertificate=True;` for the same reason as #1.
     cloudSqlProxy:
       enabled: false
       # Required when enabled: "<project>:<region>:<instance>"
