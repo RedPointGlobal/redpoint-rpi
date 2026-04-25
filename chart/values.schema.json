@@ -183,16 +183,6 @@
                   "type": "string",
                   "description": "Graceful shutdown window (e.g. '30s')"
                 },
-                "credentialsSecret": {
-                  "type": "object",
-                  "description": "Optional service-account key file auth (dev/non-prod only)",
-                  "additionalProperties": true,
-                  "properties": {
-                    "enabled": { "type": "boolean" },
-                    "secretName": { "type": "string" },
-                    "key": { "type": "string" }
-                  }
-                },
                 "resources": { "type": "object", "additionalProperties": true },
                 "additionalArgs": {
                   "type": "array",

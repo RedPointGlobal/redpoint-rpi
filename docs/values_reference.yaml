@@ -150,10 +150,9 @@ databases:
       privateIp: true
       autoIamAuthn: false
       terminationGracePeriod: "30s"
-      credentialsSecret:
-        enabled: false                                         # Workload Identity is the default
-        secretName: ""
-        key: service_account.json
+      # Auth: Workload Identity is the default. To use a SA key file instead,
+      # set cloudIdentity.google.configMapName (and keyName) above; the proxy
+      # mounts that ConfigMap automatically.
       resources:
         requests: { cpu: 50m, memory: 64Mi }
         limits:   { cpu: 200m, memory: 256Mi }

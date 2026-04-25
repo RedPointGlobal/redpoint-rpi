@@ -164,17 +164,16 @@ databases:
       autoIamAuthn: false
       # Graceful shutdown window; proxy drains connections before exiting.
       terminationGracePeriod: "30s"
-      # Authentication mode:
-      # - Default (credentialsSecret.enabled=false): Workload Identity. Pod SA must be bound to
-      #   a GCP SA with roles/cloudsql.client.
-      # - credentialsSecret.enabled=true: proxy reads a service-account key file from the mounted
-      #   Kubernetes Secret (less secure; intended for dev/non-prod).
-      credentialsSecret:
-        enabled: false
-        # Name of the K8s Secret holding the SA key
-        secretName: ""
-        # Key inside the Secret whose value is the JSON key file
-        key: service_account.json
+      # Authentication mode (auto-detected):
+      # - Workload Identity (default): pod SA must be bound to a GCP SA with
+      #   roles/cloudsql.client. No key file is mounted.
+      # - Service-account key file: triggered when `cloudIdentity.enabled=true`,
+      #   `global.deployment.platform=google`, and `cloudIdentity.google.configMapName`
+      #   is set. The proxy mounts the same ConfigMap into the sidecar at the same
+      #   path the app sees as GOOGLE_APPLICATION_CREDENTIALS
+      #   (`cloudIdentity.google.configMapFilePath` + `cloudIdentity.google.keyName`)
+      #   and starts with --credentials-file pointing at that path. Reuses the
+      #   platform-wide Google SA JSON; no separate ConfigMap or path is needed.
       resources:
         requests: { cpu: 50m, memory: 64Mi }
         limits:   { cpu: 200m, memory: 256Mi }

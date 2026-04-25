@@ -1005,6 +1005,9 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
 {{- $cfg := .Values.databases.operational.cloudSqlProxy -}}
 {{- $provider := .Values.databases.operational.provider -}}
 {{- $port := $cfg.port | default (eq $provider "sqlserver" | ternary 1433 5432) -}}
+{{- $useGoogleSaKey := and .Values.cloudIdentity.enabled (eq .Values.global.deployment.platform "google") (.Values.cloudIdentity.google.configMapName | toString | ne "") -}}
+{{- $googleSaKey := .Values.cloudIdentity.google.keyName -}}
+{{- $googleSaPath := printf "%s/%s" (.Values.cloudIdentity.google.configMapFilePath | default "/app/google-creds") ($googleSaKey | default "service_account.json") -}}
 - name: cloud-sql-proxy
   image: {{ $cfg.image | quote }}
   imagePullPolicy: IfNotPresent
@@ -1017,8 +1020,8 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
   {{- if $cfg.autoIamAuthn | default false }}
   - "--auto-iam-authn"
   {{- end }}
-  {{- if and (hasKey $cfg "credentialsSecret") ($cfg.credentialsSecret.enabled | default false) }}
-  - "--credentials-file=/secrets/{{ $cfg.credentialsSecret.key | default "service_account.json" }}"
+  {{- if $useGoogleSaKey }}
+  - "--credentials-file={{ $googleSaPath }}"
   {{- end }}
   - "--max-sigterm-delay={{ $cfg.terminationGracePeriod | default "30s" }}"
   {{- range $cfg.additionalArgs | default (list) }}
@@ -1037,30 +1040,36 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
     readOnlyRootFilesystem: true
     capabilities:
       drop: ["ALL"]
-  {{- if and (hasKey $cfg "credentialsSecret") ($cfg.credentialsSecret.enabled | default false) }}
+  {{- if $useGoogleSaKey }}
   volumeMounts:
   - name: cloud-sql-sa-key
-    mountPath: /secrets
+    mountPath: {{ $googleSaPath | quote }}
+    subPath: {{ $googleSaKey | default "service_account.json" | quote }}
     readOnly: true
   {{- end }}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Pod volume for the Cloud SQL Auth Proxy service-account key (only when
-credentialsSecret.enabled=true; Workload Identity mode emits nothing).
+Pod volume for the Cloud SQL Auth Proxy service-account key. Reuses the
+platform-wide Google SA ConfigMap (cloudIdentity.google.configMapName +
+cloudIdentity.google.keyName). Activates only when cloudIdentity is enabled
+on the google platform with a configMapName set; otherwise the proxy
+authenticates via Workload Identity and no volume is emitted.
 Usage: {{- include "rpi.block.cloudSqlProxy.volume" . | nindent 6 }}
 */}}
 {{- define "rpi.block.cloudSqlProxy.volume" -}}
 {{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" -}}
-{{- $cfg := .Values.databases.operational.cloudSqlProxy -}}
-{{- if and (hasKey $cfg "credentialsSecret") ($cfg.credentialsSecret.enabled | default false) }}
+{{- $useGoogleSaKey := and .Values.cloudIdentity.enabled (eq .Values.global.deployment.platform "google") (.Values.cloudIdentity.google.configMapName | toString | ne "") -}}
+{{- $googleSaCm := .Values.cloudIdentity.google.configMapName -}}
+{{- $googleSaKey := .Values.cloudIdentity.google.keyName | default "service_account.json" -}}
+{{- if $useGoogleSaKey }}
 - name: cloud-sql-sa-key
-  secret:
-    secretName: {{ required "databases.operational.cloudSqlProxy.credentialsSecret.secretName is required when credentialsSecret.enabled=true" $cfg.credentialsSecret.secretName | quote }}
+  configMap:
+    name: {{ $googleSaCm | quote }}
     items:
-    - key: {{ $cfg.credentialsSecret.key | default "service_account.json" | quote }}
-      path: {{ $cfg.credentialsSecret.key | default "service_account.json" | quote }}
+    - key: {{ $googleSaKey | quote }}
+      path: {{ $googleSaKey | quote }}
 {{- end -}}
 {{- end -}}
 {{- end -}}

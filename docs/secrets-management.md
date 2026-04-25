@@ -1171,7 +1171,7 @@ When active, the chart does three things:
 
 1. **Injects a native Kubernetes sidecar** (`initContainers[*].restartPolicy: Always`, requires K8s 1.29+) running the `cloud-sql-proxy` binary in every RPI pod that talks to the operational DB: `rpi-deploymentapi`, `rpi-interactionapi`, `rpi-integrationapi`, `rpi-executionservice`, `rpi-nodemanager`, `rpi-queuereader`, `rpi-realtimeapi`, and `rpi-callbackapi`.
 2. **Rewrites the connection env vars** so the app connects to `127.0.0.1:<port>` instead of the Cloud SQL instance's FQDN. For the deployment API (which uses individual `ConnectionSettings__*` env vars), the chart sets `Server=127.0.0.1` and `Port=<proxyPort>`. For the other services (which use full `CONNECTIONSTRINGS__OPERATIONALDATABASE` / `CONNECTIONSTRINGS__LOGGINGDATABASE` strings), the chart composes new strings from the existing username/password/database-name secrets with the host hardcoded to `127.0.0.1`. The connection-string format differs by engine: `Host=...;Port=...;Database=...;...;SSL Mode=Disable` for PostgreSQL, and `Server=tcp:127.0.0.1,<port>;Initial Catalog=...;User ID=...;Password=...;Encrypt=False;TrustServerCertificate=True;` for SQL Server.
-3. **Adds a volume** for the service-account key file (only when `credentialsSecret.enabled=true`; the default is Workload Identity and requires no volume).
+3. **Adds a volume** for the service-account key file (only when `cloudIdentity.enabled=true` and `cloudIdentity.google.configMapName` is set; the default is Workload Identity and requires no volume).
 
 #### Authentication modes
 
@@ -1179,7 +1179,7 @@ Two modes are supported. Workload Identity is recommended for production; the se
 
 **Workload Identity (default):** the pod's Kubernetes service account is federated to a GCP service account that has `roles/cloudsql.client` on the Cloud SQL instance. The proxy authenticates via the IMDS metadata server. No credentials are ever mounted into the pod.
 
-**Service-account key file:** the proxy reads a JSON key file from a Kubernetes Secret you create ahead of time. Enable by setting `credentialsSecret.enabled: true` and pointing at the Secret that holds the key. The chart mounts the Secret at `/secrets/service_account.json` and passes `--credentials-file=...` to the proxy.
+**Service-account key file:** the proxy reads a JSON key file from the same ConfigMap RPI uses for the rest of the Google SDK stack. Set `cloudIdentity.enabled: true` with `cloudIdentity.google.configMapName`, `cloudIdentity.google.keyName`, and `cloudIdentity.google.configMapFilePath` pointing at the ConfigMap and target path. The chart mounts that ConfigMap into the proxy sidecar at the **same path** the app containers see it (`${configMapFilePath}/${keyName}`, the value of `GOOGLE_APPLICATION_CREDENTIALS`) and passes `--credentials-file=${configMapFilePath}/${keyName}`. No separate Cloud SQL Proxy ConfigMap or path is needed; the platform-wide Google SA JSON is reused.
 
 #### Values schema
 
@@ -1201,10 +1201,9 @@ databases:
       # Use IAM database authentication (pod SA identity is the DB user)
       autoIamAuthn: false
       terminationGracePeriod: "30s"
-      credentialsSecret:
-        enabled: false       # Workload Identity is the default. Leave false for prod
-        secretName: ""       # Required if enabled=true
-        key: service_account.json
+      # Auth: Workload Identity is the default. To use a SA key file instead,
+      # set cloudIdentity.google.configMapName and cloudIdentity.google.keyName
+      # at the top level; the proxy mounts that same ConfigMap automatically.
       resources:
         requests: { cpu: 50m, memory: 64Mi }
         limits:   { cpu: 200m, memory: 256Mi }
