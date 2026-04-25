@@ -1152,6 +1152,100 @@ customCACerts:
 
 </details>
 
+<details>
+<summary><strong>Cloud SQL Auth Proxy (GKE + PostgreSQL or SQL Server)</strong></summary>
+
+For deployments on **GKE with PostgreSQL or SQL Server on Cloud SQL**, the chart can inject a [Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/mysql/connect-kubernetes-engine) sidecar next to every pod that talks to the operational database. The proxy establishes an mTLS-encrypted tunnel to Cloud SQL and exposes a local endpoint (`127.0.0.1:<port>`) that the app connects to like a normal database instance. This removes the need to put credentials in the connection string or expose Cloud SQL to the public internet.
+
+The Cloud SQL Auth Proxy v2 binary speaks both PostgreSQL and SQL Server, so the chart automatically picks the right connection-string format based on `databases.operational.provider`. The activation gate is intentionally narrow — the sidecar and the connection-string rewrites are **only** rendered when **all** of the following are true:
+
+- `global.deployment.platform: google`
+- `databases.operational.provider: postgresql` **or** `sqlserver`
+- `databases.operational.cloudSqlProxy.enabled: true`
+
+If any condition is false, nothing about this feature renders and the chart behaves exactly as it does today for every other platform and provider.
+
+#### How it works
+
+When active, the chart does three things:
+
+1. **Injects a native Kubernetes sidecar** (`initContainers[*].restartPolicy: Always`, requires K8s ≥ 1.29) running the `cloud-sql-proxy` binary in every RPI pod that talks to the operational DB — `rpi-deploymentapi`, `rpi-interactionapi`, `rpi-integrationapi`, `rpi-executionservice`, `rpi-nodemanager`, `rpi-queuereader`, `rpi-realtimeapi`, `rpi-callbackapi`.
+2. **Rewrites the connection env vars** so the app connects to `127.0.0.1:<port>` instead of the Cloud SQL instance's FQDN. For the deployment API (which uses individual `ConnectionSettings__*` env vars), the chart sets `Server=127.0.0.1` and `Port=<proxyPort>`. For the other services (which use full `CONNECTIONSTRINGS__OPERATIONALDATABASE` / `CONNECTIONSTRINGS__LOGGINGDATABASE` strings), the chart composes new strings from the existing username/password/database-name secrets with the host hardcoded to `127.0.0.1`. The connection-string format differs by engine — `Host=...;Port=...;Database=...;...;SSL Mode=Disable` for PostgreSQL, `Server=tcp:127.0.0.1,<port>;Initial Catalog=...;User ID=...;Password=...;Encrypt=False;TrustServerCertificate=True;` for SQL Server.
+3. **Adds a volume** for the service-account key file (only when `credentialsSecret.enabled=true`; the default is Workload Identity and requires no volume).
+
+#### Authentication modes
+
+Two modes are supported. Workload Identity is recommended for production; the service-account key file mode exists for dev/non-prod scenarios where Workload Identity is impractical.
+
+**Workload Identity (default):** the pod's Kubernetes service account is federated to a GCP service account that has `roles/cloudsql.client` on the Cloud SQL instance. The proxy authenticates via the IMDS metadata server — no credentials are ever mounted into the pod.
+
+**Service-account key file:** the proxy reads a JSON key file from a Kubernetes Secret you create ahead of time. Enable by setting `credentialsSecret.enabled: true` and pointing at the Secret that holds the key. The chart mounts the Secret at `/secrets/service_account.json` and passes `--credentials-file=...` to the proxy.
+
+#### Values schema
+
+```yaml
+databases:
+  operational:
+    provider: postgresql
+
+    cloudSqlProxy:
+      enabled: true
+      # Required: "<project>:<region>:<instance>"
+      connectionName: my-project:us-central1:rpi-primary
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.2
+      # Port the proxy exposes locally; chart sets ConnectionSettings__Port to this value.
+      # Leave unset to let the chart pick the engine default (5432 for PostgreSQL, 1433 for SQL Server).
+      port: 5432
+      # Use the instance's private IP (requires VPC peering between GKE and Cloud SQL)
+      privateIp: true
+      # Use IAM database authentication (pod SA identity is the DB user)
+      autoIamAuthn: false
+      terminationGracePeriod: "30s"
+      credentialsSecret:
+        enabled: false       # Workload Identity is the default — leave false for prod
+        secretName: ""       # Required if enabled=true
+        key: service_account.json
+      resources:
+        requests: { cpu: 50m, memory: 64Mi }
+        limits:   { cpu: 200m, memory: 256Mi }
+      additionalArgs: []     # e.g. ["--structured-logs"] for JSON logs
+```
+
+#### Customer-side GCP IAM setup (Workload Identity path)
+
+1. **Create a GCP service account** with Cloud SQL client permissions:
+   ```bash
+   gcloud iam service-accounts create rpi-cloudsql-client --project <your-project>
+   gcloud projects add-iam-policy-binding <your-project> \
+     --member "serviceAccount:rpi-cloudsql-client@<your-project>.iam.gserviceaccount.com" \
+     --role "roles/cloudsql.client"
+   ```
+
+2. **Bind each RPI Kubernetes service account** to that GCP SA via Workload Identity:
+   ```bash
+   for sa in rpi-deploymentapi rpi-interactionapi rpi-integrationapi rpi-executionservice \
+             rpi-nodemanager rpi-queuereader rpi-realtimeapi rpi-callbackapi; do
+     gcloud iam service-accounts add-iam-policy-binding \
+       rpi-cloudsql-client@<your-project>.iam.gserviceaccount.com \
+       --role "roles/iam.workloadIdentityUser" \
+       --member "serviceAccount:<your-project>.svc.id.goog[<your-namespace>/$sa]"
+   done
+   ```
+
+3. **Annotate each K8s SA** with `iam.gke.io/gcp-service-account: rpi-cloudsql-client@<your-project>.iam.gserviceaccount.com`. The chart already adds this annotation when `cloudIdentity.google.workloadIdentity.enabled=true` — set it in your overrides.
+
+#### Requirements
+
+- **GKE version:** K8s 1.29+ (native sidecar with `restartPolicy: Always`)
+- **Cloud SQL instance:** PostgreSQL with private IP enabled (or set `privateIp: false` to use public IP + IAM allow-list)
+- **Network:** VPC peering between the GKE cluster's VPC and the Cloud SQL VPC (when using private IP)
+
+#### What does NOT render when disabled
+
+Nothing. With `cloudSqlProxy.enabled: false` (or the platform/provider gates not matching), the helper emits empty strings, no initContainers block appears, no volume is added, and the existing connection-string env vars flow through unchanged. Verified via `helm template` diff — output for Azure, AWS, and selfhosted deployments is byte-for-byte unchanged from before this feature landed.
+
+</details>
+
 ---
 
 ## Common Reference

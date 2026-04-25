@@ -149,6 +149,56 @@
             "encrypt": {
               "type": "boolean",
               "description": "Enable TLS encryption for database connections"
+            },
+            "cloudSqlProxy": {
+              "type": "object",
+              "description": "Google Cloud SQL Auth Proxy sidecar (GKE only; activates when platform=google, provider=postgresql, and enabled=true)",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable the Cloud SQL Auth Proxy sidecar"
+                },
+                "connectionName": {
+                  "type": "string",
+                  "description": "Cloud SQL instance connection name in the form 'project:region:instance'"
+                },
+                "image": {
+                  "type": "string",
+                  "description": "Cloud SQL Auth Proxy container image (verbatim URI)"
+                },
+                "port": {
+                  "type": "integer",
+                  "description": "Local port the proxy listens on; used as ConnectionSettings__Port"
+                },
+                "privateIp": {
+                  "type": "boolean",
+                  "description": "Connect to the Cloud SQL private IP (requires VPC peering)"
+                },
+                "autoIamAuthn": {
+                  "type": "boolean",
+                  "description": "Use IAM database authentication instead of password auth"
+                },
+                "terminationGracePeriod": {
+                  "type": "string",
+                  "description": "Graceful shutdown window (e.g. '30s')"
+                },
+                "credentialsSecret": {
+                  "type": "object",
+                  "description": "Optional service-account key file auth (dev/non-prod only)",
+                  "additionalProperties": true,
+                  "properties": {
+                    "enabled": { "type": "boolean" },
+                    "secretName": { "type": "string" },
+                    "key": { "type": "string" }
+                  }
+                },
+                "resources": { "type": "object", "additionalProperties": true },
+                "additionalArgs": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
             }
           }
         },

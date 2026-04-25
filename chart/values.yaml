@@ -138,6 +138,49 @@ databases:
     pulse_logging_database_name: <my-logging-database-name>
     encrypt: true
 
+    # Google Cloud SQL Auth Proxy (GKE only; PostgreSQL or SQL Server).
+    # When enabled, injects a native K8s sidecar (initContainers[*].restartPolicy: Always)
+    # running the Cloud SQL Auth Proxy next to every pod that talks to the operational DB.
+    # The chart rewrites ConnectionSettings__Server to 127.0.0.1 so the app connects
+    # through the proxy instead of to the Cloud SQL instance directly.
+    #
+    # The proxy v2 binary speaks both PostgreSQL and SQL Server, so the chart picks the
+    # right connection-string format based on `databases.operational.provider`.
+    #
+    # Activation gate: global.deployment.platform=google AND enabled=true
+    #                  AND provider in {postgresql, sqlserver}.
+    # If any condition is false, NONE of the sidecar/override logic renders.
+    cloudSqlProxy:
+      enabled: false
+      # Required when enabled: "<project>:<region>:<instance>"
+      connectionName: ""
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.2
+      # Local port the proxy exposes; the chart emits ConnectionSettings__Port with this value.
+      # Defaults per engine: 5432 for postgresql, 1433 for sqlserver. Override here if needed.
+      # port: 5432
+      # Use the Cloud SQL instance's private IP (requires VPC peering between GKE and Cloud SQL).
+      privateIp: true
+      # Use IAM database authentication instead of password auth. Requires additional IAM setup.
+      autoIamAuthn: false
+      # Graceful shutdown window; proxy drains connections before exiting.
+      terminationGracePeriod: "30s"
+      # Authentication mode:
+      # - Default (credentialsSecret.enabled=false): Workload Identity — pod SA must be bound to
+      #   a GCP SA with roles/cloudsql.client.
+      # - credentialsSecret.enabled=true: proxy reads a service-account key file from the mounted
+      #   Kubernetes Secret (less secure; intended for dev/non-prod).
+      credentialsSecret:
+        enabled: false
+        # Name of the K8s Secret holding the SA key
+        secretName: ""
+        # Key inside the Secret whose value is the JSON key file
+        key: service_account.json
+      resources:
+        requests: { cpu: 50m, memory: 64Mi }
+        limits:   { cpu: 200m, memory: 256Mi }
+      # Extra CLI args appended to the proxy command (e.g., ["--structured-logs", "--debug"]).
+      additionalArgs: []
+
   # ==========================
   # Data Warehouse Providers
   # ==========================

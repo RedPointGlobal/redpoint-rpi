@@ -918,3 +918,149 @@ Usage: {{- include "rpi.cdp.keyVaultEnv" . | nindent 8 }}
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Cloud SQL Auth Proxy (GKE / PostgreSQL only).
+Sidecar + env-var override activate only when all of:
+  - global.deployment.platform equals "google"
+  - databases.operational.cloudSqlProxy.enabled equals true
+  - databases.operational.provider equals "postgresql"
+Every other configuration renders an empty string from each helper, so
+template output for existing deployments is unchanged.
+*/}}
+
+{{- define "rpi.cloudSqlProxy.enabled" -}}
+{{- $cfg := (.Values.databases.operational.cloudSqlProxy | default dict) -}}
+{{- $provider := .Values.databases.operational.provider | default "" -}}
+{{- if and (eq (.Values.global.deployment.platform | default "") "google") ($cfg.enabled | default false) (or (eq $provider "postgresql") (eq $provider "sqlserver")) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Env var overrides that point the app at the local Cloud SQL Auth Proxy.
+In .NET config, env vars override values from other config sources (incl.
+secret-manager-backed sources in SDK mode), so this flips the host/port
+without requiring the customer to mutate their Google Secret Manager
+entries. No-op unless the gate is true.
+Usage: {{- include "rpi.block.cloudSqlProxy.envVars" . | nindent 8 }}
+*/}}
+{{- define "rpi.block.cloudSqlProxy.envVars" -}}
+{{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" -}}
+{{- $cfg := .Values.databases.operational.cloudSqlProxy -}}
+{{- $provider := .Values.databases.operational.provider -}}
+{{- $port := $cfg.port | default (eq $provider "sqlserver" | ternary 1433 5432) -}}
+{{- $secret := include "rpi.secrets.secretName" . -}}
+# Cloud SQL Auth Proxy overrides — Server/Port style (deploymentapi reads these).
+- name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+  value: "127.0.0.1"
+- name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Port
+  value: {{ $port | quote }}
+# Helper env vars used to compose the full connection strings below via $(VAR) substitution.
+- name: _RPI_CSP_USER
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: Operations_Database_Server_Username
+- name: _RPI_CSP_PASS
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: Operations_Database_Server_Password
+- name: _RPI_CSP_OPS_DB
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: Operations_Database_Pulse_Database_Name
+- name: _RPI_CSP_LOG_DB
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: Operations_Database_Pulse_Logging_Database_Name
+# Full connection-string overrides (every service except deploymentapi reads these).
+# Format depends on the underlying database engine — Cloud SQL Auth Proxy v2 supports
+# both PostgreSQL and SQL Server with the same binary.
+{{- if eq $provider "postgresql" }}
+- name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+  value: "Host=127.0.0.1;Port={{ $port }};Database=$(_RPI_CSP_OPS_DB);Username=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);SSL Mode=Disable"
+- name: CONNECTIONSTRINGS__LOGGINGDATABASE
+  value: "Host=127.0.0.1;Port={{ $port }};Database=$(_RPI_CSP_LOG_DB);Username=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);SSL Mode=Disable"
+{{- else if eq $provider "sqlserver" }}
+- name: CONNECTIONSTRINGS__OPERATIONALDATABASE
+  value: "Server=tcp:127.0.0.1,{{ $port }};Initial Catalog=$(_RPI_CSP_OPS_DB);User ID=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);Encrypt=False;TrustServerCertificate=True;"
+- name: CONNECTIONSTRINGS__LOGGINGDATABASE
+  value: "Server=tcp:127.0.0.1,{{ $port }};Initial Catalog=$(_RPI_CSP_LOG_DB);User ID=$(_RPI_CSP_USER);Password=$(_RPI_CSP_PASS);Encrypt=False;TrustServerCertificate=True;"
+{{- end }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Native K8s sidecar container spec for Cloud SQL Auth Proxy. Emitted as an
+element of initContainers[] with restartPolicy: Always (K8s >= 1.29 native
+sidecar pattern — clean startup/shutdown ordering relative to the main app).
+Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
+*/}}
+{{- define "rpi.block.cloudSqlProxy.sidecar" -}}
+{{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" -}}
+{{- $cfg := .Values.databases.operational.cloudSqlProxy -}}
+{{- $provider := .Values.databases.operational.provider -}}
+{{- $port := $cfg.port | default (eq $provider "sqlserver" | ternary 1433 5432) -}}
+- name: cloud-sql-proxy
+  image: {{ $cfg.image | quote }}
+  imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+  args:
+  - "--port={{ $port }}"
+  {{- if $cfg.privateIp | default false }}
+  - "--private-ip"
+  {{- end }}
+  {{- if $cfg.autoIamAuthn | default false }}
+  - "--auto-iam-authn"
+  {{- end }}
+  {{- if and (hasKey $cfg "credentialsSecret") ($cfg.credentialsSecret.enabled | default false) }}
+  - "--credentials-file=/secrets/{{ $cfg.credentialsSecret.key | default "service_account.json" }}"
+  {{- end }}
+  - "--max-sigterm-delay={{ $cfg.terminationGracePeriod | default "30s" }}"
+  {{- range $cfg.additionalArgs | default (list) }}
+  - {{ . | quote }}
+  {{- end }}
+  - {{ required "databases.operational.cloudSqlProxy.connectionName is required when cloudSqlProxy.enabled=true" $cfg.connectionName | quote }}
+  ports:
+  - name: cloudsql
+    containerPort: {{ $port }}
+    protocol: TCP
+  resources:
+    {{- toYaml ($cfg.resources | default dict) | nindent 4 }}
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+  {{- if and (hasKey $cfg "credentialsSecret") ($cfg.credentialsSecret.enabled | default false) }}
+  volumeMounts:
+  - name: cloud-sql-sa-key
+    mountPath: /secrets
+    readOnly: true
+  {{- end }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Pod volume for the Cloud SQL Auth Proxy service-account key (only when
+credentialsSecret.enabled=true; Workload Identity mode emits nothing).
+Usage: {{- include "rpi.block.cloudSqlProxy.volume" . | nindent 6 }}
+*/}}
+{{- define "rpi.block.cloudSqlProxy.volume" -}}
+{{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" -}}
+{{- $cfg := .Values.databases.operational.cloudSqlProxy -}}
+{{- if and (hasKey $cfg "credentialsSecret") ($cfg.credentialsSecret.enabled | default false) }}
+- name: cloud-sql-sa-key
+  secret:
+    secretName: {{ required "databases.operational.cloudSqlProxy.credentialsSecret.secretName is required when credentialsSecret.enabled=true" $cfg.credentialsSecret.secretName | quote }}
+    items:
+    - key: {{ $cfg.credentialsSecret.key | default "service_account.json" | quote }}
+      path: {{ $cfg.credentialsSecret.key | default "service_account.json" | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}

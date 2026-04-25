@@ -138,6 +138,27 @@ databases:
     pulse_logging_database_name: <my-logging-database-name>
     encrypt: true
 
+    # Google Cloud SQL Auth Proxy (GKE only; PostgreSQL or SQL Server).
+    # Activates only when global.deployment.platform=google AND enabled=true
+    # AND provider in {postgresql, sqlserver}. See docs/secrets-management.md
+    # for full setup details.
+    cloudSqlProxy:
+      enabled: false
+      connectionName: ""                                       # "<project>:<region>:<instance>" (required when enabled)
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.2
+      # port: 5432                                             # auto: 5432 (postgresql) / 1433 (sqlserver)
+      privateIp: true
+      autoIamAuthn: false
+      terminationGracePeriod: "30s"
+      credentialsSecret:
+        enabled: false                                         # Workload Identity is the default
+        secretName: ""
+        key: service_account.json
+      resources:
+        requests: { cpu: 50m, memory: 64Mi }
+        limits:   { cpu: 200m, memory: 256Mi }
+      additionalArgs: []
+
   # ==========================
   # Data Warehouse Providers
   # ==========================

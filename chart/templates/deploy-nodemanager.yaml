@@ -163,6 +163,10 @@ spec:
             matchLabels:
               app.kubernetes.io/name: {{ $name }}
       {{- end }}
+      {{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" }}
+      initContainers:
+        {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 8 }}
+      {{- end }}
       containers:
       - env:
         {{- if .Values.global.deployment.podTimezone }}
@@ -266,7 +270,7 @@ spec:
           value: {{ $cfg.enableRPIAuthentication | quote }}
         - name: DisableHttpRedirect
           value: "true"
-        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
+        {{- if and (not (eq .Values.secretsManagement.provider "sdk")) (ne (include "rpi.cloudSqlProxy.enabled" .) "true") }}
         - name: CONNECTIONSTRINGS__LOGGINGDATABASE
           valueFrom:
             secretKeyRef:
@@ -277,7 +281,8 @@ spec:
             secretKeyRef:
               key: ConnectionString_Operations_Database
               name: {{ include "rpi.secrets.secretName" . | quote }}
-        {{- end }} 
+        {{- end }}
+        {{- include "rpi.block.cloudSqlProxy.envVars" . | nindent 8 }}
         {{- if eq .Values.databases.operational.provider "postgresql" }}
         - name: RPI_OperationalDatabaseType
           value: "PostgreSQL"
@@ -386,6 +391,7 @@ spec:
       volumes:
         - name: tempstore
           emptyDir: {}
+        {{- include "rpi.block.cloudSqlProxy.volume" . | nindent 8 }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}
