@@ -148,6 +148,18 @@ spec:
     {{- end }}
     {{- end }}
     {{- end }}
+    {{- if eq (include "rpi.logAnalyzer.enabled" .) "true" }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.loganalyzer "domain" $ingCfg.domain) }}
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: rpi-loganalyzer
+              port:
+                number: {{ (.Values.logAnalyzer.service | default dict).port | default 80 }}
+    {{- end }}
 
 ---
 {{- if .Values.smartActivation.enabled }}

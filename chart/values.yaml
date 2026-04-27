@@ -834,6 +834,7 @@ ingress:
     queuereader: rpi-queuereader
     rabbitmqconsole: rpi-rabbitmq-console
     smartactivation: rpi-smartActivation
+    loganalyzer: rpi-loganalyzer            # only used when logAnalyzer.enabled=true
 
 # ==========================
 # Network Policy
@@ -1081,6 +1082,109 @@ customAnnotations: {}
 # When enabled, each pod gets prometheus.io/scrape, /port, and /path annotations.
 customMetrics:
   enabled: false
+
+# ==========================
+# Log Analyzer (AI-driven Pulse_Logging summarizer; opt-in)
+# ==========================
+# Standalone in-cluster service that periodically reads the Pulse_Logging
+# database (READ-ONLY), clusters errors/traces, and asks an LLM to produce
+# human-readable summaries plus chart/values recommendations. Reports are
+# stored in a local SQLite file (PVC-backed) and served via a built-in UI
+# at https://<ingress.hosts.loganalyzer>.<ingress.domain>.
+#
+# All in-cluster: nothing leaves the customer's perimeter except outbound
+# calls to the configured LLM provider's endpoint. Pulse_Logging access is
+# via a dedicated read-only DB user the customer creates and stores in the
+# cloud vault as `LogAnalyzer-LoggingDatabaseConnectionString` (full
+# connection string, including the host -- 127.0.0.1 if cloudSqlProxy is on).
+logAnalyzer:
+  enabled: false
+  replicas: 1
+  serviceAccount:
+    enabled: true                    # creates rpi-loganalyzer SA in per-service mode
+
+  # ---- Model provider switch ---------------------------------------------
+  # The analyzer reads only the sub-block matching `provider`. Other blocks
+  # are ignored. Leave provider-specific defaults empty so customers must
+  # opt in deliberately.
+  model:
+    provider: anthropic              # anthropic | azureFoundry | bedrock | vertex
+    name: claude-sonnet-4-6          # logical model name (display only)
+
+    # Direct Anthropic API. Egress to api.anthropic.com:443 required.
+    # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
+    anthropic:
+      apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
+      baseUrl: ""                    # optional egress proxy
+
+    # Azure AI Foundry (Anthropic models on Azure). Auth via AAD/Workload
+    # Identity by default (reuses cloudIdentity.azure). Falls back to API
+    # key if `apiKeyVaultEntry` is set.
+    azureFoundry:
+      endpoint: ""                   # https://<resource>.openai.azure.com
+      apiVersion: "2024-10-21"
+      deploymentName: ""             # Azure deployment name for the Claude model
+      apiKeyVaultEntry: ""           # leave empty to use AAD via cloudIdentity
+
+    # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / EKS Pod Identity).
+    # Customer grants the analyzer's IAM role `bedrock:InvokeModel` on the
+    # target model. No separate API key needed.
+    bedrock:
+      region: ""                     # e.g., us-east-1
+      modelId: ""                    # e.g., anthropic.claude-sonnet-4-20250514-v1:0
+
+    # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload Identity or
+    # SA key file). Customer grants `aiplatform.endpoints.predict`. No
+    # separate API key needed.
+    vertex:
+      projectId: ""
+      region: ""                     # e.g., us-central1
+      modelId: ""                    # e.g., claude-sonnet-4@20250514
+
+  # ---- Token + request budget --------------------------------------------
+  # Hard caps enforced inside the analyzer (token-bucket). When exceeded,
+  # the next analysis cycle is skipped and the budget event is logged.
+  budget:
+    maxTokensPerHour: 200000
+    maxRequestsPerHour: 60
+
+  # ---- Analysis cadence --------------------------------------------------
+  schedule:
+    intervalMinutes: 30              # batch cycle period
+    lookbackMinutes: 60              # how far back to query each cycle
+    onDemandEnabled: true            # exposes POST /analyze endpoint
+
+  # ---- Pulse_Logging access ----------------------------------------------
+  # The analyzer reads Pulse_Logging via a separate DB user with READ-ONLY
+  # grants. Customer creates the user (see docs/secrets-management.md) and
+  # stores the full connection string in this vault entry. Loopback host
+  # (127.0.0.1) when cloudSqlProxy is on; the actual instance host otherwise.
+  loggingDatabase:
+    connectionStringVaultEntry: LogAnalyzer-LoggingDatabaseConnectionString
+
+  # ---- Local report store (SQLite) ---------------------------------------
+  # Reports persist across pod restarts only with the PVC enabled.
+  storage:
+    persistentVolumeClaim:
+      enabled: true
+      storageClass: ""               # default storage class
+      size: 10Gi
+      mountPath: /var/lib/rpi-loganalyzer
+      accessMode: ReadWriteOnce
+
+  # ---- HTTP service ------------------------------------------------------
+  service:
+    port: 80
+    containerPort: 8080
+
+  # ---- Resources ---------------------------------------------------------
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
 
 # ==========================
 # Post-Install Automation

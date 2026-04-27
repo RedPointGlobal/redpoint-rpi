@@ -2224,6 +2224,112 @@
         }
       }
     },
+    "logAnalyzer": {
+      "type": "object",
+      "description": "Standalone in-cluster service that periodically reads Pulse_Logging (read-only), clusters errors, and asks an LLM (Anthropic / Azure Foundry / Bedrock / Vertex) to produce summaries plus chart recommendations. Reports stored locally in SQLite. Opt-in.",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicas": { "type": "integer", "minimum": 1 },
+        "model": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": ["anthropic", "azureFoundry", "bedrock", "vertex"],
+              "description": "LLM provider. The chart emits provider-specific env vars matching the Anthropic SDK's auto-detection."
+            },
+            "name": { "type": "string", "description": "Logical model name (display only)." },
+            "anthropic": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "apiKeyVaultEntry": { "type": "string" },
+                "baseUrl": { "type": "string" }
+              }
+            },
+            "azureFoundry": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "endpoint": { "type": "string" },
+                "apiVersion": { "type": "string" },
+                "deploymentName": { "type": "string" },
+                "apiKeyVaultEntry": { "type": "string" }
+              }
+            },
+            "bedrock": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "region": { "type": "string" },
+                "modelId": { "type": "string" }
+              }
+            },
+            "vertex": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "projectId": { "type": "string" },
+                "region": { "type": "string" },
+                "modelId": { "type": "string" }
+              }
+            }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "maxTokensPerHour": { "type": "integer", "minimum": 0 },
+            "maxRequestsPerHour": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "schedule": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "intervalMinutes": { "type": "integer", "minimum": 1 },
+            "lookbackMinutes": { "type": "integer", "minimum": 1 },
+            "onDemandEnabled": { "type": "boolean" }
+          }
+        },
+        "loggingDatabase": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "connectionStringVaultEntry": { "type": "string" }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "persistentVolumeClaim": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "storageClass": { "type": "string" },
+                "size": { "type": "string" },
+                "mountPath": { "type": "string" },
+                "accessMode": { "type": "string" }
+              }
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "port": { "type": "integer" },
+            "containerPort": { "type": "integer" }
+          }
+        },
+        "resources": { "type": "object", "additionalProperties": true }
+      }
+    },
     "postInstall": {
       "type": "object",
       "description": "Post-install automation: license activation, cluster DB install, and optional tenant creation. Runs as a Helm post-install hook.",

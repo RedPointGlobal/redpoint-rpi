@@ -996,3 +996,116 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
   {{- end }}
 {{- end -}}
 {{- end -}}
+
+{{/* ============================================================
+     LOG ANALYZER HELPERS
+     ============================================================
+     Provider-specific env-var emission for the log analyzer's LLM
+     client. Each provider matches the Anthropic SDK auto-detection
+     so the analyzer code just instantiates Anthropic() / Bedrock /
+     Vertex / Azure-flavored client based on LOG_ANALYZER__MODEL__
+     PROVIDER.
+     ============================================================ */}}
+
+{{/*
+Returns "true" when the log analyzer is enabled. Used by templates and
+the ingress-routes file to gate analyzer-specific output.
+*/}}
+{{- define "rpi.logAnalyzer.enabled" -}}
+{{- if (.Values.logAnalyzer | default dict).enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Provider-selection env vars for the analyzer container. Emits only the
+block matching `model.provider`. AWS/GCP auth piggybacks on the existing
+cloudIdentity helpers (AWS_ROLE_ARN, GOOGLE_APPLICATION_CREDENTIALS) so
+no creds are duplicated here.
+Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
+*/}}
+{{- define "rpi.logAnalyzer.modelEnvvars" -}}
+{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- $model := $cfg.model | default dict -}}
+{{- $provider := $model.provider | default "anthropic" -}}
+{{- $secret := include "rpi.secrets.secretName" . -}}
+- name: LOG_ANALYZER__MODEL__PROVIDER
+  value: {{ $provider | quote }}
+- name: LOG_ANALYZER__MODEL__NAME
+  value: {{ $model.name | default "" | quote }}
+{{- if eq $provider "anthropic" }}
+{{- $a := $model.anthropic | default dict }}
+{{- if $a.apiKeyVaultEntry }}
+- name: ANTHROPIC_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: {{ $a.apiKeyVaultEntry | quote }}
+{{- end }}
+{{- if $a.baseUrl }}
+- name: ANTHROPIC_BASE_URL
+  value: {{ $a.baseUrl | quote }}
+{{- end }}
+{{- else if eq $provider "azureFoundry" }}
+{{- $az := $model.azureFoundry | default dict }}
+- name: AZURE_OPENAI_ENDPOINT
+  value: {{ required "logAnalyzer.model.azureFoundry.endpoint is required when provider=azureFoundry" $az.endpoint | quote }}
+- name: AZURE_OPENAI_API_VERSION
+  value: {{ $az.apiVersion | default "2024-10-21" | quote }}
+- name: AZURE_OPENAI_DEPLOYMENT_NAME
+  value: {{ required "logAnalyzer.model.azureFoundry.deploymentName is required when provider=azureFoundry" $az.deploymentName | quote }}
+{{- if $az.apiKeyVaultEntry }}
+- name: AZURE_OPENAI_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: {{ $az.apiKeyVaultEntry | quote }}
+{{- end }}
+{{- else if eq $provider "bedrock" }}
+{{- $b := $model.bedrock | default dict }}
+- name: AWS_REGION
+  value: {{ required "logAnalyzer.model.bedrock.region is required when provider=bedrock" $b.region | quote }}
+- name: LOG_ANALYZER__MODEL__BEDROCK_MODEL_ID
+  value: {{ required "logAnalyzer.model.bedrock.modelId is required when provider=bedrock" $b.modelId | quote }}
+{{- else if eq $provider "vertex" }}
+{{- $v := $model.vertex | default dict }}
+- name: VERTEX_PROJECT_ID
+  value: {{ required "logAnalyzer.model.vertex.projectId is required when provider=vertex" $v.projectId | quote }}
+- name: VERTEX_REGION
+  value: {{ required "logAnalyzer.model.vertex.region is required when provider=vertex" $v.region | quote }}
+- name: LOG_ANALYZER__MODEL__VERTEX_MODEL_ID
+  value: {{ required "logAnalyzer.model.vertex.modelId is required when provider=vertex" $v.modelId | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Budget + schedule + database + storage env vars. Always emitted when the
+analyzer is enabled. The DB connection string itself comes from a vault
+entry the customer creates with read-only grants.
+Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
+*/}}
+{{- define "rpi.logAnalyzer.runtimeEnvvars" -}}
+{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- $budget := $cfg.budget | default dict -}}
+{{- $schedule := $cfg.schedule | default dict -}}
+{{- $db := $cfg.loggingDatabase | default dict -}}
+{{- $storage := ($cfg.storage | default dict).persistentVolumeClaim | default dict -}}
+{{- $secret := include "rpi.secrets.secretName" . -}}
+- name: LOG_ANALYZER__BUDGET__MAX_TOKENS_PER_HOUR
+  value: {{ $budget.maxTokensPerHour | default 200000 | quote }}
+- name: LOG_ANALYZER__BUDGET__MAX_REQUESTS_PER_HOUR
+  value: {{ $budget.maxRequestsPerHour | default 60 | quote }}
+- name: LOG_ANALYZER__SCHEDULE__INTERVAL_MINUTES
+  value: {{ $schedule.intervalMinutes | default 30 | quote }}
+- name: LOG_ANALYZER__SCHEDULE__LOOKBACK_MINUTES
+  value: {{ $schedule.lookbackMinutes | default 60 | quote }}
+- name: LOG_ANALYZER__SCHEDULE__ON_DEMAND_ENABLED
+  value: {{ $schedule.onDemandEnabled | default true | quote }}
+- name: LOG_ANALYZER__SQLITE_PATH
+  value: {{ printf "%s/reports.db" ($storage.mountPath | default "/var/lib/rpi-loganalyzer") | quote }}
+- name: LOG_ANALYZER__LOGGING_DATABASE_CONNECTION_STRING
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: {{ $db.connectionStringVaultEntry | default "LogAnalyzer-LoggingDatabaseConnectionString" | quote }}
+{{- end -}}

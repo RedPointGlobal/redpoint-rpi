@@ -1,0 +1,137 @@
+
+{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- if $cfg.enabled -}}
+{{- $name := "rpi-loganalyzer" -}}
+{{- $service := $cfg.service | default dict -}}
+{{- $resources := $cfg.resources | default dict -}}
+{{- $pvc := ($cfg.storage | default dict).persistentVolumeClaim | default dict -}}
+{{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
+
+{{- if $pvc.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-data
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+spec:
+  accessModes:
+    - {{ $pvc.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ $pvc.size | default "10Gi" | quote }}
+  {{- with $pvc.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    port: {{ $service.port | default 80 }}
+    protocol: TCP
+    targetPort: {{ $service.containerPort | default 8080 }}
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+spec:
+  replicas: {{ $cfg.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  strategy:
+    type: Recreate                        {{/* SQLite + RWO PVC: avoid two pods opening the same file */}}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 8 }}
+      {{- $podAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "pod") | trim }}
+      {{- if $podAnnotations }}
+      annotations:
+        {{- $podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      {{- with $secCtx.pod }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ $name }}
+        image: {{ include "rpi.image" (dict "root" . "name" "rpi-loganalyzer") }}
+        imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+        ports:
+        - name: http
+          containerPort: {{ $service.containerPort | default 8080 }}
+          protocol: TCP
+        env:
+        {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
+        {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
+        {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
+        {{- with $resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with $secCtx.container }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: {{ $service.containerPort | default 8080 }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: {{ $service.containerPort | default 8080 }}
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        volumeMounts:
+        {{- if $pvc.enabled }}
+        - name: data
+          mountPath: {{ $pvc.mountPath | default "/var/lib/rpi-loganalyzer" }}
+        {{- end }}
+        {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
+        {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
+      volumes:
+      {{- if $pvc.enabled }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ $name }}-data
+      {{- end }}
+      {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
+      {{- include "rpi.customCACerts.volume" . | nindent 6 }}
+{{- end }}
