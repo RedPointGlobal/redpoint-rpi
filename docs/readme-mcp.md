@@ -108,13 +108,52 @@ For Claude Desktop, add the following to your `claude_desktop_config.json`:
 
 The assistant can plan and drive end-to-end RPI deployments. It provisions Azure infrastructure (AKS, SQL, Key Vault, Service Bus, Application Gateway for Containers), generates Helm overrides, and walks you through the deployment without handling your credentials.
 
-With Claude Code connected to the MCP server, use the `/deploy-rpi` command:
+### Setup
+
+You only need to do this once. Steps are the same as **Option B: Agentic (Claude Code)** above:
+
+1. **Install Claude Code:** `npm install -g @anthropic-ai/claude-code`, then launch with `claude` and sign in with your Anthropic account.
+2. **Register the assistant:**
+   ```bash
+   claude mcp add rpi-helm --transport http https://rpi-helm-assistant.redpointcdp.com/mcp --scope user
+   ```
+   Verify with `claude mcp list` — you should see `rpi-helm: ... (HTTP) - Connected`.
+
+### Run a deployment
+
+Tell the agent what you need with the `/deploy-rpi` command. The DSL form is the most reliable:
 
 ```
-/deploy-rpi Deploy RPI on Azure in East US 2, SQL Server, Realtime API with MongoDB cache and Service Bus, private ingress on mycompany.com
+/deploy-rpi cloud=azure tier=azure-standard domain=example.com dw=snowflake db=sqlserver infra=greenfield
 ```
 
-Refer to the **Agentic** tab in the Web UI for instructions on how to connect Claude Code to the MCP server.
+More examples:
+
+```
+/deploy-rpi cloud=azure tier=azure-minimal domain=example.com dw=snowflake db=sqlserver infra=greenfield
+/deploy-rpi cloud=azure tier=azure-standard domain=example.com dw=snowflake db=sqlserver infra=existing
+```
+
+Natural-language phrasing works too:
+
+```
+/deploy-rpi Deploy RPI on Azure in East US 2 using the azure-standard template, SQL Server, Snowflake data warehouse, greenfield infrastructure, ingress domain example.com.
+```
+
+### What the agent does
+
+| Phase | Name | What happens |
+|:------|:-----|:-------------|
+| 0 | **Discover** | Asks for the template choice (azure-standard or azure-minimal) and ingress domain if not in your prompt. |
+| 1 | **Plan infra** | Generates a UUID for the environment and produces the Bicep parameter file. |
+| 2 | **Run infrastructure** | Submits the Bicep deployment and reports live progress (10-15 min). |
+| 3 | **Pre-check** | Verifies cluster connectivity, image pull secret, and TLS cert in Key Vault. |
+| 4 | **Generate overrides** | Produces the final Helm overrides from your environment's Bicep outputs. |
+| 5 | **Deploy** | `helm install` with the generated overrides. |
+| 6 | **Validate** | Calls the deployment API's `installcluster`/`upgrade`/`addclient` flow to seed the database and the first tenant. |
+| 7 | **Handoff** | Outputs a structured handoff report containing the access URLs, credentials location, and follow-up steps. |
+
+All commands execute locally on your machine. The Helm Assistant provides the planning and validation logic via MCP but never touches your cluster or credentials.
 
 ### Security
 

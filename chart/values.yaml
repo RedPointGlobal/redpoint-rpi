@@ -1173,9 +1173,13 @@ logAnalyzer:
       accessMode: ReadWriteOnce
 
   # ---- HTTP service ------------------------------------------------------
+  # The container runs two processes (same pattern as the Helm Assistant):
+  #   - Streamlit UI on uiPort (8501) -- this is what the ingress routes to
+  #   - FastAPI API on apiPort (8080) -- internal-only, used by Streamlit and kubelet probes
   service:
     port: 80
-    containerPort: 8080
+    uiPort: 8501
+    apiPort: 8080
 
   # ---- Resources ---------------------------------------------------------
   resources:

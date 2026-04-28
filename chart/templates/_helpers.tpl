@@ -1029,6 +1029,8 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 {{- $model := $cfg.model | default dict -}}
 {{- $provider := $model.provider | default "anthropic" -}}
 {{- $secret := include "rpi.secrets.secretName" . -}}
+{{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
+{{- $isSdk := eq $secretsProvider "sdk" -}}
 - name: LOG_ANALYZER__MODEL__PROVIDER
   value: {{ $provider | quote }}
 - name: LOG_ANALYZER__MODEL__NAME
@@ -1036,11 +1038,15 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 {{- if eq $provider "anthropic" }}
 {{- $a := $model.anthropic | default dict }}
 {{- if $a.apiKeyVaultEntry }}
+- name: LOG_ANALYZER__SECRETS__NAME_ANTHROPIC_API_KEY
+  value: {{ $a.apiKeyVaultEntry | quote }}
+{{- if not $isSdk }}
 - name: ANTHROPIC_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ $secret | quote }}
       key: {{ $a.apiKeyVaultEntry | quote }}
+{{- end }}
 {{- end }}
 {{- if $a.baseUrl }}
 - name: ANTHROPIC_BASE_URL
@@ -1055,11 +1061,15 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 - name: AZURE_OPENAI_DEPLOYMENT_NAME
   value: {{ required "logAnalyzer.model.azureFoundry.deploymentName is required when provider=azureFoundry" $az.deploymentName | quote }}
 {{- if $az.apiKeyVaultEntry }}
+- name: LOG_ANALYZER__SECRETS__NAME_AZURE_FOUNDRY_API_KEY
+  value: {{ $az.apiKeyVaultEntry | quote }}
+{{- if not $isSdk }}
 - name: AZURE_OPENAI_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ $secret | quote }}
       key: {{ $az.apiKeyVaultEntry | quote }}
+{{- end }}
 {{- end }}
 {{- else if eq $provider "bedrock" }}
 {{- $b := $model.bedrock | default dict }}
@@ -1080,8 +1090,21 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 
 {{/*
 Budget + schedule + database + storage env vars. Always emitted when the
-analyzer is enabled. The DB connection string itself comes from a vault
-entry the customer creates with read-only grants.
+analyzer is enabled.
+
+The DB connection string is sourced two different ways depending on the
+chart's `secretsManagement.provider`:
+
+  - kubernetes / csi: emitted as an env var via secretKeyRef. The chart
+    creates (kubernetes mode) or syncs (csi mode) a K8s Secret containing
+    the value, and the analyzer reads it directly from the env.
+
+  - sdk: NOT emitted as an env var. Instead the chart tells the analyzer
+    which cloud vault to read at runtime via LOG_ANALYZER__SECRETS__*
+    variables. The analyzer's app.secrets.SecretResolver fetches the value
+    on demand using DefaultAzureCredential / IRSA / Workload Identity --
+    same creds the rest of RPI uses for vault access.
+
 Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 */}}
 {{- define "rpi.logAnalyzer.runtimeEnvvars" -}}
@@ -1090,7 +1113,11 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- $schedule := $cfg.schedule | default dict -}}
 {{- $db := $cfg.loggingDatabase | default dict -}}
 {{- $storage := ($cfg.storage | default dict).persistentVolumeClaim | default dict -}}
-{{- $secret := include "rpi.secrets.secretName" . -}}
+{{- $secretName := include "rpi.secrets.secretName" . -}}
+{{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
+{{- $platform := .Values.global.deployment.platform | default "" -}}
+{{- $provider := .Values.databases.operational.provider | default "sqlserver" -}}
+{{- $dbConnEntry := $db.connectionStringVaultEntry | default "LogAnalyzer-LoggingDatabaseConnectionString" -}}
 - name: LOG_ANALYZER__BUDGET__MAX_TOKENS_PER_HOUR
   value: {{ $budget.maxTokensPerHour | default 200000 | quote }}
 - name: LOG_ANALYZER__BUDGET__MAX_REQUESTS_PER_HOUR
@@ -1103,9 +1130,40 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: {{ $schedule.onDemandEnabled | default true | quote }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: {{ printf "%s/reports.db" ($storage.mountPath | default "/var/lib/rpi-loganalyzer") | quote }}
+- name: LOG_ANALYZER__DB_ENGINE
+  value: {{ $provider | quote }}
+# Secret-resolver wiring. Tells the analyzer where to find sensitive values
+# (the Pulse_Logging connection string, optionally LLM API keys).
+- name: LOG_ANALYZER__SECRETS__NAME_LOGGING_DB_CONNECTION_STRING
+  value: {{ $dbConnEntry | quote }}
+{{- if eq $secretsProvider "sdk" }}
+{{- if eq $platform "azure" }}
+- name: LOG_ANALYZER__SECRETS__PROVIDER
+  value: "azure-keyvault"
+- name: LOG_ANALYZER__SECRETS__AZURE_KEYVAULT_URI
+  value: {{ required "secretsManagement.sdk.azure.vaultUri is required when logAnalyzer is enabled with provider=sdk on Azure" .Values.secretsManagement.sdk.azure.vaultUri | quote }}
+{{- else if eq $platform "amazon" }}
+- name: LOG_ANALYZER__SECRETS__PROVIDER
+  value: "aws-secretsmanager"
+- name: LOG_ANALYZER__SECRETS__AWS_REGION
+  value: {{ required "cloudIdentity.amazon.region is required when logAnalyzer is enabled with provider=sdk on AWS" .Values.cloudIdentity.amazon.region | quote }}
+{{- else if eq $platform "google" }}
+- name: LOG_ANALYZER__SECRETS__PROVIDER
+  value: "gcp-secretmanager"
+- name: LOG_ANALYZER__SECRETS__GCP_PROJECT_ID
+  value: {{ required "secretsManagement.sdk.google.projectId is required when logAnalyzer is enabled with provider=sdk on GCP" ((.Values.secretsManagement.sdk.google).projectId | default .Values.cloudIdentity.google.projectId) | quote }}
+{{- else }}
+{{- fail "logAnalyzer with secretsManagement.provider=sdk requires global.deployment.platform in {azure, amazon, google}" }}
+{{- end }}
+{{- else }}
+# kubernetes / csi: bind the connection string env var via secretKeyRef so
+# the analyzer reads it from the env (its default secret-resolver behavior).
+- name: LOG_ANALYZER__SECRETS__PROVIDER
+  value: "env"
 - name: LOG_ANALYZER__LOGGING_DATABASE_CONNECTION_STRING
   valueFrom:
     secretKeyRef:
-      name: {{ $secret | quote }}
-      key: {{ $db.connectionStringVaultEntry | default "LogAnalyzer-LoggingDatabaseConnectionString" | quote }}
+      name: {{ $secretName | quote }}
+      key: {{ $dbConnEntry | quote }}
+{{- end }}
 {{- end -}}

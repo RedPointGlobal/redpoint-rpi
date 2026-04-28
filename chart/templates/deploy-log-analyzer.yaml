@@ -47,7 +47,7 @@ spec:
   - name: http
     port: {{ $service.port | default 80 }}
     protocol: TCP
-    targetPort: {{ $service.containerPort | default 8080 }}
+    targetPort: ui
   selector:
     app.kubernetes.io/name: {{ $name }}
 
@@ -90,8 +90,11 @@ spec:
         image: {{ include "rpi.image" (dict "root" . "name" "rpi-loganalyzer") }}
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         ports:
-        - name: http
-          containerPort: {{ $service.containerPort | default 8080 }}
+        - name: ui
+          containerPort: {{ $service.uiPort | default 8501 }}
+          protocol: TCP
+        - name: api
+          containerPort: {{ $service.apiPort | default 8080 }}
           protocol: TCP
         env:
         {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
@@ -107,16 +110,17 @@ spec:
         securityContext:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        # Probes hit the FastAPI side. Streamlit is consumer-facing only.
         readinessProbe:
           httpGet:
             path: /health/ready
-            port: {{ $service.containerPort | default 8080 }}
+            port: api
           initialDelaySeconds: 10
           periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health/live
-            port: {{ $service.containerPort | default 8080 }}
+            port: api
           initialDelaySeconds: 30
           periodSeconds: 30
         volumeMounts:

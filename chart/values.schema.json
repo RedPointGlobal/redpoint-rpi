@@ -2324,7 +2324,8 @@
           "additionalProperties": true,
           "properties": {
             "port": { "type": "integer" },
-            "containerPort": { "type": "integer" }
+            "uiPort": { "type": "integer" },
+            "apiPort": { "type": "integer" }
           }
         },
         "resources": { "type": "object", "additionalProperties": true }
