@@ -1117,7 +1117,7 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__SCHEDULE__ON_DEMAND_ENABLED
   value: {{ $schedule.onDemandEnabled | default true | quote }}
 - name: LOG_ANALYZER__SQLITE_PATH
-  value: {{ printf "%s/loganalyzer/reports.db" .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
+  value: "/var/lib/rpi-loganalyzer/reports.db"
 - name: LOG_ANALYZER__DB_ENGINE
   value: {{ $provider | quote }}
 {{- if ne $secretsProvider "sdk" }}

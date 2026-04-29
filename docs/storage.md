@@ -113,7 +113,7 @@ No `persistentVolumes` section needed. The CSI driver creates the PV and access 
 <details>
 <summary><strong style="font-size:1.25em;">FileOutputDirectory</strong></summary>
 
-A shared volume mounted by execution service, node manager, and queue reader pods for file-based processing output (CSV exports, reports, data imports). The optional Log Analyzer service also writes its SQLite report store under this volume at `<mountPath>/loganalyzer/reports.db`, so enabling FileOutputDirectory is a prerequisite for `logAnalyzer.enabled: true`.
+A shared volume mounted by execution service, node manager, and queue reader pods for file-based processing output (CSV exports, reports, data imports).
 
 | Platform | Recommended driver |
 |:---------|:------------------|
