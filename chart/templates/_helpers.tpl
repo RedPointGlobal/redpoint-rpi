@@ -1033,10 +1033,10 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 {{- $isSdk := eq $secretsProvider "sdk" -}}
 - name: LOG_ANALYZER__MODEL__PROVIDER
   value: {{ $provider | quote }}
-- name: LOG_ANALYZER__MODEL__NAME
-  value: {{ $model.name | default "" | quote }}
 {{- if eq $provider "anthropic" }}
 {{- $a := $model.anthropic | default dict }}
+- name: ANTHROPIC_MODEL
+  value: {{ required "logAnalyzer.model.anthropic.modelName is required when provider=anthropic" $a.modelName | quote }}
 {{- if and $a.apiKeyVaultEntry (not $isSdk) }}
 - name: ANTHROPIC_API_KEY
   valueFrom:
@@ -1121,8 +1121,27 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: {{ $schedule.onDemandEnabled | default true | quote }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: "/var/lib/rpi-loganalyzer/reports.db"
-- name: LOG_ANALYZER__DB_ENGINE
-  value: {{ $provider | quote }}
+# Same DatabaseType env var the .NET services (deploymentapi etc.) read --
+# platform-aware value, set even in SDK mode since it's not a secret.
+{{- $platform := .Values.global.deployment.platform -}}
+{{- if eq $provider "postgresql" }}
+- name: ClusterEnvironment__OperationalDatabase__DatabaseType
+  value: "PostgreSQL"
+{{- else if eq $provider "sqlserver" }}
+{{- if eq $platform "amazon" }}
+- name: ClusterEnvironment__OperationalDatabase__DatabaseType
+  value: "AmazonRDSSQL"
+{{- else if eq $platform "azure" }}
+- name: ClusterEnvironment__OperationalDatabase__DatabaseType
+  value: "AzureSQLDatabase"
+{{- else if eq $platform "google" }}
+- name: ClusterEnvironment__OperationalDatabase__DatabaseType
+  value: "GoogleCloudSQL"
+{{- end }}
+{{- else if eq $provider "sqlserveronvm" }}
+- name: ClusterEnvironment__OperationalDatabase__DatabaseType
+  value: "SQLServerOnVM"
+{{- end }}
 {{- if ne $secretsProvider "sdk" }}
 # kubernetes / csi: bind the same 4 connection components the deploymentapi
 # already reads (host / username / password / logging-db-name). The analyzer

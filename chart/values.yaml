@@ -1109,11 +1109,11 @@ logAnalyzer:
   # opt in deliberately.
   model:
     provider: anthropic              # anthropic | azureFoundry | bedrock | vertex
-    name: claude-sonnet-4-6          # logical model name (display only)
 
     # Direct Anthropic API. Egress to api.anthropic.com:443 required.
     # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
     anthropic:
+      modelName: claude-sonnet-4-6   # API model identifier passed to the SDK
       apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
       baseUrl: ""                    # optional egress proxy
 
