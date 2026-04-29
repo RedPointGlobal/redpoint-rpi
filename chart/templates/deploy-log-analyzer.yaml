@@ -49,6 +49,7 @@ spec:
     metadata:
       labels:
         {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 8 }}
+        {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim) }}{{- . | nindent 8 }}{{- end }}
       {{- $podAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "pod") | trim }}
       {{- if $podAnnotations }}
       annotations:
