@@ -2180,16 +2180,10 @@ logAnalyzer:
     lookbackMinutes: 60              # how far back to query each cycle
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
-  # ---- Pulse_Logging access ----------------------------------------------
-  # Reuses the chart's existing connection-string convention (same one
-  # callbackapi, executionservice, etc. use):
-  #
-  #   kubernetes/csi mode  -- env var CONNECTIONSTRINGS__LOGGINGDATABASE bound
-  #                           via secretKeyRef from the K8s Secret created by
-  #                           the chart, key = ConnectionString_Logging_Database.
-  #   sdk mode             -- analyzer fetches the .NET-style vault entry
-  #                           ConnectionStrings--LoggingDatabase from your
-  #                           cloud vault at runtime.
+  # Pulse_Logging access: the analyzer reads the same 4 connection
+  # components the deploymentapi reads (host / username / password /
+  # logging-db-name). No extra knobs here -- the chart's existing secrets
+  # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
   # Reports persist across pod restarts only with the PVC enabled.

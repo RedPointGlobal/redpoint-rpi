@@ -1037,16 +1037,12 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
   value: {{ $model.name | default "" | quote }}
 {{- if eq $provider "anthropic" }}
 {{- $a := $model.anthropic | default dict }}
-{{- if $a.apiKeyVaultEntry }}
-- name: LOG_ANALYZER__SECRETS__NAME_ANTHROPIC_API_KEY
-  value: {{ $a.apiKeyVaultEntry | quote }}
-{{- if not $isSdk }}
+{{- if and $a.apiKeyVaultEntry (not $isSdk) }}
 - name: ANTHROPIC_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ $secret | quote }}
       key: {{ $a.apiKeyVaultEntry | quote }}
-{{- end }}
 {{- end }}
 {{- if $a.baseUrl }}
 - name: ANTHROPIC_BASE_URL
@@ -1060,16 +1056,12 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
   value: {{ $az.apiVersion | default "2024-10-21" | quote }}
 - name: AZURE_OPENAI_DEPLOYMENT_NAME
   value: {{ required "logAnalyzer.model.azureFoundry.deploymentName is required when provider=azureFoundry" $az.deploymentName | quote }}
-{{- if $az.apiKeyVaultEntry }}
-- name: LOG_ANALYZER__SECRETS__NAME_AZURE_FOUNDRY_API_KEY
-  value: {{ $az.apiKeyVaultEntry | quote }}
-{{- if not $isSdk }}
+{{- if and $az.apiKeyVaultEntry (not $isSdk) }}
 - name: AZURE_OPENAI_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ $secret | quote }}
       key: {{ $az.apiKeyVaultEntry | quote }}
-{{- end }}
 {{- end }}
 {{- else if eq $provider "bedrock" }}
 {{- $b := $model.bedrock | default dict }}
@@ -1114,7 +1106,6 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- $storage := ($cfg.storage | default dict).persistentVolumeClaim | default dict -}}
 {{- $secretName := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
-{{- $platform := .Values.global.deployment.platform | default "" -}}
 {{- $provider := .Values.databases.operational.provider | default "sqlserver" -}}
 - name: LOG_ANALYZER__BUDGET__MAX_TOKENS_PER_HOUR
   value: {{ $budget.maxTokensPerHour | default 200000 | quote }}
@@ -1130,38 +1121,31 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: {{ printf "%s/reports.db" ($storage.mountPath | default "/var/lib/rpi-loganalyzer") | quote }}
 - name: LOG_ANALYZER__DB_ENGINE
   value: {{ $provider | quote }}
-# Connection-string lookup name (matches the .NET SDK provider's vault
-# naming so customers don't need to maintain a parallel entry).
-- name: LOG_ANALYZER__SECRETS__NAME_LOGGING_DB_CONNECTION_STRING
-  value: "ConnectionStrings--LoggingDatabase"
-{{- if eq $secretsProvider "sdk" }}
-{{- if eq $platform "azure" }}
-- name: LOG_ANALYZER__SECRETS__PROVIDER
-  value: "azure-keyvault"
-- name: LOG_ANALYZER__SECRETS__AZURE_KEYVAULT_URI
-  value: {{ required "secretsManagement.sdk.azure.vaultUri is required when logAnalyzer is enabled with provider=sdk on Azure" .Values.secretsManagement.sdk.azure.vaultUri | quote }}
-{{- else if eq $platform "amazon" }}
-- name: LOG_ANALYZER__SECRETS__PROVIDER
-  value: "aws-secretsmanager"
-- name: LOG_ANALYZER__SECRETS__AWS_REGION
-  value: {{ required "cloudIdentity.amazon.region is required when logAnalyzer is enabled with provider=sdk on AWS" .Values.cloudIdentity.amazon.region | quote }}
-{{- else if eq $platform "google" }}
-- name: LOG_ANALYZER__SECRETS__PROVIDER
-  value: "gcp-secretmanager"
-- name: LOG_ANALYZER__SECRETS__GCP_PROJECT_ID
-  value: {{ required "secretsManagement.sdk.google.projectId is required when logAnalyzer is enabled with provider=sdk on GCP" ((.Values.secretsManagement.sdk.google).projectId | default .Values.cloudIdentity.google.projectId) | quote }}
-{{- else }}
-{{- fail "logAnalyzer with secretsManagement.provider=sdk requires global.deployment.platform in {azure, amazon, google}" }}
-{{- end }}
-{{- else }}
-# kubernetes / csi: bind the existing chart-shared connection string env
-# var. Same name + secret key + secret name as the rest of RPI.
-- name: LOG_ANALYZER__SECRETS__PROVIDER
-  value: "env"
-- name: CONNECTIONSTRINGS__LOGGINGDATABASE
+{{- if ne $secretsProvider "sdk" }}
+# kubernetes / csi: bind the same 4 connection components the deploymentapi
+# already reads (host / username / password / logging-db-name). The analyzer
+# composes a connection string from these in Python. SDK mode is handled by
+# rpi.secrets.sdk.envvars (KeyVault__Provider etc.) and the analyzer fetches
+# the .NET-style entries from the cloud vault directly.
+- name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
   valueFrom:
     secretKeyRef:
       name: {{ $secretName | quote }}
-      key: ConnectionString_Logging_Database
+      key: Operations_Database_ServerHost
+- name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Username
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: Operations_Database_Server_Username
+- name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Password
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: Operations_Database_Server_Password
+- name: ClusterEnvironment__OperationalDatabase__LoggingDatabaseName
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: Operations_Database_Pulse_Logging_Database_Name
 {{- end }}
 {{- end -}}

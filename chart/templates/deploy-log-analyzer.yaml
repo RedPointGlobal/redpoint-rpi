@@ -99,6 +99,11 @@ spec:
         env:
         {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
         {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
+        # Same SDK + cloudIdentity envvar wiring the deploymentapi (and the
+        # rest of the RPI services) use. The analyzer reads KeyVault__Provider
+        # to know which cloud vault to talk to in SDK mode -- same shape as
+        # the .NET services, no analyzer-specific knobs.
+        {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- include "rpi.customCACerts.envVar" . | nindent 8 }}
