@@ -1103,7 +1103,6 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- $cfg := .Values.logAnalyzer | default dict -}}
 {{- $budget := $cfg.budget | default dict -}}
 {{- $schedule := $cfg.schedule | default dict -}}
-{{- $storage := ($cfg.storage | default dict).persistentVolumeClaim | default dict -}}
 {{- $secretName := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $provider := .Values.databases.operational.provider | default "sqlserver" -}}
@@ -1118,7 +1117,7 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__SCHEDULE__ON_DEMAND_ENABLED
   value: {{ $schedule.onDemandEnabled | default true | quote }}
 - name: LOG_ANALYZER__SQLITE_PATH
-  value: {{ printf "%s/reports.db" ($storage.mountPath | default "/var/lib/rpi-loganalyzer") | quote }}
+  value: {{ printf "%s/loganalyzer/reports.db" .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
 - name: LOG_ANALYZER__DB_ENGINE
   value: {{ $provider | quote }}
 {{- if ne $secretsProvider "sdk" }}

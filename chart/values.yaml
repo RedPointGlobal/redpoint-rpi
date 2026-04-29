@@ -1160,14 +1160,14 @@ logAnalyzer:
   # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
-  # Reports persist across pod restarts only with the PVC enabled.
-  storage:
-    persistentVolumeClaim:
-      enabled: true
-      storageClass: ""               # default storage class
-      size: 10Gi
-      mountPath: /var/lib/rpi-loganalyzer
-      accessMode: ReadWriteOnce
+  # The analyzer writes its SQLite store under the chart-wide
+  # FileOutputDirectory PVC at <mountPath>/loganalyzer/reports.db. This is
+  # the same shared RWX volume the rest of RPI uses (Azure Files / EFS /
+  # Filestore), so no analyzer-specific PVC is needed.
+  #
+  # REQUIRED: enable storage.persistentVolumeClaims.FileOutputDirectory before
+  # turning on logAnalyzer. Without it, the pod has nowhere to write reports
+  # and will crash on startup.
 
   # ---- HTTP service ------------------------------------------------------
   # The container runs two processes (same pattern as the Helm Assistant):
