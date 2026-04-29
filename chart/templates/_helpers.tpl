@@ -1053,14 +1053,14 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 {{- fail "logAnalyzer with provider=azureFoundry requires redpointAI.enabled=true. The analyzer reads the same Azure OpenAI config (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses." }}
 {{- end }}
 {{- $nlp := .Values.redpointAI.naturalLanguage }}
-- name: AZURE_OPENAI_ENDPOINT
+- name: RPI_NLP_APIBASE
   value: {{ required "redpointAI.naturalLanguage.ApiBase is required" $nlp.ApiBase | quote }}
-- name: AZURE_OPENAI_API_VERSION
+- name: RPI_NLP_APIVERSION
   value: {{ $nlp.ApiVersion | default "2024-10-21" | quote }}
-- name: AZURE_OPENAI_DEPLOYMENT_NAME
+- name: RPI_NLP_CHATGPTENGINE
   value: {{ required "redpointAI.naturalLanguage.ChatGptEngine is required" $nlp.ChatGptEngine | quote }}
 {{- if not $isSdk }}
-- name: AZURE_OPENAI_API_KEY
+- name: RPI_NLP_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ $secret | quote }}
