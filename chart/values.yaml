@@ -1155,12 +1155,15 @@ logAnalyzer:
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
   # ---- Pulse_Logging access ----------------------------------------------
-  # The analyzer reads Pulse_Logging via a separate DB user with READ-ONLY
-  # grants. Customer creates the user (see docs/secrets-management.md) and
-  # stores the full connection string in this vault entry. Loopback host
-  # (127.0.0.1) when cloudSqlProxy is on; the actual instance host otherwise.
-  loggingDatabase:
-    connectionStringVaultEntry: LogAnalyzer-LoggingDatabaseConnectionString
+  # Reuses the chart's existing connection-string convention (same one
+  # callbackapi, executionservice, etc. use):
+  #
+  #   kubernetes/csi mode  -- env var CONNECTIONSTRINGS__LOGGINGDATABASE bound
+  #                           via secretKeyRef from the K8s Secret created by
+  #                           the chart, key = ConnectionString_Logging_Database.
+  #   sdk mode             -- analyzer fetches the .NET-style vault entry
+  #                           ConnectionStrings--LoggingDatabase from your
+  #                           cloud vault at runtime.
 
   # ---- Local report store (SQLite) ---------------------------------------
   # Reports persist across pod restarts only with the PVC enabled.

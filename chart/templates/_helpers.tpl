@@ -1092,18 +1092,18 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 Budget + schedule + database + storage env vars. Always emitted when the
 analyzer is enabled.
 
-The DB connection string is sourced two different ways depending on the
-chart's `secretsManagement.provider`:
+The analyzer rides the chart's existing connection-string convention --
+same env var name, same secret key, same secret name -- as the rest of
+the RPI services (callbackapi, executionservice, etc.):
 
-  - kubernetes / csi: emitted as an env var via secretKeyRef. The chart
-    creates (kubernetes mode) or syncs (csi mode) a K8s Secret containing
-    the value, and the analyzer reads it directly from the env.
+  env var:  CONNECTIONSTRINGS__LOGGINGDATABASE
+  secret key: ConnectionString_Logging_Database
+  secret name: rpi.secrets.secretName
 
-  - sdk: NOT emitted as an env var. Instead the chart tells the analyzer
-    which cloud vault to read at runtime via LOG_ANALYZER__SECRETS__*
-    variables. The analyzer's app.secrets.SecretResolver fetches the value
-    on demand using DefaultAzureCredential / IRSA / Workload Identity --
-    same creds the rest of RPI uses for vault access.
+In kubernetes / csi mode the chart binds that env var via secretKeyRef.
+In sdk mode the analyzer fetches the same logical value from the cloud
+vault under the .NET-style entry name `ConnectionStrings--LoggingDatabase`
+(matches what the rest of RPI's SDK provider expects).
 
 Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 */}}
@@ -1111,13 +1111,11 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- $cfg := .Values.logAnalyzer | default dict -}}
 {{- $budget := $cfg.budget | default dict -}}
 {{- $schedule := $cfg.schedule | default dict -}}
-{{- $db := $cfg.loggingDatabase | default dict -}}
 {{- $storage := ($cfg.storage | default dict).persistentVolumeClaim | default dict -}}
 {{- $secretName := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $platform := .Values.global.deployment.platform | default "" -}}
 {{- $provider := .Values.databases.operational.provider | default "sqlserver" -}}
-{{- $dbConnEntry := $db.connectionStringVaultEntry | default "LogAnalyzer-LoggingDatabaseConnectionString" -}}
 - name: LOG_ANALYZER__BUDGET__MAX_TOKENS_PER_HOUR
   value: {{ $budget.maxTokensPerHour | default 200000 | quote }}
 - name: LOG_ANALYZER__BUDGET__MAX_REQUESTS_PER_HOUR
@@ -1132,10 +1130,10 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: {{ printf "%s/reports.db" ($storage.mountPath | default "/var/lib/rpi-loganalyzer") | quote }}
 - name: LOG_ANALYZER__DB_ENGINE
   value: {{ $provider | quote }}
-# Secret-resolver wiring. Tells the analyzer where to find sensitive values
-# (the Pulse_Logging connection string, optionally LLM API keys).
+# Connection-string lookup name (matches the .NET SDK provider's vault
+# naming so customers don't need to maintain a parallel entry).
 - name: LOG_ANALYZER__SECRETS__NAME_LOGGING_DB_CONNECTION_STRING
-  value: {{ $dbConnEntry | quote }}
+  value: "ConnectionStrings--LoggingDatabase"
 {{- if eq $secretsProvider "sdk" }}
 {{- if eq $platform "azure" }}
 - name: LOG_ANALYZER__SECRETS__PROVIDER
@@ -1156,14 +1154,14 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- fail "logAnalyzer with secretsManagement.provider=sdk requires global.deployment.platform in {azure, amazon, google}" }}
 {{- end }}
 {{- else }}
-# kubernetes / csi: bind the connection string env var via secretKeyRef so
-# the analyzer reads it from the env (its default secret-resolver behavior).
+# kubernetes / csi: bind the existing chart-shared connection string env
+# var. Same name + secret key + secret name as the rest of RPI.
 - name: LOG_ANALYZER__SECRETS__PROVIDER
   value: "env"
-- name: LOG_ANALYZER__LOGGING_DATABASE_CONNECTION_STRING
+- name: CONNECTIONSTRINGS__LOGGINGDATABASE
   valueFrom:
     secretKeyRef:
       name: {{ $secretName | quote }}
-      key: {{ $dbConnEntry | quote }}
+      key: ConnectionString_Logging_Database
 {{- end }}
 {{- end -}}

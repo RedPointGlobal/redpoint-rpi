@@ -2181,12 +2181,15 @@ logAnalyzer:
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
   # ---- Pulse_Logging access ----------------------------------------------
-  # The analyzer reads Pulse_Logging via a separate DB user with READ-ONLY
-  # grants. Customer creates the user (see docs/secrets-management.md) and
-  # stores the full connection string in this vault entry. Loopback host
-  # (127.0.0.1) when cloudSqlProxy is on; the actual instance host otherwise.
-  loggingDatabase:
-    connectionStringVaultEntry: LogAnalyzer-LoggingDatabaseConnectionString
+  # Reuses the chart's existing connection-string convention (same one
+  # callbackapi, executionservice, etc. use):
+  #
+  #   kubernetes/csi mode  -- env var CONNECTIONSTRINGS__LOGGINGDATABASE bound
+  #                           via secretKeyRef from the K8s Secret created by
+  #                           the chart, key = ConnectionString_Logging_Database.
+  #   sdk mode             -- analyzer fetches the .NET-style vault entry
+  #                           ConnectionStrings--LoggingDatabase from your
+  #                           cloud vault at runtime.
 
   # ---- Local report store (SQLite) ---------------------------------------
   # Reports persist across pod restarts only with the PVC enabled.
@@ -2199,9 +2202,13 @@ logAnalyzer:
       accessMode: ReadWriteOnce
 
   # ---- HTTP service ------------------------------------------------------
+  # The container runs two processes (same pattern as the Helm Assistant):
+  #   - Streamlit UI on uiPort (8501) -- this is what the ingress routes to
+  #   - FastAPI API on apiPort (8080) -- internal-only, used by Streamlit and kubelet probes
   service:
     port: 80
-    containerPort: 8080
+    uiPort: 8501
+    apiPort: 8080
 
   # ---- Resources ---------------------------------------------------------
   resources:

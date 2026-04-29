@@ -2295,13 +2295,6 @@
             "onDemandEnabled": { "type": "boolean" }
           }
         },
-        "loggingDatabase": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "connectionStringVaultEntry": { "type": "string" }
-          }
-        },
         "storage": {
           "type": "object",
           "additionalProperties": true,
