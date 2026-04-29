@@ -1049,19 +1049,22 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
   value: {{ $a.baseUrl | quote }}
 {{- end }}
 {{- else if eq $provider "azureFoundry" }}
-{{- $az := $model.azureFoundry | default dict }}
+{{- if not .Values.redpointAI.enabled }}
+{{- fail "logAnalyzer with provider=azureFoundry requires redpointAI.enabled=true. The analyzer reads the same Azure OpenAI config (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses." }}
+{{- end }}
+{{- $nlp := .Values.redpointAI.naturalLanguage }}
 - name: AZURE_OPENAI_ENDPOINT
-  value: {{ required "logAnalyzer.model.azureFoundry.endpoint is required when provider=azureFoundry" $az.endpoint | quote }}
+  value: {{ required "redpointAI.naturalLanguage.ApiBase is required" $nlp.ApiBase | quote }}
 - name: AZURE_OPENAI_API_VERSION
-  value: {{ $az.apiVersion | default "2024-10-21" | quote }}
+  value: {{ $nlp.ApiVersion | default "2024-10-21" | quote }}
 - name: AZURE_OPENAI_DEPLOYMENT_NAME
-  value: {{ required "logAnalyzer.model.azureFoundry.deploymentName is required when provider=azureFoundry" $az.deploymentName | quote }}
-{{- if and $az.apiKeyVaultEntry (not $isSdk) }}
+  value: {{ required "redpointAI.naturalLanguage.ChatGptEngine is required" $nlp.ChatGptEngine | quote }}
+{{- if not $isSdk }}
 - name: AZURE_OPENAI_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ $secret | quote }}
-      key: {{ $az.apiKeyVaultEntry | quote }}
+      key: RPI_NLP_API_KEY
 {{- end }}
 {{- else if eq $provider "bedrock" }}
 {{- $b := $model.bedrock | default dict }}

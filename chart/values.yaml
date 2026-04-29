@@ -1117,14 +1117,16 @@ logAnalyzer:
       apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
       baseUrl: ""                    # optional egress proxy
 
-    # Azure AI Foundry (Anthropic models on Azure). Auth via AAD/Workload
-    # Identity by default (reuses cloudIdentity.azure). Falls back to API
-    # key if `apiKeyVaultEntry` is set.
-    azureFoundry:
-      endpoint: ""                   # https://<resource>.openai.azure.com
-      apiVersion: "2024-10-21"
-      deploymentName: ""             # Azure deployment name for the Claude model
-      apiKeyVaultEntry: ""           # leave empty to use AAD via cloudIdentity
+    # Azure AI Foundry / Azure OpenAI. The analyzer rides the chart-wide
+    # `redpointAI.naturalLanguage` block -- same Azure OpenAI config the
+    # rest of RPI uses (ApiBase, ApiVersion, ChatGptEngine). Set
+    # redpointAI.enabled=true and configure that block; the chart fails
+    # fast if azureFoundry is selected without it.
+    #
+    # Auth: WI by default (reuses cloudIdentity.azure). In non-SDK mode the
+    # chart binds AZURE_OPENAI_API_KEY from the standard RPI_NLP_API_KEY
+    # secret entry (same key the .NET services use); in SDK mode the
+    # analyzer fetches the same entry from the cloud vault directly.
 
     # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / EKS Pod Identity).
     # Customer grants the analyzer's IAM role `bedrock:InvokeModel` on the
