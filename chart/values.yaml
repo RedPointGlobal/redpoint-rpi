@@ -1156,6 +1156,21 @@ logAnalyzer:
     lookbackMinutes: 60              # how far back to query each cycle
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
+  # ---- Email digest (opt-in) ---------------------------------------------
+  # When enabled, the analyzer posts a short HTML summary of each cycle's
+  # report to the configured recipients. SMTP transport reuses the
+  # chart-wide SMTPSettings block (same SMTP server, sender, credentials
+  # the .NET services already use); only the recipient list and the
+  # "send when..." rule are analyzer-specific.
+  #
+  # The email is intentionally minimal: total errors, top types, and a
+  # link back to the dashboard for the full breakdown / log downloads.
+  email:
+    enabled: false
+    recipients: []                   # ["support@example.com", ...]
+    onlyOnNewErrors: true            # only send when first-seen errors exist
+                                     # (set false to email every cycle)
+
   # Pulse_Logging access: the analyzer reads the same 4 connection
   # components the deploymentapi reads (host / username / password /
   # logging-db-name). No extra knobs here -- the chart's existing secrets

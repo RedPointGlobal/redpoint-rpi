@@ -1121,6 +1121,46 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: {{ $schedule.onDemandEnabled | default true | quote }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: "/var/lib/rpi-loganalyzer/reports.db"
+# SMTP transport, identical to deploy-executionservice. The analyzer
+# reads these only when the email digest is opted in below; emitting
+# them unconditionally keeps the wiring uniform across all services.
+- name: RPI__SMTP__EmailSenderAddress
+  value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
+- name: RPI__SMTP__EmailSenderName
+  value: {{ .Values.SMTPSettings.SMTP_SenderName | quote }}
+- name: RPI__SMTP__Address
+  value: {{ .Values.SMTPSettings.SMTP_Address | quote }}
+- name: RPI__SMTP__Port
+  value: {{ .Values.SMTPSettings.SMTP_Port | quote }}
+- name: RPI__SMTP__EnableSSL
+  value: {{ .Values.SMTPSettings.EnableSSL | quote }}
+- name: RPI__SMTP__UseCredentials
+  value: {{ .Values.SMTPSettings.UseCredentials | quote }}
+{{- if .Values.SMTPSettings.UseCredentials }}
+{{- if ne $secretsProvider "sdk" }}
+- name: RPI__SMTP__Username
+  value: {{ .Values.SMTPSettings.SMTP_Username | quote }}
+- name: RPI__SMTP__Password
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: SMTP_Password
+{{- end }}
+{{- end }}
+{{- $email := $cfg.email | default dict }}
+{{- if $email.enabled }}
+- name: LOG_ANALYZER__EMAIL__ENABLED
+  value: "true"
+- name: LOG_ANALYZER__EMAIL__RECIPIENTS
+  value: {{ join "," ($email.recipients | default list) | quote }}
+- name: LOG_ANALYZER__EMAIL__ONLY_ON_NEW_ERRORS
+  value: {{ $email.onlyOnNewErrors | default true | quote }}
+{{- $ingCfg := .Values.ingress | default dict }}
+{{- if and ($ingCfg.hosts).loganalyzer $ingCfg.domain }}
+- name: LOG_ANALYZER__EMAIL__INGRESS_URL
+  value: {{ printf "https://%s.%s" $ingCfg.hosts.loganalyzer $ingCfg.domain | quote }}
+{{- end }}
+{{- end }}
 # Same DatabaseType env var the .NET services (deploymentapi etc.) read --
 # platform-aware value, set even in SDK mode since it's not a secret.
 {{- $platform := .Values.global.deployment.platform -}}
