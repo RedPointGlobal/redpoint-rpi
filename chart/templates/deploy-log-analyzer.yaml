@@ -4,41 +4,13 @@
 {{- $name := "rpi-loganalyzer" -}}
 {{- $service := $cfg.service | default dict -}}
 {{- $resources := $cfg.resources | default dict -}}
-{{- $storage := $cfg.storage | default dict -}}
-{{- $vct := $storage.volumeClaimTemplates | default dict -}}
-{{- $claimName := ternary $storage.existingClaim (printf "%s-data" $name) (ne ($storage.existingClaim | default "") "") -}}
+{{- $fod := .Values.storage.persistentVolumeClaims.FileOutputDirectory -}}
+{{- if not $fod.enabled -}}
+{{- fail "logAnalyzer requires storage.persistentVolumeClaims.FileOutputDirectory.enabled=true. The analyzer's SQLite report store lives under <FileOutputDirectory.mountPath>/loganalyzer/." -}}
+{{- end -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
-
-{{- /* Same pattern as queuereader rabbitmq: existingClaim wins; otherwise
-       volumeClaimTemplates.enabled provisions a fresh PVC dynamically. */ -}}
-{{- if and (eq ($storage.existingClaim | default "") "") $vct.enabled }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ $claimName }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
-  annotations:
-    # Argo CD: use server-side apply so field ownership is respected.
-    # Without this, when this PVC is later bound (kube-controller fills
-    # volumeName + storageClassName), Argo's strict client-side apply
-    # would try to clear those fields on the next sync and Kubernetes
-    # would reject because they're immutable on bound claims.
-    argocd.argoproj.io/sync-options: ServerSideApply=true
-spec:
-  accessModes:
-    - {{ $vct.accessModes | default "ReadWriteOnce" }}
-  resources:
-    requests:
-      storage: {{ $vct.storage | default "10Gi" | quote }}
-  {{- with $vct.storageClassName }}
-  storageClassName: {{ . | quote }}
-  {{- end }}
-{{- end }}
 
 ---
 apiVersion: v1
@@ -93,12 +65,10 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      # uid 7777 in the image; fsGroup makes the PVC mount writable.
+      {{- with $secCtx.pod }}
       securityContext:
-        fsGroup: 7777
-        {{- with $secCtx.pod }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
       containers:
       - name: {{ $name }}
         image: {{ include "rpi.image" (dict "root" . "name" "rpi-loganalyzer") }}
@@ -143,14 +113,18 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 30
         volumeMounts:
-        - name: data
-          mountPath: /data
+        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
+        - name: fileoutputdirectory
+          mountPath: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
+        {{- end }}
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
         {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
       volumes:
-      - name: data
+      {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
+      - name: fileoutputdirectory
         persistentVolumeClaim:
-          claimName: {{ $claimName }}
+          claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+      {{- end }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
       {{- include "rpi.customCACerts.volume" . | nindent 6 }}
 {{- end }}

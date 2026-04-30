@@ -1192,18 +1192,13 @@ logAnalyzer:
   # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
-  # The analyzer keeps its SQLite report store at /data on a dedicated
-  # PVC. RWO is fine since the analyzer runs replicas=1 with Recreate
-  # (single writer). Same shape as queuereader.internalQueues.rabbitmqSettings:
-  # set existingClaim to BYO an existing PVC, otherwise volumeClaimTemplates
-  # dynamically provisions one against the cluster's default StorageClass.
-  storage:
-    existingClaim: ""              # BYO existing PVC (takes precedence)
-    volumeClaimTemplates:
-      enabled: true
-      accessModes: ReadWriteOnce
-      storageClassName: ""         # blank = cluster default StorageClass
-      storage: 10Gi
+  # The analyzer rides the chart-wide FileOutputDirectory PVC instead of
+  # provisioning its own. SQLite store lives at:
+  #   <FileOutputDirectory.mountPath>/loganalyzer/reports.db
+  # i.e. typically /rpifileoutputdir/loganalyzer/reports.db.
+  #
+  # Required: storage.persistentVolumeClaims.FileOutputDirectory.enabled=true
+  # The chart fails fast at template time otherwise.
 
   # ---- HTTP service ------------------------------------------------------
   # The container runs two processes (same pattern as the Helm Assistant):
