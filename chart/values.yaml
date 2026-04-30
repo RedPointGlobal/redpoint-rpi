@@ -1177,10 +1177,18 @@ logAnalyzer:
   # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
-  # The analyzer keeps its SQLite report store on an emptyDir volume at
-  # /var/lib/rpi-loganalyzer/reports.db. Reports are pod-local and are
-  # lost on pod restart; that's fine because the analyzer rebuilds them
-  # from Pulse_Logging on the next cycle.
+  # The analyzer keeps its SQLite report store at /data on a dedicated
+  # PVC. RWO is fine since the analyzer runs replicas=1 with Recreate
+  # (single writer). Same shape as queuereader.internalQueues.rabbitmqSettings:
+  # set existingClaim to BYO an existing PVC, otherwise volumeClaimTemplates
+  # dynamically provisions one against the cluster's default StorageClass.
+  storage:
+    existingClaim: ""              # BYO existing PVC (takes precedence)
+    volumeClaimTemplates:
+      enabled: true
+      accessModes: ReadWriteOnce
+      storageClassName: ""         # blank = cluster default StorageClass
+      storage: 10Gi
 
   # ---- HTTP service ------------------------------------------------------
   # The container runs two processes (same pattern as the Helm Assistant):

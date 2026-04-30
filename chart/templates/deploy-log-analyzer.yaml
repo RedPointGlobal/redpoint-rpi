@@ -4,9 +4,34 @@
 {{- $name := "rpi-loganalyzer" -}}
 {{- $service := $cfg.service | default dict -}}
 {{- $resources := $cfg.resources | default dict -}}
+{{- $storage := $cfg.storage | default dict -}}
+{{- $vct := $storage.volumeClaimTemplates | default dict -}}
+{{- $claimName := ternary $storage.existingClaim (printf "%s-data" $name) (ne ($storage.existingClaim | default "") "") -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
+
+{{- /* Same pattern as queuereader rabbitmq: existingClaim wins; otherwise
+       volumeClaimTemplates.enabled provisions a fresh PVC dynamically. */ -}}
+{{- if and (eq ($storage.existingClaim | default "") "") $vct.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $claimName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+spec:
+  accessModes:
+    - {{ $vct.accessModes | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ $vct.storage | default "10Gi" | quote }}
+  {{- with $vct.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}
 
 ---
 apiVersion: v1
@@ -61,7 +86,7 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      # uid 7777 in the image; fsGroup makes the emptyDir mount writable.
+      # uid 7777 in the image; fsGroup makes the PVC mount writable.
       securityContext:
         fsGroup: 7777
         {{- with $secCtx.pod }}
@@ -112,12 +137,13 @@ spec:
           periodSeconds: 30
         volumeMounts:
         - name: data
-          mountPath: /var/lib/rpi-loganalyzer
+          mountPath: /data
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
         {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
       volumes:
       - name: data
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: {{ $claimName }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
       {{- include "rpi.customCACerts.volume" . | nindent 6 }}
 {{- end }}

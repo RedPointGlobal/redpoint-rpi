@@ -1120,7 +1120,7 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__SCHEDULE__ON_DEMAND_ENABLED
   value: {{ $schedule.onDemandEnabled | default true | quote }}
 - name: LOG_ANALYZER__SQLITE_PATH
-  value: "/var/lib/rpi-loganalyzer/reports.db"
+  value: "/data/reports.db"
 # SMTP transport, identical to deploy-executionservice. The analyzer
 # reads these only when the email digest is opted in below; emitting
 # them unconditionally keeps the wiring uniform across all services.
