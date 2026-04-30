@@ -4,10 +4,8 @@
 {{- $name := "rpi-loganalyzer" -}}
 {{- $service := $cfg.service | default dict -}}
 {{- $resources := $cfg.resources | default dict -}}
-{{- $fod := .Values.storage.persistentVolumeClaims.FileOutputDirectory -}}
-{{- if not $fod.enabled -}}
-{{- fail "logAnalyzer requires storage.persistentVolumeClaims.FileOutputDirectory.enabled=true. The analyzer's SQLite report store lives under <FileOutputDirectory.mountPath>/loganalyzer/." -}}
-{{- end -}}
+{{- $persistence := $cfg.persistence | default dict -}}
+{{- $vct := $persistence.volumeClaimTemplates | default dict -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
@@ -36,19 +34,21 @@ spec:
 
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
 spec:
-  replicas: {{ $cfg.replicas | default 1 }}
+  serviceName: {{ $name }}
+  replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ $name }}
-  strategy:
-    type: Recreate                        {{/* SQLite single-writer */}}
   template:
     metadata:
       labels:
@@ -113,18 +113,33 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 30
         volumeMounts:
-        {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
-        - name: fileoutputdirectory
-          mountPath: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.mountPath | quote }}
-        {{- end }}
+        - name: {{ $name }}-data
+          mountPath: /data
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
         {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
       volumes:
-      {{- if .Values.storage.persistentVolumeClaims.FileOutputDirectory.enabled }}
-      - name: fileoutputdirectory
+      {{- if $persistence.existingClaim }}
+      - name: {{ $name }}-data
         persistentVolumeClaim:
-          claimName: {{ .Values.storage.persistentVolumeClaims.FileOutputDirectory.claimName }}
+          claimName: {{ $persistence.existingClaim | quote }}
+      {{- else if not $vct.enabled }}
+      - name: {{ $name }}-data
+        emptyDir: {}
       {{- end }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
       {{- include "rpi.customCACerts.volume" . | nindent 6 }}
+  {{- if and $vct.enabled (not $persistence.existingClaim) }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ $name }}-data
+      spec:
+        accessModes:
+          - {{ $vct.accessModes | default "ReadWriteOnce" }}
+        {{- if $vct.storageClassName }}
+        storageClassName: {{ $vct.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $vct.storage | default "5Gi" | quote }}
+  {{- end }}
 {{- end }}

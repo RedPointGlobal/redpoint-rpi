@@ -1192,13 +1192,21 @@ logAnalyzer:
   # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
-  # The analyzer rides the chart-wide FileOutputDirectory PVC instead of
-  # provisioning its own. SQLite store lives at:
-  #   <FileOutputDirectory.mountPath>/loganalyzer/reports.db
-  # i.e. typically /rpifileoutputdir/loganalyzer/reports.db.
-  #
-  # Required: storage.persistentVolumeClaims.FileOutputDirectory.enabled=true
-  # The chart fails fast at template time otherwise.
+  # The analyzer keeps its report history in a small SQLite file at
+  # /data/reports.db. SQLite needs a filesystem that honors POSIX byte-range
+  # locks, so /data must be backed by block storage (Azure Disk, AWS EBS,
+  # GCP PD) -- NOT Azure Files / NFS, which silently break SQLite locking.
+  # Pattern matches Redis/RabbitMQ: dynamic provisioning by default, BYO
+  # supported via existingClaim.
+  persistence:
+    # BYO: name of a PVC you've already created. If set, volumeClaimTemplates
+    # is ignored. The PVC must support RWO and POSIX locks (see above).
+    existingClaim: ""
+    volumeClaimTemplates:
+      enabled: true                  # false + no existingClaim => emptyDir (data is lost on pod restart)
+      accessModes: ReadWriteOnce
+      storageClassName: ""           # empty = use cluster default storage class
+      storage: 5Gi
 
   # ---- HTTP service ------------------------------------------------------
   # The container runs two processes (same pattern as the Helm Assistant):
