@@ -22,6 +22,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+  annotations:
+    # Argo CD: use server-side apply so field ownership is respected.
+    # Without this, when this PVC is later bound (kube-controller fills
+    # volumeName + storageClassName), Argo's strict client-side apply
+    # would try to clear those fields on the next sync and Kubernetes
+    # would reject because they're immutable on bound claims.
+    argocd.argoproj.io/sync-options: ServerSideApply=true
 spec:
   accessModes:
     - {{ $vct.accessModes | default "ReadWriteOnce" }}

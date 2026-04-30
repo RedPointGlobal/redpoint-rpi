@@ -1161,6 +1161,18 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: {{ printf "https://%s.%s" $ingCfg.hosts.loganalyzer $ingCfg.domain | quote }}
 {{- end }}
 {{- end }}
+{{- $teams := $cfg.teams | default dict }}
+{{- if $teams.enabled }}
+- name: LOG_ANALYZER__TEAMS__ENABLED
+  value: "true"
+- name: LOG_ANALYZER__TEAMS__ONLY_ON_NEW_ERRORS
+  value: {{ $teams.onlyOnNewErrors | default true | quote }}
+- name: LOG_ANALYZER__TEAMS__WEBHOOK_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: {{ $teams.webhookSecretKey | default "LogAnalyzer_Teams_Webhook" | quote }}
+{{- end }}
 # Same DatabaseType env var the .NET services (deploymentapi etc.) read --
 # platform-aware value, set even in SDK mode since it's not a secret.
 {{- $platform := .Values.global.deployment.platform -}}

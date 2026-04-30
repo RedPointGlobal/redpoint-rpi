@@ -1171,6 +1171,21 @@ logAnalyzer:
     onlyOnNewErrors: true            # only send when first-seen errors exist
                                      # (set false to email every cycle)
 
+  # ---- Microsoft Teams notification (opt-in) -----------------------------
+  # When enabled, the analyzer posts an Adaptive Card per cycle to a
+  # Teams channel via an incoming webhook. The webhook URL is sensitive
+  # (anyone with it can post to the channel), so it lives in the K8s
+  # Secret rather than this file -- set webhookSecretKey to the Secret
+  # entry name. Default key is `LogAnalyzer_Teams_Webhook`.
+  #
+  # Get the webhook URL from Teams: in the channel, ... > Workflows >
+  # "Post to a channel when a webhook request is received". Copy the
+  # URL it generates into the secret.
+  teams:
+    enabled: false
+    webhookSecretKey: LogAnalyzer_Teams_Webhook
+    onlyOnNewErrors: true            # only post when first-seen errors exist
+
   # Pulse_Logging access: the analyzer reads the same 4 connection
   # components the deploymentapi reads (host / username / password /
   # logging-db-name). No extra knobs here -- the chart's existing secrets
