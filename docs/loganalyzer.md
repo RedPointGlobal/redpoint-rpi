@@ -5,11 +5,11 @@
 
 ## Overview
 
-The **Log Analyzer** is an operations component for RPI that reads recent error rows from the `Pulse_Logging` database, groups them into clusters by signature, and produces a per-cycle report showing what is failing, where, and how often. The same report is sent to email and Microsoft Teams.
+The **Log Analyzer** is an operations component for RPI that reads recent error rows from the Pulse Logging database, groups them into clusters by signature, and produces a per-cycle report showing what is failing, where, and how often. The same report is sent to email and Microsoft Teams.
 
-It is built for SRE teams who want a single operations view of error activity across services, tenants, plugins, and hosts without having to query `Pulse_Logging` by hand or watch a dashboard. It does not replace your APM, metrics, or paging stack. It complements them by giving you a scheduled (daily or interval) operations digest with a small dashboard for follow-up investigation.
+It is built for SRE teams who want a single operations view of error activity across services, tenants, plugins, and hosts without having to query Pulse Logging by hand or watch a dashboard. It does not replace your APM, metrics, or paging stack. It complements them by giving you a scheduled (daily or interval) operations digest with a small dashboard for follow-up investigation.
 
-The component runs in the same cluster as the rest of RPI. It connects to `Pulse_Logging` using the chart's existing operational database credentials. It writes its own report history to a local SQLite database on a dedicated volume.
+The component runs in the same cluster as the rest of RPI. It connects to Pulse Logging using the chart's existing operational database credentials. It writes its own report history to a local SQLite database on a dedicated volume.
 
 ---
 
@@ -18,7 +18,7 @@ The component runs in the same cluster as the rest of RPI. It connects to `Pulse
 
 Each cycle:
 
-1. Queries `Pulse_Logging` for rows logged in the lookback window (60 minutes in interval mode, 24 hours in daily mode).
+1. Queries Pulse Logging for rows logged in the lookback window (60 minutes in interval mode, 24 hours in daily mode).
 2. Filters out rows below the configured severity floor.
 3. Groups rows by signature. The fingerprint strips volatile content (timestamps, IDs, IP addresses, paths) so multiple variants of the same underlying error land in one cluster.
 4. Aggregates totals by service, tenant, plugin, and host.
@@ -33,18 +33,6 @@ The dashboard at `https://<your-ingress>/` shows the latest report at the top, f
 
 <details>
 <summary><strong style="font-size:1.25em;">How it works</strong></summary>
-
-### Architecture
-
-| Component | Role |
-|:----------|:-----|
-| Streamlit UI (port 8501) | Operator-facing dashboard. Calls the local API. |
-| FastAPI app (port 8080) | Health probes, report queries, on-demand analysis trigger. |
-| Background scheduler | Triggers the analysis cycle on the configured cadence. |
-| SQLite report store | Local database at `/data/reports.db`. Holds the report history. |
-| `Pulse_Logging` client | Read-only `pyodbc` connection to the operational database. |
-| Email sender | SMTP transport. Reuses the chart-wide `SMTPSettings` block. |
-| Teams sender | HTTPS POST to a Workflow incoming webhook (URL stored as a Kubernetes secret). |
 
 ### Schedule modes
 
@@ -213,9 +201,25 @@ The Streamlit UI at the ingress URL has these sections:
 | Error details | Per-cluster cards. Each card shows the count, source, headline message, a short explanation, and a suggested fix. Cards are color-coded by severity. |
 | Downloads | Recent reports with a per-cycle log download. The download contains every persisted row from every cluster (raw, untruncated). Hand off to dev for deeper analysis. |
 
-### API endpoints
+### Internal API (not on the public ingress)
 
-The analyzer exposes a small JSON API on the same ingress:
+The pod runs two processes:
+
+| Process | Port | Reachable from |
+|:--------|:-----|:---------------|
+| Streamlit UI | `8501` | The public ingress (this is what operators see). |
+| FastAPI | `8080` | Inside the pod only. The Streamlit UI calls it on `localhost`. Kubelet hits it for probes. |
+
+The FastAPI port is intentionally not added to the K8s Service, so the dashboard URL is the only externally reachable surface. Hitting `/api/...` on the public ingress returns the Streamlit HTML shell, not JSON.
+
+For ad-hoc inspection of the internal API (token budget, raw report payload, on-demand cycle), use a port-forward:
+
+```bash
+kubectl port-forward -n <namespace> pod/rpi-loganalyzer-0 8080:8080
+curl http://localhost:8080/api/budget
+```
+
+Available endpoints:
 
 | Endpoint | Purpose |
 |:---------|:--------|
@@ -224,10 +228,12 @@ The analyzer exposes a small JSON API on the same ingress:
 | `GET /api/reports` | List recent reports (id, started_at, error_count, token usage). |
 | `GET /api/reports/{id}` | Single report payload. |
 | `GET /api/reports/{id}/export.txt` | Plain-text dump of every row in every cluster for that report. |
-| `GET /api/trend` | Per-cycle time series for the last 24 hours. Used by the trend chart. |
+| `GET /api/trend` | Per-cycle time series for the last 24 hours. |
 | `GET /api/budget` | Current token / request budget status. |
 | `GET /api/settings` | Read-only summary of the active configuration. |
 | `POST /api/analyze` | Fire an off-schedule cycle. Returns the new report. Disable via `schedule.onDemandEnabled: false`. |
+
+The dashboard sidebar shows the same token-budget figures as `GET /api/budget` so you do not need a port-forward for routine viewing.
 
 ### Logs and probes
 
