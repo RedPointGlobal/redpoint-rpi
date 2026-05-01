@@ -9,7 +9,7 @@ The **Log Analyzer** is an operations component for RPI that reads recent error 
 
 It is built for SRE teams who want a single operations view of error activity across services, tenants, plugins, and hosts without having to query Pulse Logging by hand or watch a dashboard. It does not replace your APM, metrics, or paging stack. It complements them by giving you a scheduled (daily or interval) operations digest with a small dashboard for follow-up investigation.
 
-The component runs in the same cluster as the rest of RPI. It connects to Pulse Logging using the chart's existing operational database credentials. It writes its own report history to a local SQLite database on a dedicated volume.
+The component runs in the same cluster and namespace as the rest of the RPI services. It connects to Pulse Logging using the chart's existing operational database credentials. It writes its own report history to a local SQLite database on a dedicated volume.
 
 ---
 
