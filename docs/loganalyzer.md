@@ -23,7 +23,7 @@ Provision the model backend before turning on the analyzer. Pick one provider. T
 - Azure OpenAI or AI Foundry resource deployed in the target subscription.
 - A model deployment on that resource (for example, a `gpt-5` deployment).
 - Endpoint, API version, and deployment name. The analyzer reads these via the chart-wide `redpointAI.naturalLanguage` block (`ApiBase`, `ApiVersion`, `ChatGptEngine`), so set them once and the rest of RPI plus the analyzer share them.
-- Authentication: either an API key in `redpoint-rpi-secrets` (`RPI_NLP_API_KEY`), or Workload Identity assigned the `Cognitive Services OpenAI User` role on the resource.
+- Authentication: an API key in `redpoint-rpi-secrets` under `RPI_NLP_API_KEY`.
 - Network egress from the cluster to the OpenAI endpoint. Private Endpoint is supported.
 
 ### AWS (Bedrock)
