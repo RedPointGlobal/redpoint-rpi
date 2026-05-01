@@ -40,13 +40,6 @@ Provision the model backend before turning on the analyzer. Pick one provider. T
 - Grant `roles/aiplatform.user` (or the narrower `aiplatform.endpoints.predict`) to the GCP service account RPI already uses (`cloudIdentity.google.serviceAccountEmail` from your existing overrides). The analyzer rides the chart's standard Workload Identity binding, so no new service account or federation setup is needed.
 - Network egress to `<region>-aiplatform.googleapis.com`.
 
-### Direct Anthropic API (any cloud)
-
-- Anthropic account with billing configured at `console.anthropic.com`.
-- API key created and stored in the cloud vault under the key name set by `model.anthropic.apiKeyVaultEntry` (default `LogAnalyzer-AnthropicApiKey`).
-- Network egress from the cluster to `api.anthropic.com:443`.
-- No cloud IAM is required. The analyzer reads the key from the vault and calls Anthropic directly.
-
 </details>
 
 <details>
