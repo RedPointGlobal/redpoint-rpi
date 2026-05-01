@@ -3,6 +3,8 @@
 
 [< Back to Home](../README.md)
 
+![Log Analyzer dashboard](../chart/images/dashboard_card.jpg)
+
 ## Overview
 
 The **Log Analyzer** is an operations component for RPI that reads recent error rows from the Pulse Logging database, groups them into clusters by signature, and produces a per-cycle report showing what is failing, where, and how often. The same report is sent to email and Microsoft Teams.
