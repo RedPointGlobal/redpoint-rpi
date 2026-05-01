@@ -1115,10 +1115,16 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: {{ $budget.maxRequestsPerHour | default 60 | quote }}
 - name: LOG_ANALYZER__SCHEDULE__INTERVAL_MINUTES
   value: {{ $schedule.intervalMinutes | default 30 | quote }}
+{{- if $schedule.lookbackMinutes }}
 - name: LOG_ANALYZER__SCHEDULE__LOOKBACK_MINUTES
-  value: {{ $schedule.lookbackMinutes | default 60 | quote }}
+  value: {{ $schedule.lookbackMinutes | quote }}
+{{- end }}
 - name: LOG_ANALYZER__SCHEDULE__ON_DEMAND_ENABLED
-  value: {{ $schedule.onDemandEnabled | default true | quote }}
+  value: {{ ternary $schedule.onDemandEnabled true (hasKey $schedule "onDemandEnabled") | quote }}
+{{- if $schedule.dailyAtUtc }}
+- name: LOG_ANALYZER__SCHEDULE__DAILY_AT_UTC
+  value: {{ $schedule.dailyAtUtc | quote }}
+{{- end }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: "/data/reports.db"
 # SMTP transport, identical to deploy-executionservice. The analyzer

@@ -1151,9 +1151,19 @@ logAnalyzer:
     maxRequestsPerHour: 60
 
   # ---- Analysis cadence --------------------------------------------------
+  # Two scheduling modes:
+  #   - interval: runs every `intervalMinutes` after pod startup (default).
+  #   - daily:    set `dailyAtUtc` to "HH:MM" (UTC). Overrides intervalMinutes
+  #               and fires once per day at that wall-clock time. In daily
+  #               mode the email + teams digests fire on every run regardless
+  #               of email.onlyOnNewErrors / teams.onlyOnNewErrors -- the
+  #               assumption is you wanted a daily summary.
+  # `lookbackMinutes` defaults to 60 in interval mode, or 1440 (24h) in daily
+  # mode. Set it explicitly here to override either default.
   schedule:
-    intervalMinutes: 30              # batch cycle period
-    lookbackMinutes: 60              # how far back to query each cycle
+    intervalMinutes: 30              # batch cycle period (interval mode)
+    dailyAtUtc: ""                   # "HH:MM" UTC -- e.g. "00:00" for midnight
+    lookbackMinutes: ""              # leave empty for auto: 60 (interval) or 1440 (daily). Override with an int.
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
   # ---- Email digest (opt-in) ---------------------------------------------

@@ -2291,8 +2291,14 @@
           "additionalProperties": true,
           "properties": {
             "intervalMinutes": { "type": "integer", "minimum": 1 },
-            "lookbackMinutes": { "type": "integer", "minimum": 1 },
-            "onDemandEnabled": { "type": "boolean" }
+            "lookbackMinutes": {
+              "oneOf": [
+                { "type": "integer", "minimum": 1 },
+                { "type": "string", "pattern": "^(|[0-9]+)$" }
+              ]
+            },
+            "onDemandEnabled": { "type": "boolean" },
+            "dailyAtUtc": { "type": "string", "pattern": "^(|([01][0-9]|2[0-3]):[0-5][0-9])$" }
           }
         },
         "storage": {
