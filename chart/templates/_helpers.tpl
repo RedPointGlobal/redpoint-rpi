@@ -1154,7 +1154,7 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__EMAIL__RECIPIENTS
   value: {{ join "," ($email.recipients | default list) | quote }}
 - name: LOG_ANALYZER__EMAIL__ONLY_ON_NEW_ERRORS
-  value: {{ $email.onlyOnNewErrors | default true | quote }}
+  value: {{ ternary $email.onlyOnNewErrors true (hasKey $email "onlyOnNewErrors") | quote }}
 {{- $ingCfg := .Values.ingress | default dict }}
 {{- if and ($ingCfg.hosts).loganalyzer $ingCfg.domain }}
 - name: LOG_ANALYZER__EMAIL__INGRESS_URL
@@ -1166,7 +1166,7 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__TEAMS__ENABLED
   value: "true"
 - name: LOG_ANALYZER__TEAMS__ONLY_ON_NEW_ERRORS
-  value: {{ $teams.onlyOnNewErrors | default true | quote }}
+  value: {{ ternary $teams.onlyOnNewErrors true (hasKey $teams "onlyOnNewErrors") | quote }}
 - name: LOG_ANALYZER__TEAMS__WEBHOOK_URL
   valueFrom:
     secretKeyRef:

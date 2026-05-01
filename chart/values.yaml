@@ -1198,7 +1198,7 @@ logAnalyzer:
   # GCP PD) -- NOT Azure Files / NFS, which silently break SQLite locking.
   # Pattern matches Redis/RabbitMQ: dynamic provisioning by default, BYO
   # supported via existingClaim.
-  persistence:
+  storage:
     # BYO: name of a PVC you've already created. If set, volumeClaimTemplates
     # is ignored. The PVC must support RWO and POSIX locks (see above).
     existingClaim: ""

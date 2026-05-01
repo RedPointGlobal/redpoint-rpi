@@ -4,8 +4,8 @@
 {{- $name := "rpi-loganalyzer" -}}
 {{- $service := $cfg.service | default dict -}}
 {{- $resources := $cfg.resources | default dict -}}
-{{- $persistence := $cfg.persistence | default dict -}}
-{{- $vct := $persistence.volumeClaimTemplates | default dict -}}
+{{- $storage := $cfg.storage | default dict -}}
+{{- $vct := $storage.volumeClaimTemplates | default dict -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
@@ -120,17 +120,17 @@ spec:
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
         {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
       volumes:
-      {{- if $persistence.existingClaim }}
+      {{- if $storage.existingClaim }}
       - name: {{ $name }}-data
         persistentVolumeClaim:
-          claimName: {{ $persistence.existingClaim | quote }}
+          claimName: {{ $storage.existingClaim | quote }}
       {{- else if not $vct.enabled }}
       - name: {{ $name }}-data
         emptyDir: {}
       {{- end }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
       {{- include "rpi.customCACerts.volume" . | nindent 6 }}
-  {{- if and $vct.enabled (not $persistence.existingClaim) }}
+  {{- if and $vct.enabled (not $storage.existingClaim) }}
   volumeClaimTemplates:
     - metadata:
         name: {{ $name }}-data
