@@ -14,6 +14,44 @@ The component runs in the same cluster as the rest of RPI. It connects to Pulse 
 ---
 
 <details>
+<summary><strong style="font-size:1.25em;">Prerequisites</strong></summary>
+
+Provision the model backend before turning on the analyzer. Pick one provider. The analyzer only calls the model on each cycle (not per error row), so traffic is light, but the resource has to exist and be reachable from the cluster.
+
+### Azure (Azure OpenAI / AI Foundry)
+
+- Azure OpenAI or AI Foundry resource deployed in the target subscription.
+- A model deployment on that resource (for example, a `gpt-5` deployment).
+- Endpoint, API version, and deployment name. The analyzer reads these via the chart-wide `redpointAI.naturalLanguage` block (`ApiBase`, `ApiVersion`, `ChatGptEngine`), so set them once and the rest of RPI plus the analyzer share them.
+- Authentication: either an API key in `redpoint-rpi-secrets` (`RPI_NLP_API_KEY`), or Workload Identity assigned the `Cognitive Services OpenAI User` role on the resource.
+- Network egress from the cluster to the OpenAI endpoint. Private Endpoint is supported.
+
+### AWS (Bedrock)
+
+- Bedrock service available in the target region. Not every region carries every model.
+- **Model access approved** in the Bedrock console for the `modelId` you plan to use. This is a manual approval step that takes from minutes to a few hours.
+- IAM role with `bedrock:InvokeModel` on the target model ARN, attached to the analyzer via IRSA or EKS Pod Identity.
+- Trust relationship binding the role to the analyzer's K8s service account (`rpi-loganalyzer`).
+- Network egress from the cluster to `bedrock-runtime.<region>.amazonaws.com`. PrivateLink is supported.
+
+### GCP (Vertex AI)
+
+- Vertex AI API enabled on the project.
+- For Anthropic-on-Vertex: model access enabled (request flow in the console, similar to Bedrock).
+- GCP service account with `roles/aiplatform.user` (or the narrower `aiplatform.endpoints.predict`).
+- Workload Identity binding the analyzer's K8s service account to the GCP service account.
+- Network egress to `<region>-aiplatform.googleapis.com`.
+
+### Direct Anthropic API (any cloud)
+
+- Anthropic account with billing configured at `console.anthropic.com`.
+- API key created and stored in the cloud vault under the key name set by `model.anthropic.apiKeyVaultEntry` (default `LogAnalyzer-AnthropicApiKey`).
+- Network egress from the cluster to `api.anthropic.com:443`.
+- No cloud IAM is required. The analyzer reads the key from the vault and calls Anthropic directly.
+
+</details>
+
+<details>
 <summary><strong style="font-size:1.25em;">What it does</strong></summary>
 
 Each cycle:
@@ -150,6 +188,8 @@ The analyzer reuses the chart-wide `SMTPSettings` block (the same SMTP server, s
 
 The HTML body shows total errors, the new / recurring / resolved breakdown pills, four breakdown pies (service, tenant, plugin, host), the cycle summary, and a button that links back to the dashboard.
 
+![Email digest](../chart/images/email_card.jpg)
+
 ### Microsoft Teams
 
 The Teams card is posted to a Workflow incoming webhook. To get the URL:
@@ -160,6 +200,8 @@ The Teams card is posted to a Workflow incoming webhook. To get the URL:
 4. Store it in `redpoint-rpi-secrets` under the key `LogAnalyzer_Teams_Webhook` (override with `teams.webhookSecretKey` if you use a different key).
 
 The card mirrors the email content. The Redpoint logo and the four breakdown pies are inlined into the card payload as base64 data URIs. This means the card renders correctly even when the analyzer's ingress is private. Teams' image renderers run on Microsoft's public infrastructure and would not be able to fetch images from a private host, but data URIs do not require a network fetch.
+
+![Teams card](../chart/images/teams_card.jpg)
 
 ### Trigger gates
 
