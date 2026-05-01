@@ -30,16 +30,14 @@ Provision the model backend before turning on the analyzer. Pick one provider. T
 
 - Bedrock service available in the target region. Not every region carries every model.
 - **Model access approved** in the Bedrock console for the `modelId` you plan to use. This is a manual approval step that takes from minutes to a few hours.
-- IAM role with `bedrock:InvokeModel` on the target model ARN, attached to the analyzer via IRSA or EKS Pod Identity.
-- Trust relationship binding the role to the analyzer's K8s service account (`rpi-loganalyzer`).
+- Add `bedrock:InvokeModel` (on the target model ARN) to the IAM role RPI already uses (`cloudIdentity.amazon.roleArn` from your existing overrides). The analyzer rides the chart's standard IRSA / EKS Pod Identity binding, so no new role or trust relationship is needed.
 - Network egress from the cluster to `bedrock-runtime.<region>.amazonaws.com`. PrivateLink is supported.
 
 ### GCP (Vertex AI)
 
 - Vertex AI API enabled on the project.
 - For Anthropic-on-Vertex: model access enabled (request flow in the console, similar to Bedrock).
-- GCP service account with `roles/aiplatform.user` (or the narrower `aiplatform.endpoints.predict`).
-- Workload Identity binding the analyzer's K8s service account to the GCP service account.
+- Grant `roles/aiplatform.user` (or the narrower `aiplatform.endpoints.predict`) to the GCP service account RPI already uses (`cloudIdentity.google.serviceAccountEmail` from your existing overrides). The analyzer rides the chart's standard Workload Identity binding, so no new service account or federation setup is needed.
 - Network egress to `<region>-aiplatform.googleapis.com`.
 
 ### Direct Anthropic API (any cloud)
