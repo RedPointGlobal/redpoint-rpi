@@ -1127,9 +1127,8 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- end }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: "/data/reports.db"
-# SMTP transport, identical to deploy-executionservice. The analyzer
-# reads these only when the email digest is opted in below; emitting
-# them unconditionally keeps the wiring uniform across all services.
+# SMTP transport for the email digest. Always emitted; consumed only
+# when email is enabled.
 - name: RPI__SMTP__EmailSenderAddress
   value: {{ .Values.SMTPSettings.SMTP_SenderAddress | quote }}
 - name: RPI__SMTP__EmailSenderName
@@ -1179,8 +1178,8 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
       name: {{ $secretName | quote }}
       key: {{ $teams.webhookSecretKey | default "LogAnalyzer_Teams_Webhook" | quote }}
 {{- end }}
-# Same DatabaseType env var the .NET services (deploymentapi etc.) read --
-# platform-aware value, set even in SDK mode since it's not a secret.
+# Operational SQL database type. Drives the analyzer's connection
+# string. Always emitted (not a secret).
 {{- $platform := .Values.global.deployment.platform -}}
 {{- if eq $provider "postgresql" }}
 - name: ClusterEnvironment__OperationalDatabase__DatabaseType
@@ -1201,11 +1200,8 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
   value: "SQLServerOnVM"
 {{- end }}
 {{- if ne $secretsProvider "sdk" }}
-# kubernetes / csi: bind the same 4 connection components the deploymentapi
-# already reads (host / username / password / logging-db-name). The analyzer
-# composes a connection string from these in Python. SDK mode is handled by
-# rpi.secrets.sdk.envvars (KeyVault__Provider etc.) and the analyzer fetches
-# the .NET-style entries from the cloud vault directly.
+# Operational DB connection components for the Pulse Logging client.
+# SDK mode reads these from the cloud vault directly via rpi.secrets.sdk.envvars.
 - name: ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
   valueFrom:
     secretKeyRef:
