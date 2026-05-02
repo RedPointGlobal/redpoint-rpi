@@ -286,4 +286,10 @@ INFO  app.teams_sender Teams notification skipped: no first-seen errors this cyc
 </details>
 
 ---
+
+## Day-2 operations
+
+For operators running the Log Analyzer in production, see the **[Log Analyzer Operations Guide](loganalyzer-ops.md)**. It covers what every dashboard label means, how the schedule and lookback windows work (including how long it takes a fix to show as `Resolved`), notification trigger gates, the token budget, and troubleshooting the most common failure modes.
+
+---
 <sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>
