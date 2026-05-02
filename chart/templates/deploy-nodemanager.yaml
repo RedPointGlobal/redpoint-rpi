@@ -373,9 +373,9 @@ spec:
             mountPath: /tmp
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
           - name: odbc-config
-            mountPath: /app/odbc-config
-            readOnly: true
-          - name: odbc-runtime
+            mountPath: /app/odbc-config/odbc2.ini
+            subPath: odbc2.ini
+          - name: odbcini
             mountPath: /odbc-config
           {{- range .Values.databases.datawarehouse.bigquery.connections }}
           {{- if eq .credentialsType "serviceAccount" }}
@@ -412,7 +412,8 @@ spec:
         - name: odbc-config
           configMap:
             name: odbc-config
-        - name: odbc-runtime
+            defaultMode: 0777
+        - name: odbcini
           emptyDir: {}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}
