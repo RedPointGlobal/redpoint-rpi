@@ -1,0 +1,55 @@
+{{/*
+ODBC ini file for the .NET services that talk to BigQuery via the
+Simba ODBC driver. v7.7 dropped ODBC for Redshift and Databricks --
+those use native SDK paths now -- so this ConfigMap is BigQuery-only.
+
+Mounted at /app/odbc-config/odbc.ini in executionservice, nodemanager,
+callbackapi, and realtimeapi pods. The ODBCINI env var on each of
+those services points at the same path.
+
+Gated on (bigquery.enabled AND autoCreateSecrets):
+  - bigquery.enabled = false: nothing emitted; the env / volume in the
+    service templates is also skipped, so non-BigQuery deploys are
+    completely free of ODBC wiring.
+  - autoCreateSecrets = false: chart does not emit this ConfigMap;
+    the customer is expected to provide a ConfigMap named odbc-config
+    in the release namespace themselves. The service templates still
+    wire the env + volume mount, so the customer's BYO ConfigMap takes
+    effect transparently.
+*/}}
+{{- $bq := .Values.databases.datawarehouse.bigquery | default dict -}}
+{{- if and ($bq.enabled | default false) (.Values.databases.datawarehouse.autoCreateSecrets | default false) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odbc-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "odbc-config" "component" "datawarehouse") | nindent 4 }}
+data:
+  odbc.ini: |
+    [ODBC]
+    Trace=no
+
+    [ODBC Data Sources]
+    {{- range $bq.connections }}
+    {{ .name }}=Simba ODBC Driver for Google BigQuery 64-bit
+    {{- end }}
+    {{- range $bq.connections }}
+
+    [{{ .name }}]
+    Description=Simba ODBC Driver for Google BigQuery (64-bit) DSN
+    Driver=/app/odbc-lib/bigquery/SimbaODBCDriverforGoogleBigQuery64/lib/libgooglebigqueryodbc_sb64.so
+    Catalog={{ .projectId }}
+    {{/* Integer fields use hasKey, not `default`, because 0 is the
+         Go zero value -- `default 1` would coerce a user-set 0 back
+         to 1 (same gotcha that bit email.onlyOnNewErrors). */}}
+    SQLDialect={{ if hasKey . "sqlDialect" }}{{ .sqlDialect }}{{ else }}1{{ end }}
+    AllowLargeResults={{ if hasKey . "allowLargeResults" }}{{ .allowLargeResults }}{{ else }}0{{ end }}
+    OAuthMechanism={{ if hasKey . "OAuthMechanism" }}{{ .OAuthMechanism }}{{ else }}0{{ end }}
+    LargeResultsDataSetId={{ .largeResultsDataSetId | default "_bqodbc_temp_tables" }}
+    LargeResultsTempTableExpirationTime={{ .largeResultsTempTableExpirationTime | default "3600000" }}
+    Email={{ .serviceAccountEmail }}
+    KeyFilePath={{ default $.Values.cloudIdentity.google.configMapFilePath .ConfigMapFilePath }}/{{ default $.Values.cloudIdentity.google.keyName .keyName }}
+    {{- end }}
+{{- end }}

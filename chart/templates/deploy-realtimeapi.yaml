@@ -323,6 +323,11 @@ spec:
             value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
           {{- end }}
           {{- end }}
+          {{- if (($dw.bigquery | default dict).enabled | default false) }}
+          # Simba ODBC driver for BigQuery uses the ini at this path.
+          - name: ODBCINI
+            value: /app/odbc-config/odbc.ini
+          {{- end }}
           {{- if not (eq .Values.secretsManagement.provider "sdk") }}
           - name: CONNECTIONSTRINGS__LOGGINGDATABASE
             valueFrom:
@@ -1180,11 +1185,14 @@ spec:
             - name: tempstore
               mountPath: /tmp
             {{- if (($dw.bigquery | default dict).enabled | default false) }}
+            - name: odbc-config
+              mountPath: /app/odbc-config
+              readOnly: true
             {{- range .Values.databases.datawarehouse.bigquery.connections }}
             {{- if eq .credentialsType "serviceAccount" }}
-            - name: {{ .configMapName | quote }}
-              mountPath: {{ .ConfigMapFilePath }}/{{ .keyName }}
-              subPath: {{ .keyName }}
+            - name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
+              mountPath: {{ default $.Values.cloudIdentity.google.configMapFilePath .ConfigMapFilePath }}/{{ default $.Values.cloudIdentity.google.keyName .keyName }}
+              subPath: {{ default $.Values.cloudIdentity.google.keyName .keyName }}
               readOnly: true
             {{- end }}
             {{- end }}
@@ -1212,11 +1220,15 @@ spec:
         - name: tempstore
           emptyDir: {}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+            defaultMode: 0644
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}
-        - name: {{ .configMapName | quote }}
+        - name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
           configMap:
-            name: {{ .configMapName | quote }}
+            name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
         {{- end }}
         {{- end }}
         {{- end }}
