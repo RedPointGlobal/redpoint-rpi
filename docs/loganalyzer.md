@@ -7,7 +7,7 @@
 
 ## Overview
 
-The **Log Analyzer** is an operations component for RPI that reads recent error rows from the Pulse Logging database, groups them into clusters by signature, and produces a per-cycle report showing what is failing, where, and how often. The same report is sent to email and Microsoft Teams.
+The **Log Analyzer** is an operations component for RPI that reads recent error rows from the Pulse Logging database, groups identical errors together, and produces a per-cycle report showing what is failing, where, and how often. The same report is sent to email and Microsoft Teams.
 
 It is built for SRE teams who want a single operations view of error activity across services, tenants, plugins, and hosts without having to query Pulse Logging by hand or watch a dashboard. It does not replace your APM, metrics, or paging stack. It complements them by giving you a scheduled (daily or interval) operations digest with a small dashboard for follow-up investigation.
 
@@ -51,11 +51,11 @@ Each cycle:
 
 1. Queries Pulse Logging for rows logged in the lookback window (60 minutes in interval mode, 24 hours in daily mode).
 2. Filters out rows below the configured severity floor.
-3. Groups rows by signature. The fingerprint strips volatile content (timestamps, IDs, IP addresses, paths) so multiple variants of the same underlying error land in one cluster.
+3. Groups errors by their root pattern. Volatile content (timestamps, IDs, IP addresses, paths) is stripped before grouping, so different variants of the same underlying error land together.
 4. Aggregates totals by service, tenant, plugin, and host.
 5. For each cluster, asks the configured model to produce a short explanation of what the error means and a suggested fix. Also asks for a 2 to 4 sentence summary of the cycle as a whole.
 6. Persists the full report to a local SQLite store.
-7. Marks each cluster as `new`, `recurring`, or `resolved` relative to the previous cycle. A cluster is `new` if its signature has never been seen in any prior cycle.
+7. Marks each error type as `new`, `recurring`, or `resolved`. An error is `new` the first time it ever appears in any report; after that it is `recurring`. An error is `resolved` if it was in the previous report but is not in the current one.
 8. Sends an HTML email digest and a Teams Adaptive Card if either channel is enabled and the trigger gates pass.
 
 The dashboard at `https://<your-ingress>/` shows the latest report at the top, four breakdown pies, a 24-hour trend chart per service, and per-cluster cards with the explanation and suggested fix.

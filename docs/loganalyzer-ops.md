@@ -26,8 +26,8 @@ The aim is that an operator landing here at 2am with a paged-out RPI environment
 
 Each cluster card carries a coloured pill of the form `555× HIGH`:
 
-- The number is the **hit count** for this cluster's signature in the current cycle's lookback window.
-- The `×` is a multiplication sign, read as "times". `555×` means the signature fired 555 times.
+- The number is the **hit count** for this error type in the current cycle's lookback window.
+- The `×` is a multiplication sign, read as "times". `555×` means the error fired 555 times.
 - The bucket label and the card colour come from the count:
 
 | Count range | Bucket | Pill colour | Card rail colour |
@@ -58,7 +58,7 @@ When a cluster's errors are part of incidents that touched more than one service
 ```
 
 - **`4-svc blast`**: across all incidents this cluster participated in, the worst one touched 4 distinct services. This is the maximum blast radius. It is a "this cluster is part of a cascade" signal.
-- **`12 incidents`**: the count of distinct CorrelationIds this signature appeared in during this cycle. Standalone rows with no CorrelationId are also counted as one incident each.
+- **`12 incidents`**: the count of distinct CorrelationIds this error appeared in during this cycle. Standalone rows with no CorrelationId are also counted as one incident each.
 
 The badge is hidden when the cluster only ever appeared in single-service incidents.
 
@@ -210,7 +210,7 @@ Two options:
 
 | Path | Contents | Survives pod restart? |
 |:---|:---|:---|
-| `/data/reports.db` (SQLite) | Report history, clusters, incidents, persisted rows, fingerprint history | Yes (PVC) |
+| `/data/reports.db` (SQLite) | Report history, error groups, incidents, persisted rows, recurrence history | Yes (PVC) |
 | `/tmp` (container fs) | Nothing important | No |
 
 The `/data` volume is provisioned via `volumeClaimTemplates` on a StatefulSet. The default StorageClass is whatever the cluster default is (Azure Disk on AKS, EBS on EKS, PD on GKE). All of those honour POSIX byte-range locks, which SQLite needs.
@@ -257,12 +257,12 @@ sys.stdout.buffer.write(b''.join(cn.iterdump()).encode() if False else b'')
 | Question | Answer |
 |:---|:---|
 | The cycle says **555 errors** but I only fixed one thing. Why? | One root cause can produce many error rows. The 555 is the row count, not the unique-error count. Look at the cluster count and the **incident count** (`X errors across Y incidents`). One incident often covers many rows from the same correlation. |
-| Why does the same error appear as **multiple clusters**? | Fingerprinting hashes only the first sentence of the message after stripping volatile content (UUIDs, IPs, timestamps). If the LLM-emitted message uses different phrasing for genuinely-the-same root cause, the fingerprints diverge. Send the cluster signatures to dev to consider tightening the message format upstream. |
+| Why does the same error appear as **multiple cards**? | Errors are grouped by the first sentence of the message after stripping volatile content (UUIDs, IPs, timestamps). If your application logs the same root cause with different first-sentence phrasing, they end up in separate cards. Have your dev team standardise the message format if this is a frequent issue. |
 | How do I find **which tenant** is generating these errors? | The Tenant line on each cluster card shows the ClientID UUID prefix. Hover for the full UUID. Grep your tenant config for the prefix to find the matching customer / environment. |
 | Why isn't my **email** arriving? | Walk the gate checklist: `email.enabled: true`, recipients non-empty, SMTPSettings populated, and either the cycle has new error types OR `onlyOnNewErrors: false` / daily mode. Look in the analyzer logs for `email digest skipped: <reason>`. |
 | Why is no **Teams card** posting? | Same gate walk plus the webhook URL must be present in `redpoint-rpi-secrets` under the configured key (default `LogAnalyzer_Teams_Webhook`). Check `kubectl get secret redpoint-rpi-secrets -o jsonpath='{.data.LogAnalyzer_Teams_Webhook}' \| base64 -d`. |
 | How long until my fix shows as **Resolved**? | Two cycles after the fix. See [Schedule and timing](#schedule-and-timing) above. The sparkline will drop to zero on the right edge faster, that's the practical recovery signal. |
-| What does **NEW** mean? Is it forever? | NEW is a lifetime flag. A signature is NEW exactly once, the first time it ever appears in any cycle. After that it is RECURRING forever, even if it goes quiet for weeks and returns. |
+| What does **NEW** mean? Is it forever? | An error is NEW the first time it ever shows up in any report. After that it is RECURRING forever, even if it goes quiet for weeks and returns. |
 | How do I get the **raw rows** for a cluster? | Logs tab. Each report has a per-cycle .txt download with every persisted row from every cluster (capped at 500 rows per cluster). |
 | Why is the **trend chart** flat? | The chart needs at least 2 cycles of data. With one cycle in the window it stays flat or shows a caption. Wait for the next cycle. |
 | Why are my **pies empty**? | The cycle had no rows in that dimension (e.g. `by_plugin` is empty when no logged errors carried a Plugin tag). Empty pies render as "No data" placeholders. |
