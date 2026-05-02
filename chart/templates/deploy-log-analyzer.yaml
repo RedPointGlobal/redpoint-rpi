@@ -11,6 +11,46 @@
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
 
 ---
+# Read-only RBAC for the analyzer's Infrastructure events collector.
+# Lets the analyzer pod call the K8s API to capture OOMKilled,
+# CrashLoopBackOff, probe failures, and pull the previous container's
+# stdout when a pod just crashed. Namespace-scoped only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+    namespace: {{ .Release.Namespace }}
+
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -83,6 +123,12 @@ spec:
           containerPort: {{ $service.apiPort | default 8080 }}
           protocol: TCP
         env:
+        # Downward-API: lets the K8s events collector know which
+        # namespace to scope its event/pod queries to.
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
         {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
         # Same SDK + cloudIdentity envvar wiring the deploymentapi (and the
