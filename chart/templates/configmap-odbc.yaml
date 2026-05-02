@@ -1,24 +1,17 @@
 {{/*
 ODBC ini file for the .NET services that talk to BigQuery via the
-Simba ODBC driver. v7.7 dropped ODBC for Redshift and Databricks --
-those use native SDK paths now -- so this ConfigMap is BigQuery-only.
+Simba ODBC driver.
 
 Mounted at /app/odbc-config/odbc.ini in executionservice, nodemanager,
 callbackapi, and realtimeapi pods. The ODBCINI env var on each of
 those services points at the same path.
 
-Gated on (bigquery.enabled AND autoCreateSecrets):
-  - bigquery.enabled = false: nothing emitted; the env / volume in the
-    service templates is also skipped, so non-BigQuery deploys are
-    completely free of ODBC wiring.
-  - autoCreateSecrets = false: chart does not emit this ConfigMap;
-    the customer is expected to provide a ConfigMap named odbc-config
-    in the release namespace themselves. The service templates still
-    wire the env + volume mount, so the customer's BYO ConfigMap takes
-    effect transparently.
+Gated on bigquery.enabled. When false the ConfigMap, env vars, and
+volume mounts are all skipped, so non-BigQuery deploys are completely
+free of ODBC wiring.
 */}}
 {{- $bq := .Values.databases.datawarehouse.bigquery | default dict -}}
-{{- if and ($bq.enabled | default false) (.Values.databases.datawarehouse.autoCreateSecrets | default false) }}
+{{- if ($bq.enabled | default false) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
