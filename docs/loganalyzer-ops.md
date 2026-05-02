@@ -18,9 +18,9 @@ The aim is that an operator landing here at 2am with a paged-out RPI environment
 
 | Pill | What it means |
 |:-----|:--------------|
-| **NEW N** | Number of clusters whose signature has **never been seen in any prior cycle**. This is a lifetime check against the `seen_fingerprints` table, not a cycle-over-cycle check. A signature counts as NEW exactly once and never again. |
-| **RECURRING N** | Number of clusters in this report whose signature was seen in any prior cycle. NEW + RECURRING always equals the total cluster count in the current report. |
-| **RESOLVED N** | Number of clusters that were in the **previous report** but are not in the current one. This is cycle-over-cycle. The "Resolved" pill is the only one anchored to the immediately previous report rather than the lifetime history. |
+| **NEW N** | Number of distinct errors **firing for the first time**. Once an error has been seen in any prior report, it stops being NEW even if it goes quiet for weeks and returns. |
+| **RECURRING N** | Number of distinct errors in this report that have **fired before** at some point. NEW + RECURRING is the total error types in the current report. |
+| **RESOLVED N** | Number of errors that were in the **previous report** but are no longer firing. This is the only pill compared against the previous report rather than the full history. |
 
 ### Count and severity badge
 
