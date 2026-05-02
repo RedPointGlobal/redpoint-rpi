@@ -277,6 +277,10 @@ spec:
           value: "{{ .Values.cloudIdentity.google.configMapFilePath }}/{{ .Values.cloudIdentity.google.keyName }}"
         {{- end }}
         {{- end }}
+        {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        - name: ODBCINI
+          value: /odbc-config/odbc.ini
+        {{- end }}
         {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
@@ -396,6 +400,15 @@ spec:
           name: web-port
           protocol: TCP
         {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
+        {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        lifecycle:
+          postStart:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - cat /app/odbc-config/odbc2.ini > /odbc-config/odbc.ini
+        {{- end }}
         {{- if $cfg.resources.enabled }}
         resources:
           {{- if and $cfg.resources.limits (ne $cfg.resources.limits.enabled false) }}
@@ -421,6 +434,11 @@ spec:
           - name: tempstore
             mountPath: /tmp
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
+          - name: odbc-config
+            mountPath: /app/odbc-config
+            readOnly: true
+          - name: odbc-runtime
+            mountPath: /odbc-config
           {{- range .Values.databases.datawarehouse.bigquery.connections }}
           {{- if eq .credentialsType "serviceAccount" }}
           - name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
@@ -453,6 +471,11 @@ spec:
         - name: tempstore
           emptyDir: {}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
+        - name: odbc-config
+          configMap:
+            name: odbc-config
+        - name: odbc-runtime
+          emptyDir: {}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}
         - name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
