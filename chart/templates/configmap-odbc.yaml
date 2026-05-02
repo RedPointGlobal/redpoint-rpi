@@ -12,7 +12,7 @@ metadata:
   labels:
     {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "odbc-config" "component" "datawarehouse") | nindent 4 }}
 data:
-  odbc.ini: |
+  odbc2.ini: |
     [ODBC]
     Trace=no
 
