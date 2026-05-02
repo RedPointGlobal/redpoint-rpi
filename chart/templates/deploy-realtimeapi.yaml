@@ -851,7 +851,11 @@ spec:
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Key
             value: "Hostname"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__0__Value
+            {{- if eq $cfg.queueProvider.rabbitmq.type "internal" }}
+            value: {{ printf "rpi-realtimeapi-rabbitmq.%s.svc.cluster.local." .Release.Namespace | quote }}
+            {{- else }}
             value: {{ $cfg.queueProvider.rabbitmq.rabbitmqSettings.hostname | quote }}
+            {{- end }}
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Key
             value: "VirtualHost"
           - name: RealtimeAPIConfiguration__Queues__ClientQueueSettings__Settings__1__Value
@@ -869,7 +873,11 @@ spec:
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Key
             value: "Hostname"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__0__Value
+            {{- if eq $cfg.queueProvider.rabbitmq.type "internal" }}
+            value: {{ printf "rpi-realtimeapi-rabbitmq.%s.svc.cluster.local." .Release.Namespace | quote }}
+            {{- else }}
             value: {{ $cfg.queueProvider.rabbitmq.rabbitmqSettings.hostname | quote }}
+            {{- end }}
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Key
             value: "VirtualHost"
           - name: RealtimeAPIConfiguration__Queues__ListenerQueueSettings__Settings__1__Value

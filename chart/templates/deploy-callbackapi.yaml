@@ -402,7 +402,11 @@ spec:
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Key
           value: "Hostname"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__0__Value
+          {{- if eq $rtCfg.queueProvider.rabbitmq.type "internal" }}
+          value: {{ printf "rpi-realtimeapi-rabbitmq.%s.svc.cluster.local." .Release.Namespace | quote }}
+          {{- else }}
           value: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.hostname | quote }}
+          {{- end }}
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Key
           value: "VirtualHost"
         - name: CallbackServiceConfig__QueueProvider__CallbackServiceQueueSettings__Settings__1__Value
