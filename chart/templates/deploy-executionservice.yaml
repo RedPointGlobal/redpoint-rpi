@@ -508,8 +508,13 @@ spec:
           - name: tempstore
             mountPath: /tmp
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
+          # subPath mount gives a real file (not the ConfigMap symlink
+          # chain), which Simba's ODBC parser handles cleanly. File
+          # won't auto-update on ConfigMap change, but this content
+          # only changes on chart upgrade -- pods roll anyway.
           - name: odbc-config
-            mountPath: /app/odbc-config
+            mountPath: /app/odbc-config/odbc.ini
+            subPath: odbc.ini
             readOnly: true
           {{- range .Values.databases.datawarehouse.bigquery.connections }}
           {{- if eq .credentialsType "serviceAccount" }}

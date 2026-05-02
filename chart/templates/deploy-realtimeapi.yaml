@@ -1185,8 +1185,10 @@ spec:
             - name: tempstore
               mountPath: /tmp
             {{- if (($dw.bigquery | default dict).enabled | default false) }}
+            # subPath mount: real file, not the ConfigMap symlink chain.
             - name: odbc-config
-              mountPath: /app/odbc-config
+              mountPath: /app/odbc-config/odbc.ini
+              subPath: odbc.ini
               readOnly: true
             {{- range .Values.databases.datawarehouse.bigquery.connections }}
             {{- if eq .credentialsType "serviceAccount" }}

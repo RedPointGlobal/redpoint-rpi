@@ -34,9 +34,6 @@ data:
     Description=Simba ODBC Driver for Google BigQuery (64-bit) DSN
     Driver=/app/odbc-lib/bigquery/SimbaODBCDriverforGoogleBigQuery64/lib/libgooglebigqueryodbc_sb64.so
     Catalog={{ .projectId }}
-    {{/* Integer fields use hasKey, not `default`, because 0 is the
-         Go zero value -- `default 1` would coerce a user-set 0 back
-         to 1 (same gotcha that bit email.onlyOnNewErrors). */}}
     SQLDialect={{ if hasKey . "sqlDialect" }}{{ .sqlDialect }}{{ else }}1{{ end }}
     AllowLargeResults={{ if hasKey . "allowLargeResults" }}{{ .allowLargeResults }}{{ else }}0{{ end }}
     OAuthMechanism={{ if hasKey . "OAuthMechanism" }}{{ .OAuthMechanism }}{{ else }}0{{ end }}
