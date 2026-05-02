@@ -157,6 +157,20 @@ spec:
             {{- end }}
           {{- end }}
           env:
+            # Boot under the per-pod headless-service FQDN instead of the
+            # bare pod hostname. Without this, rabbit advertises itself as
+            # `rabbit@rpi-queuereader-rabbitmq-0` (a name that does not
+            # resolve from outside the rabbit pod), and .NET RabbitMQ
+            # clients hit "Name or service not known" on the auto-recovery
+            # path even though the primary connection is healthy.
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: RABBITMQ_USE_LONGNAME
+              value: "true"
+            - name: RABBITMQ_NODENAME
+              value: "rabbit@$(POD_NAME).{{ $QueueReaderMQ }}.$(POD_NAMESPACE).svc.cluster.local"
             - name: RABBITMQ_DEFAULT_USER
               value: {{ $qrCfg.internalQueues.rabbitmqSettings.username | quote }}
             - name: RABBITMQ_DEFAULT_PASS
@@ -374,6 +388,17 @@ spec:
             {{- end }}
           {{- end }}
           env:
+            # See queuereader rabbit block above: boot under per-pod
+            # headless-service FQDN so .NET clients' auto-recovery path
+            # stops failing DNS on the bare pod nodename.
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: RABBITMQ_USE_LONGNAME
+              value: "true"
+            - name: RABBITMQ_NODENAME
+              value: "rabbit@$(POD_NAME).{{ $RealtimeapiMQ }}.$(POD_NAMESPACE).svc.cluster.local"
             - name: RABBITMQ_DEFAULT_USER
               value: {{ $rtCfg.queueProvider.rabbitmq.rabbitmqSettings.username | quote }}
             - name: RABBITMQ_DEFAULT_PASS
