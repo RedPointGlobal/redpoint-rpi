@@ -324,7 +324,7 @@ spec:
           {{- end }}
           {{- end }}
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
-          # Simba ODBC driver for BigQuery uses the ini at this path.
+          # BigQuery DSN file for the Simba ODBC driver.
           - name: ODBCINI
             value: /app/odbc-config/odbc.ini
           {{- end }}
@@ -1186,6 +1186,7 @@ spec:
               mountPath: /tmp
             {{- if (($dw.bigquery | default dict).enabled | default false) }}
             # subPath mount: real file, not the ConfigMap symlink chain.
+            # Doesn't auto-update on ConfigMap change; pods roll on upgrade.
             - name: odbc-config
               mountPath: /app/odbc-config/odbc.ini
               subPath: odbc.ini

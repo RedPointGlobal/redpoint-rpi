@@ -1,14 +1,6 @@
 {{/*
-ODBC ini file for the .NET services that talk to BigQuery via the
-Simba ODBC driver.
-
-Mounted at /app/odbc-config/odbc.ini in executionservice, nodemanager,
-callbackapi, and realtimeapi pods. The ODBCINI env var on each of
-those services points at the same path.
-
-Gated on bigquery.enabled. When false the ConfigMap, env vars, and
-volume mounts are all skipped, so non-BigQuery deploys are completely
-free of ODBC wiring.
+ODBC ini for the BigQuery Simba driver. Rendered when bigquery.enabled
+is true. One DSN section per entry in databases.datawarehouse.bigquery.connections.
 */}}
 {{- $bq := .Values.databases.datawarehouse.bigquery | default dict -}}
 {{- if ($bq.enabled | default false) }}

@@ -11,10 +11,8 @@
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
 
 ---
-# Read-only RBAC for the analyzer's Infrastructure events collector.
-# Lets the analyzer pod call the K8s API to capture OOMKilled,
-# CrashLoopBackOff, probe failures, and pull the previous container's
-# stdout when a pod just crashed. Namespace-scoped only.
+# Read-only K8s API access for the analyzer's pod-health and event
+# collectors. Namespace-scoped.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -32,9 +30,7 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
-  # metrics-server: live CPU + memory usage for the Pod health section.
-  # Optional in the cluster -- when not installed, the snapshot just
-  # omits CPU/memory and the UI shows "-" for those columns.
+  # metrics-server. Optional; if absent, CPU/memory columns show "-".
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods"]
     verbs: ["get", "list"]

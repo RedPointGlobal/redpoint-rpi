@@ -347,10 +347,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
-        # Simba ODBC driver for BigQuery uses the ini at this path. The
-        # odbc-config ConfigMap is rendered by templates/configmap-odbc.yaml
-        # when autoCreateSecrets is on; customers running BYO can supply
-        # their own ConfigMap with the same name.
+        # BigQuery DSN file for the Simba ODBC driver.
         - name: ODBCINI
           value: /app/odbc-config/odbc.ini
         {{- end }}
@@ -508,10 +505,10 @@ spec:
           - name: tempstore
             mountPath: /tmp
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
-          # subPath mount gives a real file (not the ConfigMap symlink
-          # chain), which Simba's ODBC parser handles cleanly. File
-          # won't auto-update on ConfigMap change, but this content
-          # only changes on chart upgrade -- pods roll anyway.
+          # subPath mount: real file, not the ConfigMap symlink chain
+          # (Simba's parser doesn't follow symlinks reliably). File
+          # won't auto-update on ConfigMap change; pods roll on chart
+          # upgrade so this is fine.
           - name: odbc-config
             mountPath: /app/odbc-config/odbc.ini
             subPath: odbc.ini
