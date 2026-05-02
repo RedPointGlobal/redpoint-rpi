@@ -423,9 +423,9 @@ spec:
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
           {{- range .Values.databases.datawarehouse.bigquery.connections }}
           {{- if eq .credentialsType "serviceAccount" }}
-          - name: {{ .configMapName | quote }}
-            mountPath: {{ .ConfigMapFilePath }}/{{ .keyName }}
-            subPath: {{ .keyName }}
+          - name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
+            mountPath: {{ default $.Values.cloudIdentity.google.configMapFilePath .ConfigMapFilePath }}/{{ default $.Values.cloudIdentity.google.keyName .keyName }}
+            subPath: {{ default $.Values.cloudIdentity.google.keyName .keyName }}
             readOnly: true
           {{- end }}
           {{- end }}
@@ -455,9 +455,9 @@ spec:
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
         {{- if eq .credentialsType "serviceAccount" }}
-        - name: {{ .configMapName | quote }}
+        - name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
           configMap:
-            name: {{ .configMapName | quote }}
+            name: {{ default $.Values.cloudIdentity.google.configMapName .configMapName | quote }}
         {{- end }}
         {{- end }}
         {{- end }}
