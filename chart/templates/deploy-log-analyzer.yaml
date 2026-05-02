@@ -32,6 +32,12 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
+  # metrics-server: live CPU + memory usage for the Pod health section.
+  # Optional in the cluster -- when not installed, the snapshot just
+  # omits CPU/memory and the UI shows "-" for those columns.
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
