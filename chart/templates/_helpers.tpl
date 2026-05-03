@@ -1109,6 +1109,8 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- $secretName := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $provider := .Values.databases.operational.provider | default "sqlserver" -}}
+- name: LOG_ANALYZER__CLOUD_PLATFORM
+  value: {{ .Values.global.deployment.platform | default "" | quote }}
 - name: LOG_ANALYZER__BUDGET__MAX_TOKENS_PER_HOUR
   value: {{ $budget.maxTokensPerHour | default 200000 | quote }}
 - name: LOG_ANALYZER__BUDGET__MAX_REQUESTS_PER_HOUR
