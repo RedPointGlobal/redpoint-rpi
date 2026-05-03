@@ -2231,6 +2231,13 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "replicas": { "type": "integer", "minimum": 1 },
+        "serviceAccount": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": { "type": "boolean", "description": "Create the rpi-loganalyzer ServiceAccount." }
+          }
+        },
         "model": {
           "type": "object",
           "additionalProperties": true,
@@ -2296,15 +2303,18 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
-            "persistentVolumeClaim": {
+            "existingClaim": {
+              "type": "string",
+              "description": "BYO PVC name. When set, volumeClaimTemplates is ignored."
+            },
+            "volumeClaimTemplates": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
                 "enabled": { "type": "boolean" },
-                "storageClass": { "type": "string" },
-                "size": { "type": "string" },
-                "mountPath": { "type": "string" },
-                "accessMode": { "type": "string" }
+                "accessModes": { "type": "string" },
+                "storageClassName": { "type": "string", "description": "Empty string => use the cluster's default StorageClass." },
+                "storage": { "type": "string", "description": "PVC size, e.g. 5Gi." }
               }
             }
           }
@@ -2318,7 +2328,56 @@
             "apiPort": { "type": "integer" }
           }
         },
-        "resources": { "type": "object", "additionalProperties": true }
+        "resources": { "type": "object", "additionalProperties": true },
+        "email": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "recipients": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Recipient email addresses. Required when enabled."
+            },
+            "onlyOnNewErrors": { "type": "boolean", "description": "Only send when first-seen errors exist; ignored in daily-schedule mode." }
+          }
+        },
+        "teams": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "webhookSecretKey": { "type": "string", "description": "Secret key holding the Teams incoming-webhook URL." },
+            "onlyOnNewErrors": { "type": "boolean" }
+          }
+        },
+        "localLlm": {
+          "type": "object",
+          "description": "Built-in offline LLM (Ollama). Ships a small CPU-runnable model so the analyzer works out of the box without a cloud account.",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": { "type": "boolean", "description": "Disable when using a cloud provider to save cluster resources." },
+            "image": { "type": "string", "description": "Ollama container image, e.g. ollama/ollama:0.5.4." },
+            "service": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "port": { "type": "integer", "default": 11434 }
+              }
+            },
+            "resources": { "type": "object", "additionalProperties": true },
+            "persistence": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "size": { "type": "string" },
+                "storageClassName": { "type": "string" },
+                "accessMode": { "type": "string" }
+              }
+            }
+          }
+        }
       }
     },
     "postInstall": {
