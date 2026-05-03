@@ -150,18 +150,24 @@ spec:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         # Probes hit the FastAPI side. Streamlit is consumer-facing only.
+        # Generous thresholds because a local-LLM analysis cycle blocks
+        # the event loop for 30-90s on CPU, and the eager first-cycle
+        # runs during lifespan startup -- without this headroom kubelet
+        # SIGKILLs the pod before uvicorn opens the port.
         readinessProbe:
           httpGet:
             path: /health/ready
             port: api
           initialDelaySeconds: 10
-          periodSeconds: 10
+          periodSeconds: 15
+          failureThreshold: 30          # ~7.5 min before NotReady
         livenessProbe:
           httpGet:
             path: /health/live
             port: api
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 30
+          failureThreshold: 10          # ~6 min before SIGKILL
         volumeMounts:
         - name: {{ $name }}-data
           mountPath: /data
