@@ -3,7 +3,7 @@
 {{- if and $cfg.enabled $llm.enabled -}}
 {{- $name := "rpi-loganalyzer-llm" -}}
 {{- $port := $llm.service.port | default 11434 -}}
-{{- $model := $llm.model | default "phi3:mini" -}}
+{{- $model := required "logAnalyzer.model.llmName is required when localLlm is enabled" (($cfg.model | default dict).llmName) -}}
 {{- $persistence := $llm.persistence | default dict -}}
 {{- $resources := $llm.resources | default dict -}}
 

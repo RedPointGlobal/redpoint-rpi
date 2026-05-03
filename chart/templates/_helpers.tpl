@@ -1034,20 +1034,18 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__MODEL__PROVIDER
   value: {{ $provider | quote }}
 {{- if eq $provider "local" }}
-{{- $local := $model.local | default dict }}
 {{- $localLlm := $cfg.localLlm | default dict }}
 {{- if not $localLlm.enabled }}
 {{- fail "logAnalyzer with provider=local requires logAnalyzer.localLlm.enabled=true (the in-cluster Ollama deployment)." }}
 {{- end }}
-{{- $defaultBase := printf "http://rpi-loganalyzer-llm.%s.svc.cluster.local:%v/v1" .Release.Namespace ($localLlm.service.port | default 11434) }}
 - name: LOG_ANALYZER__MODEL__BASE_URL
-  value: {{ $local.baseUrl | default $defaultBase | quote }}
+  value: {{ printf "http://rpi-loganalyzer-llm.%s.svc.cluster.local:%v/v1" .Release.Namespace ($localLlm.service.port | default 11434) | quote }}
 - name: LOG_ANALYZER__MODEL__NAME
-  value: {{ $local.modelName | default ($localLlm.model | default "phi3:mini") | quote }}
+  value: {{ required "logAnalyzer.model.llmName is required when provider=local" $model.llmName | quote }}
 {{- else if eq $provider "anthropic" }}
 {{- $a := $model.anthropic | default dict }}
 - name: ANTHROPIC_MODEL
-  value: {{ required "logAnalyzer.model.anthropic.modelName is required when provider=anthropic" $a.modelName | quote }}
+  value: {{ required "logAnalyzer.model.llmName is required when provider=anthropic" $model.llmName | quote }}
 {{- if and $a.apiKeyVaultEntry (not $isSdk) }}
 - name: ANTHROPIC_API_KEY
   valueFrom:
@@ -1082,7 +1080,7 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 - name: AWS_REGION
   value: {{ required "logAnalyzer.model.bedrock.region is required when provider=bedrock" $b.region | quote }}
 - name: LOG_ANALYZER__MODEL__BEDROCK_MODEL_ID
-  value: {{ required "logAnalyzer.model.bedrock.modelId is required when provider=bedrock" $b.modelId | quote }}
+  value: {{ required "logAnalyzer.model.llmName is required when provider=bedrock" $model.llmName | quote }}
 {{- else if eq $provider "vertex" }}
 {{- $v := $model.vertex | default dict }}
 - name: VERTEX_PROJECT_ID
@@ -1090,7 +1088,7 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 - name: VERTEX_REGION
   value: {{ required "logAnalyzer.model.vertex.region is required when provider=vertex" $v.region | quote }}
 - name: LOG_ANALYZER__MODEL__VERTEX_MODEL_ID
-  value: {{ required "logAnalyzer.model.vertex.modelId is required when provider=vertex" $v.modelId | quote }}
+  value: {{ required "logAnalyzer.model.llmName is required when provider=vertex" $model.llmName | quote }}
 {{- end }}
 {{- end -}}
 

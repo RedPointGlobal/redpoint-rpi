@@ -1104,9 +1104,9 @@ logAnalyzer:
     enabled: true                    # creates rpi-loganalyzer SA in per-service mode
 
   # ---- Model provider switch ---------------------------------------------
-  # The analyzer reads only the sub-block matching `provider`. Other blocks
-  # are ignored. Leave provider-specific defaults empty so customers must
-  # opt in deliberately.
+  # Pick a provider and (for non-Azure) name the model. azureFoundry is
+  # special: it ignores `llmName` and reads the model name from the
+  # chart-wide redpointAI.naturalLanguage.ChatGptEngine instead.
   #
   # Default is `local` so the analyzer works out of the box -- the chart
   # ships a CPU-friendly Ollama sidecar (see logAnalyzer.localLlm below)
@@ -1115,17 +1115,17 @@ logAnalyzer:
   model:
     provider: local                  # local | anthropic | azureFoundry | bedrock | vertex
 
-    # Built-in offline LLM. No API keys, no egress, runs on CPU. The
-    # chart auto-resolves `baseUrl` and `modelName` from the localLlm
-    # block below -- you don't normally need to set anything here.
-    local:
-      baseUrl: ""                    # leave empty to use the in-cluster service
-      modelName: ""                  # leave empty to use logAnalyzer.localLlm.model
+    # Model identifier for the active provider. Ignored for azureFoundry
+    # (uses redpointAI.naturalLanguage.ChatGptEngine).
+    #   local    -> any tag from https://ollama.com/library (e.g., phi3:mini, gemma2:2b)
+    #   anthropic-> claude-sonnet-4-6, claude-opus-4-7, etc.
+    #   bedrock  -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
+    #   vertex   -> e.g., claude-sonnet-4@20250514
+    llmName: phi3:mini
 
     # Direct Anthropic API. Egress to api.anthropic.com:443 required.
     # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
     anthropic:
-      modelName: claude-sonnet-4-6   # API model identifier passed to the SDK
       apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
       baseUrl: ""                    # optional egress proxy
 
@@ -1145,7 +1145,6 @@ logAnalyzer:
     # target model. No separate API key needed.
     bedrock:
       region: ""                     # e.g., us-east-1
-      modelId: ""                    # e.g., anthropic.claude-sonnet-4-20250514-v1:0
 
     # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload Identity or
     # SA key file). Customer grants `aiplatform.endpoints.predict`. No
@@ -1153,7 +1152,6 @@ logAnalyzer:
     vertex:
       projectId: ""
       region: ""                     # e.g., us-central1
-      modelId: ""                    # e.g., claude-sonnet-4@20250514
 
   # ---- Token + request budget --------------------------------------------
   # Hard caps enforced inside the analyzer (token-bucket). When exceeded,
@@ -1214,14 +1212,11 @@ logAnalyzer:
   # this only when you've already pointed `model.provider` at a cloud
   # provider and want to save cluster resources.
   #
-  # Resource cost: ~3-4 GiB RAM + 2 CPU cores at runtime, ~3 GiB disk
-  # for the default phi3:mini model. Override `model` to swap in a
-  # bigger one (`qwen2.5:7b`, `llama3.1:8b`, `mistral:7b`, etc.); the
-  # chart will pull it on first start.
+  # The model name comes from `model.llmName` above -- this block is
+  # only the deployment knobs (image, resources, persistence).
   localLlm:
     enabled: true                    # turn off when using a cloud model
     image: ollama/ollama:0.5.4
-    model: phi3:mini                 # any model on https://ollama.com/library
     service:
       port: 11434
     resources:

@@ -2238,9 +2238,12 @@
             "provider": {
               "type": "string",
               "enum": ["local", "anthropic", "azureFoundry", "bedrock", "vertex"],
-              "description": "LLM provider. `local` uses the in-cluster Ollama deployment (logAnalyzer.localLlm) -- works out of the box with no API keys. The cloud providers emit env vars matching the Anthropic SDK's auto-detection."
+              "description": "LLM provider. `local` uses the in-cluster Ollama deployment (logAnalyzer.localLlm) -- works out of the box with no API keys."
             },
-            "name": { "type": "string", "description": "Logical model name (display only)." },
+            "llmName": {
+              "type": "string",
+              "description": "Model identifier for the active provider (e.g., phi3:mini, claude-sonnet-4-6, anthropic.claude-sonnet-4-20250514-v1:0). Ignored for azureFoundry, which reads redpointAI.naturalLanguage.ChatGptEngine instead."
+            },
             "anthropic": {
               "type": "object",
               "additionalProperties": true,
@@ -2249,22 +2252,11 @@
                 "baseUrl": { "type": "string" }
               }
             },
-            "azureFoundry": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "endpoint": { "type": "string" },
-                "apiVersion": { "type": "string" },
-                "deploymentName": { "type": "string" },
-                "apiKeyVaultEntry": { "type": "string" }
-              }
-            },
             "bedrock": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "region": { "type": "string" },
-                "modelId": { "type": "string" }
+                "region": { "type": "string" }
               }
             },
             "vertex": {
@@ -2272,8 +2264,7 @@
               "additionalProperties": true,
               "properties": {
                 "projectId": { "type": "string" },
-                "region": { "type": "string" },
-                "modelId": { "type": "string" }
+                "region": { "type": "string" }
               }
             }
           }
