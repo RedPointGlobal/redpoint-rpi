@@ -1027,13 +1027,24 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 {{- define "rpi.logAnalyzer.modelEnvvars" -}}
 {{- $cfg := .Values.logAnalyzer | default dict -}}
 {{- $model := $cfg.model | default dict -}}
-{{- $provider := $model.provider | default "anthropic" -}}
+{{- $provider := $model.provider | default "local" -}}
 {{- $secret := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $isSdk := eq $secretsProvider "sdk" -}}
 - name: LOG_ANALYZER__MODEL__PROVIDER
   value: {{ $provider | quote }}
-{{- if eq $provider "anthropic" }}
+{{- if eq $provider "local" }}
+{{- $local := $model.local | default dict }}
+{{- $localLlm := $cfg.localLlm | default dict }}
+{{- if not $localLlm.enabled }}
+{{- fail "logAnalyzer with provider=local requires logAnalyzer.localLlm.enabled=true (the in-cluster Ollama deployment)." }}
+{{- end }}
+{{- $defaultBase := printf "http://rpi-loganalyzer-llm.%s.svc.cluster.local:%v/v1" .Release.Namespace ($localLlm.service.port | default 11434) }}
+- name: LOG_ANALYZER__MODEL__BASE_URL
+  value: {{ $local.baseUrl | default $defaultBase | quote }}
+- name: LOG_ANALYZER__MODEL__NAME
+  value: {{ $local.modelName | default ($localLlm.model | default "phi3:mini") | quote }}
+{{- else if eq $provider "anthropic" }}
 {{- $a := $model.anthropic | default dict }}
 - name: ANTHROPIC_MODEL
   value: {{ required "logAnalyzer.model.anthropic.modelName is required when provider=anthropic" $a.modelName | quote }}

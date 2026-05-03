@@ -1107,8 +1107,20 @@ logAnalyzer:
   # The analyzer reads only the sub-block matching `provider`. Other blocks
   # are ignored. Leave provider-specific defaults empty so customers must
   # opt in deliberately.
+  #
+  # Default is `local` so the analyzer works out of the box -- the chart
+  # ships a CPU-friendly Ollama sidecar (see logAnalyzer.localLlm below)
+  # with a small open-weights model. Switch to anthropic / azureFoundry /
+  # bedrock / vertex with one line for higher-quality cloud analysis.
   model:
-    provider: anthropic              # anthropic | azureFoundry | bedrock | vertex
+    provider: local                  # local | anthropic | azureFoundry | bedrock | vertex
+
+    # Built-in offline LLM. No API keys, no egress, runs on CPU. The
+    # chart auto-resolves `baseUrl` and `modelName` from the localLlm
+    # block below -- you don't normally need to set anything here.
+    local:
+      baseUrl: ""                    # leave empty to use the in-cluster service
+      modelName: ""                  # leave empty to use logAnalyzer.localLlm.model
 
     # Direct Anthropic API. Egress to api.anthropic.com:443 required.
     # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
@@ -1195,6 +1207,35 @@ logAnalyzer:
     enabled: false
     webhookSecretKey: LogAnalyzer_Teams_Webhook
     onlyOnNewErrors: true            # only post when first-seen errors exist
+
+  # ---- Built-in offline LLM (Ollama) -------------------------------------
+  # Ships a small CPU-runnable model alongside the analyzer so the tool
+  # works out of the box without any cloud account / API key. Disable
+  # this only when you've already pointed `model.provider` at a cloud
+  # provider and want to save cluster resources.
+  #
+  # Resource cost: ~3-4 GiB RAM + 2 CPU cores at runtime, ~3 GiB disk
+  # for the default phi3:mini model. Override `model` to swap in a
+  # bigger one (`qwen2.5:7b`, `llama3.1:8b`, `mistral:7b`, etc.); the
+  # chart will pull it on first start.
+  localLlm:
+    enabled: true                    # turn off when using a cloud model
+    image: ollama/ollama:0.5.4
+    model: phi3:mini                 # any model on https://ollama.com/library
+    service:
+      port: 11434
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "2Gi"
+      limits:
+        cpu: "4"
+        memory: "6Gi"
+    persistence:
+      enabled: true
+      size: 10Gi                     # holds the pulled model file(s)
+      storageClassName: ""           # default storage class when blank
+      accessMode: ReadWriteOnce
 
   # Pulse_Logging access: the analyzer reads the same 4 connection
   # components the deploymentapi reads (host / username / password /

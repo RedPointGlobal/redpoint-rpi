@@ -1,0 +1,123 @@
+{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- $llm := $cfg.localLlm | default dict -}}
+{{- if and $cfg.enabled $llm.enabled -}}
+{{- $name := "rpi-loganalyzer-llm" -}}
+{{- $port := $llm.service.port | default 11434 -}}
+{{- $model := $llm.model | default "phi3:mini" -}}
+{{- $persistence := $llm.persistence | default dict -}}
+{{- $resources := $llm.resources | default dict -}}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer-llm") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ $port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer-llm") | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ $name }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer-llm") | nindent 8 }}
+    spec:
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      containers:
+        - name: ollama
+          image: {{ $llm.image | default "ollama/ollama:0.5.4" | quote }}
+          imagePullPolicy: IfNotPresent
+          # Run ollama serve in the foreground; pull the configured model
+          # the first time the pod starts (no-op on subsequent restarts
+          # since the model file persists in the PVC). The pod stays
+          # NotReady until the readiness probe sees the model in the
+          # local registry, so the analyzer never hits an empty server.
+          command: ["sh", "-c"]
+          args:
+            - |
+              ollama serve &
+              SERVER_PID=$!
+              until ollama list >/dev/null 2>&1; do sleep 1; done
+              ollama pull "$OLLAMA_MODEL"
+              wait "$SERVER_PID"
+          env:
+            - name: OLLAMA_MODEL
+              value: {{ $model | quote }}
+            # Keep the model resident across requests so the first
+            # analyze call after idle isn't a 30s cold-load.
+            - name: OLLAMA_KEEP_ALIVE
+              value: "24h"
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:{{ $port }}"
+          ports:
+            - name: http
+              containerPort: {{ $port }}
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - ollama list | awk '{print $1}' | grep -qx "$OLLAMA_MODEL"
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 60   # generous: first pull can take 5-10 min
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 4
+            timeoutSeconds: 5
+          {{- if $resources }}
+          resources:
+            {{- toYaml $resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: models
+              mountPath: /root/.ollama
+  {{- if $persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: models
+      spec:
+        accessModes:
+          - {{ $persistence.accessMode | default "ReadWriteOnce" }}
+        {{- if $persistence.storageClassName }}
+        storageClassName: {{ $persistence.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $persistence.size | default "10Gi" }}
+  {{- else }}
+      volumes:
+        - name: models
+          emptyDir:
+            sizeLimit: {{ $persistence.size | default "10Gi" }}
+  {{- end }}
+{{- end }}

@@ -2237,8 +2237,8 @@
           "properties": {
             "provider": {
               "type": "string",
-              "enum": ["anthropic", "azureFoundry", "bedrock", "vertex"],
-              "description": "LLM provider. The chart emits provider-specific env vars matching the Anthropic SDK's auto-detection."
+              "enum": ["local", "anthropic", "azureFoundry", "bedrock", "vertex"],
+              "description": "LLM provider. `local` uses the in-cluster Ollama deployment (logAnalyzer.localLlm) -- works out of the box with no API keys. The cloud providers emit env vars matching the Anthropic SDK's auto-detection."
             },
             "name": { "type": "string", "description": "Logical model name (display only)." },
             "anthropic": {
