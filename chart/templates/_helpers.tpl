@@ -1138,6 +1138,14 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- end }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: "/data/reports.db"
+{{- with $cfg.probeTargets }}
+# Connectivity matrix overrides. Empty/unset means the analyzer auto-
+# discovers SQL host (from secrets), RabbitMQ + Redis (from in-cluster
+# DNS in this namespace). Set this to override or extend with custom
+# targets (external SaaS DB, Service Bus namespace, ingress, etc.).
+- name: LOG_ANALYZER__PROBE_TARGETS
+  value: {{ . | toJson | quote }}
+{{- end }}
 # SMTP transport for the email digest. Always emitted; consumed only
 # when email is enabled.
 - name: RPI__SMTP__EmailSenderAddress

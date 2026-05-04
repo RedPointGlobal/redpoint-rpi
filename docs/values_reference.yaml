@@ -2182,6 +2182,16 @@ logAnalyzer:
     lookbackMinutes: 60              # how far back to query each cycle
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
+  # ---- Connectivity probes (Infrastructure tab) --------------------------
+  # TCP/DNS probes per target every cycle. Auto-discovered: SQL (from secret),
+  # SMTP, ingress, in-cluster RabbitMQ/Redis. Use this only for things that
+  # aren't in the chart's env contract (third-party APIs, external SaaS, etc).
+  probeTargets: []
+  # Example -- only things NOT already auto-discovered:
+  # probeTargets:
+  #   - {name: "Snowflake", host: "abc1234.snowflakecomputing.com", port: 443, kind: tcp}
+  #   - {name: "Auth0",     host: "rpi-prod.us.auth0.com",          port: 443, kind: tcp}
+
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's
   # report to the configured recipients. SMTP transport reuses the

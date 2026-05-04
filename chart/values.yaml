@@ -1176,6 +1176,34 @@ logAnalyzer:
     lookbackMinutes: ""              # leave empty for auto: 60 (interval) or 1440 (daily). Override with an int.
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
+  # ---- Connectivity probes (Infrastructure tab) --------------------------
+  # The analyzer opens a TCP connection + DNS resolve to each target every
+  # cycle and surfaces uptime / latency / last-failure on the dashboard.
+  # No DB credentials needed -- it's pure reachability.
+  #
+  # AUTO-DISCOVERED (no config needed) -- pulled from env vars the chart
+  # already binds:
+  #   - SQL (Operational + Pulse_Logging) -- ClusterEnvironment__OperationalDatabase__ConnectionSettings__Server
+  #   - SMTP server                       -- RPI__SMTP__Address + RPI__SMTP__Port
+  #   - Ingress (analyzer dashboard)      -- derived from ingress.hosts.loganalyzer + ingress.domain
+  #   - RabbitMQ                          -- rpi-rabbitmq.<namespace>.svc.cluster.local:5672
+  #   - Redis                             -- rpi-redis.<namespace>.svc.cluster.local:6379
+  #
+  # Use `probeTargets` ONLY for things the analyzer can't derive: third-
+  # party APIs, external SaaS endpoints other RPI services call, alternate
+  # ingress hosts, anything outside the chart's secret/env contract.
+  # Each entry:
+  #   name: friendly label shown on the matrix
+  #   host: hostname or IP
+  #   port: TCP port (use 0 for kind=dns)
+  #   kind: "tcp" (probes both TCP and DNS) or "dns" (DNS only)
+  probeTargets: []
+  # Example -- only things NOT already auto-discovered:
+  # probeTargets:
+  #   - {name: "Snowflake",       host: "abc1234.snowflakecomputing.com",       port: 443, kind: tcp}
+  #   - {name: "Auth0",           host: "rpi-prod.us.auth0.com",                port: 443, kind: tcp}
+  #   - {name: "External MongoDB",host: "rpi-prod.mongodb.net",                 port: 27017, kind: tcp}
+
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's
   # report to the configured recipients. SMTP transport reuses the
