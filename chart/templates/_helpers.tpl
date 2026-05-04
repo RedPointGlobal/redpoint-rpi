@@ -1119,7 +1119,7 @@ Customers list endpoints in `logAnalyzer.probeTargets` as plain
 `host:port` strings. The analyzer probes each line every cycle.
 */}}
 {{- define "rpi.logAnalyzer.probeTargets" -}}
-{{- join "\n" ((.Values.logAnalyzer).probeTargets | default list) -}}
+{{- join "," ((.Values.logAnalyzer).probeTargets | default list) -}}
 {{- end }}
 
 {{- define "rpi.logAnalyzer.runtimeEnvvars" -}}
