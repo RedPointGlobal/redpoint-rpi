@@ -1,0 +1,94 @@
+# ============================================================
+# RPI Quickstart -- Amazon (EKS)
+# ============================================================
+# Opinionated, best-practice starter overrides.yaml. Encodes the
+# recommended AWS path: SDK secrets via Secrets Manager, IRSA,
+# MongoDB cache, SQS queue, EFS storage, AWS ALB ingress,
+# autoscaling enabled.
+#
+# Replace the <placeholder> values before deploying. The Validate
+# tab will flag any that you miss.
+# ============================================================
+
+global:
+  deployment:
+    mode: standard
+    platform: amazon
+    images:
+      registry: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      tag: "7.7.20260414.1238"
+      imagePullSecret:
+        enabled: true
+        name: redpoint-rpi
+
+# Cloud identity: IRSA (IAM Roles for Service Accounts). Each
+# service account assumes its own IAM role -- no static AWS keys
+# inside the cluster.
+cloudIdentity:
+  enabled: true
+  amazon:
+    accountId: <your-aws-account-id>
+    roleArn: arn:aws:iam::<your-aws-account-id>:role/<your-rpi-role>
+
+# Secrets: SDK provider reads from AWS Secrets Manager. The IRSA
+# role above grants secretsmanager:GetSecretValue on the relevant
+# ARNs.
+secretsManagement:
+  provider: sdk
+  amazon:
+    region: <your-aws-region>
+    secretArnPrefix: arn:aws:secretsmanager:<your-aws-region>:<your-aws-account-id>:secret:rpi/
+
+# Realtime cache: MongoDB. Atlas M20+ recommended for production.
+realtimeapi:
+  cacheProvider:
+    enabled: true
+    provider: mongodb
+    mongodb:
+      server_host: <your-mongodb-host>
+      database_name: <your-cache-database-name>
+
+# Queue: Amazon SQS. Standard queues for high throughput; FIFO if
+# you need strict ordering on a per-message-group basis.
+queueProvider:
+  provider: amazonsqs
+  amazonsqs:
+    region: <your-aws-region>
+    queueUrlPrefix: https://sqs.<your-aws-region>.amazonaws.com/<your-aws-account-id>/
+
+# Storage: EFS for the shared FileOutputDirectory mount. RWX is
+# required.
+storage:
+  fileOutputDirectory:
+    enabled: true
+    storageClassName: efs-sc
+    accessMode: ReadWriteMany
+    size: 50Gi
+
+# Ingress: AWS ALB via the AWS Load Balancer Controller, with TLS
+# terminated at the ALB using an ACM certificate.
+ingress:
+  enabled: true
+  className: alb
+  domain: <your-domain>
+  tls:
+    enabled: true
+    acmCertificateArn: arn:aws:acm:<your-aws-region>:<your-aws-account-id>:certificate/<your-cert-id>
+
+# Autoscaling: HPA on the four highest-load services. Tune target
+# utilization once you have production traffic.
+autoscaling:
+  enabled: true
+
+# Smart Activation: enable if you're using the CDP-driven syndication
+# flow. Otherwise leave disabled.
+smartActivation:
+  enabled: false
+
+# Sensible global resource defaults.
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 3Gi

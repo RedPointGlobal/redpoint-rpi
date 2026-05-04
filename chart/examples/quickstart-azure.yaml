@@ -1,0 +1,94 @@
+# ============================================================
+# RPI Quickstart -- Azure (AKS)
+# ============================================================
+# Opinionated, best-practice starter overrides.yaml. Encodes the
+# recommended Azure path: SDK secrets via Key Vault, Workload
+# Identity, MongoDB cache, Service Bus queue, Azure Files storage,
+# AGC ingress, autoscaling enabled.
+#
+# Replace the <placeholder> values before deploying. The Validate
+# tab will flag any that you miss.
+# ============================================================
+
+global:
+  deployment:
+    mode: standard
+    platform: azure
+    images:
+      registry: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      tag: "7.7.20260414.1238"
+      imagePullSecret:
+        enabled: true
+        name: redpoint-rpi
+
+# Cloud identity: AKS Workload Identity (recommended over node-managed
+# identity since it scopes credentials per service account).
+cloudIdentity:
+  enabled: true
+  azure:
+    clientId: <your-azure-managed-identity-client-id>
+    tenantId: <your-azure-tenant-id>
+
+# Secrets: SDK provider reads directly from Key Vault. Each service
+# pulls only the secrets it needs. No K8s Secret objects to rotate.
+secretsManagement:
+  provider: sdk
+  azure:
+    keyVaultName: <your-key-vault-name>
+
+# Realtime cache: MongoDB is the production-recommended provider.
+# Minimum M20 General on Atlas, or 8 GB RAM VM if self-hosted.
+realtimeapi:
+  cacheProvider:
+    enabled: true
+    provider: mongodb
+    mongodb:
+      server_host: <your-mongodb-host>
+      database_name: <your-cache-database-name>
+
+# Queue: Azure Service Bus. Drop-in replacement for the chart's
+# built-in RabbitMQ when you want managed-service durability.
+queueProvider:
+  provider: azureservicebus
+  azureservicebus:
+    namespace: <your-servicebus-namespace>
+
+# Storage: Azure Files for the shared FileOutputDirectory mount.
+# RWX is required -- Azure Disk won't work here.
+storage:
+  fileOutputDirectory:
+    enabled: true
+    storageClassName: azurefile-csi
+    accessMode: ReadWriteMany
+    size: 50Gi
+
+# Ingress: Application Gateway for Containers (AGC) with a TLS cert
+# synced from Key Vault via the CSI driver. Public ingress on your
+# domain.
+ingress:
+  enabled: true
+  className: alb
+  domain: <your-domain>
+  tls:
+    enabled: true
+    secretName: rpi-tls
+    keyVaultCertName: <your-key-vault-cert-name>
+
+# Autoscaling: HPA on the four highest-load services. Tune target
+# utilization once you have production traffic.
+autoscaling:
+  enabled: true
+
+# Smart Activation: enable if you're using the CDP-driven syndication
+# flow. Otherwise leave disabled.
+smartActivation:
+  enabled: false
+
+# Sensible global resource defaults. Per-service overrides below this
+# inherit from these.
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 3Gi

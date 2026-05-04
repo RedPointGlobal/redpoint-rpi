@@ -1,0 +1,92 @@
+# ============================================================
+# RPI Quickstart -- Google Cloud (GKE)
+# ============================================================
+# Opinionated, best-practice starter overrides.yaml. Encodes the
+# recommended GCP path: SDK secrets via Secret Manager, Workload
+# Identity, MongoDB cache, Pub/Sub queue, Filestore storage, GKE
+# Ingress, autoscaling enabled.
+#
+# Replace the <placeholder> values before deploying. The Validate
+# tab will flag any that you miss.
+# ============================================================
+
+global:
+  deployment:
+    mode: standard
+    platform: google
+    images:
+      registry: rg1acrpub.azurecr.io/docker/redpointglobal/releases
+      tag: "7.7.20260414.1238"
+      imagePullSecret:
+        enabled: true
+        name: redpoint-rpi
+
+# Cloud identity: GKE Workload Identity. Each Kubernetes service
+# account binds to a Google service account so workloads authenticate
+# to GCP APIs without static keys.
+cloudIdentity:
+  enabled: true
+  google:
+    projectId: <your-gcp-project-id>
+    serviceAccountEmail: <your-rpi-sa>@<your-gcp-project-id>.iam.gserviceaccount.com
+
+# Secrets: SDK provider reads from Secret Manager. The bound Google
+# service account needs roles/secretmanager.secretAccessor on the
+# secrets your services consume.
+secretsManagement:
+  provider: sdk
+  google:
+    projectId: <your-gcp-project-id>
+
+# Realtime cache: MongoDB. Atlas M20+ recommended for production.
+realtimeapi:
+  cacheProvider:
+    enabled: true
+    provider: mongodb
+    mongodb:
+      server_host: <your-mongodb-host>
+      database_name: <your-cache-database-name>
+
+# Queue: Google Pub/Sub. Topic + subscription per logical RPI queue.
+queueProvider:
+  provider: googlepubsub
+  googlepubsub:
+    projectId: <your-gcp-project-id>
+    topicPrefix: rpi-
+
+# Storage: Filestore for the shared FileOutputDirectory mount. RWX
+# is required.
+storage:
+  fileOutputDirectory:
+    enabled: true
+    storageClassName: filestore-csi
+    accessMode: ReadWriteMany
+    size: 1Ti      # Filestore minimum on the basic tier
+
+# Ingress: GKE Ingress with a Google-managed certificate. Public
+# ingress on your domain.
+ingress:
+  enabled: true
+  className: gce
+  domain: <your-domain>
+  tls:
+    enabled: true
+    googleManagedCertName: <your-managed-cert-name>
+
+# Autoscaling: HPA on the four highest-load services. Tune target
+# utilization once you have production traffic.
+autoscaling:
+  enabled: true
+
+# Smart Activation: enable if you're using the CDP-driven syndication
+# flow. Otherwise leave disabled.
+smartActivation:
+  enabled: false
+
+# Sensible global resource defaults.
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 3Gi
