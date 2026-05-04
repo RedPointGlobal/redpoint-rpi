@@ -1111,6 +1111,126 @@ vault under the .NET-style entry name `ConnectionStrings--LoggingDatabase`
 
 Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 */}}
+
+{{/*
+Default probe targets for the Infrastructure tab.
+
+Reads the chart's existing values (databases.operational, realtimeapi.cacheProvider,
+realtimeapi.queueProvider, SMTPSettings, ingress) and emits a JSON-encoded list
+of {name, host, port, kind} entries. The analyzer probes these every cycle.
+
+Connection-string parsing (regexFind) handles the Mongo / Service Bus /
+Event Hubs / Redis cases where the host is buried inside a chart-emitted
+connection string. Anything that can't be parsed cleanly is omitted -- the
+analyzer keeps its in-pod env-var fallback as a safety net.
+*/}}
+{{- define "rpi.logAnalyzer.defaultProbeTargets" -}}
+{{- $targets := list -}}
+
+{{/* Operational DB. Port follows provider. */}}
+{{- $opDb := .Values.databases.operational | default dict -}}
+{{- $opHost := $opDb.server_host | default "" -}}
+{{- if and $opHost (ne $opHost "<my-database-server-host>") -}}
+  {{- $opPort := 1433 -}}
+  {{- if eq ($opDb.provider | default "sqlserver") "postgresql" -}}{{- $opPort = 5432 -}}{{- end -}}
+  {{- $targets = append $targets (dict "name" "Operational DB" "host" $opHost "port" $opPort "kind" "tcp") -}}
+{{- end -}}
+
+{{/* Realtime cache provider. */}}
+{{- $cache := (.Values.realtimeapi).cacheProvider | default dict -}}
+{{- $cp := $cache.provider | default "" -}}
+{{- if eq $cp "mongodb" -}}
+  {{- $cs := ($cache.mongodb).connectionString | default "" -}}
+  {{/* mongodb://[user[:pass]@]host[:port][,host:port][,...]/db -- pull first host */}}
+  {{- $afterAt := regexFind "@[^/?,]+" $cs -}}
+  {{- $hostPort := "" -}}
+  {{- if $afterAt -}}{{- $hostPort = trimPrefix "@" $afterAt -}}
+  {{- else -}}{{- $hostPort = regexFind "//[^/?,]+" $cs | trimPrefix "//" -}}{{- end -}}
+  {{- if $hostPort -}}
+    {{- $h := $hostPort -}}{{- $p := 27017 -}}
+    {{- if regexMatch ":[0-9]+$" $hostPort -}}
+      {{- $h = regexReplaceAll ":[0-9]+$" $hostPort "" -}}
+      {{- $p = atoi (regexFind "[0-9]+$" $hostPort) -}}
+    {{- end -}}
+    {{- $targets = append $targets (dict "name" "MongoDB cache" "host" $h "port" $p "kind" "tcp") -}}
+  {{- end -}}
+{{- else if eq $cp "inMemorySql" -}}
+  {{- $h := ($cache.inMemorySql).server_host | default "" -}}
+  {{- if and $h (ne $h "<my-cache-database-server-host>") -}}
+    {{- $targets = append $targets (dict "name" "Cache (inMemorySql)" "host" $h "port" 1433 "kind" "tcp") -}}
+  {{- end -}}
+{{- else if eq $cp "redis" -}}
+  {{- $cs := (($cache.redis).redisSettings).connectionString | default "" -}}
+  {{- $first := regexFind "^[^,]+" $cs -}}
+  {{- if and $first (ne $first "my-redis-host:6379") -}}
+    {{- $h := $first -}}{{- $p := 6379 -}}
+    {{- if regexMatch ":[0-9]+$" $first -}}
+      {{- $h = regexReplaceAll ":[0-9]+$" $first "" -}}
+      {{- $p = atoi (regexFind "[0-9]+$" $first) -}}
+    {{- end -}}
+    {{- $targets = append $targets (dict "name" "Redis cache" "host" $h "port" $p "kind" "tcp") -}}
+  {{- end -}}
+{{- end -}}
+
+{{/* Queue provider. Endpoints derived from chart values. */}}
+{{- $queue := (.Values.realtimeapi).queueProvider | default dict -}}
+{{- $qp := $queue.provider | default "" -}}
+{{- if eq $qp "azureservicebus" -}}
+  {{- $cs := ($queue.azureservicebus).connectionstring | default "" -}}
+  {{- $h := regexFind "sb://[^/;]+" $cs | trimPrefix "sb://" -}}
+  {{- if $h -}}
+    {{- $targets = append $targets (dict "name" "Azure Service Bus" "host" $h "port" 443 "kind" "tcp") -}}
+  {{- end -}}
+{{- else if eq $qp "azureeventhubs" -}}
+  {{- $cs := ($queue.azureeventhubs).connectionstring | default "" -}}
+  {{- $h := regexFind "sb://[^/;]+" $cs | trimPrefix "sb://" -}}
+  {{- if $h -}}
+    {{- $targets = append $targets (dict "name" "Azure Event Hubs" "host" $h "port" 443 "kind" "tcp") -}}
+  {{- end -}}
+{{- else if eq $qp "azurestorage" -}}
+  {{- $acct := ($queue.azurestorage).storageAccountName | default "" -}}
+  {{- if and $acct (ne $acct "myStorageAccountName") -}}
+    {{- $targets = append $targets (dict "name" "Azure Storage Queue" "host" (printf "%s.queue.core.windows.net" $acct) "port" 443 "kind" "tcp") -}}
+  {{- end -}}
+{{- else if eq $qp "amazonsqs" -}}
+  {{- $region := ((.Values.cloudIdentity).amazonSettings).region | default "" -}}
+  {{- if $region -}}
+    {{- $targets = append $targets (dict "name" "Amazon SQS" "host" (printf "sqs.%s.amazonaws.com" $region) "port" 443 "kind" "tcp") -}}
+  {{- end -}}
+{{- else if eq $qp "googlepubsub" -}}
+  {{- $targets = append $targets (dict "name" "Google Pub/Sub" "host" "pubsub.googleapis.com" "port" 443 "kind" "tcp") -}}
+{{- else if eq $qp "amazonmsk" -}}
+  {{- $bs := ($queue.amazonmsk).bootstrapServers | default "" -}}
+  {{- $first := regexFind "^[^,]+" $bs -}}
+  {{- if and $first (not (regexMatch "<" $first)) -}}
+    {{- $h := $first -}}{{- $p := 9092 -}}
+    {{- if regexMatch ":[0-9]+$" $first -}}
+      {{- $h = regexReplaceAll ":[0-9]+$" $first "" -}}
+      {{- $p = atoi (regexFind "[0-9]+$" $first) -}}
+    {{- end -}}
+    {{- $targets = append $targets (dict "name" "Amazon MSK" "host" $h "port" $p "kind" "tcp") -}}
+  {{- end -}}
+{{- end -}}
+
+{{/* SMTP. */}}
+{{- $smtp := .Values.SMTPSettings | default dict -}}
+{{- $smtpHost := $smtp.SMTP_Address | default "" -}}
+{{- if $smtpHost -}}
+  {{- $smtpPort := $smtp.SMTP_Port | default 587 | int -}}
+  {{- $targets = append $targets (dict "name" "SMTP" "host" $smtpHost "port" $smtpPort "kind" "tcp") -}}
+{{- end -}}
+
+{{/* Ingress for the analyzer's own dashboard. */}}
+{{- $ing := .Values.ingress | default dict -}}
+{{- $ingHosts := $ing.hosts | default dict -}}
+{{- if and $ingHosts.loganalyzer $ing.domain -}}
+  {{- $h := printf "%s.%s" $ingHosts.loganalyzer $ing.domain -}}
+  {{- $targets = append $targets (dict "name" "Ingress (analyzer)" "host" $h "port" 443 "kind" "tcp") -}}
+{{- end -}}
+
+{{- $targets | toJson -}}
+{{- end }}
+
 {{- define "rpi.logAnalyzer.runtimeEnvvars" -}}
 {{- $cfg := .Values.logAnalyzer | default dict -}}
 {{- $budget := $cfg.budget | default dict -}}
@@ -1138,11 +1258,16 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 {{- end }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: "/data/reports.db"
+# Default probe targets for the Infrastructure tab -- assembled by the chart
+# from databases / cacheProvider / queueProvider / SMTP / ingress so the
+# analyzer doesn't have to guess. Empty list when nothing is configured;
+# the helper emits {} in that case so the env var still binds cleanly.
+- name: LOG_ANALYZER__DEFAULT_PROBE_TARGETS
+  value: {{ include "rpi.logAnalyzer.defaultProbeTargets" . | quote }}
 {{- with $cfg.probeTargets }}
-# Connectivity matrix overrides. Empty/unset means the analyzer auto-
-# discovers SQL host (from secrets), RabbitMQ + Redis (from in-cluster
-# DNS in this namespace). Set this to override or extend with custom
-# targets (external SaaS DB, Service Bus namespace, ingress, etc.).
+# Customer-supplied probe targets ON TOP OF the chart-derived defaults.
+# Use this for things the chart doesn't know about (third-party APIs,
+# external auth providers, alternate ingress, etc).
 - name: LOG_ANALYZER__PROBE_TARGETS
   value: {{ . | toJson | quote }}
 {{- end }}
