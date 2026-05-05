@@ -1112,16 +1112,6 @@ vault under the .NET-style entry name `ConnectionStrings--LoggingDatabase`
 Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 */}}
 
-{{/*
-Connectivity-probe targets for the Infrastructure tab.
-
-Customers list endpoints in `logAnalyzer.probeTargets` as plain
-`host:port` strings. The analyzer probes each line every cycle.
-*/}}
-{{- define "rpi.logAnalyzer.probeTargets" -}}
-{{- join "," ((.Values.logAnalyzer).probeTargets | default list) -}}
-{{- end }}
-
 {{- define "rpi.logAnalyzer.runtimeEnvvars" -}}
 {{- $cfg := .Values.logAnalyzer | default dict -}}
 {{- $budget := $cfg.budget | default dict -}}
@@ -1149,13 +1139,22 @@ Customers list endpoints in `logAnalyzer.probeTargets` as plain
 {{- end }}
 - name: LOG_ANALYZER__SQLITE_PATH
   value: "/data/reports.db"
-# Probe targets for the Infrastructure tab. Plain `host:port` lines from
-# logAnalyzer.probeTargets. When unset the analyzer falls back to in-pod
-# auto-discovery (SQL host from secrets, SMTP/ingress from env, in-cluster
-# RabbitMQ/Redis from K8s namespace).
-{{- with (include "rpi.logAnalyzer.probeTargets" . | trim) }}
-- name: LOG_ANALYZER__PROBE_TARGETS
+# Diagnostics-tab DB names. Read by the analyzer's Diagnostics surface
+# (SQL trace clusters, audit timeline, per-Interaction drill-down).
+# clientServer is informational; sqlTrace and audit are authoritative.
+{{- with $cfg.logSources }}
+{{- with .clientServer }}
+- name: LOG_ANALYZER__LOG_SOURCES__CLIENT_SERVER
   value: {{ . | quote }}
+{{- end }}
+{{- with .sqlTrace }}
+- name: LOG_ANALYZER__LOG_SOURCES__SQL_TRACE
+  value: {{ . | quote }}
+{{- end }}
+{{- with .audit }}
+- name: LOG_ANALYZER__LOG_SOURCES__AUDIT
+  value: {{ . | quote }}
+{{- end }}
 {{- end }}
 # SMTP transport for the email digest. Always emitted; consumed only
 # when email is enabled.

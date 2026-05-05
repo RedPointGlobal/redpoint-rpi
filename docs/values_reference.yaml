@@ -2182,15 +2182,15 @@ logAnalyzer:
     lookbackMinutes: 60              # how far back to query each cycle
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
-  # ---- Connectivity probes (Infrastructure tab) --------------------------
-  # Plain `host:port` strings -- one per line. TCP-probed + DNS-resolved
-  # every cycle. When empty, the analyzer falls back to in-pod auto-discovery
-  # (SQL host, SMTP, ingress, in-cluster RabbitMQ/Redis).
-  probeTargets: []
-  # probeTargets:
-  #   - my-namespace.servicebus.windows.net:443
-  #   - rpi-prod.mongodb.net:27017
-  #   - abc1234.snowflakecomputing.com:443
+  # ---- Operational DB names (Diagnostics tab) ----------------------------
+  # clientServer is informational only -- Pulse_Logging connection still
+  # comes from the chart secret. sqlTrace + audit drive the Diagnostics
+  # tab. When empty, the corresponding section renders a "not configured"
+  # caption.
+  logSources:
+    clientServer: ""    # e.g. Pulse_qarc_a400ca_Logging
+    sqlTrace: ""        # e.g. InteractionAudit_qarc_a400ca
+    audit: ""           # e.g. InteractionAudit_qarc_a400ca
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's

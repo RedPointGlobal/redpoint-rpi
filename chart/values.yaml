@@ -1176,19 +1176,19 @@ logAnalyzer:
     lookbackMinutes: ""              # leave empty for auto: 60 (interval) or 1440 (daily). Override with an int.
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
-  # ---- Connectivity probes (Infrastructure tab) --------------------------
-  # List endpoints the analyzer should TCP-probe + DNS-resolve every cycle.
-  # Plain `host:port` strings -- one per line. Surfaces uptime / latency /
-  # last-failure on the Infrastructure tab. No DB credentials needed.
-  #
-  # When this list is empty, the analyzer auto-discovers from the env vars
-  # the chart already binds: SQL host, SMTP host, ingress, and in-cluster
-  # RabbitMQ / Redis services.
-  probeTargets: []
-  # probeTargets:
-  #   - my-namespace.servicebus.windows.net:443
-  #   - rpi-prod.mongodb.net:27017
-  #   - abc1234.snowflakecomputing.com:443
+  # ---- Operational DB names (Diagnostics tab) ----------------------------
+  # Three RPI databases the analyzer reads. clientServer is informational
+  # only -- the actual Pulse_Logging connection still comes from the chart
+  # secret. sqlTrace + audit are read by the Diagnostics tab for SQL trace
+  # clusters, audit timeline, and per-Interaction drill-down. Both audit
+  # values usually point to the same database (InteractionAudit_<env>);
+  # they are separate keys so a customer can split them in the future
+  # without a chart change. When sqlTrace/audit is empty the corresponding
+  # Diagnostics section renders an "not configured" caption.
+  logSources:
+    clientServer: ""    # e.g. Pulse_qarc_a400ca_Logging
+    sqlTrace: ""        # e.g. InteractionAudit_qarc_a400ca
+    audit: ""           # e.g. InteractionAudit_qarc_a400ca
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's
