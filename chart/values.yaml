@@ -1103,6 +1103,18 @@ logAnalyzer:
   serviceAccount:
     enabled: true                    # creates rpi-loganalyzer SA in per-service mode
 
+  # ---- Node health panel -------------------------------------------------
+  # Powers the Node Health section on the System Health tab. Reads node
+  # state + per-node CPU/memory from the Kubernetes API and metrics-server.
+  # Nodes are cluster-scoped, so this binds a ClusterRole to the analyzer's
+  # ServiceAccount granting get/list on nodes (core) and nodes
+  # (metrics.k8s.io). When disabled, no ClusterRole is created and the
+  # Node health panel renders a quiet "disabled by chart values" caption.
+  # Some security teams require explicit approval for cluster-scoped RBAC;
+  # leave this off in those clusters.
+  nodeHealth:
+    enabled: true
+
   # ---- Model provider switch ---------------------------------------------
   # Pick a provider and (for non-Azure) name the model. azureFoundry is
   # special: it ignores `llmName` and reads the model name from the

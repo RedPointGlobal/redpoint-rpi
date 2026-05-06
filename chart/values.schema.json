@@ -2238,6 +2238,16 @@
             "enabled": { "type": "boolean", "description": "Create the rpi-loganalyzer ServiceAccount." }
           }
         },
+        "nodeHealth": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the Node Health panel on the System Health tab. Binds a ClusterRole to the analyzer's ServiceAccount granting get/list on nodes (core) and nodes (metrics.k8s.io). Disable in clusters where cluster-scoped RBAC requires separate approval."
+            }
+          }
+        },
         "model": {
           "type": "object",
           "additionalProperties": true,

@@ -52,6 +52,44 @@ subjects:
     name: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
     namespace: {{ .Release.Namespace }}
 
+{{- if (($cfg.nodeHealth | default dict).enabled | default false) }}
+---
+# Cluster-scoped read-only access for the Node health panel. Nodes are
+# cluster-scoped resources, so a Role/RoleBinding cannot grant access.
+# Names are namespace-suffixed so multiple analyzer installs in the same
+# cluster don't collide on the cluster-scoped binding.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $name }}-nodes-{{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+  # metrics-server. Optional; if absent, CPU/memory columns show "-".
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}-nodes-{{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}-nodes-{{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $cfg) }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+
 ---
 apiVersion: v1
 kind: Service
