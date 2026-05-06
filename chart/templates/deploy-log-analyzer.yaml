@@ -218,8 +218,11 @@ spec:
         - name: {{ $name }}-data
           mountPath: /data
         {{- if $mountFileOut }}
+        # Mount path inside the analyzer container is fixed; it does not
+        # need to track FileOutputDirectory.mountPath (different filesystem
+        # namespace from the .NET service pods).
         - name: fileoutputdirectory
-          mountPath: {{ $fileOutPvc.mountPath | default "/rpifileoutputdir" | quote }}
+          mountPath: /rpifileoutputdir
           readOnly: true
         {{- end }}
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
