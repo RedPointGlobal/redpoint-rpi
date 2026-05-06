@@ -1203,18 +1203,32 @@ logAnalyzer:
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
   # ---- Operational DB names (Diagnostics tab) ----------------------------
-  # Three RPI databases the analyzer reads. clientServer is informational
-  # only -- the actual Pulse_Logging connection still comes from the chart
-  # secret. sqlTrace + audit are read by the Diagnostics tab for SQL trace
-  # clusters, audit timeline, and per-Interaction drill-down. Both audit
-  # values usually point to the same database (InteractionAudit_<env>);
-  # they are separate keys so a customer can split them in the future
-  # without a chart change. When sqlTrace/audit is empty the corresponding
-  # Diagnostics section renders an "not configured" caption.
+  # RPI databases the analyzer reads for the Diagnostics tab. clientServer
+  # is informational only -- the actual Pulse_Logging connection still
+  # comes from the chart secret. sqlTrace + audit live in the same
+  # InteractionAudit_<env> DB and are read for SQL trace clusters and
+  # the audit timeline. interaction is the main Interaction_<env> DB
+  # that holds workflow + activity definitions and runtime state -- read
+  # for per-Interaction drill-down + bundle download. When a value is
+  # empty the corresponding Diagnostics section renders a "not
+  # configured" caption.
   logSources:
     clientServer: ""    # e.g. Pulse_qarc_a400ca_Logging
     sqlTrace: ""        # e.g. InteractionAudit_qarc_a400ca
     audit: ""           # e.g. InteractionAudit_qarc_a400ca
+    interaction: ""     # e.g. Interaction_qarc_a400ca
+
+  # ---- Diagnostics tab ---------------------------------------------------
+  # Per-Interaction lookup + bundle download (parity with the on-prem
+  # "Download Diagnostics" zip). When fileOutput.enabled is true the
+  # chart-managed FileOutputDirectory PVC is mounted read-only on the
+  # analyzer StatefulSet at /rpifileoutputdir so the bundle can include
+  # the workflow's output files. claimName is the existing PVC's claim;
+  # leave the default unless you've named it differently.
+  diagnostics:
+    fileOutput:
+      enabled: true
+      claimName: rpi-fileoutput
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's

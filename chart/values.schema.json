@@ -2248,6 +2248,30 @@
             }
           }
         },
+        "logSources": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "clientServer": { "type": "string", "description": "Pulse logging DB name (informational; conn string still comes from chart secret)." },
+            "sqlTrace":     { "type": "string", "description": "InteractionAudit DB hosting SQLTraceLog." },
+            "audit":        { "type": "string", "description": "InteractionAudit DB hosting AuditHistory (typically same as sqlTrace)." },
+            "interaction":  { "type": "string", "description": "Main Interaction_<env> DB hosting op_InteractionWorkflows / op_DataWorkflows. Read by the Diagnostics tab for per-Interaction drill-down + bundle download." }
+          }
+        },
+        "diagnostics": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "fileOutput": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "enabled":   { "type": "boolean", "description": "Mount the chart-managed FileOutputDirectory PVC read-only on the analyzer StatefulSet so bundle downloads include the workflow's output files." },
+                "claimName": { "type": "string",  "description": "Name of the existing PVC backing the FileOutputDirectory; default rpi-fileoutput." }
+              }
+            }
+          }
+        },
         "model": {
           "type": "object",
           "additionalProperties": true,

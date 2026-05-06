@@ -209,6 +209,11 @@ spec:
         volumeMounts:
         - name: {{ $name }}-data
           mountPath: /data
+        {{- if (($cfg.diagnostics | default dict).fileOutput | default dict).enabled }}
+        - name: rpi-fileoutput
+          mountPath: /rpifileoutputdir
+          readOnly: true
+        {{- end }}
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
         {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
       volumes:
@@ -219,6 +224,12 @@ spec:
       {{- else if not $vct.enabled }}
       - name: {{ $name }}-data
         emptyDir: {}
+      {{- end }}
+      {{- if (($cfg.diagnostics | default dict).fileOutput | default dict).enabled }}
+      - name: rpi-fileoutput
+        persistentVolumeClaim:
+          claimName: {{ ($cfg.diagnostics.fileOutput.claimName | default "rpi-fileoutput") | quote }}
+          readOnly: true
       {{- end }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
       {{- include "rpi.customCACerts.volume" . | nindent 6 }}

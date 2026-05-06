@@ -1166,6 +1166,16 @@ Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__LOG_SOURCES__AUDIT
   value: {{ . | quote }}
 {{- end }}
+{{- with .interaction }}
+- name: LOG_ANALYZER__LOG_SOURCES__INTERACTION
+  value: {{ . | quote }}
+{{- end }}
+{{- end }}
+{{- with $cfg.diagnostics }}
+{{- with .fileOutput }}
+- name: LOG_ANALYZER__DIAGNOSTICS__FILE_OUTPUT_ENABLED
+  value: {{ .enabled | toString | quote }}
+{{- end }}
 {{- end }}
 # SMTP transport for the email digest. Always emitted; consumed only
 # when email is enabled.
