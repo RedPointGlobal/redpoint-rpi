@@ -1220,15 +1220,17 @@ logAnalyzer:
 
   # ---- Diagnostics tab ---------------------------------------------------
   # Per-Interaction lookup + bundle download (parity with the on-prem
-  # "Download Diagnostics" zip). When fileOutput.enabled is true the
-  # chart-managed FileOutputDirectory PVC is mounted read-only on the
-  # analyzer StatefulSet at /rpifileoutputdir so the bundle can include
-  # the workflow's output files. claimName is the existing PVC's claim;
-  # leave the default unless you've named it differently.
+  # "Download Diagnostics" zip). When fileOutput.enabled is true AND
+  # storage.persistentVolumeClaims.FileOutputDirectory.enabled is also
+  # true (chart-wide), the same PVC the .NET services write to is mounted
+  # read-only on the analyzer StatefulSet so the bundle can include the
+  # workflow's output files. The mount tracks the existing FileOutput
+  # claimName + mountPath -- no parallel value to maintain. When the
+  # FileOutputDirectory PVC is not enabled chart-wide, this toggle is
+  # a no-op and the bundle's Files/ folder gets _empty.txt.
   diagnostics:
     fileOutput:
       enabled: true
-      claimName: rpi-fileoutput
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's

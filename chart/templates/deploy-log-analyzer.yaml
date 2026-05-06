@@ -7,6 +7,14 @@
 {{- $storage := $cfg.storage | default dict -}}
 {{- $vct := $storage.volumeClaimTemplates | default dict -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
+{{- /* Diagnostics tab mounts the chart-managed FileOutputDirectory PVC
+       read-only when both the analyzer's own toggle AND the chart's
+       FileOutputDirectory PVC are enabled. The analyzer toggle alone
+       cannot create a missing PVC; this gate prevents schedule failures
+       on customers without the FileOutputDirectory storage configured. */ -}}
+{{- $fileOutPvc := (.Values.storage.persistentVolumeClaims | default dict).FileOutputDirectory | default dict -}}
+{{- $diagFileOut := (($cfg.diagnostics | default dict).fileOutput | default dict) -}}
+{{- $mountFileOut := and $diagFileOut.enabled $fileOutPvc.enabled -}}
 
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
 
@@ -209,9 +217,9 @@ spec:
         volumeMounts:
         - name: {{ $name }}-data
           mountPath: /data
-        {{- if (($cfg.diagnostics | default dict).fileOutput | default dict).enabled }}
-        - name: rpi-fileoutput
-          mountPath: /rpifileoutputdir
+        {{- if $mountFileOut }}
+        - name: fileoutputdirectory
+          mountPath: {{ $fileOutPvc.mountPath | default "/rpifileoutputdir" | quote }}
           readOnly: true
         {{- end }}
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
@@ -225,10 +233,10 @@ spec:
       - name: {{ $name }}-data
         emptyDir: {}
       {{- end }}
-      {{- if (($cfg.diagnostics | default dict).fileOutput | default dict).enabled }}
-      - name: rpi-fileoutput
+      {{- if $mountFileOut }}
+      - name: fileoutputdirectory
         persistentVolumeClaim:
-          claimName: {{ ($cfg.diagnostics.fileOutput.claimName | default "rpi-fileoutput") | quote }}
+          claimName: {{ $fileOutPvc.claimName | quote }}
           readOnly: true
       {{- end }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
