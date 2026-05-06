@@ -1113,15 +1113,29 @@ logAnalyzer:
   # with a small open-weights model. Switch to anthropic / azureFoundry /
   # bedrock / vertex with one line for higher-quality cloud analysis.
   model:
-    provider: local                  # local | anthropic | azureFoundry | bedrock | vertex
+    provider: local                  # local | anthropic | azureFoundry | bedrock | vertex | helmAssistant
 
     # Model identifier for the active provider. Ignored for azureFoundry
-    # (uses redpointAI.naturalLanguage.ChatGptEngine).
+    # (uses redpointAI.naturalLanguage.ChatGptEngine) and for helmAssistant
+    # (the Helm Assistant service picks the model server-side).
     #   local    -> any tag from https://ollama.com/library (e.g., phi3:mini, gemma2:2b)
     #   anthropic-> claude-sonnet-4-6, claude-opus-4-7, etc.
     #   bedrock  -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
     #   vertex   -> e.g., claude-sonnet-4@20250514
     llmName: phi3:mini
+
+    # Redpoint-hosted AI control plane (Helm Assistant). When provider is
+    # `helmAssistant`, the analyzer ships clustered-and-redacted error data
+    # to this endpoint and gets a structured AI summary back -- no local
+    # model, no per-customer cloud LLM credentials. Egress to the URL on
+    # 443 is required. The API key is read from the existing
+    # redpoint-rpi-secrets Secret under the fixed key
+    # `LogAnalyzer_HelmAssistant_ApiKey` -- same pattern RPI_NLP_API_KEY
+    # uses. Trade-off: redacted sample messages leave the cluster
+    # (see redaction layer); customers with strict residency
+    # requirements should prefer one of the direct provider modes.
+    helmAssistant:
+      url: https://rpi-helm-assistant.redpointcdp.com
 
     # Direct Anthropic API. Egress to api.anthropic.com:443 required.
     # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.

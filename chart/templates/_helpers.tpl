@@ -1089,6 +1089,17 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
   value: {{ required "logAnalyzer.model.vertex.region is required when provider=vertex" $v.region | quote }}
 - name: LOG_ANALYZER__MODEL__VERTEX_MODEL_ID
   value: {{ required "logAnalyzer.model.llmName is required when provider=vertex" $model.llmName | quote }}
+{{- else if eq $provider "helmAssistant" }}
+{{- $ha := $model.helmAssistant | default dict }}
+- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_URL
+  value: {{ required "logAnalyzer.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
+{{- if not $isSdk }}
+- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: LogAnalyzer_HelmAssistant_ApiKey
+{{- end }}
 {{- end }}
 {{- end -}}
 

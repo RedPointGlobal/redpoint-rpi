@@ -2244,8 +2244,8 @@
           "properties": {
             "provider": {
               "type": "string",
-              "enum": ["local", "anthropic", "azureFoundry", "bedrock", "vertex"],
-              "description": "LLM provider. `local` uses the in-cluster Ollama deployment (logAnalyzer.localLlm) -- works out of the box with no API keys."
+              "enum": ["local", "anthropic", "azureFoundry", "bedrock", "vertex", "helmAssistant"],
+              "description": "LLM provider. `local` uses the in-cluster Ollama deployment (logAnalyzer.localLlm) -- works out of the box with no API keys. `helmAssistant` ships clustered+redacted error data to a Redpoint-hosted control plane and gets a structured AI summary back -- no per-customer model credentials required."
             },
             "llmName": {
               "type": "string",

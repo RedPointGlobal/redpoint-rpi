@@ -2134,7 +2134,16 @@ logAnalyzer:
   # are ignored. Leave provider-specific defaults empty so customers must
   # opt in deliberately.
   model:
-    provider: anthropic              # anthropic | azureFoundry | bedrock | vertex
+    provider: anthropic              # anthropic | azureFoundry | bedrock | vertex | helmAssistant
+
+    # Redpoint-hosted AI control plane. Analyzer sends redacted cluster
+    # data to this endpoint and gets a structured summary back. No
+    # per-customer cloud LLM credentials required. The API key is read
+    # from the existing redpoint-rpi-secrets Secret under the fixed
+    # key `LogAnalyzer_HelmAssistant_ApiKey` (same pattern as
+    # RPI_NLP_API_KEY).
+    helmAssistant:
+      url: https://rpi-helm-assistant.redpointcdp.com
 
     # Direct Anthropic API. Egress to api.anthropic.com:443 required.
     # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
