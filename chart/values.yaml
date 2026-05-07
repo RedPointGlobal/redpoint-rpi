@@ -1115,69 +1115,97 @@ logAnalyzer:
   nodeHealth:
     enabled: true
 
-  # ---- Model provider switch ---------------------------------------------
-  # Pick a provider and (for non-Azure) name the model. azureFoundry is
-  # special: it ignores `llmName` and reads the model name from the
-  # chart-wide redpointAI.naturalLanguage.ChatGptEngine instead.
+  # ---- AI deployment posture ---------------------------------------------
+  # The Log Analyzer's incident-intelligence experience is provider-
+  # agnostic from the operator's perspective: identical UX, identical
+  # analysis pipeline. What you choose here is the *deployment posture*
+  # -- where inference runs, who operates it, and where log data lives.
   #
-  # Default is `local` so the analyzer works out of the box -- the chart
-  # ships a CPU-friendly Ollama sidecar (see logAnalyzer.localLlm below)
-  # with a small open-weights model. Switch to anthropic / azureFoundry /
-  # bedrock / vertex with one line for higher-quality cloud analysis.
+  # Three postures, each first-class:
+  #
+  #   helmAssistant  (default, turnkey)
+  #     Best out-of-the-box experience. Inference runs on the Redpoint-
+  #     hosted Helm Assistant control plane. Redacted, clustered error
+  #     data is shipped over HTTPS; structured AI summaries come back.
+  #     Zero customer AI infrastructure required.
+  #     Privacy boundary: redacted samples leave the cluster.
+  #     Operational ownership: managed by Redpoint.
+  #
+  #   localLlm  (private, packaged)
+  #     Best privacy-preserving experience. All inference happens
+  #     in-cluster via the packaged Ollama deployment shipped with the
+  #     chart (see logAnalyzer.localLlm below). No log data leaves the
+  #     customer network. Designed for highly regulated environments.
+  #     Privacy boundary: nothing leaves the cluster.
+  #     Operational ownership: customer (within the cluster).
+  #
+  #   byo  (customer-managed AI platform)
+  #     Best enterprise-platform integration. The analyzer integrates
+  #     with a customer-managed inference platform you choose under
+  #     `byo.platform` (Azure AI Foundry, AWS Bedrock, Google Vertex AI,
+  #     direct Anthropic). Auth piggybacks on the chart's existing
+  #     cloudIdentity helpers -- no creds duplicated here.
+  #     Privacy boundary: customer-managed.
+  #     Operational ownership: customer.
   model:
-    provider: local                  # local | anthropic | azureFoundry | bedrock | vertex | helmAssistant
+    provider: helmAssistant          # helmAssistant | localLlm | byo
 
-    # Model identifier for the active provider. Ignored for azureFoundry
-    # (uses redpointAI.naturalLanguage.ChatGptEngine) and for helmAssistant
-    # (the Helm Assistant service picks the model server-side).
-    #   local    -> any tag from https://ollama.com/library (e.g., phi3:mini, gemma2:2b)
-    #   anthropic-> claude-sonnet-4-6, claude-opus-4-7, etc.
-    #   bedrock  -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
-    #   vertex   -> e.g., claude-sonnet-4@20250514
-    llmName: phi3:mini
+    # Model identifier for the active posture. Ignored when
+    # provider=helmAssistant (the control plane selects the model)
+    # and when byo.platform=azureFoundry (the deployment name comes
+    # from redpointAI.naturalLanguage.ChatGptEngine).
+    #   localLlm           -> any tag from https://ollama.com/library
+    #                         (e.g., phi3:mini, gemma2:2b)
+    #   byo + anthropic    -> claude-sonnet-4-6, claude-opus-4-7, etc.
+    #   byo + bedrock      -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
+    #   byo + vertex       -> e.g., claude-sonnet-4@20250514
+    llmName: ""
 
-    # Redpoint-hosted AI control plane (Helm Assistant). When provider is
-    # `helmAssistant`, the analyzer ships clustered-and-redacted error data
-    # to this endpoint and gets a structured AI summary back -- no local
-    # model, no per-customer cloud LLM credentials. Egress to the URL on
-    # 443 is required. The API key is read from the existing
-    # redpoint-rpi-secrets Secret under the fixed key
-    # `LogAnalyzer_HelmAssistant_ApiKey` -- same pattern RPI_NLP_API_KEY
-    # uses. Trade-off: redacted sample messages leave the cluster
-    # (see redaction layer); customers with strict residency
-    # requirements should prefer one of the direct provider modes.
+    # ---- Posture: helmAssistant (managed control plane) -----------------
+    # Redpoint-hosted Helm Assistant control plane. Egress to this URL
+    # on 443 is required when provider=helmAssistant. The API key is
+    # read from the existing redpoint-rpi-secrets Secret under the
+    # fixed key `LogAnalyzer_HelmAssistant_ApiKey` -- same pattern
+    # RPI_NLP_API_KEY uses.
     helmAssistant:
       url: https://rpi-helm-assistant.redpointcdp.com
 
-    # Direct Anthropic API. Egress to api.anthropic.com:443 required.
-    # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
-    anthropic:
-      apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
-      baseUrl: ""                    # optional egress proxy
+    # ---- Posture: byo (customer-managed AI platform) --------------------
+    # Active only when provider=byo. Pick the inference platform your
+    # AI governance / platform standards already cover. The analyzer
+    # uses the matching SDK and auth path; everything above this layer
+    # (UX, pipeline, summaries) stays identical across platforms.
+    byo:
+      platform: anthropic            # anthropic | azureFoundry | bedrock | vertex
 
-    # Azure AI Foundry / Azure OpenAI. The analyzer rides the chart-wide
-    # `redpointAI.naturalLanguage` block -- same Azure OpenAI config the
-    # rest of RPI uses (ApiBase, ApiVersion, ChatGptEngine). Set
-    # redpointAI.enabled=true and configure that block; the chart fails
-    # fast if azureFoundry is selected without it.
-    #
-    # Auth: WI by default (reuses cloudIdentity.azure). In non-SDK mode the
-    # chart binds AZURE_OPENAI_API_KEY from the standard RPI_NLP_API_KEY
-    # secret entry (same key the .NET services use); in SDK mode the
-    # analyzer fetches the same entry from the cloud vault directly.
+      # Direct Anthropic API. Egress to api.anthropic.com:443 required.
+      # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
+      anthropic:
+        apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
+        baseUrl: ""                  # optional egress proxy
 
-    # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / EKS Pod Identity).
-    # Customer grants the analyzer's IAM role `bedrock:InvokeModel` on the
-    # target model. No separate API key needed.
-    bedrock:
-      region: ""                     # e.g., us-east-1
+      # Azure AI Foundry / Azure OpenAI. Rides the chart-wide
+      # `redpointAI.naturalLanguage` block -- same Azure OpenAI config
+      # (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses. Set
+      # redpointAI.enabled=true and configure that block; the chart
+      # fails fast if byo.platform=azureFoundry is selected without it.
+      # Auth: Workload Identity by default (reuses cloudIdentity.azure).
+      # In non-SDK mode AZURE_OPENAI_API_KEY binds from the standard
+      # RPI_NLP_API_KEY secret entry; in SDK mode the analyzer fetches
+      # the same entry from the cloud vault directly.
 
-    # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload Identity or
-    # SA key file). Customer grants `aiplatform.endpoints.predict`. No
-    # separate API key needed.
-    vertex:
-      projectId: ""
-      region: ""                     # e.g., us-central1
+      # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / Pod
+      # Identity). Customer grants the analyzer's IAM role
+      # `bedrock:InvokeModel` on the target model. No separate API key.
+      bedrock:
+        region: ""                   # e.g., us-east-1
+
+      # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload
+      # Identity or SA key file). Customer grants
+      # `aiplatform.endpoints.predict`. No separate API key.
+      vertex:
+        projectId: ""
+        region: ""                   # e.g., us-central1
 
   # ---- Token + request budget --------------------------------------------
   # Hard caps enforced inside the analyzer (token-bucket). When exceeded,
@@ -1262,16 +1290,17 @@ logAnalyzer:
     webhookSecretKey: LogAnalyzer_Teams_Webhook
     onlyOnNewErrors: true            # only post when first-seen errors exist
 
-  # ---- Built-in offline LLM (Ollama) -------------------------------------
-  # Ships a small CPU-runnable model alongside the analyzer so the tool
-  # works out of the box without any cloud account / API key. Disable
-  # this only when you've already pointed `model.provider` at a cloud
-  # provider and want to save cluster resources.
+  # ---- Posture: localLlm (private, packaged in-cluster inference) --------
+  # Deployment knobs (image, resources, persistence) for the in-cluster
+  # Ollama backend that powers the `localLlm` posture above. When
+  # model.provider=localLlm, this block must be enabled -- the chart
+  # fails fast otherwise. Leave it off when provider is helmAssistant
+  # or byo to avoid spending cluster resources on an unused backend.
   #
-  # The model name comes from `model.llmName` above -- this block is
-  # only the deployment knobs (image, resources, persistence).
+  # The model itself is named in `model.llmName` -- this block is purely
+  # the runtime / packaging story for that model.
   localLlm:
-    enabled: true                    # turn off when using a cloud model
+    enabled: false                   # set true when model.provider=localLlm
     image: ollama/ollama:0.5.4
     service:
       port: 11434

@@ -84,16 +84,24 @@ The analyzer keeps its report history in SQLite at `/data/reports.db`. SQLite ne
 
 The chart uses a `volumeClaimTemplates` block on a single-replica StatefulSet. This is the same pattern Redis and RabbitMQ use. By default the StorageClass is left empty so the cluster default is used. You can also bring your own PVC via `storage.existingClaim`.
 
-### Model providers
+### AI deployment postures
 
-The analyzer can call any of:
+The analyzer treats AI inference as a deployment-posture decision: where inference runs, who operates it, and where log data lives. The user experience is identical across postures; only the deployment architecture differs.
 
-| Provider | Configuration |
-|:---------|:--------------|
-| Azure OpenAI / Foundry | Reuses the chart-wide `redpointAI.naturalLanguage` block (`ApiBase`, `ApiVersion`, `ChatGptEngine`). |
-| Direct Anthropic API | API key stored in the cloud vault. |
-| AWS Bedrock | Authentication via `cloudIdentity.amazon` (IRSA / EKS Pod Identity). Permission needed: `bedrock:InvokeModel` on the target model. |
-| GCP Vertex AI | Authentication via `cloudIdentity.google` (Workload Identity). Permission needed: `aiplatform.endpoints.predict`. |
+| Posture | What it is | Privacy boundary | Operational ownership |
+|:--------|:-----------|:-----------------|:----------------------|
+| **`helmAssistant`** (default, turnkey) | Inference runs on the Redpoint-hosted control plane. Redacted, clustered error data is shipped over HTTPS; structured AI summaries come back. Zero customer AI infrastructure required. | redacted samples leave the cluster | Redpoint-managed |
+| **`localLlm`** (private, packaged) | Inference runs in-cluster via the chart-shipped Ollama deployment. No log data leaves the customer network. Designed for highly regulated environments. | nothing leaves the cluster | customer (in-cluster) |
+| **`byo`** (customer-managed) | Customer-managed inference platform you choose under `byo.platform` (Azure AI Foundry, AWS Bedrock, Google Vertex AI, direct Anthropic). Auth piggybacks on the chart's existing `cloudIdentity` helpers. | customer-managed | customer |
+
+For `byo`, the supported platforms are:
+
+| `byo.platform` | Configuration |
+|:---------------|:--------------|
+| `anthropic` | API key stored in the cloud vault under `LogAnalyzer-AnthropicApiKey`. |
+| `azureFoundry` | Reuses the chart-wide `redpointAI.naturalLanguage` block (`ApiBase`, `ApiVersion`, `ChatGptEngine`). |
+| `bedrock` | Authentication via `cloudIdentity.amazon` (IRSA / EKS Pod Identity). Permission needed: `bedrock:InvokeModel` on the target model. |
+| `vertex` | Authentication via `cloudIdentity.google` (Workload Identity). Permission needed: `aiplatform.endpoints.predict`. |
 
 The model is called per cycle, not per row. Token and request rate limits are enforced inside the analyzer via `budget.maxTokensPerHour` and `budget.maxRequestsPerHour`. When a budget is exceeded the next cycle is skipped and the budget event is logged.
 
@@ -104,13 +112,14 @@ The model is called per cycle, not per row. Token and request rate limits are en
 
 The analyzer is opt-in. Add the following block to your overrides.
 
-### Example A: Daily summary at midnight UTC, Azure OpenAI, email + Teams
+### Example A: `helmAssistant` (default, turnkey)
+
+Best out-of-the-box experience. Zero AI infrastructure required.
 
 ```yaml
 logAnalyzer:
   enabled: true
-  model:
-    provider: azureFoundry          # reuses the chart-wide redpointAI block
+  # model.provider defaults to helmAssistant; URL is pre-set in the chart.
   schedule:
     dailyAtUtc: "00:00"             # daily mode, 24 h lookback (auto)
   email:
@@ -127,32 +136,64 @@ logAnalyzer:
       storageClassName: ""          # empty = cluster default storage class
 ```
 
-### Example B: Interval mode (every 30 minutes), Anthropic, email-only on new errors
+The Helm Assistant API key drops into the `redpoint-rpi-secrets` Secret under the fixed key `LogAnalyzer_HelmAssistant_ApiKey` (format: `<username>:<password>`).
+
+### Example B: `localLlm` (private, packaged in-cluster)
+
+Inference runs in-cluster via Ollama; no log data leaves the network.
 
 ```yaml
 logAnalyzer:
   enabled: true
   model:
-    provider: anthropic
-    anthropic:
-      modelName: claude-sonnet-4-6
-      apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
+    provider: localLlm
+    llmName: phi3:mini              # any tag from https://ollama.com/library
+  localLlm:
+    enabled: true                   # opt in to the in-cluster Ollama deployment
   schedule:
     intervalMinutes: 30
     lookbackMinutes: 60
+```
+
+### Example C: `byo` + AWS Bedrock (customer-managed)
+
+Customer-managed inference platform; auth via `cloudIdentity.amazon`.
+
+```yaml
+logAnalyzer:
+  enabled: true
+  model:
+    provider: byo
+    llmName: anthropic.claude-sonnet-4-20250514-v1:0
+    byo:
+      platform: bedrock
+      bedrock:
+        region: us-east-1
   email:
     enabled: true
     recipients:
       - sre@example.com
     onlyOnNewErrors: true           # only when at least one cluster is first-seen
+
+cloudIdentity:
+  amazon:
+    roleArn: arn:aws:iam::123456789012:role/rpi-loganalyzer
 ```
+
+The IAM role above needs `bedrock:InvokeModel` on the target model. No separate API key.
+
+For `byo` + Anthropic, set `byo.platform: anthropic` and `byo.anthropic.apiKeyVaultEntry`. For `byo` + Vertex, set `byo.platform: vertex` and `byo.vertex.{projectId, region}`. For `byo` + Azure Foundry, set `byo.platform: azureFoundry` and configure `redpointAI.naturalLanguage` chart-wide.
 
 ### Reference
 
 | Key | Default | Description |
 |:----|:--------|:------------|
 | `enabled` | `false` | Master switch. |
-| `model.provider` | `anthropic` | One of: `anthropic`, `azureFoundry`, `bedrock`, `vertex`. |
+| `model.provider` | `helmAssistant` | AI deployment posture. `helmAssistant` (managed control plane), `localLlm` (packaged in-cluster Ollama), or `byo` (customer-managed AI platform). |
+| `model.llmName` | `""` | Model identifier for the active posture. Ignored when `provider=helmAssistant` (control plane selects model) and when `byo.platform=azureFoundry` (uses `redpointAI.naturalLanguage.ChatGptEngine`). |
+| `model.helmAssistant.url` | `https://rpi-helm-assistant.redpointcdp.com` | Redpoint Helm Assistant control-plane URL. Required when `provider=helmAssistant`. |
+| `model.byo.platform` | _(unset)_ | Required when `provider=byo`. One of: `anthropic`, `azureFoundry`, `bedrock`, `vertex`. |
+| `localLlm.enabled` | `false` | Deploy the in-cluster Ollama backend. Must be `true` when `provider=localLlm`. |
 | `schedule.intervalMinutes` | `30` | Interval mode period. Ignored when `dailyAtUtc` is set. |
 | `schedule.dailyAtUtc` | `""` | Daily mode time as `HH:MM` UTC. Empty = interval mode. |
 | `schedule.lookbackMinutes` | auto | How far back each cycle queries. Defaults to 60 in interval mode, 1440 in daily mode. Override with an integer if needed. |

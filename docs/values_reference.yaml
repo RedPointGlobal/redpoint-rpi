@@ -2129,54 +2129,78 @@ logAnalyzer:
   serviceAccount:
     enabled: true                    # creates rpi-loganalyzer SA in per-service mode
 
-  # ---- Model provider switch ---------------------------------------------
-  # The analyzer reads only the sub-block matching `provider`. Other blocks
-  # are ignored. Leave provider-specific defaults empty so customers must
-  # opt in deliberately.
+  # ---- AI deployment posture ---------------------------------------------
+  # The Log Analyzer treats AI inference as a deployment-posture decision:
+  # where inference runs, who operates it, and where log data lives. The
+  # operator UX is identical across postures; only the deployment
+  # architecture and privacy boundary differ.
+  #
+  #   helmAssistant  (default, turnkey)
+  #     Redpoint-hosted control plane. Redacted, clustered error data
+  #     leaves the cluster over HTTPS; structured AI summaries come back.
+  #     Zero customer AI infrastructure required.
+  #
+  #   localLlm  (private, packaged)
+  #     In-cluster Ollama deployment (see logAnalyzer.localLlm). Nothing
+  #     leaves the customer network. Designed for highly regulated envs.
+  #
+  #   byo  (customer-managed AI platform)
+  #     Customer-managed inference platform you choose under
+  #     `byo.platform` (anthropic | azureFoundry | bedrock | vertex). Auth
+  #     piggybacks on the chart's existing cloudIdentity helpers.
   model:
-    provider: anthropic              # anthropic | azureFoundry | bedrock | vertex | helmAssistant
+    provider: helmAssistant          # helmAssistant | localLlm | byo
 
-    # Redpoint-hosted AI control plane. Analyzer sends redacted cluster
-    # data to this endpoint and gets a structured summary back. No
-    # per-customer cloud LLM credentials required. The API key is read
-    # from the existing redpoint-rpi-secrets Secret under the fixed
-    # key `LogAnalyzer_HelmAssistant_ApiKey` (same pattern as
-    # RPI_NLP_API_KEY).
+    # Model identifier for the active posture. Ignored when
+    # provider=helmAssistant (the control plane selects the model)
+    # and when byo.platform=azureFoundry (the deployment name comes
+    # from redpointAI.naturalLanguage.ChatGptEngine).
+    #   localLlm           -> any tag from https://ollama.com/library
+    #                         (e.g., phi3:mini, gemma2:2b)
+    #   byo + anthropic    -> claude-sonnet-4-6, claude-opus-4-7, etc.
+    #   byo + bedrock      -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
+    #   byo + vertex       -> e.g., claude-sonnet-4@20250514
+    llmName: ""
+
+    # ---- Posture: helmAssistant (managed control plane) -----------------
+    # API key from the redpoint-rpi-secrets Secret under the fixed key
+    # LogAnalyzer_HelmAssistant_ApiKey (mirrors RPI_NLP_API_KEY pattern).
+    # Egress to this URL on 443 is required.
     helmAssistant:
       url: https://rpi-helm-assistant.redpointcdp.com
 
-    # Direct Anthropic API. Egress to api.anthropic.com:443 required.
-    # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
-    anthropic:
-      modelName: claude-sonnet-4-6   # API model identifier passed to the SDK
-      apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
-      baseUrl: ""                    # optional egress proxy
+    # ---- Posture: byo (customer-managed AI platform) --------------------
+    # Active only when provider=byo.
+    byo:
+      platform: anthropic            # anthropic | azureFoundry | bedrock | vertex
 
-    # Azure AI Foundry / Azure OpenAI. The analyzer rides the chart-wide
-    # `redpointAI.naturalLanguage` block -- same Azure OpenAI config the
-    # rest of RPI uses (ApiBase, ApiVersion, ChatGptEngine). Set
-    # redpointAI.enabled=true and configure that block; the chart fails
-    # fast if azureFoundry is selected without it.
-    #
-    # Auth: WI by default (reuses cloudIdentity.azure). In non-SDK mode the
-    # chart binds AZURE_OPENAI_API_KEY from the standard RPI_NLP_API_KEY
-    # secret entry (same key the .NET services use); in SDK mode the
-    # analyzer fetches the same entry from the cloud vault directly.
+      # Direct Anthropic API. Egress to api.anthropic.com:443 required.
+      # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
+      anthropic:
+        apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
+        baseUrl: ""                  # optional egress proxy
 
-    # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / EKS Pod Identity).
-    # Customer grants the analyzer's IAM role `bedrock:InvokeModel` on the
-    # target model. No separate API key needed.
-    bedrock:
-      region: ""                     # e.g., us-east-1
-      modelId: ""                    # e.g., anthropic.claude-sonnet-4-20250514-v1:0
+      # Azure AI Foundry / Azure OpenAI. Rides the chart-wide
+      # `redpointAI.naturalLanguage` block (ApiBase, ApiVersion,
+      # ChatGptEngine). Set redpointAI.enabled=true and configure that
+      # block; the chart fails fast if byo.platform=azureFoundry is
+      # selected without it. Auth: WI by default (reuses
+      # cloudIdentity.azure). In non-SDK mode AZURE_OPENAI_API_KEY binds
+      # from the standard RPI_NLP_API_KEY secret entry; in SDK mode the
+      # analyzer fetches the same entry from the cloud vault directly.
 
-    # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload Identity or
-    # SA key file). Customer grants `aiplatform.endpoints.predict`. No
-    # separate API key needed.
-    vertex:
-      projectId: ""
-      region: ""                     # e.g., us-central1
-      modelId: ""                    # e.g., claude-sonnet-4@20250514
+      # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / Pod
+      # Identity). Customer grants the analyzer's IAM role
+      # `bedrock:InvokeModel` on the target model. No separate API key.
+      bedrock:
+        region: ""                   # e.g., us-east-1
+
+      # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload
+      # Identity or SA key file). Customer grants
+      # `aiplatform.endpoints.predict`. No separate API key.
+      vertex:
+        projectId: ""
+        region: ""                   # e.g., us-central1
 
   # ---- Token + request budget --------------------------------------------
   # Hard caps enforced inside the analyzer (token-bucket). When exceeded,

@@ -1018,34 +1018,56 @@ true
 {{- end -}}
 
 {{/*
-Provider-selection env vars for the analyzer container. Emits only the
-block matching `model.provider`. AWS/GCP auth piggybacks on the existing
-cloudIdentity helpers (AWS_ROLE_ARN, GOOGLE_APPLICATION_CREDENTIALS) so
-no creds are duplicated here.
+AI deployment-posture env vars for the analyzer container. Emits only
+the block matching `model.provider` (helmAssistant | localLlm | byo).
+For byo, the inner `byo.platform` selector picks the customer-managed
+inference platform (anthropic / azureFoundry / bedrock / vertex). AWS
+and GCP auth piggybacks on the existing cloudIdentity helpers
+(AWS_ROLE_ARN, GOOGLE_APPLICATION_CREDENTIALS) so no creds are
+duplicated here.
 Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 */}}
 {{- define "rpi.logAnalyzer.modelEnvvars" -}}
 {{- $cfg := .Values.logAnalyzer | default dict -}}
 {{- $model := $cfg.model | default dict -}}
-{{- $provider := $model.provider | default "local" -}}
+{{- $provider := $model.provider | default "helmAssistant" -}}
 {{- $secret := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $isSdk := eq $secretsProvider "sdk" -}}
 - name: LOG_ANALYZER__MODEL__PROVIDER
   value: {{ $provider | quote }}
-{{- if eq $provider "local" }}
+{{- if eq $provider "helmAssistant" }}
+{{- $ha := $model.helmAssistant | default dict }}
+- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_URL
+  value: {{ required "logAnalyzer.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
+{{- if not $isSdk }}
+- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secret | quote }}
+      key: LogAnalyzer_HelmAssistant_ApiKey
+{{- end }}
+{{- else if eq $provider "localLlm" }}
 {{- $localLlm := $cfg.localLlm | default dict }}
 {{- if not $localLlm.enabled }}
-{{- fail "logAnalyzer with provider=local requires logAnalyzer.localLlm.enabled=true (the in-cluster Ollama deployment)." }}
+{{- fail "logAnalyzer with provider=localLlm requires logAnalyzer.localLlm.enabled=true (the in-cluster packaged-inference deployment)." }}
 {{- end }}
 - name: LOG_ANALYZER__MODEL__BASE_URL
   value: {{ printf "http://rpi-loganalyzer-llm.%s.svc.cluster.local:%v/v1" .Release.Namespace ($localLlm.service.port | default 11434) | quote }}
 - name: LOG_ANALYZER__MODEL__NAME
-  value: {{ required "logAnalyzer.model.llmName is required when provider=local" $model.llmName | quote }}
-{{- else if eq $provider "anthropic" }}
-{{- $a := $model.anthropic | default dict }}
+  value: {{ required "logAnalyzer.model.llmName is required when provider=localLlm" $model.llmName | quote }}
+{{- else if eq $provider "byo" }}
+{{- $byo := $model.byo | default dict }}
+{{- $platform := $byo.platform | default "" }}
+{{- if not $platform }}
+{{- fail "logAnalyzer with provider=byo requires logAnalyzer.model.byo.platform (anthropic | azureFoundry | bedrock | vertex)." }}
+{{- end }}
+- name: LOG_ANALYZER__MODEL__BYO_PLATFORM
+  value: {{ $platform | quote }}
+{{- if eq $platform "anthropic" }}
+{{- $a := $byo.anthropic | default dict }}
 - name: ANTHROPIC_MODEL
-  value: {{ required "logAnalyzer.model.llmName is required when provider=anthropic" $model.llmName | quote }}
+  value: {{ required "logAnalyzer.model.llmName is required when byo.platform=anthropic" $model.llmName | quote }}
 {{- if and $a.apiKeyVaultEntry (not $isSdk) }}
 - name: ANTHROPIC_API_KEY
   valueFrom:
@@ -1057,9 +1079,9 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 - name: ANTHROPIC_BASE_URL
   value: {{ $a.baseUrl | quote }}
 {{- end }}
-{{- else if eq $provider "azureFoundry" }}
+{{- else if eq $platform "azureFoundry" }}
 {{- if not .Values.redpointAI.enabled }}
-{{- fail "logAnalyzer with provider=azureFoundry requires redpointAI.enabled=true. The analyzer reads the same Azure OpenAI config (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses." }}
+{{- fail "logAnalyzer with byo.platform=azureFoundry requires redpointAI.enabled=true. The analyzer reads the same Azure OpenAI config (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses." }}
 {{- end }}
 {{- $nlp := .Values.redpointAI.naturalLanguage }}
 - name: RPI_NLP_APIBASE
@@ -1075,31 +1097,25 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
       name: {{ $secret | quote }}
       key: RPI_NLP_API_KEY
 {{- end }}
-{{- else if eq $provider "bedrock" }}
-{{- $b := $model.bedrock | default dict }}
+{{- else if eq $platform "bedrock" }}
+{{- $b := $byo.bedrock | default dict }}
 - name: AWS_REGION
-  value: {{ required "logAnalyzer.model.bedrock.region is required when provider=bedrock" $b.region | quote }}
+  value: {{ required "logAnalyzer.model.byo.bedrock.region is required when byo.platform=bedrock" $b.region | quote }}
 - name: LOG_ANALYZER__MODEL__BEDROCK_MODEL_ID
-  value: {{ required "logAnalyzer.model.llmName is required when provider=bedrock" $model.llmName | quote }}
-{{- else if eq $provider "vertex" }}
-{{- $v := $model.vertex | default dict }}
+  value: {{ required "logAnalyzer.model.llmName is required when byo.platform=bedrock" $model.llmName | quote }}
+{{- else if eq $platform "vertex" }}
+{{- $v := $byo.vertex | default dict }}
 - name: VERTEX_PROJECT_ID
-  value: {{ required "logAnalyzer.model.vertex.projectId is required when provider=vertex" $v.projectId | quote }}
+  value: {{ required "logAnalyzer.model.byo.vertex.projectId is required when byo.platform=vertex" $v.projectId | quote }}
 - name: VERTEX_REGION
-  value: {{ required "logAnalyzer.model.vertex.region is required when provider=vertex" $v.region | quote }}
+  value: {{ required "logAnalyzer.model.byo.vertex.region is required when byo.platform=vertex" $v.region | quote }}
 - name: LOG_ANALYZER__MODEL__VERTEX_MODEL_ID
-  value: {{ required "logAnalyzer.model.llmName is required when provider=vertex" $model.llmName | quote }}
-{{- else if eq $provider "helmAssistant" }}
-{{- $ha := $model.helmAssistant | default dict }}
-- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_URL
-  value: {{ required "logAnalyzer.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
-{{- if not $isSdk }}
-- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secret | quote }}
-      key: LogAnalyzer_HelmAssistant_ApiKey
+  value: {{ required "logAnalyzer.model.llmName is required when byo.platform=vertex" $model.llmName | quote }}
+{{- else }}
+{{- fail (printf "Unknown logAnalyzer.model.byo.platform=%q. Expected anthropic | azureFoundry | bedrock | vertex." $platform) }}
 {{- end }}
+{{- else }}
+{{- fail (printf "Unknown logAnalyzer.model.provider=%q. Expected helmAssistant | localLlm | byo." $provider) }}
 {{- end }}
 {{- end -}}
 

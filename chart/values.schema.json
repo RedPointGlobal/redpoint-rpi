@@ -2277,34 +2277,56 @@
           "properties": {
             "provider": {
               "type": "string",
-              "enum": ["local", "anthropic", "azureFoundry", "bedrock", "vertex", "helmAssistant"],
-              "description": "LLM provider. `local` uses the in-cluster Ollama deployment (logAnalyzer.localLlm) -- works out of the box with no API keys. `helmAssistant` ships clustered+redacted error data to a Redpoint-hosted control plane and gets a structured AI summary back -- no per-customer model credentials required."
+              "enum": ["helmAssistant", "localLlm", "byo"],
+              "description": "AI deployment posture. `helmAssistant` (default, turnkey) routes redacted analysis through the Redpoint-hosted control plane -- no customer AI infrastructure required. `localLlm` keeps all inference inside the cluster via the packaged Ollama deployment (see logAnalyzer.localLlm) -- log data never leaves the customer network. `byo` integrates with a customer-managed inference platform; pick the platform under model.byo.platform."
             },
             "llmName": {
               "type": "string",
-              "description": "Model identifier for the active provider (e.g., phi3:mini, claude-sonnet-4-6, anthropic.claude-sonnet-4-20250514-v1:0). Ignored for azureFoundry, which reads redpointAI.naturalLanguage.ChatGptEngine instead."
+              "description": "Model identifier for the active posture (e.g., phi3:mini for localLlm, claude-sonnet-4-6 for byo+anthropic, anthropic.claude-sonnet-4-20250514-v1:0 for byo+bedrock). Ignored when provider=helmAssistant (the control plane selects the model server-side) and when byo.platform=azureFoundry (the deployment name comes from redpointAI.naturalLanguage.ChatGptEngine)."
             },
-            "anthropic": {
+            "helmAssistant": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "apiKeyVaultEntry": { "type": "string" },
-                "baseUrl": { "type": "string" }
+                "url": {
+                  "type": "string",
+                  "description": "Redpoint Helm Assistant control-plane URL. Egress to this URL on 443 is required when provider=helmAssistant. The API key is read from the existing redpoint-rpi-secrets Secret under the fixed key LogAnalyzer_HelmAssistant_ApiKey."
+                }
               }
             },
-            "bedrock": {
+            "byo": {
               "type": "object",
               "additionalProperties": true,
+              "description": "Bring-your-own inference platform configuration. Active only when provider=byo. The analyzer integrates with the customer-managed platform you choose under `platform`; auth piggybacks on the chart's cloudIdentity helpers (no separate creds duplicated here).",
               "properties": {
-                "region": { "type": "string" }
-              }
-            },
-            "vertex": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "projectId": { "type": "string" },
-                "region": { "type": "string" }
+                "platform": {
+                  "type": "string",
+                  "enum": ["anthropic", "azureFoundry", "bedrock", "vertex"],
+                  "description": "Customer-managed inference platform. `anthropic` = direct Anthropic API. `azureFoundry` = Azure AI Foundry / Azure OpenAI (rides redpointAI.naturalLanguage). `bedrock` = AWS Bedrock (auth via cloudIdentity.amazon). `vertex` = GCP Vertex AI (auth via cloudIdentity.google)."
+                },
+                "anthropic": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "apiKeyVaultEntry": { "type": "string" },
+                    "baseUrl": { "type": "string" }
+                  }
+                },
+                "bedrock": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "region": { "type": "string" }
+                  }
+                },
+                "vertex": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "projectId": { "type": "string" },
+                    "region": { "type": "string" }
+                  }
+                }
               }
             }
           }
