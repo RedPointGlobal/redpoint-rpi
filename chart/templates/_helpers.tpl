@@ -1206,11 +1206,17 @@ Usage: {{- include "rpi.logAnalyzer.authEnvvars" . | nindent 8 }}
 - name: LOG_ANALYZER__AUTH__NATIVE__CLIENT_ID
   value: {{ $native.clientId | default "rpi-observability" | quote }}
 {{- if not $isSdk }}
+# Native posture supports both 'confidential' (hashed secret in
+# OpenIddictApplications) and 'public' (no secret) client types. Marked
+# optional so the pod starts even when the customer registered a public
+# client and hasn't populated this Secret entry. The ROPC client code
+# sends the secret only when it is set.
 - name: LogAnalyzer_NativeAuth_ClientSecret
   valueFrom:
     secretKeyRef:
       name: {{ $secretName | quote }}
       key: LogAnalyzer_NativeAuth_ClientSecret
+      optional: true
 {{- end }}
 {{- end }}
 {{- if $federated.enabled }}
@@ -1239,11 +1245,23 @@ Usage: {{- include "rpi.logAnalyzer.authEnvvars" . | nindent 8 }}
 {{- end }}
 {{- end }}
 {{- if not $isSdk }}
+# Session signing key. Required for cookie integrity; auth cannot
+# function without it. Customer must populate this Secret entry
+# before the pod starts.
 - name: LogAnalyzer_Session_SigningKey
   valueFrom:
     secretKeyRef:
       name: {{ $secretName | quote }}
       key: LogAnalyzer_Session_SigningKey
+# Previous signing key. Optional; only populated during key rotation
+# windows so existing sessions remain valid while new sessions sign
+# with the rotated key.
+- name: LogAnalyzer_Session_PreviousKey
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: LogAnalyzer_Session_PreviousKey
+      optional: true
 {{- end }}
 {{- end }}
 {{- end -}}
