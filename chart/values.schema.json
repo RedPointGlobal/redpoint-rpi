@@ -2271,6 +2271,56 @@
             }
           }
         },
+        "auth": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Trust-domain participation. When enabled, the analyzer authenticates users against the IDP RPI is configured against and authorizes them through RPI's normalized user/group model. See AUTH_DESIGN_RFC.md for the engineering contract.",
+          "properties": {
+            "enabled":  { "type": "boolean", "description": "Master switch. Default false; when false the legacy unauthenticated path is preserved." },
+            "tenantId": { "type": "string", "description": "RPI tenant identifier the analyzer's user lookup is scoped to. Required when enabled=true." },
+            "anonymous": {
+              "type": "string",
+              "enum": ["deny", "observabilityViewOnly", "allowAnonymous"],
+              "description": "Migration posture. `deny` (default for new deployments): authentication required everywhere. `observabilityViewOnly`: anonymous users see broad telemetry only; sensitive surfaces require auth. `allowAnonymous`: legacy compat; preserves unauthenticated behavior."
+            },
+            "cookieSecure":               { "type": "boolean", "description": "Set the Secure attribute on session cookies. Set false only for local development without TLS." },
+            "sessionLifetimeSeconds":     { "type": "integer", "minimum": 60, "description": "Session lifetime in seconds. Default 28800 (8 hours)." },
+            "authorizationCacheTtlSeconds": { "type": "integer", "minimum": 0, "description": "Per-process AuthorizationProvider cache TTL in seconds. Set 0 to disable. Default 60." },
+            "ingressHost":                { "type": "string", "description": "Hostname the analyzer is reachable at; used to build the OIDC redirect URI advertised to the IDP. AUTO-DERIVED from ingress.hosts.loganalyzer + ingress.domain when empty; override only for custom CNAME / external LB scenarios." },
+            "provider": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "native": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "enabled":    { "type": "boolean" },
+                    "issuerUrl":  { "type": "string", "description": "AUTO-DERIVED from ingress.hosts.client + ingress.domain (the rpi-interactionapi public host) when empty. Override only when the issuer lives somewhere unusual." },
+                    "clientId":   { "type": "string" }
+                  }
+                },
+                "federated": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "enabled":       { "type": "boolean" },
+                    "kind":          { "type": "string", "enum": ["", "entra", "keycloak", "okta"] },
+                    "issuerUrl":     { "type": "string" },
+                    "clientId":      { "type": "string" },
+                    "audience":      { "type": "string" },
+                    "identityClaim": { "type": "string" }
+                  }
+                }
+              }
+            },
+            "capabilityMap": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Maps RPI group names to analyzer capabilities. Keys are capability identifiers (observability.view, diagnostics.view, diagnostics.viewSql, diagnostics.viewStackTrace, diagnostics.exportBundle, analyzer.admin); values are arrays of RPI group names."
+            }
+          }
+        },
         "model": {
           "type": "object",
           "additionalProperties": true,

@@ -1139,6 +1139,116 @@ vault under the .NET-style entry name `ConnectionStrings--LoggingDatabase`
 Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
 */}}
 
+
+{{/*
+Auth env-vars for the analyzer container. Emits nothing when
+logAnalyzer.auth.enabled is false (preserving the legacy path).
+
+Active emission shape:
+  LOG_ANALYZER__AUTH__ENABLED                          true
+  LOG_ANALYZER__AUTH__TENANT_ID                        <values>
+  LOG_ANALYZER__AUTH__ANONYMOUS                        deny | observabilityViewOnly | allowAnonymous
+  LOG_ANALYZER__AUTH__COOKIE_SECURE                    true | false
+  LOG_ANALYZER__AUTH__SESSION_LIFETIME_SECONDS         <values>
+  LOG_ANALYZER__AUTH__AUTHZ_CACHE_TTL_SECONDS          <values>
+  LOG_ANALYZER__AUTH__INGRESS_HOST                     <values>
+  LOG_ANALYZER__AUTH__CAPABILITY_MAP                   <JSON-encoded values>
+  LOG_ANALYZER__AUTH__NATIVE__*  (when native.enabled)
+  LOG_ANALYZER__AUTH__FEDERATED__*  (when federated.enabled)
+
+Plus three secretKeyRef bindings to redpoint-rpi-secrets:
+  LogAnalyzer_Session_SigningKey
+  LogAnalyzer_OAuth_ClientSecret    (when federated.enabled)
+  LogAnalyzer_NativeAuth_ClientSecret (when native.enabled)
+
+Usage: {{- include "rpi.logAnalyzer.authEnvvars" . | nindent 8 }}
+*/}}
+{{- define "rpi.logAnalyzer.authEnvvars" -}}
+{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- $auth := $cfg.auth | default dict -}}
+{{- if not $auth.enabled }}{{- "" -}}{{- else -}}
+{{- $secretName := include "rpi.secrets.secretName" . -}}
+{{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
+{{- $isSdk := eq $secretsProvider "sdk" -}}
+{{- $provider := $auth.provider | default dict -}}
+{{- $native := $provider.native | default dict -}}
+{{- $federated := $provider.federated | default dict -}}
+{{/* Hosts derived from the canonical ingress block; customers may
+     override but typically should not. ingressHost = the analyzer's
+     own loganalyzer host. nativeIssuerUrl = the rpi-interactionapi
+     client host (where native RPI auth lives). */}}
+{{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- $analyzerHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.loganalyzer "domain" $ingCfg.domain) -}}
+{{- $clientHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.client "domain" $ingCfg.domain) -}}
+{{- $ingressHost := $auth.ingressHost | default $analyzerHost -}}
+- name: LOG_ANALYZER__AUTH__ENABLED
+  value: "true"
+- name: LOG_ANALYZER__AUTH__TENANT_ID
+  value: {{ required "logAnalyzer.auth.tenantId is required when auth.enabled=true" $auth.tenantId | quote }}
+- name: LOG_ANALYZER__AUTH__ANONYMOUS
+  value: {{ $auth.anonymous | default "deny" | quote }}
+- name: LOG_ANALYZER__AUTH__COOKIE_SECURE
+  value: {{ ternary $auth.cookieSecure true (hasKey $auth "cookieSecure") | quote }}
+- name: LOG_ANALYZER__AUTH__SESSION_LIFETIME_SECONDS
+  value: {{ $auth.sessionLifetimeSeconds | default 28800 | quote }}
+- name: LOG_ANALYZER__AUTH__AUTHZ_CACHE_TTL_SECONDS
+  value: {{ $auth.authorizationCacheTtlSeconds | default 60 | quote }}
+- name: LOG_ANALYZER__AUTH__INGRESS_HOST
+  value: {{ $ingressHost | quote }}
+- name: LOG_ANALYZER__AUTH__CAPABILITY_MAP
+  value: {{ $auth.capabilityMap | default dict | toJson | quote }}
+{{- if $native.enabled }}
+{{- $nativeIssuer := $native.issuerUrl | default (printf "https://%s" $clientHost) }}
+- name: LOG_ANALYZER__AUTH__NATIVE__ENABLED
+  value: "true"
+- name: LOG_ANALYZER__AUTH__NATIVE__ISSUER_URL
+  value: {{ $nativeIssuer | quote }}
+- name: LOG_ANALYZER__AUTH__NATIVE__CLIENT_ID
+  value: {{ $native.clientId | default "rpi-observability" | quote }}
+{{- if not $isSdk }}
+- name: LogAnalyzer_NativeAuth_ClientSecret
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: LogAnalyzer_NativeAuth_ClientSecret
+{{- end }}
+{{- end }}
+{{- if $federated.enabled }}
+- name: LOG_ANALYZER__AUTH__FEDERATED__ENABLED
+  value: "true"
+- name: LOG_ANALYZER__AUTH__FEDERATED__KIND
+  value: {{ required "logAnalyzer.auth.provider.federated.kind is required" $federated.kind | quote }}
+- name: LOG_ANALYZER__AUTH__FEDERATED__ISSUER_URL
+  value: {{ required "logAnalyzer.auth.provider.federated.issuerUrl is required" $federated.issuerUrl | quote }}
+- name: LOG_ANALYZER__AUTH__FEDERATED__CLIENT_ID
+  value: {{ required "logAnalyzer.auth.provider.federated.clientId is required" $federated.clientId | quote }}
+{{- if $federated.audience }}
+- name: LOG_ANALYZER__AUTH__FEDERATED__AUDIENCE
+  value: {{ $federated.audience | quote }}
+{{- end }}
+{{- if $federated.identityClaim }}
+- name: LOG_ANALYZER__AUTH__FEDERATED__IDENTITY_CLAIM
+  value: {{ $federated.identityClaim | quote }}
+{{- end }}
+{{- if not $isSdk }}
+- name: LogAnalyzer_OAuth_ClientSecret
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: LogAnalyzer_OAuth_ClientSecret
+{{- end }}
+{{- end }}
+{{- if not $isSdk }}
+- name: LogAnalyzer_Session_SigningKey
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: LogAnalyzer_Session_SigningKey
+{{- end }}
+{{- end }}
+{{- end -}}
+
+
 {{- define "rpi.logAnalyzer.runtimeEnvvars" -}}
 {{- $cfg := .Values.logAnalyzer | default dict -}}
 {{- $budget := $cfg.budget | default dict -}}

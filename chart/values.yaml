@@ -1317,6 +1317,83 @@ logAnalyzer:
       storageClassName: ""           # default storage class when blank
       accessMode: ReadWriteOnce
 
+  # ---- Authentication and authorization ---------------------------------
+  # When enabled, the analyzer participates in the RPI trust domain:
+  # identity is delegated to whichever IDP RPI is configured against
+  # (native rpi-interactionapi, Microsoft Entra, Keycloak, or Okta);
+  # authorization is resolved through RPI's normalized user/group/
+  # permission model in the operational database. Disabled by default
+  # so existing deployments preserve the legacy unauthenticated path
+  # until the operator explicitly opts in.
+  #
+  # See AUTH_DESIGN_RFC.md and SECURITY_BOUNDARIES_AND_DATA_HANDLING.md
+  # in the loganalyzer source tree for the engineering contract and
+  # security posture.
+  auth:
+    enabled: false                   # opt-in; set true to enable trust-domain participation
+
+    # Tenant identifier for the analyzer deployment. Required when
+    # auth.enabled=true. Single-tenant per deployment in MVP.
+    tenantId: ""
+
+    # Migration posture for legacy / mixed deployments.
+    #   deny                  -- new deployments; require auth on all surfaces
+    #   observabilityViewOnly -- partial enforcement; broad telemetry stays anonymous
+    #   allowAnonymous        -- legacy compat; preserves the unauthenticated path
+    anonymous: deny
+
+    # Cookie security. Set false only for local development without TLS.
+    cookieSecure: true
+
+    # Session lifetime in seconds. Default 8 hours.
+    sessionLifetimeSeconds: 28800
+
+    # Per-process AuthorizationProvider cache TTL in seconds. Set 0 to
+    # disable. Group membership changes in RPI take effect at most
+    # this many seconds after assignment.
+    authorizationCacheTtlSeconds: 60
+
+    # Hostname the analyzer is reachable at; used to build the OIDC
+    # redirect URI advertised to the IDP. AUTO-DERIVED from
+    # ingress.hosts.loganalyzer + ingress.domain when left empty.
+    # Override only if the analyzer is fronted by a different external
+    # hostname (custom CNAME, external load balancer, etc.).
+    ingressHost: ""
+
+    # IDP integration: exactly one block under `provider` is enabled.
+    provider:
+      # ---- Native posture (rpi-interactionapi as issuer) ---------------
+      native:
+        enabled: false
+        # AUTO-DERIVED from ingress.hosts.client + ingress.domain
+        # (the rpi-interactionapi public host) when left empty.
+        # Override only when the issuer lives somewhere unusual.
+        issuerUrl: ""
+        clientId: rpi-observability
+        # clientSecretKey is fixed: LogAnalyzer_NativeAuth_ClientSecret
+        # in redpoint-rpi-secrets.
+
+      # ---- Federated posture (Entra | Keycloak | Okta) -----------------
+      federated:
+        enabled: false
+        kind: ""                     # entra | keycloak | okta
+        issuerUrl: ""                # discovery doc root
+        clientId: ""
+        audience: ""                 # defaults to clientId when empty
+        identityClaim: ""            # override when the IDP emits a non-default email-shaped claim
+
+    # Capability mapping: maps RPI group names to analyzer capabilities.
+    # Customers override per their RPI group conventions. The default
+    # below references RPI built-in groups plus common conventions;
+    # the System Administrator group exists on every RPI deployment.
+    capabilityMap:
+      observability.view:           ["Operations", "Support", "Configuration", "System Administrator"]
+      diagnostics.view:             ["Operations", "Support", "Configuration", "System Administrator"]
+      diagnostics.viewSql:          ["Configuration", "System Administrator"]
+      diagnostics.viewStackTrace:   ["Configuration", "System Administrator"]
+      diagnostics.exportBundle:     ["Support", "Configuration", "System Administrator"]
+      analyzer.admin:               ["System Administrator"]
+
   # Pulse_Logging access: the analyzer reads the same 4 connection
   # components the deploymentapi reads (host / username / password /
   # logging-db-name). No extra knobs here -- the chart's existing secrets

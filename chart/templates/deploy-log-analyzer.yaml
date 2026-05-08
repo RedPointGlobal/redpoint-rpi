@@ -120,6 +120,28 @@ spec:
   selector:
     app.kubernetes.io/name: {{ $name }}
 
+{{- if (.Values.logAnalyzer.auth | default dict).enabled }}
+---
+# Sibling Service exposing FastAPI directly. Used by the ingress to
+# route /auth/* to the auth router without going through Streamlit.
+# Created only when auth is enabled.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" (printf "%s-api" $name) "component" "loganalyzer-api") | nindent 4 }}
+spec:
+  ports:
+  - name: http
+    port: {{ $service.apiPort | default 8080 }}
+    protocol: TCP
+    targetPort: api
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+{{- end }}
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -179,6 +201,7 @@ spec:
               fieldPath: metadata.namespace
         {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
         {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
+        {{- include "rpi.logAnalyzer.authEnvvars" . | nindent 8 }}
         # Same SDK + cloudIdentity envvar wiring the deploymentapi (and the
         # rest of the RPI services) use. The analyzer reads KeyVault__Provider
         # to know which cloud vault to talk to in SDK mode -- same shape as
