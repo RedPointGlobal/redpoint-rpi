@@ -314,6 +314,17 @@ spec:
       {{- end }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
       {{- include "rpi.customCACerts.volume" . | nindent 6 }}
+      {{- if .Values.nodeSelector.enabled }}
+      nodeSelector:
+        {{ .Values.nodeSelector.key }}: {{ .Values.nodeSelector.value }}
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - effect: NoSchedule
+          key: {{ .Values.nodeSelector.key }}
+          operator: Equal
+          value: {{ .Values.nodeSelector.value }}
+      {{- end }}
   {{- if and $vct.enabled (not $storage.existingClaim) }}
   volumeClaimTemplates:
     - metadata:
