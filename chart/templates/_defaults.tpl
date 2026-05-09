@@ -1,14 +1,14 @@
 {{/*
 ============================================================
-  INTERNAL DEFAULTS — _defaults.tpl
+  INTERNAL DEFAULTS - _defaults.tpl
 ============================================================
   Chart-managed defaults that users should NOT edit directly.
   Override any value directly in your overrides file under
   the matching top-level key (e.g., realtimeapi:, ingress:).
 
   Architecture:
-    _defaults.tpl   — this file, defines default YAML per component
-    _helpers.tpl    — merge helpers that combine:
+    _defaults.tpl   - this file, defines default YAML per component
+    _helpers.tpl    - merge helpers that combine:
                       defaults + user values (user wins)
 
   Each component has a named template that returns YAML:
@@ -1160,7 +1160,7 @@ resources:
 {{- define "rpi.defaults.databaseUpgrade" -}}
 enabled: false
 # Empty = chart default ({registry}/net-utils:latest). Set to a full image URI to
-# override — used verbatim, no registry/tag appended. Useful on clusters where
+# override - used verbatim, no registry/tag appended. Useful on clusters where
 # Deployment Safeguards reject :latest tags.
 image: ""
 deploymentapiHost: rpi-deploymentapi

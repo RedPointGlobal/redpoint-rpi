@@ -69,7 +69,7 @@ spec:
           echo ""
 
           # --------------------------------------------------
-          # 1. DNS Resolution — Operational Database
+          # 1. DNS Resolution - Operational Database
           # --------------------------------------------------
           echo "[1/4] DNS Resolution"
           {{- $dbHost := .Values.databases.operational.server_host | default "" }}
@@ -77,10 +77,10 @@ spec:
           if nslookup "{{ $dbHost }}" >/dev/null 2>&1; then
             pass "Database host '{{ $dbHost }}' resolves"
           else
-            fail "Cannot resolve database host '{{ $dbHost }}' — check databases.operational.server_host"
+            fail "Cannot resolve database host '{{ $dbHost }}' - check databases.operational.server_host"
           fi
           {{- else if eq $dbHost "rpi-demo-mssql" }}
-          pass "Demo mode — database host is in-cluster (rpi-demo-mssql)"
+          pass "Demo mode - database host is in-cluster (rpi-demo-mssql)"
           {{- else }}
           fail "databases.operational.server_host is not set"
           {{- end }}
@@ -110,10 +110,10 @@ spec:
           if nc -z -w 5 "{{ $dbHost }}" {{ $dbPort }} 2>/dev/null; then
             pass "TCP connect to {{ $dbHost }}:{{ $dbPort }} ({{ $dbProvider }})"
           else
-            fail "Cannot connect to {{ $dbHost }}:{{ $dbPort }} — check firewall rules and database availability"
+            fail "Cannot connect to {{ $dbHost }}:{{ $dbPort }} - check firewall rules and database availability"
           fi
           {{- else if eq $dbHost "rpi-demo-mssql" }}
-          pass "Demo mode — skipping external DB connectivity check"
+          pass "Demo mode - skipping external DB connectivity check"
           {{- else }}
           fail "No database host configured"
           {{- end }}

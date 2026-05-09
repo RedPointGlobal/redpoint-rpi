@@ -20,5 +20,6 @@ deploy/terraform/examples/*/.terraform/
 deploy/terraform/examples/*/.terraform.lock.hcl
 .github
 scripts
+
 .pre-commit-config.yaml
 CONTRIBUTING.md

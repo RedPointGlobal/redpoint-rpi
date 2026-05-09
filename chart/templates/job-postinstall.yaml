@@ -201,7 +201,7 @@ spec:
             "${BASE_URL}/api/licensing/status" 2>/dev/null || echo "")
 
           if echo "${LICENSE_STATUS}" | grep -qi '"isActivated":true\|"IsActivated":true'; then
-            echo "License is already activated — skipping"
+            echo "License is already activated - skipping"
           else
             echo "Activating license..."
             SYSTEM_NAME="{{ $cfg.systemName }}"
@@ -237,7 +237,7 @@ spec:
             "${BASE_URL}/api/deployment/status" 2>/dev/null || echo "")
 
           if echo "${DEPLOY_STATUS}" | grep -q '"LastRunComplete"'; then
-            echo "Cluster databases already installed — skipping"
+            echo "Cluster databases already installed - skipping"
           else
             echo "Installing cluster databases..."
             INSTALL_RESPONSE=$(curl -s -w '\n%{http_code}' --connect-timeout 10 \
