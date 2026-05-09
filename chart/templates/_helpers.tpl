@@ -1449,5 +1449,10 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
     secretKeyRef:
       name: {{ $secretName | quote }}
       key: Operations_Database_Pulse_Logging_Database_Name
+- name: ClusterEnvironment__OperationalDatabase__PulseDatabaseName
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: Operations_Database_Pulse_Database_Name
 {{- end }}
 {{- end -}}
