@@ -1172,9 +1172,10 @@ observability:
     # ---- Posture: helmAssistant (managed control plane) -----------------
     # Redpoint-hosted Helm Assistant control plane. Egress to this URL
     # on 443 is required when provider=helmAssistant. The API key is
-    # read from the existing redpoint-rpi-secrets Secret under the
-    # fixed key `Observability_HelmAssistant_ApiKey` -- same pattern
-    # RPI_NLP_API_KEY uses.
+    # customer-populated in the rpi-observability Secret under the
+    # fixed key `Observability_HelmAssistant_ApiKey`. Obtain the key
+    # from the Helm Assistant control plane and write it to the Secret
+    # before installing; startup pre-flight refuses to run without it.
     helmAssistant:
       url: https://rpi-helm-assistant.redpointcdp.com
 

@@ -1041,10 +1041,11 @@ Usage: {{- include "rpi.observability.modelEnvvars" . | nindent 8 }}
 - name: OBSERVABILITY__MODEL__HELM_ASSISTANT_URL
   value: {{ required "observability.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
 {{- if not $isSdk }}
-# Helm Assistant API key. Bootstrapped on first install by the
-# pre-install Helm hook Job (chart/templates/observability-bootstrap.yaml)
-# into the Secret rpi-observability. Persists across pod restarts and
-# Helm upgrades; never rotated automatically.
+# Helm Assistant API key. Customer-populated in the rpi-observability
+# Secret under Observability_HelmAssistant_ApiKey. Obtain the key
+# from the Helm Assistant control plane and populate the Secret
+# before installing; startup pre-flight refuses to run without it
+# when provider=helmAssistant.
 - name: OBSERVABILITY__MODEL__HELM_ASSISTANT_API_KEY
   valueFrom:
     secretKeyRef:
@@ -1165,9 +1166,6 @@ Active emission shape (when mode != public):
   Authentication__Microsoft__APIApplicationID           (entra mode only)
 
 Plus secretKeyRef bindings (all from Secret rpi-observability):
-  Observability_Session_SigningKey       (bootstrapped by pre-install
-                                          Job in observability-
-                                          bootstrap.yaml)
   Observability_NativeAuth_ClientSecret  (customer-populated; the
                                           OpenIddict client and its
                                           secret are provisioned
@@ -1178,6 +1176,10 @@ Plus secretKeyRef bindings (all from Secret rpi-observability):
                                           identity records)
   Observability_OAuth_ClientSecret       (customer-populated; federated
                                           only)
+
+The session signing key is generated on first start and persisted
+on the pod's PVC at /data/session_signing_key -- not in any K8s
+Secret. See app/auth/session.py.
 
 The runtime startup validator (app/auth/native_validator.py) refuses
 to start when native auth is enabled but Observability_NativeAuth_
@@ -1272,26 +1274,11 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
       key: Observability_OAuth_ClientSecret
 {{- end }}
 {{- end }}
-{{- if not $isSdk }}
-# Session signing key. Bootstrapped on first install by the pre-install
-# Helm hook Job (chart/templates/observability-bootstrap.yaml) into the
-# Secret rpi-observability. Persists across pod restarts and Helm
-# upgrades; never rotated automatically.
-- name: Observability_Session_SigningKey
-  valueFrom:
-    secretKeyRef:
-      name: rpi-observability
-      key: Observability_Session_SigningKey
-# Previous signing key. Optional; populated by the operator during a
-# manual key rotation window so existing sessions remain valid while
-# new sessions sign with the rotated key. Bootstrap does not touch this.
-- name: Observability_Session_PreviousKey
-  valueFrom:
-    secretKeyRef:
-      name: rpi-observability
-      key: Observability_Session_PreviousKey
-      optional: true
-{{- end }}
+{{/* Session signing key is generated on first start and persisted on
+     the pod's PVC at /data/session_signing_key. No K8s Secret entry
+     is required and no env var is injected. Rotation: operator writes
+     the existing file to /data/session_signing_key.previous and
+     deletes /data/session_signing_key so a new one is generated. */}}
 {{- end }}
 {{- end -}}
 
