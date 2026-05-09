@@ -1303,6 +1303,13 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{- $provider := .Values.databases.operational.provider | default "sqlserver" -}}
 - name: OBSERVABILITY__CLOUD_PLATFORM
   value: {{ .Values.global.deployment.platform | default "" | quote }}
+{{/* Canonical RPI ClientID (rpi_Clients lookup key). REQUIRED.
+     ADR-0009 strict refinement: observability.clientId is the only
+     valid source of truth for tenant identification. No fallback,
+     no inference, no auto-detection. Helm fails the render here
+     when observability is enabled and the value is empty. */}}
+- name: OBSERVABILITY__CLIENT_ID
+  value: {{ required "observability.clientId is required when observability.enabled=true. Set it to the ClientID GUID from Pulse_<env>.dbo.rpi_Clients (e.g. 9A39D66C-111C-408E-AE5B-D97880BAC496). There is no fallback or auto-detection." $cfg.clientId | quote }}
 - name: OBSERVABILITY__BUDGET__MAX_TOKENS_PER_HOUR
   value: {{ $budget.maxTokensPerHour | default 200000 | quote }}
 - name: OBSERVABILITY__BUDGET__MAX_REQUESTS_PER_HOUR
@@ -1321,27 +1328,12 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{- end }}
 - name: OBSERVABILITY__SQLITE_PATH
   value: "/data/reports.db"
-# Diagnostics-tab DB names. Read by the analyzer's Diagnostics surface
-# (SQL trace clusters, audit timeline, per-Interaction drill-down).
-# clientServer is informational; sqlTrace and audit are authoritative.
-{{- with $cfg.logSources }}
-{{- with .clientServer }}
-- name: OBSERVABILITY__LOG_SOURCES__CLIENT_SERVER
-  value: {{ . | quote }}
-{{- end }}
-{{- with .sqlTrace }}
-- name: OBSERVABILITY__LOG_SOURCES__SQL_TRACE
-  value: {{ . | quote }}
-{{- end }}
-{{- with .audit }}
-- name: OBSERVABILITY__LOG_SOURCES__AUDIT
-  value: {{ . | quote }}
-{{- end }}
-{{- with .interaction }}
-- name: OBSERVABILITY__LOG_SOURCES__INTERACTION
-  value: {{ . | quote }}
-{{- end }}
-{{- end }}
+{{/* Diagnostics-tab DB names (Interaction + InteractionAudit) are NOT
+     emitted as env vars. The analyzer resolves them at startup from
+     Pulse_<env>.dbo.rpi_Clients via ClientResolver, using
+     OBSERVABILITY__CLIENT_ID (set above from observability.clientId)
+     as the lookup key. No fallback, no inference -- ADR-0009 strict
+     refinement. */}}
 {{- with $cfg.diagnostics }}
 {{- with .fileOutput }}
 - name: OBSERVABILITY__DIAGNOSTICS__FILE_OUTPUT_ENABLED

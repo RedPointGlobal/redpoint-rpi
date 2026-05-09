@@ -1111,6 +1111,21 @@ observability:
   serviceAccount:
     enabled: true                    # creates rpi-observability SA in per-service mode
 
+  # ---- RPI ClientID (REQUIRED) ------------------------------------------
+  # The RPI tenant identifier (a GUID) that this analyzer instance serves.
+  # Used as the lookup key against Pulse_<env>.dbo.rpi_Clients to resolve
+  # the tenant's Interaction + InteractionAudit DB names (ADR-0009).
+  #
+  # REQUIRED whenever observability.enabled=true. Empty / missing causes
+  # `helm template` and `helm install` to fail. There is no fallback,
+  # no inference, no single-tenant auto-detection -- behavior is
+  # identical for single-tenant and multi-tenant deployments. See
+  # workspace doc forbidden/silent-fallback-in-config.md.
+  #
+  # Find the value: SELECT ClientID FROM Pulse_<env>.dbo.rpi_Clients
+  # (uppercase GUID, e.g. 9A39D66C-111C-408E-AE5B-D97880BAC496).
+  clientId: ""
+
   # ---- Node health panel -------------------------------------------------
   # Powers the Node Health section on the System Health tab. Reads node
   # state + per-node CPU/memory from the Kubernetes API and metrics-server.
@@ -1240,20 +1255,14 @@ observability:
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
   # ---- Operational DB names (Diagnostics tab) ----------------------------
-  # RPI databases the analyzer reads for the Diagnostics tab. clientServer
-  # is informational only -- the actual Pulse_Logging connection still
-  # comes from the chart secret. sqlTrace + audit live in the same
-  # InteractionAudit_<env> DB and are read for SQL trace clusters and
-  # the audit timeline. interaction is the main Interaction_<env> DB
-  # that holds workflow + activity definitions and runtime state -- read
-  # for per-Interaction drill-down + bundle download. When a value is
-  # empty the corresponding Diagnostics section renders a "not
-  # configured" caption.
-  logSources:
-    clientServer: ""    # e.g. Pulse_qarc_a400ca_Logging
-    sqlTrace: ""        # e.g. InteractionAudit_qarc_a400ca
-    audit: ""           # e.g. InteractionAudit_qarc_a400ca
-    interaction: ""     # e.g. Interaction_qarc_a400ca
+  # The Diagnostics tab needs two tenant-specific database names:
+  #   * the Interaction DB (op_InteractionWorkflows / op_DataWorkflows)
+  #   * the InteractionAudit DB (SQLTraceLog / AuditHistory)
+  # These are NOT operator-typed chart values. The analyzer resolves them
+  # at startup from Pulse_<env>.dbo.rpi_Clients using observability.clientId
+  # (above) as the lookup key. See ADR-0009 strict refinement -- no
+  # fallback, no inference. Behavior is identical for single-tenant and
+  # multi-tenant deployments.
 
   # ---- Diagnostics tab ---------------------------------------------------
   # Per-Interaction lookup + bundle download (parity with the on-prem
