@@ -636,13 +636,20 @@ Usage: {{- include "rpi.secrets.sdk.envvars" . | nindent 10 }}
 {{- end -}}
 
 {{/*
-Resolve the K8s secret name. Works for kubernetes and csi modes.
+Resolve the K8s secret name. Each provider reads from its own
+secretName field so customers can keep distinct names per mode.
 Usage: {{ include "rpi.secrets.secretName" . }}
 */}}
 {{- define "rpi.secrets.secretName" -}}
-{{- if eq .Values.secretsManagement.provider "csi" -}}
+{{- $provider := .Values.secretsManagement.provider | default "kubernetes" -}}
+{{- if eq $provider "csi" -}}
 {{ .Values.secretsManagement.csi.secretName | default "redpoint-rpi-secrets" }}
+{{- else if eq $provider "kubernetes" -}}
+{{ .Values.secretsManagement.kubernetes.secretName | default "redpoint-rpi-secrets" }}
 {{- else -}}
+{{/* sdk or unknown: secretKeyRef bindings are gated off in SDK mode
+     so this branch is rarely consumed; fall back to the kubernetes
+     name to keep manifests renderable. */}}
 {{ .Values.secretsManagement.kubernetes.secretName | default "redpoint-rpi-secrets" }}
 {{- end -}}
 {{- end -}}
@@ -1041,15 +1048,16 @@ Usage: {{- include "rpi.observability.modelEnvvars" . | nindent 8 }}
 - name: OBSERVABILITY__MODEL__HELM_ASSISTANT_URL
   value: {{ required "observability.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
 {{- if not $isSdk }}
-# Helm Assistant API key. Customer-populated in the rpi-observability
-# Secret under Observability_HelmAssistant_ApiKey. Obtain the key
-# from the Helm Assistant control plane and populate the Secret
-# before installing; startup pre-flight refuses to run without it
-# when provider=helmAssistant.
+# Helm Assistant API key. Customer-populated in the chart's standard
+# RPI Secret (default: redpoint-rpi-secrets) under
+# Observability_HelmAssistant_ApiKey. Obtain the key from the Helm
+# Assistant control plane and populate the Secret before installing;
+# startup pre-flight refuses to run without it when
+# provider=helmAssistant.
 - name: OBSERVABILITY__MODEL__HELM_ASSISTANT_API_KEY
   valueFrom:
     secretKeyRef:
-      name: rpi-observability
+      name: {{ $secret | quote }}
       key: Observability_HelmAssistant_ApiKey
 {{- end }}
 {{- else if eq $provider "localLlm" }}
@@ -1165,7 +1173,8 @@ Active emission shape (when mode != public):
   Authentication__Microsoft__ClientApplicationID        (entra mode only)
   Authentication__Microsoft__APIApplicationID           (entra mode only)
 
-Plus secretKeyRef bindings (all from Secret rpi-observability):
+Plus secretKeyRef bindings (all from the chart's standard RPI Secret,
+default name redpoint-rpi-secrets, resolved via rpi.secrets.secretName):
   Observability_NativeAuth_ClientSecret  (customer-populated; the
                                           OpenIddict client and its
                                           secret are provisioned
@@ -1222,7 +1231,8 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{/* Native = the standard RPI authentication contract (Authentication__*
      env vars) consumed directly. The OpenIddict client (default
      ClientId rpi-observability) is pre-registered externally; the
-     analyzer reads its secret from Secret rpi-observability. */}}
+     analyzer reads its secret from the chart's standard RPI Secret
+     (default: redpoint-rpi-secrets). */}}
 {{- $nativeBlock := $auth.native | default dict -}}
 {{- $nativeAuthHost := $nativeBlock.authorizationHost | default (printf "https://%s" $clientHost) -}}
 {{- $nativeMetaHost := $nativeBlock.authMetaHttpHost | default "" -}}
@@ -1243,7 +1253,7 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 - name: Observability_NativeAuth_ClientSecret
   valueFrom:
     secretKeyRef:
-      name: rpi-observability
+      name: {{ $secretName | quote }}
       key: Observability_NativeAuth_ClientSecret
 {{- end }}
 {{- end }}
@@ -1265,12 +1275,13 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 - name: Authentication__Microsoft__APIApplicationID
   value: {{ required "observability.auth.microsoft.apiApplicationId (or chart-wide MicrosoftEntraID.interaction_api_id) is required for Entra mode" $apiAppId | quote }}
 {{- if not $isSdk }}
-# Entra OAuth client secret. Customer-populated in rpi-observability
-# Secret with the secret value registered with the IDP.
+# Entra OAuth client secret. Customer-populated in the chart's
+# standard RPI Secret (default: redpoint-rpi-secrets) with the
+# secret value registered with the IDP.
 - name: Observability_OAuth_ClientSecret
   valueFrom:
     secretKeyRef:
-      name: rpi-observability
+      name: {{ $secretName | quote }}
       key: Observability_OAuth_ClientSecret
 {{- end }}
 {{- end }}

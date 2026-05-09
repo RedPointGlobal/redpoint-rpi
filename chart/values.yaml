@@ -1413,10 +1413,10 @@ observability:
       authMetaHttpHost: ""
       # The OpenIddict client ID Observability uses. The customer (RPI
       # platform / DBA / identity admin) pre-registers a confidential
-      # OpenIddict client with this ClientId and populates Secret
-      # rpi-observability key Observability_NativeAuth_ClientSecret
-      # with the matching ClientSecret. Observability never writes to
-      # OpenIddictApplications.
+      # OpenIddict client with this ClientId and populates the chart's
+      # standard RPI Secret (default: redpoint-rpi-secrets) under the
+      # key Observability_NativeAuth_ClientSecret with the matching
+      # ClientSecret. Observability never writes to OpenIddictApplications.
       clientId: rpi-observability
 
     # ---- Entra posture overrides ---------------------------------------
