@@ -1,11 +1,11 @@
 ![redpoint_logo](../chart/images/redpoint.png)
-# Log Analyzer Operations Guide
+# RPI Observability Operations Guide
 
 [< Back to Home](../README.md)
 
 ## Overview
 
-This is the day-2 operations playbook for the Log Analyzer. It explains what every label on the dashboard means, when notifications fire, how the schedule works, and the most common questions operators hit when something does not look right. For installation, configuration, and prerequisites see the [Log Analyzer setup guide](loganalyzer.md).
+This is the day-2 operations playbook for the RPI Observability. It explains what every label on the dashboard means, when notifications fire, how the schedule works, and the most common questions operators hit when something does not look right. For installation, configuration, and prerequisites see the [RPI Observability setup guide](observability.md).
 
 The aim is that an operator landing here at 2am with a paged-out RPI environment can find the answer in one section without having to read source code.
 
@@ -162,7 +162,7 @@ If any gate fails, the analyzer logs `email digest skipped: <reason>` and moves 
 | Gate | Source |
 |:---|:---|
 | `teams.enabled: true` | Helm values |
-| `teams.webhookSecretKey` (default `LogAnalyzer_Teams_Webhook`) resolves to a non-empty webhook URL in the K8s Secret | Helm values + cluster Secret |
+| `teams.webhookSecretKey` (default `Observability_Teams_Webhook`) resolves to a non-empty webhook URL in the K8s Secret | Helm values + cluster Secret |
 | Cycle has at least one **NEW** cluster, **OR** `teams.onlyOnNewErrors: false`, **OR** daily mode is on | Helm values + cycle output |
 
 ### Why daily mode bypasses `onlyOnNewErrors`
@@ -226,7 +226,7 @@ If you ever see `database is locked` in the analyzer's startup logs, it almost c
 The analyzer pod does not ship with `sqlite3` CLI. To inspect, use Python (which is in the image):
 
 ```bash
-kubectl exec -n <ns> rpi-loganalyzer-0 -- python3 -c "
+kubectl exec -n <ns> rpi-observability-0 -- python3 -c "
 import sqlite3
 cn = sqlite3.connect('/data/reports.db')
 for r in cn.execute('SELECT id, started_at, error_count, incident_count FROM reports ORDER BY id DESC LIMIT 10'):
@@ -240,7 +240,7 @@ The analyzer is a StatefulSet with `persistentVolumeClaimRetentionPolicy: Retain
 To take a snapshot of the report store at a point in time:
 
 ```bash
-kubectl exec -n <ns> rpi-loganalyzer-0 -- python3 -c "
+kubectl exec -n <ns> rpi-observability-0 -- python3 -c "
 import sqlite3, sys
 cn = sqlite3.connect('/data/reports.db')
 sys.stdout.buffer.write(b''.join(cn.iterdump()).encode() if False else b'')
@@ -260,7 +260,7 @@ sys.stdout.buffer.write(b''.join(cn.iterdump()).encode() if False else b'')
 | Why does the same error appear as **multiple cards**? | Errors are grouped by the first sentence of the message after stripping volatile content (UUIDs, IPs, timestamps). If your application logs the same root cause with different first-sentence phrasing, they end up in separate cards. Have your dev team standardise the message format if this is a frequent issue. |
 | How do I find **which tenant** is generating these errors? | The Tenant line on each cluster card shows the ClientID UUID prefix. Hover for the full UUID. Grep your tenant config for the prefix to find the matching customer / environment. |
 | Why isn't my **email** arriving? | Walk the gate checklist: `email.enabled: true`, recipients non-empty, SMTPSettings populated, and either the cycle has new error types OR `onlyOnNewErrors: false` / daily mode. Look in the analyzer logs for `email digest skipped: <reason>`. |
-| Why is no **Teams card** posting? | Same gate walk plus the webhook URL must be present in `redpoint-rpi-secrets` under the configured key (default `LogAnalyzer_Teams_Webhook`). Check `kubectl get secret redpoint-rpi-secrets -o jsonpath='{.data.LogAnalyzer_Teams_Webhook}' \| base64 -d`. |
+| Why is no **Teams card** posting? | Same gate walk plus the webhook URL must be present in `redpoint-rpi-secrets` under the configured key (default `Observability_Teams_Webhook`). Check `kubectl get secret redpoint-rpi-secrets -o jsonpath='{.data.Observability_Teams_Webhook}' \| base64 -d`. |
 | How long until my fix shows as **Resolved**? | Two cycles after the fix. See [Schedule and timing](#schedule-and-timing) above. The sparkline will drop to zero on the right edge faster, that's the practical recovery signal. |
 | What does **NEW** mean? Is it forever? | An error is NEW the first time it ever shows up in any report. After that it is RECURRING forever, even if it goes quiet for weeks and returns. |
 | How do I get the **raw rows** for a cluster? | Logs tab. Each report has a per-cycle .txt download with every persisted row from every cluster (capped at 500 rows per cluster). |

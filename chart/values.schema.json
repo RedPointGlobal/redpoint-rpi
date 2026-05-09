@@ -2224,7 +2224,7 @@
         }
       }
     },
-    "logAnalyzer": {
+    "observability": {
       "type": "object",
       "description": "Standalone in-cluster service that periodically reads Pulse_Logging (read-only), clusters errors, and asks an LLM (Anthropic / Azure Foundry / Bedrock / Vertex) to produce summaries plus chart recommendations. Reports stored locally in SQLite. Opt-in.",
       "additionalProperties": true,
@@ -2235,7 +2235,7 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
-            "enabled": { "type": "boolean", "description": "Create the rpi-loganalyzer ServiceAccount." }
+            "enabled": { "type": "boolean", "description": "Create the rpi-observability ServiceAccount." }
           }
         },
         "nodeHealth": {
@@ -2286,7 +2286,7 @@
             "cookieSecure":               { "type": "boolean", "description": "Set the Secure attribute on session cookies. Set false only for local development without TLS." },
             "sessionLifetimeSeconds":     { "type": "integer", "minimum": 60, "description": "Session lifetime in seconds. Default 28800 (8 hours)." },
             "authorizationCacheTtlSeconds": { "type": "integer", "minimum": 0, "description": "Per-process AuthorizationProvider cache TTL in seconds. Set 0 to disable. Default 60." },
-            "ingressHost":                { "type": "string", "description": "Hostname the analyzer is reachable at; used to build the OIDC redirect URI advertised to the IDP. AUTO-DERIVED from ingress.hosts.loganalyzer + ingress.domain when empty; override only for custom CNAME / external LB scenarios." },
+            "ingressHost":                { "type": "string", "description": "Hostname the analyzer is reachable at; used to build the OIDC redirect URI advertised to the IDP. AUTO-DERIVED from ingress.hosts.observability + ingress.domain when empty; override only for custom CNAME / external LB scenarios." },
             "provider": {
               "type": "object",
               "additionalProperties": true,
@@ -2328,7 +2328,7 @@
             "provider": {
               "type": "string",
               "enum": ["helmAssistant", "localLlm", "byo"],
-              "description": "AI deployment posture. `helmAssistant` (default, turnkey) routes redacted analysis through the Redpoint-hosted control plane -- no customer AI infrastructure required. `localLlm` keeps all inference inside the cluster via the packaged Ollama deployment (see logAnalyzer.localLlm) -- log data never leaves the customer network. `byo` integrates with a customer-managed inference platform; pick the platform under model.byo.platform."
+              "description": "AI deployment posture. `helmAssistant` (default, turnkey) routes redacted analysis through the Redpoint-hosted control plane -- no customer AI infrastructure required. `localLlm` keeps all inference inside the cluster via the packaged Ollama deployment (see observability.localLlm) -- log data never leaves the customer network. `byo` integrates with a customer-managed inference platform; pick the platform under model.byo.platform."
             },
             "llmName": {
               "type": "string",
@@ -2340,7 +2340,7 @@
               "properties": {
                 "url": {
                   "type": "string",
-                  "description": "Redpoint Helm Assistant control-plane URL. Egress to this URL on 443 is required when provider=helmAssistant. The API key is read from the existing redpoint-rpi-secrets Secret under the fixed key LogAnalyzer_HelmAssistant_ApiKey."
+                  "description": "Redpoint Helm Assistant control-plane URL. Egress to this URL on 443 is required when provider=helmAssistant. The API key is read from the existing redpoint-rpi-secrets Secret under the fixed key Observability_HelmAssistant_ApiKey."
                 }
               }
             },

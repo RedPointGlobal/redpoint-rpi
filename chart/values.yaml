@@ -834,7 +834,7 @@ ingress:
     queuereader: rpi-queuereader
     rabbitmqconsole: rpi-rabbitmq-console
     smartactivation: rpi-smartActivation
-    loganalyzer: rpi-loganalyzer            # only used when logAnalyzer.enabled=true
+    observability: rpi-observability            # only used when observability.enabled=true
 
 # ==========================
 # Network Policy
@@ -1084,24 +1084,32 @@ customMetrics:
   enabled: false
 
 # ==========================
-# Log Analyzer (AI-driven Pulse_Logging summarizer; opt-in)
+# RPI Observability (AI-driven Pulse_Logging summarizer; opt-in)
 # ==========================
 # Standalone in-cluster service that periodically reads the Pulse_Logging
 # database (READ-ONLY), clusters errors/traces, and asks an LLM to produce
 # human-readable summaries plus chart/values recommendations. Reports are
 # stored in a local SQLite file (PVC-backed) and served via a built-in UI
-# at https://<ingress.hosts.loganalyzer>.<ingress.domain>.
+# at https://<ingress.hosts.observability>.<ingress.domain>.
 #
 # All in-cluster: nothing leaves the customer's perimeter except outbound
 # calls to the configured LLM provider's endpoint. Pulse_Logging access is
 # via a dedicated read-only DB user the customer creates and stores in the
-# cloud vault as `LogAnalyzer-LoggingDatabaseConnectionString` (full
+# cloud vault as `Observability-LoggingDatabaseConnectionString` (full
 # connection string, including the host -- 127.0.0.1 if cloudSqlProxy is on).
-logAnalyzer:
+# ---- Single-instance deployment contract (v1) --------------------------
+# RPI Observability is single-instance by design. The pod owns local
+# SQLite state, runs the cycle scheduler in-process, holds the auth
+# cache + token-budget bucket in memory, and binds K8s collectors to a
+# single namespace. There is no leader election or shared-state
+# coordination. Setting `observability.replicas` (or any value that
+# implies more than one running instance) is rejected at chart-render
+# time. Multi-replica is a v2 concern; do not interpret the
+# single-instance shape as an accidental limitation.
+observability:
   enabled: false
-  replicas: 1
   serviceAccount:
-    enabled: true                    # creates rpi-loganalyzer SA in per-service mode
+    enabled: true                    # creates rpi-observability SA in per-service mode
 
   # ---- Node health panel -------------------------------------------------
   # Powers the Node Health section on the System Health tab. Reads node
@@ -1116,7 +1124,7 @@ logAnalyzer:
     enabled: true
 
   # ---- AI deployment posture ---------------------------------------------
-  # The Log Analyzer's incident-intelligence experience is provider-
+  # The RPI Observability's incident-intelligence experience is provider-
   # agnostic from the operator's perspective: identical UX, identical
   # analysis pipeline. What you choose here is the *deployment posture*
   # -- where inference runs, who operates it, and where log data lives.
@@ -1134,7 +1142,7 @@ logAnalyzer:
   #   localLlm  (private, packaged)
   #     Best privacy-preserving experience. All inference happens
   #     in-cluster via the packaged Ollama deployment shipped with the
-  #     chart (see logAnalyzer.localLlm below). No log data leaves the
+  #     chart (see observability.localLlm below). No log data leaves the
   #     customer network. Designed for highly regulated environments.
   #     Privacy boundary: nothing leaves the cluster.
   #     Operational ownership: customer (within the cluster).
@@ -1165,7 +1173,7 @@ logAnalyzer:
     # Redpoint-hosted Helm Assistant control plane. Egress to this URL
     # on 443 is required when provider=helmAssistant. The API key is
     # read from the existing redpoint-rpi-secrets Secret under the
-    # fixed key `LogAnalyzer_HelmAssistant_ApiKey` -- same pattern
+    # fixed key `Observability_HelmAssistant_ApiKey` -- same pattern
     # RPI_NLP_API_KEY uses.
     helmAssistant:
       url: https://rpi-helm-assistant.redpointcdp.com
@@ -1181,7 +1189,7 @@ logAnalyzer:
       # Direct Anthropic API. Egress to api.anthropic.com:443 required.
       # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
       anthropic:
-        apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
+        apiKeyVaultEntry: Observability-AnthropicApiKey
         baseUrl: ""                  # optional egress proxy
 
       # Azure AI Foundry / Azure OpenAI. Rides the chart-wide
@@ -1260,6 +1268,33 @@ logAnalyzer:
     fileOutput:
       enabled: true
 
+  # ---- Execution Control API binding (Live Execution Console) ------------
+  # The Live Execution Console (Database queries tab) consumes RPI's
+  # Execution Control API for in-flight workflow / database state and
+  # cooperative-cancel signals. The Execution Control API is the only
+  # surface Observability consumes; the rpi_ExecutionQueries table is
+  # internal to the execution service and is NOT accessed directly by
+  # Observability. Until baseUrl is populated, the LiveQueryProvider
+  # reports "unbound" and the UI surfaces an awaiting-integration card.
+  #
+  # Endpoints contracted from the upstream service:
+  #   GET  {baseUrl}/api/execution/queries/active
+  #   POST {baseUrl}/api/execution/queries/{connectionId}/cancel
+  #
+  # Capabilities:
+  #   execution.viewLiveQueries  -- Configuration, System Administrator
+  #   execution.cancelQuery      -- System Administrator only
+  #
+  # Both default to restrictive groups because in-flight SQL can leak
+  # PII via WHERE-clause literals and cancel is a runtime control
+  # operation against live workflow state.
+  executionControl:
+    baseUrl: ""                   # e.g. http://rpi-deploymentapi.<ns>.svc.cluster.local:80
+    apiKeySecretKey: ""           # optional; key in redpoint-rpi-secrets
+                                  # containing the bearer token (when
+                                  # the upstream service requires auth)
+    timeoutSeconds: 5
+
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's
   # report to the configured recipients. SMTP transport reuses the
@@ -1280,14 +1315,14 @@ logAnalyzer:
   # Teams channel via an incoming webhook. The webhook URL is sensitive
   # (anyone with it can post to the channel), so it lives in the K8s
   # Secret rather than this file -- set webhookSecretKey to the Secret
-  # entry name. Default key is `LogAnalyzer_Teams_Webhook`.
+  # entry name. Default key is `Observability_Teams_Webhook`.
   #
   # Get the webhook URL from Teams: in the channel, ... > Workflows >
   # "Post to a channel when a webhook request is received". Copy the
   # URL it generates into the secret.
   teams:
     enabled: false
-    webhookSecretKey: LogAnalyzer_Teams_Webhook
+    webhookSecretKey: Observability_Teams_Webhook
     onlyOnNewErrors: true            # only post when first-seen errors exist
 
   # ---- Posture: localLlm (private, packaged in-cluster inference) --------
@@ -1327,20 +1362,24 @@ logAnalyzer:
   # until the operator explicitly opts in.
   #
   # See AUTH_DESIGN_RFC.md and SECURITY_BOUNDARIES_AND_DATA_HANDLING.md
-  # in the loganalyzer source tree for the engineering contract and
+  # in the observability source tree for the engineering contract and
   # security posture.
   auth:
-    enabled: false                   # opt-in; set true to enable trust-domain participation
+    # Single-provider deployment model. Each deployment resolves to
+    # exactly ONE of:
+    #   public  -- no authentication; UI is fully anonymous
+    #   native  -- RPI native auth (rpi-interactionapi / OpenIddict)
+    #   entra   -- Microsoft Entra ID
+    # Hybrid configurations are rejected at chart-render time.
+    # Switching modes is a deployment-time decision, not a runtime
+    # negotiation. Authentication mode and auth-provider configuration
+    # use the standard RPI Authentication__* env-var contract.
+    mode: public
 
     # Tenant identifier for the analyzer deployment. Required when
-    # auth.enabled=true. Single-tenant per deployment in MVP.
+    # mode != public. The RPI tenant scope this analyzer instance
+    # serves; single-tenant per deployment in v1.
     tenantId: ""
-
-    # Migration posture for legacy / mixed deployments.
-    #   deny                  -- new deployments; require auth on all surfaces
-    #   observabilityViewOnly -- partial enforcement; broad telemetry stays anonymous
-    #   allowAnonymous        -- legacy compat; preserves the unauthenticated path
-    anonymous: deny
 
     # Cookie security. Set false only for local development without TLS.
     cookieSecure: true
@@ -1354,33 +1393,39 @@ logAnalyzer:
     authorizationCacheTtlSeconds: 60
 
     # Hostname the analyzer is reachable at; used to build the OIDC
-    # redirect URI advertised to the IDP. AUTO-DERIVED from
-    # ingress.hosts.loganalyzer + ingress.domain when left empty.
+    # redirect URI advertised to the IDP for Entra mode. AUTO-DERIVED
+    # from ingress.hosts.observability + ingress.domain when left empty.
     # Override only if the analyzer is fronted by a different external
     # hostname (custom CNAME, external load balancer, etc.).
     ingressHost: ""
 
-    # IDP integration: exactly one block under `provider` is enabled.
-    provider:
-      # ---- Native posture (rpi-interactionapi as issuer) ---------------
-      native:
-        enabled: false
-        # AUTO-DERIVED from ingress.hosts.client + ingress.domain
-        # (the rpi-interactionapi public host) when left empty.
-        # Override only when the issuer lives somewhere unusual.
-        issuerUrl: ""
-        clientId: rpi-observability
-        # clientSecretKey is fixed: LogAnalyzer_NativeAuth_ClientSecret
-        # in redpoint-rpi-secrets.
+    # ---- Native posture overrides --------------------------------------
+    # Used only when mode=native. Defaults are derived from the
+    # canonical RPI ingress block.
+    native:
+      # AUTO-DERIVED from ingress.hosts.client + ingress.domain (the
+      # rpi-interactionapi public host) when left empty.
+      authorizationHost: ""
+      # Optional separate metadata host (auth-meta endpoints). RPI
+      # services that use a different metadata host set this; most
+      # deployments leave it empty.
+      authMetaHttpHost: ""
+      # The OpenIddict client ID Observability uses. The customer (RPI
+      # platform / DBA / identity admin) pre-registers a confidential
+      # OpenIddict client with this ClientId and populates Secret
+      # rpi-observability key Observability_NativeAuth_ClientSecret
+      # with the matching ClientSecret. Observability never writes to
+      # OpenIddictApplications.
+      clientId: rpi-observability
 
-      # ---- Federated posture (Entra | Keycloak | Okta) -----------------
-      federated:
-        enabled: false
-        kind: ""                     # entra | keycloak | okta
-        issuerUrl: ""                # discovery doc root
-        clientId: ""
-        audience: ""                 # defaults to clientId when empty
-        identityClaim: ""            # override when the IDP emits a non-default email-shaped claim
+    # ---- Entra posture overrides ---------------------------------------
+    # Used only when mode=entra. Defaults to the chart-wide
+    # MicrosoftEntraID block. Override here only if Observability
+    # needs different Entra config than the rest of the RPI deployment.
+    microsoft:
+      tenantId: ""              # default: MicrosoftEntraID.tenant_id
+      clientApplicationId: ""   # default: MicrosoftEntraID.interaction_client_id
+      apiApplicationId: ""      # default: MicrosoftEntraID.interaction_api_id
 
     # Capability mapping: maps RPI group names to analyzer capabilities.
     # Customers override per their RPI group conventions. The default
@@ -1392,6 +1437,16 @@ logAnalyzer:
       diagnostics.viewSql:          ["Configuration", "System Administrator"]
       diagnostics.viewStackTrace:   ["Configuration", "System Administrator"]
       diagnostics.exportBundle:     ["Support", "Configuration", "System Administrator"]
+      # Live Execution Console (Database queries tab). Read access is
+      # narrower than diagnostics.view because in-flight SQL can leak
+      # PII via WHERE-clause literals.
+      execution.viewLiveQueries:    ["Configuration", "System Administrator"]
+      # Cancel command goes through the Execution Control API and
+      # cooperatively signals the executing service; locked to System
+      # Administrator only by default. Mirrors the RPI client's
+      # "Operations -- Database Query Log -- Cancel Command" functional
+      # permission.
+      execution.cancelQuery:        ["System Administrator"]
       analyzer.admin:               ["System Administrator"]
 
   # Pulse_Logging access: the analyzer reads the same 4 connection

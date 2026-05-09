@@ -1000,19 +1000,19 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
 {{/* ============================================================
      LOG ANALYZER HELPERS
      ============================================================
-     Provider-specific env-var emission for the log analyzer's LLM
+     Provider-specific env-var emission for the observability's LLM
      client. Each provider matches the Anthropic SDK auto-detection
      so the analyzer code just instantiates Anthropic() / Bedrock /
-     Vertex / Azure-flavored client based on LOG_ANALYZER__MODEL__
+     Vertex / Azure-flavored client based on OBSERVABILITY__MODEL__
      PROVIDER.
      ============================================================ */}}
 
 {{/*
-Returns "true" when the log analyzer is enabled. Used by templates and
+Returns "true" when the observability is enabled. Used by templates and
 the ingress-routes file to gate analyzer-specific output.
 */}}
-{{- define "rpi.logAnalyzer.enabled" -}}
-{{- if (.Values.logAnalyzer | default dict).enabled -}}
+{{- define "rpi.observability.enabled" -}}
+{{- if (.Values.observability | default dict).enabled -}}
 true
 {{- end -}}
 {{- end -}}
@@ -1025,49 +1025,53 @@ inference platform (anthropic / azureFoundry / bedrock / vertex). AWS
 and GCP auth piggybacks on the existing cloudIdentity helpers
 (AWS_ROLE_ARN, GOOGLE_APPLICATION_CREDENTIALS) so no creds are
 duplicated here.
-Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
+Usage: {{- include "rpi.observability.modelEnvvars" . | nindent 8 }}
 */}}
-{{- define "rpi.logAnalyzer.modelEnvvars" -}}
-{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- define "rpi.observability.modelEnvvars" -}}
+{{- $cfg := .Values.observability | default dict -}}
 {{- $model := $cfg.model | default dict -}}
 {{- $provider := $model.provider | default "helmAssistant" -}}
 {{- $secret := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $isSdk := eq $secretsProvider "sdk" -}}
-- name: LOG_ANALYZER__MODEL__PROVIDER
+- name: OBSERVABILITY__MODEL__PROVIDER
   value: {{ $provider | quote }}
 {{- if eq $provider "helmAssistant" }}
 {{- $ha := $model.helmAssistant | default dict }}
-- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_URL
-  value: {{ required "logAnalyzer.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
+- name: OBSERVABILITY__MODEL__HELM_ASSISTANT_URL
+  value: {{ required "observability.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
 {{- if not $isSdk }}
-- name: LOG_ANALYZER__MODEL__HELM_ASSISTANT_API_KEY
+# Helm Assistant API key. Bootstrapped on first install by the
+# pre-install Helm hook Job (chart/templates/observability-bootstrap.yaml)
+# into the Secret rpi-observability. Persists across pod restarts and
+# Helm upgrades; never rotated automatically.
+- name: OBSERVABILITY__MODEL__HELM_ASSISTANT_API_KEY
   valueFrom:
     secretKeyRef:
-      name: {{ $secret | quote }}
-      key: LogAnalyzer_HelmAssistant_ApiKey
+      name: rpi-observability
+      key: Observability_HelmAssistant_ApiKey
 {{- end }}
 {{- else if eq $provider "localLlm" }}
 {{- $localLlm := $cfg.localLlm | default dict }}
 {{- if not $localLlm.enabled }}
-{{- fail "logAnalyzer with provider=localLlm requires logAnalyzer.localLlm.enabled=true (the in-cluster packaged-inference deployment)." }}
+{{- fail "observability with provider=localLlm requires observability.localLlm.enabled=true (the in-cluster packaged-inference deployment)." }}
 {{- end }}
-- name: LOG_ANALYZER__MODEL__BASE_URL
-  value: {{ printf "http://rpi-loganalyzer-llm.%s.svc.cluster.local:%v/v1" .Release.Namespace ($localLlm.service.port | default 11434) | quote }}
-- name: LOG_ANALYZER__MODEL__NAME
-  value: {{ required "logAnalyzer.model.llmName is required when provider=localLlm" $model.llmName | quote }}
+- name: OBSERVABILITY__MODEL__BASE_URL
+  value: {{ printf "http://rpi-observability-llm.%s.svc.cluster.local:%v/v1" .Release.Namespace ($localLlm.service.port | default 11434) | quote }}
+- name: OBSERVABILITY__MODEL__NAME
+  value: {{ required "observability.model.llmName is required when provider=localLlm" $model.llmName | quote }}
 {{- else if eq $provider "byo" }}
 {{- $byo := $model.byo | default dict }}
 {{- $platform := $byo.platform | default "" }}
 {{- if not $platform }}
-{{- fail "logAnalyzer with provider=byo requires logAnalyzer.model.byo.platform (anthropic | azureFoundry | bedrock | vertex)." }}
+{{- fail "observability with provider=byo requires observability.model.byo.platform (anthropic | azureFoundry | bedrock | vertex)." }}
 {{- end }}
-- name: LOG_ANALYZER__MODEL__BYO_PLATFORM
+- name: OBSERVABILITY__MODEL__BYO_PLATFORM
   value: {{ $platform | quote }}
 {{- if eq $platform "anthropic" }}
 {{- $a := $byo.anthropic | default dict }}
 - name: ANTHROPIC_MODEL
-  value: {{ required "logAnalyzer.model.llmName is required when byo.platform=anthropic" $model.llmName | quote }}
+  value: {{ required "observability.model.llmName is required when byo.platform=anthropic" $model.llmName | quote }}
 {{- if and $a.apiKeyVaultEntry (not $isSdk) }}
 - name: ANTHROPIC_API_KEY
   valueFrom:
@@ -1081,7 +1085,7 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 {{- end }}
 {{- else if eq $platform "azureFoundry" }}
 {{- if not .Values.redpointAI.enabled }}
-{{- fail "logAnalyzer with byo.platform=azureFoundry requires redpointAI.enabled=true. The analyzer reads the same Azure OpenAI config (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses." }}
+{{- fail "observability with byo.platform=azureFoundry requires redpointAI.enabled=true. The analyzer reads the same Azure OpenAI config (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses." }}
 {{- end }}
 {{- $nlp := .Values.redpointAI.naturalLanguage }}
 - name: RPI_NLP_APIBASE
@@ -1100,22 +1104,22 @@ Usage: {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
 {{- else if eq $platform "bedrock" }}
 {{- $b := $byo.bedrock | default dict }}
 - name: AWS_REGION
-  value: {{ required "logAnalyzer.model.byo.bedrock.region is required when byo.platform=bedrock" $b.region | quote }}
-- name: LOG_ANALYZER__MODEL__BEDROCK_MODEL_ID
-  value: {{ required "logAnalyzer.model.llmName is required when byo.platform=bedrock" $model.llmName | quote }}
+  value: {{ required "observability.model.byo.bedrock.region is required when byo.platform=bedrock" $b.region | quote }}
+- name: OBSERVABILITY__MODEL__BEDROCK_MODEL_ID
+  value: {{ required "observability.model.llmName is required when byo.platform=bedrock" $model.llmName | quote }}
 {{- else if eq $platform "vertex" }}
 {{- $v := $byo.vertex | default dict }}
 - name: VERTEX_PROJECT_ID
-  value: {{ required "logAnalyzer.model.byo.vertex.projectId is required when byo.platform=vertex" $v.projectId | quote }}
+  value: {{ required "observability.model.byo.vertex.projectId is required when byo.platform=vertex" $v.projectId | quote }}
 - name: VERTEX_REGION
-  value: {{ required "logAnalyzer.model.byo.vertex.region is required when byo.platform=vertex" $v.region | quote }}
-- name: LOG_ANALYZER__MODEL__VERTEX_MODEL_ID
-  value: {{ required "logAnalyzer.model.llmName is required when byo.platform=vertex" $model.llmName | quote }}
+  value: {{ required "observability.model.byo.vertex.region is required when byo.platform=vertex" $v.region | quote }}
+- name: OBSERVABILITY__MODEL__VERTEX_MODEL_ID
+  value: {{ required "observability.model.llmName is required when byo.platform=vertex" $model.llmName | quote }}
 {{- else }}
-{{- fail (printf "Unknown logAnalyzer.model.byo.platform=%q. Expected anthropic | azureFoundry | bedrock | vertex." $platform) }}
+{{- fail (printf "Unknown observability.model.byo.platform=%q. Expected anthropic | azureFoundry | bedrock | vertex." $platform) }}
 {{- end }}
 {{- else }}
-{{- fail (printf "Unknown logAnalyzer.model.provider=%q. Expected helmAssistant | localLlm | byo." $provider) }}
+{{- fail (printf "Unknown observability.model.provider=%q. Expected helmAssistant | localLlm | byo." $provider) }}
 {{- end }}
 {{- end -}}
 
@@ -1136,189 +1140,237 @@ In sdk mode the analyzer fetches the same logical value from the cloud
 vault under the .NET-style entry name `ConnectionStrings--LoggingDatabase`
 (matches what the rest of RPI's SDK provider expects).
 
-Usage: {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
+Usage: {{- include "rpi.observability.runtimeEnvvars" . | nindent 8 }}
 */}}
 
 
 {{/*
-Auth env-vars for the analyzer container. Emits nothing when
-logAnalyzer.auth.enabled is false (preserving the legacy path).
+Mode-aware auth env-vars for the analyzer container. Emits nothing
+when observability.auth.mode=public. For Native and Entra modes,
+emits the provider's standard RPI Authentication__* env vars plus
+observability-side post-auth configuration.
 
-Active emission shape:
-  LOG_ANALYZER__AUTH__ENABLED                          true
-  LOG_ANALYZER__AUTH__TENANT_ID                        <values>
-  LOG_ANALYZER__AUTH__ANONYMOUS                        deny | observabilityViewOnly | allowAnonymous
-  LOG_ANALYZER__AUTH__COOKIE_SECURE                    true | false
-  LOG_ANALYZER__AUTH__SESSION_LIFETIME_SECONDS         <values>
-  LOG_ANALYZER__AUTH__AUTHZ_CACHE_TTL_SECONDS          <values>
-  LOG_ANALYZER__AUTH__INGRESS_HOST                     <values>
-  LOG_ANALYZER__AUTH__CAPABILITY_MAP                   <JSON-encoded values>
-  LOG_ANALYZER__AUTH__NATIVE__*  (when native.enabled)
-  LOG_ANALYZER__AUTH__FEDERATED__*  (when federated.enabled)
+Active emission shape (when mode != public):
+  OBSERVABILITY__AUTH__TENANT_ID                        <values>
+  OBSERVABILITY__AUTH__COOKIE_SECURE                    true | false
+  OBSERVABILITY__AUTH__SESSION_LIFETIME_SECONDS         <values>
+  OBSERVABILITY__AUTH__AUTHZ_CACHE_TTL_SECONDS          <values>
+  OBSERVABILITY__AUTH__INGRESS_HOST                     <values>
+  OBSERVABILITY__AUTH__CAPABILITY_MAP                   <JSON-encoded values>
+  Authentication__EnableRPIAuthentication               (native mode only)
+  Authentication__RPIAuthentication__AuthorizationHost  (native mode only)
+  Authentication__Microsoft__Enable                     (entra mode only)
+  Authentication__Microsoft__TenantID                   (entra mode only)
+  Authentication__Microsoft__ClientApplicationID        (entra mode only)
+  Authentication__Microsoft__APIApplicationID           (entra mode only)
 
-Plus three secretKeyRef bindings to redpoint-rpi-secrets:
-  LogAnalyzer_Session_SigningKey
-  LogAnalyzer_OAuth_ClientSecret    (when federated.enabled)
-  LogAnalyzer_NativeAuth_ClientSecret (when native.enabled)
+Plus secretKeyRef bindings (all from Secret rpi-observability):
+  Observability_Session_SigningKey       (bootstrapped by pre-install
+                                          Job in observability-
+                                          bootstrap.yaml)
+  Observability_NativeAuth_ClientSecret  (customer-populated; the
+                                          OpenIddict client and its
+                                          secret are provisioned
+                                          externally by the RPI
+                                          platform / DBA / identity
+                                          admin -- Observability does
+                                          NOT create or modify any
+                                          identity records)
+  Observability_OAuth_ClientSecret       (customer-populated; federated
+                                          only)
 
-Usage: {{- include "rpi.logAnalyzer.authEnvvars" . | nindent 8 }}
+The runtime startup validator (app/auth/native_validator.py) refuses
+to start when native auth is enabled but Observability_NativeAuth_
+ClientSecret is missing from the K8s Secret. The validator does NOT
+read OpenIddictApplications.
+
+Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 */}}
-{{- define "rpi.logAnalyzer.authEnvvars" -}}
-{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- define "rpi.observability.authEnvvars" -}}
+{{- $cfg := .Values.observability | default dict -}}
 {{- $auth := $cfg.auth | default dict -}}
-{{- if not $auth.enabled }}{{- "" -}}{{- else -}}
+{{- $mode := $auth.mode | default "public" -}}
+{{- if eq $mode "public" }}{{- "" -}}{{- else -}}
+{{- if not (or (eq $mode "native") (eq $mode "entra")) -}}
+{{- fail (printf "observability.auth.mode must be one of: public | native | entra. Got: %q" $mode) -}}
+{{- end -}}
 {{- $secretName := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $isSdk := eq $secretsProvider "sdk" -}}
-{{- $provider := $auth.provider | default dict -}}
-{{- $native := $provider.native | default dict -}}
-{{- $federated := $provider.federated | default dict -}}
-{{/* Hosts derived from the canonical ingress block; customers may
-     override but typically should not. ingressHost = the analyzer's
-     own loganalyzer host. nativeIssuerUrl = the rpi-interactionapi
-     client host (where native RPI auth lives). */}}
+{{/* Ingress host derived from the canonical ingress block; the
+     customer's own observability hostname. */}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
-{{- $analyzerHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.loganalyzer "domain" $ingCfg.domain) -}}
+{{- $analyzerHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.observability "domain" $ingCfg.domain) -}}
 {{- $clientHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.client "domain" $ingCfg.domain) -}}
 {{- $ingressHost := $auth.ingressHost | default $analyzerHost -}}
-- name: LOG_ANALYZER__AUTH__ENABLED
-  value: "true"
-- name: LOG_ANALYZER__AUTH__TENANT_ID
-  value: {{ required "logAnalyzer.auth.tenantId is required when auth.enabled=true" $auth.tenantId | quote }}
-- name: LOG_ANALYZER__AUTH__ANONYMOUS
-  value: {{ $auth.anonymous | default "deny" | quote }}
-- name: LOG_ANALYZER__AUTH__COOKIE_SECURE
+{{/* Observability-specific (post-authentication) configuration. */}}
+- name: OBSERVABILITY__AUTH__TENANT_ID
+  value: {{ required "observability.auth.tenantId is required when auth.mode != public" $auth.tenantId | quote }}
+- name: OBSERVABILITY__AUTH__COOKIE_SECURE
   value: {{ ternary $auth.cookieSecure true (hasKey $auth "cookieSecure") | quote }}
-- name: LOG_ANALYZER__AUTH__SESSION_LIFETIME_SECONDS
+- name: OBSERVABILITY__AUTH__SESSION_LIFETIME_SECONDS
   value: {{ $auth.sessionLifetimeSeconds | default 28800 | quote }}
-- name: LOG_ANALYZER__AUTH__AUTHZ_CACHE_TTL_SECONDS
+- name: OBSERVABILITY__AUTH__AUTHZ_CACHE_TTL_SECONDS
   value: {{ $auth.authorizationCacheTtlSeconds | default 60 | quote }}
-- name: LOG_ANALYZER__AUTH__INGRESS_HOST
+- name: OBSERVABILITY__AUTH__INGRESS_HOST
   value: {{ $ingressHost | quote }}
-- name: LOG_ANALYZER__AUTH__CAPABILITY_MAP
+- name: OBSERVABILITY__AUTH__CAPABILITY_MAP
   value: {{ $auth.capabilityMap | default dict | toJson | quote }}
-{{- if $native.enabled }}
-{{- $nativeIssuer := $native.issuerUrl | default (printf "https://%s" $clientHost) }}
-- name: LOG_ANALYZER__AUTH__NATIVE__ENABLED
+{{- if eq $mode "native" }}
+{{/* Native = the standard RPI authentication contract (Authentication__*
+     env vars) consumed directly. The OpenIddict client (default
+     ClientId rpi-observability) is pre-registered externally; the
+     analyzer reads its secret from Secret rpi-observability. */}}
+{{- $nativeBlock := $auth.native | default dict -}}
+{{- $nativeAuthHost := $nativeBlock.authorizationHost | default (printf "https://%s" $clientHost) -}}
+{{- $nativeMetaHost := $nativeBlock.authMetaHttpHost | default "" -}}
+- name: Authentication__EnableRPIAuthentication
   value: "true"
-- name: LOG_ANALYZER__AUTH__NATIVE__ISSUER_URL
-  value: {{ $nativeIssuer | quote }}
-- name: LOG_ANALYZER__AUTH__NATIVE__CLIENT_ID
-  value: {{ $native.clientId | default "rpi-observability" | quote }}
+- name: Authentication__RPIAuthentication__AuthorizationHost
+  value: {{ $nativeAuthHost | quote }}
+{{- if $nativeMetaHost }}
+- name: Authentication__RPIAuthentication__AuthMetaHttpHost
+  value: {{ $nativeMetaHost | quote }}
+{{- end }}
+- name: OBSERVABILITY__AUTH__NATIVE__CLIENT_ID
+  value: {{ $nativeBlock.clientId | default "rpi-observability" | quote }}
 {{- if not $isSdk }}
-# Native posture supports both 'confidential' (hashed secret in
-# OpenIddictApplications) and 'public' (no secret) client types. Marked
-# optional so the pod starts even when the customer registered a public
-# client and hasn't populated this Secret entry. The ROPC client code
-# sends the secret only when it is set.
-- name: LogAnalyzer_NativeAuth_ClientSecret
+# Native confidential client secret. Customer pre-registers the
+# OpenIddict client and populates this Secret key. Observability
+# never writes to OpenIddictApplications.
+- name: Observability_NativeAuth_ClientSecret
   valueFrom:
     secretKeyRef:
-      name: {{ $secretName | quote }}
-      key: LogAnalyzer_NativeAuth_ClientSecret
-      optional: true
+      name: rpi-observability
+      key: Observability_NativeAuth_ClientSecret
 {{- end }}
 {{- end }}
-{{- if $federated.enabled }}
-- name: LOG_ANALYZER__AUTH__FEDERATED__ENABLED
+{{- if eq $mode "entra" }}
+{{/* Entra = Microsoft Entra ID. The standard chart-wide MicrosoftEntraID
+     block carries the IDs by default; observability.auth.microsoft can
+     override per-deployment. */}}
+{{- $msChartWide := .Values.MicrosoftEntraID | default dict -}}
+{{- $ms := $auth.microsoft | default dict -}}
+{{- $tenantId := $ms.tenantId | default $msChartWide.tenant_id -}}
+{{- $clientAppId := $ms.clientApplicationId | default $msChartWide.interaction_client_id -}}
+{{- $apiAppId := $ms.apiApplicationId | default $msChartWide.interaction_api_id -}}
+- name: Authentication__Microsoft__Enable
   value: "true"
-- name: LOG_ANALYZER__AUTH__FEDERATED__KIND
-  value: {{ required "logAnalyzer.auth.provider.federated.kind is required" $federated.kind | quote }}
-- name: LOG_ANALYZER__AUTH__FEDERATED__ISSUER_URL
-  value: {{ required "logAnalyzer.auth.provider.federated.issuerUrl is required" $federated.issuerUrl | quote }}
-- name: LOG_ANALYZER__AUTH__FEDERATED__CLIENT_ID
-  value: {{ required "logAnalyzer.auth.provider.federated.clientId is required" $federated.clientId | quote }}
-{{- if $federated.audience }}
-- name: LOG_ANALYZER__AUTH__FEDERATED__AUDIENCE
-  value: {{ $federated.audience | quote }}
-{{- end }}
-{{- if $federated.identityClaim }}
-- name: LOG_ANALYZER__AUTH__FEDERATED__IDENTITY_CLAIM
-  value: {{ $federated.identityClaim | quote }}
-{{- end }}
+- name: Authentication__Microsoft__TenantID
+  value: {{ required "observability.auth.microsoft.tenantId (or chart-wide MicrosoftEntraID.tenant_id) is required for Entra mode" $tenantId | quote }}
+- name: Authentication__Microsoft__ClientApplicationID
+  value: {{ required "observability.auth.microsoft.clientApplicationId (or chart-wide MicrosoftEntraID.interaction_client_id) is required for Entra mode" $clientAppId | quote }}
+- name: Authentication__Microsoft__APIApplicationID
+  value: {{ required "observability.auth.microsoft.apiApplicationId (or chart-wide MicrosoftEntraID.interaction_api_id) is required for Entra mode" $apiAppId | quote }}
 {{- if not $isSdk }}
-- name: LogAnalyzer_OAuth_ClientSecret
+# Entra OAuth client secret. Customer-populated in rpi-observability
+# Secret with the secret value registered with the IDP.
+- name: Observability_OAuth_ClientSecret
   valueFrom:
     secretKeyRef:
-      name: {{ $secretName | quote }}
-      key: LogAnalyzer_OAuth_ClientSecret
+      name: rpi-observability
+      key: Observability_OAuth_ClientSecret
 {{- end }}
 {{- end }}
 {{- if not $isSdk }}
-# Session signing key. Required for cookie integrity; auth cannot
-# function without it. Customer must populate this Secret entry
-# before the pod starts.
-- name: LogAnalyzer_Session_SigningKey
+# Session signing key. Bootstrapped on first install by the pre-install
+# Helm hook Job (chart/templates/observability-bootstrap.yaml) into the
+# Secret rpi-observability. Persists across pod restarts and Helm
+# upgrades; never rotated automatically.
+- name: Observability_Session_SigningKey
   valueFrom:
     secretKeyRef:
-      name: {{ $secretName | quote }}
-      key: LogAnalyzer_Session_SigningKey
-# Previous signing key. Optional; only populated during key rotation
-# windows so existing sessions remain valid while new sessions sign
-# with the rotated key.
-- name: LogAnalyzer_Session_PreviousKey
+      name: rpi-observability
+      key: Observability_Session_SigningKey
+# Previous signing key. Optional; populated by the operator during a
+# manual key rotation window so existing sessions remain valid while
+# new sessions sign with the rotated key. Bootstrap does not touch this.
+- name: Observability_Session_PreviousKey
   valueFrom:
     secretKeyRef:
-      name: {{ $secretName | quote }}
-      key: LogAnalyzer_Session_PreviousKey
+      name: rpi-observability
+      key: Observability_Session_PreviousKey
       optional: true
 {{- end }}
 {{- end }}
 {{- end -}}
 
 
-{{- define "rpi.logAnalyzer.runtimeEnvvars" -}}
-{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- define "rpi.observability.runtimeEnvvars" -}}
+{{- $cfg := .Values.observability | default dict -}}
 {{- $budget := $cfg.budget | default dict -}}
 {{- $schedule := $cfg.schedule | default dict -}}
 {{- $secretName := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $provider := .Values.databases.operational.provider | default "sqlserver" -}}
-- name: LOG_ANALYZER__CLOUD_PLATFORM
+- name: OBSERVABILITY__CLOUD_PLATFORM
   value: {{ .Values.global.deployment.platform | default "" | quote }}
-- name: LOG_ANALYZER__BUDGET__MAX_TOKENS_PER_HOUR
+- name: OBSERVABILITY__BUDGET__MAX_TOKENS_PER_HOUR
   value: {{ $budget.maxTokensPerHour | default 200000 | quote }}
-- name: LOG_ANALYZER__BUDGET__MAX_REQUESTS_PER_HOUR
+- name: OBSERVABILITY__BUDGET__MAX_REQUESTS_PER_HOUR
   value: {{ $budget.maxRequestsPerHour | default 60 | quote }}
-- name: LOG_ANALYZER__SCHEDULE__INTERVAL_MINUTES
+- name: OBSERVABILITY__SCHEDULE__INTERVAL_MINUTES
   value: {{ $schedule.intervalMinutes | default 30 | quote }}
 {{- if $schedule.lookbackMinutes }}
-- name: LOG_ANALYZER__SCHEDULE__LOOKBACK_MINUTES
+- name: OBSERVABILITY__SCHEDULE__LOOKBACK_MINUTES
   value: {{ $schedule.lookbackMinutes | quote }}
 {{- end }}
-- name: LOG_ANALYZER__SCHEDULE__ON_DEMAND_ENABLED
+- name: OBSERVABILITY__SCHEDULE__ON_DEMAND_ENABLED
   value: {{ ternary $schedule.onDemandEnabled true (hasKey $schedule "onDemandEnabled") | quote }}
 {{- if $schedule.dailyAtUtc }}
-- name: LOG_ANALYZER__SCHEDULE__DAILY_AT_UTC
+- name: OBSERVABILITY__SCHEDULE__DAILY_AT_UTC
   value: {{ $schedule.dailyAtUtc | quote }}
 {{- end }}
-- name: LOG_ANALYZER__SQLITE_PATH
+- name: OBSERVABILITY__SQLITE_PATH
   value: "/data/reports.db"
 # Diagnostics-tab DB names. Read by the analyzer's Diagnostics surface
 # (SQL trace clusters, audit timeline, per-Interaction drill-down).
 # clientServer is informational; sqlTrace and audit are authoritative.
 {{- with $cfg.logSources }}
 {{- with .clientServer }}
-- name: LOG_ANALYZER__LOG_SOURCES__CLIENT_SERVER
+- name: OBSERVABILITY__LOG_SOURCES__CLIENT_SERVER
   value: {{ . | quote }}
 {{- end }}
 {{- with .sqlTrace }}
-- name: LOG_ANALYZER__LOG_SOURCES__SQL_TRACE
+- name: OBSERVABILITY__LOG_SOURCES__SQL_TRACE
   value: {{ . | quote }}
 {{- end }}
 {{- with .audit }}
-- name: LOG_ANALYZER__LOG_SOURCES__AUDIT
+- name: OBSERVABILITY__LOG_SOURCES__AUDIT
   value: {{ . | quote }}
 {{- end }}
 {{- with .interaction }}
-- name: LOG_ANALYZER__LOG_SOURCES__INTERACTION
+- name: OBSERVABILITY__LOG_SOURCES__INTERACTION
   value: {{ . | quote }}
 {{- end }}
 {{- end }}
 {{- with $cfg.diagnostics }}
 {{- with .fileOutput }}
-- name: LOG_ANALYZER__DIAGNOSTICS__FILE_OUTPUT_ENABLED
+- name: OBSERVABILITY__DIAGNOSTICS__FILE_OUTPUT_ENABLED
   value: {{ .enabled | toString | quote }}
+{{- end }}
+{{- end }}
+{{/* Execution Control API binding (Live Execution Console). Empty
+     baseUrl means the LiveQueryProvider stays unbound and the UI
+     surfaces the awaiting-integration state explicitly. The feature
+     framework still ships; the data-source layer awaits binding to
+     the upstream Execution Control API. Observability never accesses
+     rpi_ExecutionQueries directly. */}}
+{{- with $cfg.executionControl | default dict }}
+{{- if .baseUrl }}
+- name: OBSERVABILITY__EXECUTION_CONTROL__BASE_URL
+  value: {{ .baseUrl | quote }}
+{{- end }}
+{{- if .timeoutSeconds }}
+- name: OBSERVABILITY__EXECUTION_CONTROL__TIMEOUT_SECONDS
+  value: {{ .timeoutSeconds | quote }}
+{{- end }}
+{{- if and .apiKeySecretKey (ne $secretsProvider "sdk") }}
+- name: OBSERVABILITY__EXECUTION_CONTROL__API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ $secretName | quote }}
+      key: {{ .apiKeySecretKey | quote }}
 {{- end }}
 {{- end }}
 # SMTP transport for the email digest. Always emitted; consumed only
@@ -1348,29 +1400,29 @@ Usage: {{- include "rpi.logAnalyzer.authEnvvars" . | nindent 8 }}
 {{- end }}
 {{- $email := $cfg.email | default dict }}
 {{- if $email.enabled }}
-- name: LOG_ANALYZER__EMAIL__ENABLED
+- name: OBSERVABILITY__EMAIL__ENABLED
   value: "true"
-- name: LOG_ANALYZER__EMAIL__RECIPIENTS
+- name: OBSERVABILITY__EMAIL__RECIPIENTS
   value: {{ join "," ($email.recipients | default list) | quote }}
-- name: LOG_ANALYZER__EMAIL__ONLY_ON_NEW_ERRORS
+- name: OBSERVABILITY__EMAIL__ONLY_ON_NEW_ERRORS
   value: {{ ternary $email.onlyOnNewErrors true (hasKey $email "onlyOnNewErrors") | quote }}
 {{- $ingCfg := .Values.ingress | default dict }}
-{{- if and ($ingCfg.hosts).loganalyzer $ingCfg.domain }}
-- name: LOG_ANALYZER__EMAIL__INGRESS_URL
-  value: {{ printf "https://%s.%s" $ingCfg.hosts.loganalyzer $ingCfg.domain | quote }}
+{{- if and ($ingCfg.hosts).observability $ingCfg.domain }}
+- name: OBSERVABILITY__EMAIL__INGRESS_URL
+  value: {{ printf "https://%s.%s" $ingCfg.hosts.observability $ingCfg.domain | quote }}
 {{- end }}
 {{- end }}
 {{- $teams := $cfg.teams | default dict }}
 {{- if $teams.enabled }}
-- name: LOG_ANALYZER__TEAMS__ENABLED
+- name: OBSERVABILITY__TEAMS__ENABLED
   value: "true"
-- name: LOG_ANALYZER__TEAMS__ONLY_ON_NEW_ERRORS
+- name: OBSERVABILITY__TEAMS__ONLY_ON_NEW_ERRORS
   value: {{ ternary $teams.onlyOnNewErrors true (hasKey $teams "onlyOnNewErrors") | quote }}
-- name: LOG_ANALYZER__TEAMS__WEBHOOK_URL
+- name: OBSERVABILITY__TEAMS__WEBHOOK_URL
   valueFrom:
     secretKeyRef:
       name: {{ $secretName | quote }}
-      key: {{ $teams.webhookSecretKey | default "LogAnalyzer_Teams_Webhook" | quote }}
+      key: {{ $teams.webhookSecretKey | default "Observability_Teams_Webhook" | quote }}
 {{- end }}
 # Operational SQL database type. Drives the analyzer's connection
 # string. Always emitted (not a secret).

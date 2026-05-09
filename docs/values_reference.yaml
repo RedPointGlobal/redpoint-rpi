@@ -1507,7 +1507,7 @@ ingress:
     queuereader: rpi-queuereader
     rabbitmqconsole: rpi-rabbitmq-console
     smartactivation: rpi-smartActivation
-    loganalyzer: rpi-loganalyzer            # only used when logAnalyzer.enabled=true
+    observability: rpi-observability            # only used when observability.enabled=true
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
   # Uncomment and modify any of the lines below to override the
@@ -2110,27 +2110,27 @@ customMetrics:
   enabled: false
 
 # ==========================
-# Log Analyzer (AI-driven Pulse_Logging summarizer; opt-in)
+# RPI Observability (AI-driven Pulse_Logging summarizer; opt-in)
 # ==========================
 # Standalone in-cluster service that periodically reads the Pulse_Logging
 # database (READ-ONLY), clusters errors/traces, and asks an LLM to produce
 # human-readable summaries plus chart/values recommendations. Reports are
 # stored in a local SQLite file (PVC-backed) and served via a built-in UI
-# at https://<ingress.hosts.loganalyzer>.<ingress.domain>.
+# at https://<ingress.hosts.observability>.<ingress.domain>.
 #
 # All in-cluster: nothing leaves the customer's perimeter except outbound
 # calls to the configured LLM provider's endpoint. Pulse_Logging access is
 # via a dedicated read-only DB user the customer creates and stores in the
-# cloud vault as `LogAnalyzer-LoggingDatabaseConnectionString` (full
+# cloud vault as `Observability-LoggingDatabaseConnectionString` (full
 # connection string, including the host -- 127.0.0.1 if cloudSqlProxy is on).
-logAnalyzer:
+observability:
   enabled: false
   replicas: 1
   serviceAccount:
-    enabled: true                    # creates rpi-loganalyzer SA in per-service mode
+    enabled: true                    # creates rpi-observability SA in per-service mode
 
   # ---- AI deployment posture ---------------------------------------------
-  # The Log Analyzer treats AI inference as a deployment-posture decision:
+  # The RPI Observability treats AI inference as a deployment-posture decision:
   # where inference runs, who operates it, and where log data lives. The
   # operator UX is identical across postures; only the deployment
   # architecture and privacy boundary differ.
@@ -2141,7 +2141,7 @@ logAnalyzer:
   #     Zero customer AI infrastructure required.
   #
   #   localLlm  (private, packaged)
-  #     In-cluster Ollama deployment (see logAnalyzer.localLlm). Nothing
+  #     In-cluster Ollama deployment (see observability.localLlm). Nothing
   #     leaves the customer network. Designed for highly regulated envs.
   #
   #   byo  (customer-managed AI platform)
@@ -2164,7 +2164,7 @@ logAnalyzer:
 
     # ---- Posture: helmAssistant (managed control plane) -----------------
     # API key from the redpoint-rpi-secrets Secret under the fixed key
-    # LogAnalyzer_HelmAssistant_ApiKey (mirrors RPI_NLP_API_KEY pattern).
+    # Observability_HelmAssistant_ApiKey (mirrors RPI_NLP_API_KEY pattern).
     # Egress to this URL on 443 is required.
     helmAssistant:
       url: https://rpi-helm-assistant.redpointcdp.com
@@ -2177,7 +2177,7 @@ logAnalyzer:
       # Direct Anthropic API. Egress to api.anthropic.com:443 required.
       # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
       anthropic:
-        apiKeyVaultEntry: LogAnalyzer-AnthropicApiKey
+        apiKeyVaultEntry: Observability-AnthropicApiKey
         baseUrl: ""                  # optional egress proxy
 
       # Azure AI Foundry / Azure OpenAI. Rides the chart-wide
@@ -2246,10 +2246,10 @@ logAnalyzer:
   # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
-  # The analyzer keeps its SQLite report store on an emptyDir volume at
-  # /var/lib/rpi-loganalyzer/reports.db. Reports are pod-local and are
-  # lost on pod restart; that's fine because the analyzer rebuilds them
-  # from Pulse_Logging on the next cycle.
+  # The component keeps its SQLite report store at /data/reports.db. The
+  # chart mounts a persistent volume (StatefulSet volumeClaimTemplates,
+  # or an existingClaim you provide) at /data; the path is canonical and
+  # is not environment-dependent. Reports survive pod restarts.
 
   # ---- HTTP service ------------------------------------------------------
   # The container runs two processes (same pattern as the Helm Assistant):

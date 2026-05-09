@@ -1,9 +1,9 @@
-{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- $cfg := .Values.observability | default dict -}}
 {{- $llm := $cfg.localLlm | default dict -}}
 {{- if and $cfg.enabled $llm.enabled -}}
-{{- $name := "rpi-loganalyzer-llm" -}}
+{{- $name := "rpi-observability-llm" -}}
 {{- $port := $llm.service.port | default 11434 -}}
-{{- $model := required "logAnalyzer.model.llmName is required when localLlm is enabled" (($cfg.model | default dict).llmName) -}}
+{{- $model := required "observability.model.llmName is required when localLlm is enabled" (($cfg.model | default dict).llmName) -}}
 {{- $persistence := $llm.persistence | default dict -}}
 {{- $resources := $llm.resources | default dict -}}
 
@@ -13,7 +13,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer-llm") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability-llm") | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -31,7 +31,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer-llm") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability-llm") | nindent 4 }}
 spec:
   replicas: 1
   serviceName: {{ $name }}
@@ -41,7 +41,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer-llm") | nindent 8 }}
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability-llm") | nindent 8 }}
     spec:
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:

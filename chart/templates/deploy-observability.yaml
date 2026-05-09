@@ -1,7 +1,54 @@
 
-{{- $cfg := .Values.logAnalyzer | default dict -}}
+{{- $cfg := .Values.observability | default dict -}}
 {{- if $cfg.enabled -}}
-{{- $name := "rpi-loganalyzer" -}}
+
+{{/*
+  ----------------------------------------------------------------------
+  Chart-render contract assertions for RPI Observability.
+
+  These execute at `helm template` / `helm install` / `helm upgrade`
+  time. They reject deployment configurations that the v1 architecture
+  does not support, with an explicit error instead of a silently broken
+  install. The principle: absence (or contradiction) of configuration
+  is an error condition, not an alternate operating mode.
+  ----------------------------------------------------------------------
+*/}}
+
+{{- /* F-H01: single-instance deployment contract.
+       The component owns local SQLite + in-process scheduler/cache; it
+       cannot be safely scaled. Reject any explicit replicas override. */ -}}
+{{- if hasKey $cfg "replicas" -}}
+{{- fail "observability.replicas is not configurable; v1 RPI Observability is single-instance by design (local SQLite, in-process scheduler, in-process auth cache). Multi-replica is a v2 concern." -}}
+{{- end -}}
+
+{{- /* F-H03: chart/app contract for AI provider.
+       model.provider=localLlm runs against the in-cluster Ollama
+       deployment; the deployment is gated by localLlm.enabled. The two
+       knobs must agree. */ -}}
+{{- $modelProvider := ($cfg.model | default dict).provider | default "helmAssistant" -}}
+{{- $localLlmEnabled := ($cfg.localLlm | default dict).enabled | default false -}}
+{{- if and (eq $modelProvider "localLlm") (not $localLlmEnabled) -}}
+{{- fail "model.provider=localLlm requires observability.localLlm.enabled=true (the in-cluster Ollama deployment must be rendered for the application to reach it)." -}}
+{{- end -}}
+
+{{- /* F-N07: native auth authorization host must be derivable.
+       When auth.mode=native, the chart synthesizes
+       Authentication__RPIAuthentication__AuthorizationHost from
+       ingress.hosts.client + ingress.domain unless explicitly
+       overridden. If neither is set, the synthesized URL is "https://"
+       (broken). Require one or the other when native mode is on.
+       Single-provider model: auth.mode is the only switch. */ -}}
+{{- $authCfg := $cfg.auth | default dict -}}
+{{- $authMode := $authCfg.mode | default "public" -}}
+{{- if eq $authMode "native" -}}
+{{- $nativeCfg := $authCfg.native | default dict -}}
+{{- $ingForCheck := fromYaml (include "rpi.merged.ingress" .) -}}
+{{- if and (not $nativeCfg.authorizationHost) (not (($ingForCheck.hosts | default dict).client)) -}}
+{{- fail "auth.mode=native requires either auth.native.authorizationHost OR ingress.hosts.client (used to auto-derive Authentication__RPIAuthentication__AuthorizationHost). Both are unset." -}}
+{{- end -}}
+{{- end -}}
+
+{{- $name := "rpi-observability" -}}
 {{- $service := $cfg.service | default dict -}}
 {{- $resources := $cfg.resources | default dict -}}
 {{- $storage := $cfg.storage | default dict -}}
@@ -16,7 +63,7 @@
 {{- $diagFileOut := (($cfg.diagnostics | default dict).fileOutput | default dict) -}}
 {{- $mountFileOut := and $diagFileOut.enabled $fileOutPvc.enabled -}}
 
-{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "loganalyzer" "cfg" $cfg) }}
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "observability" "cfg" $cfg) }}
 
 ---
 # Read-only K8s API access for the analyzer's pod-health and event
@@ -27,7 +74,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["events"]
@@ -50,7 +97,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -71,7 +118,7 @@ kind: ClusterRole
 metadata:
   name: {{ $name }}-nodes-{{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
@@ -87,7 +134,7 @@ kind: ClusterRoleBinding
 metadata:
   name: {{ $name }}-nodes-{{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -105,7 +152,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 4 }}
   {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
   {{- if $svcAnnotations }}
   annotations:
@@ -120,7 +167,7 @@ spec:
   selector:
     app.kubernetes.io/name: {{ $name }}
 
-{{- if (.Values.logAnalyzer.auth | default dict).enabled }}
+{{- if (.Values.observability.auth | default dict).enabled }}
 ---
 # Sibling Service exposing FastAPI directly. Used by the ingress to
 # route /auth/* to the auth router without going through Streamlit.
@@ -131,7 +178,7 @@ metadata:
   name: {{ $name }}-api
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" (printf "%s-api" $name) "component" "loganalyzer-api") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" (printf "%s-api" $name) "component" "observability-api") | nindent 4 }}
 spec:
   ports:
   - name: http
@@ -149,7 +196,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 4 }}
 spec:
   serviceName: {{ $name }}
   replicas: 1
@@ -162,7 +209,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "loganalyzer") | nindent 8 }}
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 8 }}
         {{- with (include "rpi.cloudidentity.podLabels" (dict "root" . "svcCloudIdentity" (hasKey $cfg "cloudIdentity" | ternary $cfg.cloudIdentity false)) | trim) }}{{- . | nindent 8 }}{{- end }}
       {{- $podAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "pod") | trim }}
       {{- if $podAnnotations }}
@@ -183,7 +230,7 @@ spec:
         {{- end }}
       containers:
       - name: {{ $name }}
-        image: {{ include "rpi.image" (dict "root" . "name" "rpi-loganalyzer") }}
+        image: {{ include "rpi.image" (dict "root" . "name" "rpi-observability") }}
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         ports:
         - name: ui
@@ -199,9 +246,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        {{- include "rpi.logAnalyzer.modelEnvvars" . | nindent 8 }}
-        {{- include "rpi.logAnalyzer.runtimeEnvvars" . | nindent 8 }}
-        {{- include "rpi.logAnalyzer.authEnvvars" . | nindent 8 }}
+        {{- include "rpi.observability.modelEnvvars" . | nindent 8 }}
+        {{- include "rpi.observability.runtimeEnvvars" . | nindent 8 }}
+        {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
         # Same SDK + cloudIdentity envvar wiring the deploymentapi (and the
         # rest of the RPI services) use. The analyzer reads KeyVault__Provider
         # to know which cloud vault to talk to in SDK mode -- same shape as

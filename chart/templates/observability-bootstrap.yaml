@@ -1,0 +1,142 @@
+{{- $cfg := .Values.observability | default dict -}}
+{{- if $cfg.enabled -}}
+
+{{/*
+  RPI Observability bootstrap (pre-install / pre-upgrade Helm hook).
+
+  Populates the Secret `rpi-observability` with two runtime-local
+  values that v1 owns:
+
+    Observability_Session_SigningKey   (random 32-byte url-safe; required
+                                        when auth.enabled=true)
+    Observability_HelmAssistant_ApiKey (provisioned via the Helm Assistant
+                                        API; required when
+                                        model.provider=helmAssistant)
+
+  Both values are written exactly once per Secret-key pair. The Job
+  re-runs on every install/upgrade but is idempotent: existing keys
+  are read and never overwritten, never compared, never rotated.
+
+  Failure of any provisioning step exits the Job non-zero and fails
+  the Helm install. There is no fallback path.
+
+  The native-auth client secret is NOT bootstrapped; native posture
+  uses a Public OpenIddict client validated by the analyzer's startup
+  pre-flight (see app/auth/native_validator.py).
+*/}}
+
+{{- $name := "rpi-observability-bootstrap" -}}
+{{- $secretName := "rpi-observability" -}}
+{{- $authMode := ($cfg.auth | default dict).mode | default "public" -}}
+{{- $needsSessionKey := ne $authMode "public" -}}
+{{- $needsHmaKey := eq (($cfg.model | default dict).provider | default "helmAssistant") "helmAssistant" -}}
+
+{{- if or $needsSessionKey $needsHmaKey }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+  # Bootstrap writes runtime-local secrets into rpi-observability.
+  # Scoped to that single Secret name; no broader Secret access.
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["{{ $secretName }}"]
+  verbs: ["get", "patch"]
+  # The first run must be able to create the Secret if missing.
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+    spec:
+      serviceAccountName: {{ $name }}
+      restartPolicy: Never
+      {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
+      {{- end }}
+      containers:
+      - name: bootstrap
+        image: {{ include "rpi.image" (dict "root" . "name" "rpi-observability") }}
+        imagePullPolicy: {{ .Values.global.deployment.images.pullPolicy | default "IfNotPresent" }}
+        command: ["python", "-m", "app.bootstrap"]
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OBSERVABILITY__BOOTSTRAP__SECRET_NAME
+          value: {{ $secretName | quote }}
+        # The bootstrap reads this single mode flag (Public | Native |
+        # Entra) to decide whether the session signing key is needed.
+        - name: OBSERVABILITY__AUTH__MODE
+          value: {{ $authMode | quote }}
+        - name: OBSERVABILITY__MODEL__PROVIDER
+          value: {{ ($cfg.model | default dict).provider | default "helmAssistant" | quote }}
+        {{- if $needsHmaKey }}
+        - name: OBSERVABILITY__MODEL__HELM_ASSISTANT_URL
+          value: {{ required "observability.model.helmAssistant.url is required when provider=helmAssistant" (($cfg.model | default dict).helmAssistant | default dict).url | quote }}
+        {{- end }}
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+
+{{- end }}
+{{- end }}

@@ -148,31 +148,31 @@ spec:
     {{- end }}
     {{- end }}
     {{- end }}
-    {{- if eq (include "rpi.logAnalyzer.enabled" .) "true" }}
-    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.loganalyzer "domain" $ingCfg.domain) }}
+    {{- if eq (include "rpi.observability.enabled" .) "true" }}
+    - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.observability "domain" $ingCfg.domain) }}
       http:
         paths:
         # Auth flows route to FastAPI (port 8080); the Streamlit UI is the
         # default backend on /. Both sit in the same pod under a single
         # hostname so the auth session cookie is sent on every request.
-        # When logAnalyzer.auth.enabled=false the /auth/* path simply 404s
+        # When observability.auth.enabled=false the /auth/* path simply 404s
         # at FastAPI; the legacy Streamlit-only behavior is preserved.
-        {{- if (.Values.logAnalyzer.auth | default dict).enabled }}
+        {{- if (.Values.observability.auth | default dict).enabled }}
         - path: /auth
           pathType: Prefix
           backend:
             service:
-              name: rpi-loganalyzer-api
+              name: rpi-observability-api
               port:
-                number: {{ (.Values.logAnalyzer.service | default dict).apiPort | default 8080 }}
+                number: {{ (.Values.observability.service | default dict).apiPort | default 8080 }}
         {{- end }}
         - path: /
           pathType: Prefix
           backend:
             service:
-              name: rpi-loganalyzer
+              name: rpi-observability
               port:
-                number: {{ (.Values.logAnalyzer.service | default dict).port | default 80 }}
+                number: {{ (.Values.observability.service | default dict).port | default 80 }}
     {{- end }}
 
 ---
