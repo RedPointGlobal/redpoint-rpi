@@ -1269,32 +1269,20 @@ observability:
     fileOutput:
       enabled: true
 
-  # ---- Execution Control API binding (Live Execution Console) ------------
-  # The Live Execution Console (Database queries tab) consumes RPI's
-  # Execution Control API for in-flight workflow / database state and
-  # cooperative-cancel signals. The Execution Control API is the only
-  # surface Observability consumes; the rpi_ExecutionQueries table is
-  # internal to the execution service and is NOT accessed directly by
-  # Observability. Until baseUrl is populated, the LiveQueryProvider
-  # reports "unbound" and the UI surfaces an awaiting-integration card.
+  # ---- Database Queries (read-only) --------------------------------------
+  # The Database Queries tab is a live snapshot of in-flight database
+  # commands sourced directly from rpi_ExecutionQueries via the same
+  # shared RPI operational-database connection every other RPI service
+  # uses (no new env vars, no new secrets, no new chart values). The
+  # surface is read-only: Observability does not cancel, kill, or
+  # otherwise mutate execution state -- operators perform those
+  # actions through the native RPI client.
   #
-  # Endpoints contracted from the upstream service:
-  #   GET  {baseUrl}/api/execution/queries/active
-  #   POST {baseUrl}/api/execution/queries/{connectionId}/cancel
+  # Capability:
+  #   diagnostics.viewLiveQueries -- Configuration, System Administrator
   #
-  # Capabilities:
-  #   execution.viewLiveQueries  -- Configuration, System Administrator
-  #   execution.cancelQuery      -- System Administrator only
-  #
-  # Both default to restrictive groups because in-flight SQL can leak
-  # PII via WHERE-clause literals and cancel is a runtime control
-  # operation against live workflow state.
-  executionControl:
-    baseUrl: ""                   # e.g. http://rpi-deploymentapi.<ns>.svc.cluster.local:80
-    apiKeySecretKey: ""           # optional; key in redpoint-rpi-secrets
-                                  # containing the bearer token (when
-                                  # the upstream service requires auth)
-    timeoutSeconds: 5
+  # The capability defaults to restrictive groups because in-flight SQL
+  # text can carry PII through WHERE-clause literals and parameter values.
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's
@@ -1438,16 +1426,10 @@ observability:
       diagnostics.viewSql:          ["Configuration", "System Administrator"]
       diagnostics.viewStackTrace:   ["Configuration", "System Administrator"]
       diagnostics.exportBundle:     ["Support", "Configuration", "System Administrator"]
-      # Live Execution Console (Database queries tab). Read access is
-      # narrower than diagnostics.view because in-flight SQL can leak
-      # PII via WHERE-clause literals.
-      execution.viewLiveQueries:    ["Configuration", "System Administrator"]
-      # Cancel command goes through the Execution Control API and
-      # cooperatively signals the executing service; locked to System
-      # Administrator only by default. Mirrors the RPI client's
-      # "Operations -- Database Query Log -- Cancel Command" functional
-      # permission.
-      execution.cancelQuery:        ["System Administrator"]
+      # Database Queries (read-only). Narrower than diagnostics.view
+      # because in-flight SQL text can carry PII through WHERE-clause
+      # literals and parameter values.
+      diagnostics.viewLiveQueries:  ["Configuration", "System Administrator"]
       analyzer.admin:               ["System Administrator"]
 
   # Pulse_Logging access: the analyzer reads the same 4 connection

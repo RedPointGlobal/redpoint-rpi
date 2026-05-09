@@ -1348,29 +1348,12 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: {{ .enabled | toString | quote }}
 {{- end }}
 {{- end }}
-{{/* Execution Control API binding (Live Execution Console). Empty
-     baseUrl means the LiveQueryProvider stays unbound and the UI
-     surfaces the awaiting-integration state explicitly. The feature
-     framework still ships; the data-source layer awaits binding to
-     the upstream Execution Control API. Observability never accesses
-     rpi_ExecutionQueries directly. */}}
-{{- with $cfg.executionControl | default dict }}
-{{- if .baseUrl }}
-- name: OBSERVABILITY__EXECUTION_CONTROL__BASE_URL
-  value: {{ .baseUrl | quote }}
-{{- end }}
-{{- if .timeoutSeconds }}
-- name: OBSERVABILITY__EXECUTION_CONTROL__TIMEOUT_SECONDS
-  value: {{ .timeoutSeconds | quote }}
-{{- end }}
-{{- if and .apiKeySecretKey (ne $secretsProvider "sdk") }}
-- name: OBSERVABILITY__EXECUTION_CONTROL__API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secretName | quote }}
-      key: {{ .apiKeySecretKey | quote }}
-{{- end }}
-{{- end }}
+{{/* Database Queries (read-only). Sourced directly from
+     rpi_ExecutionQueries via the same shared RPI operational-database
+     connection every other RPI service uses -- no dedicated env vars,
+     secrets, or chart values. When the operational-database connection
+     is not bound on this pod, the provider reports "unbound" and the
+     UI renders the standard "not configured" diagnostics state. */}}
 # SMTP transport for the email digest. Always emitted; consumed only
 # when email is enabled.
 - name: RPI__SMTP__EmailSenderAddress
