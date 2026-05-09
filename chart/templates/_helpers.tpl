@@ -1340,6 +1340,24 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: {{ .enabled | toString | quote }}
 {{- end }}
 {{- end }}
+{{/* Custom Metrics (T4 telemetry). The analyzer scrapes
+     Prometheus-style /metrics endpoints from configured RPI services.
+     Service list is JSON-encoded so operators can override DNS names
+     without code changes; defaults baked in values.yaml cover the
+     standard deployment shape. See reference/rpi-metrics-catalog.md
+     and principles/discovery-authority.md. */}}
+{{- with $cfg.metrics }}
+- name: OBSERVABILITY__METRICS__ENABLED
+  value: {{ .enabled | toString | quote }}
+- name: OBSERVABILITY__METRICS__SCRAPE_INTERVAL
+  value: {{ .scrapeIntervalSeconds | default 15 | quote }}
+- name: OBSERVABILITY__METRICS__TIMEOUT_SECONDS
+  value: {{ .timeoutSeconds | default 5 | quote }}
+- name: OBSERVABILITY__METRICS__BUFFER_SIZE
+  value: {{ .bufferSize | default 240 | quote }}
+- name: OBSERVABILITY__METRICS__SERVICES
+  value: {{ .services | default list | toJson | quote }}
+{{- end }}
 {{/* Database Queries (read-only). Sourced directly from
      rpi_ExecutionQueries via the same shared RPI operational-database
      connection every other RPI service uses -- no dedicated env vars,

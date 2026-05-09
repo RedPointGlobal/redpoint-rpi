@@ -1293,6 +1293,40 @@ observability:
   # The capability defaults to restrictive groups because in-flight SQL
   # text can carry PII through WHERE-clause literals and parameter values.
 
+  # ---- Custom Metrics (T4 telemetry) -------------------------------------
+  # Reads Prometheus-style /metrics endpoints exposed by RPI services
+  # in-cluster, parses them, and renders the Custom Metrics tab. T4
+  # telemetry only -- never authoritative for identity / topology /
+  # configuration. See workspace docs:
+  #   reference/rpi-metrics-catalog.md
+  #   principles/discovery-authority.md
+  #
+  # No external monitoring system is required. Parsing uses a Python
+  # library (prometheus-client); no cluster-side Prometheus stack is
+  # assumed or installed by Observability.
+  #
+  # Defaults below cover the standard RPI deployment shape; operator
+  # overrides are not required. To disable the feature entirely, set
+  # enabled: false.
+  metrics:
+    enabled: true
+    scrapeIntervalSeconds: 15
+    timeoutSeconds: 5
+    bufferSize: 240               # ~60 min of 15s samples per series
+    services:
+      - name: "Execution Service"
+        dnsName: "rpi-executionservice"
+        port: 8080
+        path: "/metrics"
+      - name: "Node Manager"
+        dnsName: "rpi-nodemanager"
+        port: 8080
+        path: "/metrics"
+      - name: "Queue Reader"
+        dnsName: "rpi-queuereader"
+        port: 8080
+        path: "/metrics"
+
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the analyzer posts a short HTML summary of each cycle's
   # report to the configured recipients. SMTP transport reuses the
