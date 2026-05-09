@@ -1314,17 +1314,21 @@ observability:
     timeoutSeconds: 5
     bufferSize: 240               # ~60 min of 15s samples per series
     services:
+      # K8s Service port is 80 (targetPort 8080 inside the container).
+      # Service-to-service traffic in the cluster always uses port 80;
+      # 8080 only works from INSIDE the pod (localhost:8080) and is NOT
+      # the cross-pod path.
       - name: "Execution Service"
         dnsName: "rpi-executionservice"
-        port: 8080
+        port: 80
         path: "/metrics"
       - name: "Node Manager"
         dnsName: "rpi-nodemanager"
-        port: 8080
+        port: 80
         path: "/metrics"
       - name: "Queue Reader"
         dnsName: "rpi-queuereader"
-        port: 8080
+        port: 80
         path: "/metrics"
 
   # ---- Email digest (opt-in) ---------------------------------------------
