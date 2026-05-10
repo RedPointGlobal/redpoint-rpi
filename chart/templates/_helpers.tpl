@@ -1345,7 +1345,17 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
      Service list is JSON-encoded so operators can override DNS names
      without code changes; defaults baked in values.yaml cover the
      standard deployment shape. See reference/rpi-metrics-catalog.md
-     and principles/discovery-authority.md. */}}
+     and principles/discovery-authority.md.
+
+     The services list is filtered by each entry's corresponding
+     top-level .enabled flag. Convention: strip the "rpi-" prefix
+     from dnsName to map to the values key (rpi-realtimeapi ->
+     .Values.realtimeapi.enabled). When the customer disables a
+     service via overrides (e.g. realtimeapi.enabled=false), the
+     entry is dropped from the emitted env var so the analyzer
+     never tries to scrape it. Operator-added scrape targets that
+     don't correspond to a chart-managed service default to
+     enabled=true so they always pass through. */}}
 {{- with $cfg.metrics }}
 - name: OBSERVABILITY__METRICS__ENABLED
   value: {{ .enabled | toString | quote }}
@@ -1355,8 +1365,22 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: {{ .timeoutSeconds | default 5 | quote }}
 - name: OBSERVABILITY__METRICS__BUFFER_SIZE
   value: {{ .bufferSize | default 240 | quote }}
+{{- $enabledSvcs := list -}}
+{{- range $svc := (.services | default list) -}}
+{{-   $shortName := trimPrefix "rpi-" ($svc.dnsName | default "") -}}
+{{-   $svcCfg := get $.Values $shortName -}}
+{{-   $isEnabled := true -}}
+{{-   if $svcCfg -}}
+{{-     if hasKey $svcCfg "enabled" -}}
+{{-       $isEnabled = $svcCfg.enabled -}}
+{{-     end -}}
+{{-   end -}}
+{{-   if $isEnabled -}}
+{{-     $enabledSvcs = append $enabledSvcs $svc -}}
+{{-   end -}}
+{{- end }}
 - name: OBSERVABILITY__METRICS__SERVICES
-  value: {{ .services | default list | toJson | quote }}
+  value: {{ $enabledSvcs | toJson | quote }}
 {{- end }}
 {{/* Database Queries (read-only). Sourced directly from
      rpi_ExecutionQueries via the same shared RPI operational-database

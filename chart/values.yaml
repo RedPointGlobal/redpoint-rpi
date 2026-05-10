@@ -1313,11 +1313,18 @@ observability:
     scrapeIntervalSeconds: 15
     timeoutSeconds: 5
     bufferSize: 240               # ~60 min of 15s samples per series
+    # Default scrape topology covers every RPI service that exposes a
+    # /metrics endpoint. Each entry is automatically filtered out at
+    # chart-render time when the corresponding top-level service is
+    # disabled (e.g. realtimeapi.enabled=false drops "Realtime API"
+    # from the emitted OBSERVABILITY__METRICS__SERVICES env var).
+    # Convention: dnsName matches the K8s Service name, and the
+    # service's values key is dnsName minus the "rpi-" prefix.
+    # K8s Service port is 80 (targetPort 8080 inside the container).
+    # Service-to-service traffic in the cluster always uses port 80;
+    # 8080 only works from INSIDE the pod (localhost:8080) and is NOT
+    # the cross-pod path.
     services:
-      # K8s Service port is 80 (targetPort 8080 inside the container).
-      # Service-to-service traffic in the cluster always uses port 80;
-      # 8080 only works from INSIDE the pod (localhost:8080) and is NOT
-      # the cross-pod path.
       - name: "Execution Service"
         dnsName: "rpi-executionservice"
         port: 80
@@ -1328,6 +1335,26 @@ observability:
         path: "/metrics"
       - name: "Queue Reader"
         dnsName: "rpi-queuereader"
+        port: 80
+        path: "/metrics"
+      - name: "Interaction API"
+        dnsName: "rpi-interactionapi"
+        port: 80
+        path: "/metrics"
+      - name: "Integration API"
+        dnsName: "rpi-integrationapi"
+        port: 80
+        path: "/metrics"
+      - name: "Callback API"
+        dnsName: "rpi-callbackapi"
+        port: 80
+        path: "/metrics"
+      - name: "Realtime API"
+        dnsName: "rpi-realtimeapi"
+        port: 80
+        path: "/metrics"
+      - name: "Rebrandly"
+        dnsName: "rpi-rebrandly"
         port: 80
         path: "/metrics"
 
