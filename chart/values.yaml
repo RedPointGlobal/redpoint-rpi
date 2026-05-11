@@ -1313,13 +1313,25 @@ observability:
     scrapeIntervalSeconds: 15
     timeoutSeconds: 5
     bufferSize: 240               # ~60 min of 15s samples per series
-    # Default scrape topology covers every RPI service that exposes a
-    # /metrics endpoint. Each entry is automatically filtered out at
-    # chart-render time when the corresponding top-level service is
-    # disabled (e.g. realtimeapi.enabled=false drops "Realtime API"
-    # from the emitted OBSERVABILITY__METRICS__SERVICES env var).
-    # Convention: dnsName matches the K8s Service name, and the
+    # Curated list of RPI services that expose a Prometheus /metrics
+    # endpoint. Two filters apply at chart-render time:
+    #   1. Capability (this list): a service is included here ONLY
+    #      if it actually exposes /metrics. Listing a service that
+    #      doesn't will produce phantom "X unreachable" incidents
+    #      on the System Health surface.
+    #   2. Deployment (.enabled flag): each entry is automatically
+    #      filtered out when the corresponding top-level service is
+    #      disabled (e.g. realtimeapi.enabled=false drops "Realtime
+    #      API" from the emitted OBSERVABILITY__METRICS__SERVICES).
+    # Convention: dnsName matches the K8s Service name; the
     # service's values key is dnsName minus the "rpi-" prefix.
+    #
+    # NOT listed (and why):
+    #   - rpi-rebrandly: does not expose /metrics. Adding it here
+    #     causes a phantom "Rebrandly unreachable" active incident.
+    #   - rpi-deploymentapi, rpi-rabbitmq-console, rpi-smartActivation:
+    #     no /metrics today. Add when the service ships an endpoint.
+    #
     # K8s Service port is 80 (targetPort 8080 inside the container).
     # Service-to-service traffic in the cluster always uses port 80;
     # 8080 only works from INSIDE the pod (localhost:8080) and is NOT
@@ -1351,10 +1363,6 @@ observability:
         path: "/metrics"
       - name: "Realtime API"
         dnsName: "rpi-realtimeapi"
-        port: 80
-        path: "/metrics"
-      - name: "Rebrandly"
-        dnsName: "rpi-rebrandly"
         port: 80
         path: "/metrics"
 

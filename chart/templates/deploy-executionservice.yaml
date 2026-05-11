@@ -313,7 +313,7 @@ spec:
         - name: Plugins__LuxSci__SendRequestCount
           value: {{ $cfg.jobExecution.luxScisendRequestCount | quote }}
         - name: RPIExecution__InternalAddress
-          value: {{ $cfg.jobExecution.internalAddress | quote }}
+          value: "http://rpi-executionservice"
         - name: RPIExecution__AuditTaskEvents
           value: {{ $cfg.jobExecution.auditTaskEvents | quote }}
         - name: RPIExecution__MaxThreadsPerExecutionService
