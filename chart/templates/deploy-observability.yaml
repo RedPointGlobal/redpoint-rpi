@@ -261,10 +261,10 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with $secCtx.container }}
-        securityContext:
-          {{- toYaml . | nindent 10 }}
-        {{- end }}
+#        {{- with $secCtx.container }}
+#        securityContext:
+#          {{- toYaml . | nindent 10 }}
+#        {{- end }}
         # Probes hit the FastAPI side. Streamlit is consumer-facing only.
         # Generous thresholds because a local-LLM analysis cycle blocks
         # the event loop for 30-90s on CPU, and the eager first-cycle
