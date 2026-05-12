@@ -172,6 +172,8 @@ spec:
         - name: TZ
           value: {{ .Values.global.deployment.podTimezone | quote }}
         {{- end }}
+        - name: RPIExecution__InternalAddress
+          value: "http://rpi-queuereader"
         {{- if .Values.rebrandly.enabled }}
         - name: Plugins__Rebrandly__BaseUrl
           value: "http://rpi-rebrandly"

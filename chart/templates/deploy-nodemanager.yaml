@@ -169,6 +169,8 @@ spec:
         - name: TZ
           value: {{ .Values.global.deployment.podTimezone | quote }}
         {{- end }}
+        - name: RPIExecution__InternalAddress
+          value: "http://rpi-nodemanager"
         - name: Logging__LogLevel__Default
           value: {{ $cfg.logging.default | quote }}
         - name: Logging__Database__LogLevel__Default
