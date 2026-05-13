@@ -293,7 +293,7 @@ spec:
         # namespace from the .NET service pods).
         - name: fileoutputdirectory
           mountPath: /rpifileoutputdir
-          readOnly: true
+          readOnly: false
         {{- end }}
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
         {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
