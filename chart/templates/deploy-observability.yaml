@@ -85,6 +85,13 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
+  # Deployments power the Overview platform-health pill: services
+  # count = rpi-* deployments in the namespace; pod counts = sum of
+  # spec.replicas + status.readyReplicas across those deployments.
+  # Authoritative source for "intent" (replicas) vs "observed" (ready).
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
   # metrics-server. Optional; if absent, CPU/memory columns show "-".
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods"]
