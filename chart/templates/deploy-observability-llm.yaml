@@ -8,7 +8,7 @@
 {{- $local := $intel.local | default dict -}}
 {{- $deploy := $local.deployment | default dict -}}
 {{- $svc := $deploy.service | default dict -}}
-{{- $name := "rpi-observability-intelligence" -}}
+{{- $name := "rpi-observability-llm" -}}
 {{- $port := int ($svc.port | default 8000) -}}
 
 {{- $image := $deploy.image | default (include "rpi.image" (dict "root" . "name" "rpi-observability-llm")) -}}

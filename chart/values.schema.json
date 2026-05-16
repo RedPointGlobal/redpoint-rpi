@@ -2337,7 +2337,7 @@
               "additionalProperties": true,
               "description": "Consumed only when provider=local.",
               "properties": {
-                "baseUrl":          { "type": "string", "description": "Override the default in-cluster Service URL. Blank = http://rpi-observability-intelligence.<ns>.svc.cluster.local:8000/v1." },
+                "baseUrl":          { "type": "string", "description": "Override the default in-cluster Service URL. Blank = http://rpi-observability-llm.<ns>.svc.cluster.local:8000/v1." },
                 "model":            { "type": "string", "description": "Model identifier the local runtime serves. Must match what the active rpi-observability-llm image reports via /v1/models." },
                 "embeddingsModel":  { "type": "string", "description": "Embeddings model. Blank = use the chat model." },
                 "deployment": {

@@ -1067,7 +1067,7 @@ Usage: {{- include "rpi.observability.intelligenceEnvvars" . | nindent 8 }}
 # matches what the active rpi-observability-llm image reports via
 # /v1/models.
 - name: OBSERVABILITY__INTELLIGENCE__LOCAL__BASE_URL
-  value: {{ $local.baseUrl | default (printf "http://rpi-observability-intelligence.%s.svc.cluster.local:8000/v1" .Release.Namespace) | quote }}
+  value: {{ $local.baseUrl | default (printf "http://rpi-observability-llm.%s.svc.cluster.local:8000/v1" .Release.Namespace) | quote }}
 - name: OBSERVABILITY__INTELLIGENCE__LOCAL__MODEL
   value: {{ $local.model | default "Qwen/Qwen2.5-3B-Instruct" | quote }}
 {{- if $local.embeddingsModel }}

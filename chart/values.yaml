@@ -1153,7 +1153,7 @@ observability:
   #   aws     -- Bedrock
   #
   # When provider=local, the chart deploys a StatefulSet
-  # (rpi-observability-intelligence) running the rpi-observability-llm
+  # (rpi-observability-llm) running the rpi-observability-llm
   # image and the observability service routes to it via the in-cluster
   # Service. When provider is azure/google/aws, no in-cluster serving
   # layer is rendered; the observability service reaches the cloud
@@ -1183,7 +1183,7 @@ observability:
     local:
       # Default points at the in-cluster Service. Override only if the
       # operator self-hosts the serving layer elsewhere on the cluster.
-      baseUrl: ""                            # blank = http://rpi-observability-intelligence.<ns>.svc.cluster.local:8000/v1
+      baseUrl: ""                            # blank = http://rpi-observability-llm.<ns>.svc.cluster.local:8000/v1
 
       # Model identifier the local runtime exposes via /v1/models.
       # Telemetry + audit fields persist this string; it must match
