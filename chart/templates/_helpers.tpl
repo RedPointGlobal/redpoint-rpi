@@ -1005,13 +1005,13 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
 {{- end -}}
 
 {{/* ============================================================
-     LOG ANALYZER HELPERS
+     OBSERVABILITY SERVICE HELPERS
      ============================================================
-     Provider-specific env-var emission for the observability's LLM
-     client. Each provider matches the Anthropic SDK auto-detection
-     so the analyzer code just instantiates Anthropic() / Bedrock /
-     Vertex / Azure-flavored client based on OBSERVABILITY__MODEL__
-     PROVIDER.
+     Env-var emission for the Intelligence Runtime topology. Four
+     cloud-integration provider categories (local / azure / google /
+     aws); the observability service constructs each enabled provider
+     at lifespan startup and routes capability requests via the
+     configured pool -> provider mapping.
      ============================================================ */}}
 
 {{/*
@@ -1025,110 +1025,88 @@ true
 {{- end -}}
 
 {{/*
-AI deployment-posture env vars for the analyzer container. Emits only
-the block matching `model.provider` (helmAssistant | localLlm | byo).
-For byo, the inner `byo.platform` selector picks the customer-managed
-inference platform (anthropic / azureFoundry / bedrock / vertex). AWS
-and GCP auth piggybacks on the existing cloudIdentity helpers
-(AWS_ROLE_ARN, GOOGLE_APPLICATION_CREDENTIALS) so no creds are
-duplicated here.
-Usage: {{- include "rpi.observability.modelEnvvars" . | nindent 8 }}
+Intelligence Runtime env vars. Emits the active provider topology
+for the observability service to construct at lifespan start. The
+`provider` selector picks one of: local | azure | google | aws.
+Only the active provider's config block is emitted; inactive blocks
+are silent.
+
+The Intelligence Runtime is part of the observability solution, not
+a separate feature -- observability.enabled controls the whole
+solution. Local is the in-cluster runtime served by the
+rpi-observability-llm image; azure/google/aws are cloud
+integrations.
+
+See workspace-docs ADR-INT-001 / ADR-INT-002.
+
+Usage: {{- include "rpi.observability.intelligenceEnvvars" . | nindent 8 }}
 */}}
-{{- define "rpi.observability.modelEnvvars" -}}
+{{- define "rpi.observability.intelligenceEnvvars" -}}
 {{- $cfg := .Values.observability | default dict -}}
-{{- $model := $cfg.model | default dict -}}
-{{- $provider := $model.provider | default "helmAssistant" -}}
+{{- $intel := $cfg.intelligence | default dict -}}
+{{- $provider := lower (default "local" $intel.provider) -}}
+{{- $local := $intel.local | default dict -}}
+{{- $azure := $intel.azure | default dict -}}
+{{- $google := $intel.google | default dict -}}
+{{- $aws := $intel.aws | default dict -}}
 {{- $secret := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $isSdk := eq $secretsProvider "sdk" -}}
-- name: OBSERVABILITY__MODEL__PROVIDER
+{{- /* Validate the provider selector at chart-render time. */ -}}
+{{- if not (has $provider (list "local" "azure" "google" "aws")) }}
+{{- fail (printf "observability.intelligence.provider=%q is not one of: local | azure | google | aws" $provider) }}
+{{- end }}
+- name: OBSERVABILITY__INTELLIGENCE__PROVIDER
   value: {{ $provider | quote }}
-{{- if eq $provider "helmAssistant" }}
-{{- $ha := $model.helmAssistant | default dict }}
-- name: OBSERVABILITY__MODEL__HELM_ASSISTANT_URL
-  value: {{ required "observability.model.helmAssistant.url is required when provider=helmAssistant" $ha.url | quote }}
-{{- if not $isSdk }}
-# Helm Assistant API key. Customer-populated in the chart's standard
-# RPI Secret (default: redpoint-rpi-secrets) under
-# Observability_HelmAssistant_ApiKey. Obtain the key from the Helm
-# Assistant control plane and populate the Secret before installing;
-# startup pre-flight refuses to run without it when
-# provider=helmAssistant.
-- name: OBSERVABILITY__MODEL__HELM_ASSISTANT_API_KEY
+{{- if $intel.timeoutSeconds }}
+- name: OBSERVABILITY__INTELLIGENCE__TIMEOUT_SECONDS
+  value: {{ $intel.timeoutSeconds | quote }}
+{{- end }}
+{{- if eq $provider "local" }}
+# Local provider (in-cluster serving layer). The model identifier
+# matches what the active rpi-observability-llm image reports via
+# /v1/models.
+- name: OBSERVABILITY__INTELLIGENCE__LOCAL__BASE_URL
+  value: {{ $local.baseUrl | default (printf "http://rpi-observability-intelligence.%s.svc.cluster.local:8000/v1" .Release.Namespace) | quote }}
+- name: OBSERVABILITY__INTELLIGENCE__LOCAL__MODEL
+  value: {{ $local.model | default "Qwen/Qwen2.5-3B-Instruct" | quote }}
+{{- if $local.embeddingsModel }}
+- name: OBSERVABILITY__INTELLIGENCE__LOCAL__EMBEDDINGS_MODEL
+  value: {{ $local.embeddingsModel | quote }}
+{{- end }}
+{{- else if eq $provider "azure" }}
+# Azure cloud-integration provider (AI Foundry or Azure OpenAI).
+- name: OBSERVABILITY__INTELLIGENCE__AZURE__SERVICE
+  value: {{ $azure.service | default "foundry" | quote }}
+- name: OBSERVABILITY__INTELLIGENCE__AZURE__ENDPOINT
+  value: {{ required "observability.intelligence.azure.endpoint is required when intelligence.provider=azure" $azure.endpoint | quote }}
+- name: OBSERVABILITY__INTELLIGENCE__AZURE__DEPLOYMENT
+  value: {{ required "observability.intelligence.azure.deployment is required when intelligence.provider=azure" $azure.deployment | quote }}
+{{- if $azure.apiVersion }}
+- name: OBSERVABILITY__INTELLIGENCE__AZURE__API_VERSION
+  value: {{ $azure.apiVersion | quote }}
+{{- end }}
+{{- if and (not $isSdk) $azure.apiKeySecretKey }}
+- name: AZURE_INTELLIGENCE_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ $secret | quote }}
-      key: Observability_HelmAssistant_ApiKey
+      key: {{ $azure.apiKeySecretKey | quote }}
 {{- end }}
-{{- else if eq $provider "localLlm" }}
-{{- $localLlm := $cfg.localLlm | default dict }}
-{{- if not $localLlm.enabled }}
-{{- fail "observability with provider=localLlm requires observability.localLlm.enabled=true (the in-cluster packaged-inference deployment)." }}
-{{- end }}
-- name: OBSERVABILITY__MODEL__BASE_URL
-  value: {{ printf "http://rpi-observability-llm.%s.svc.cluster.local:%v/v1" .Release.Namespace ($localLlm.service.port | default 11434) | quote }}
-- name: OBSERVABILITY__MODEL__NAME
-  value: {{ required "observability.model.llmName is required when provider=localLlm" $model.llmName | quote }}
-{{- else if eq $provider "byo" }}
-{{- $byo := $model.byo | default dict }}
-{{- $platform := $byo.platform | default "" }}
-{{- if not $platform }}
-{{- fail "observability with provider=byo requires observability.model.byo.platform (anthropic | azureFoundry | bedrock | vertex)." }}
-{{- end }}
-- name: OBSERVABILITY__MODEL__BYO_PLATFORM
-  value: {{ $platform | quote }}
-{{- if eq $platform "anthropic" }}
-{{- $a := $byo.anthropic | default dict }}
-- name: ANTHROPIC_MODEL
-  value: {{ required "observability.model.llmName is required when byo.platform=anthropic" $model.llmName | quote }}
-{{- if and $a.apiKeyVaultEntry (not $isSdk) }}
-- name: ANTHROPIC_API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secret | quote }}
-      key: {{ $a.apiKeyVaultEntry | quote }}
-{{- end }}
-{{- if $a.baseUrl }}
-- name: ANTHROPIC_BASE_URL
-  value: {{ $a.baseUrl | quote }}
-{{- end }}
-{{- else if eq $platform "azureFoundry" }}
-{{- if not .Values.redpointAI.enabled }}
-{{- fail "observability with byo.platform=azureFoundry requires redpointAI.enabled=true. The analyzer reads the same Azure OpenAI config (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses." }}
-{{- end }}
-{{- $nlp := .Values.redpointAI.naturalLanguage }}
-- name: RPI_NLP_APIBASE
-  value: {{ required "redpointAI.naturalLanguage.ApiBase is required" $nlp.ApiBase | quote }}
-- name: RPI_NLP_APIVERSION
-  value: {{ $nlp.ApiVersion | default "2024-10-21" | quote }}
-- name: RPI_NLP_CHATGPTENGINE
-  value: {{ required "redpointAI.naturalLanguage.ChatGptEngine is required" $nlp.ChatGptEngine | quote }}
-{{- if not $isSdk }}
-- name: RPI_NLP_API_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ $secret | quote }}
-      key: RPI_NLP_API_KEY
-{{- end }}
-{{- else if eq $platform "bedrock" }}
-{{- $b := $byo.bedrock | default dict }}
-- name: AWS_REGION
-  value: {{ required "observability.model.byo.bedrock.region is required when byo.platform=bedrock" $b.region | quote }}
-- name: OBSERVABILITY__MODEL__BEDROCK_MODEL_ID
-  value: {{ required "observability.model.llmName is required when byo.platform=bedrock" $model.llmName | quote }}
-{{- else if eq $platform "vertex" }}
-{{- $v := $byo.vertex | default dict }}
-- name: VERTEX_PROJECT_ID
-  value: {{ required "observability.model.byo.vertex.projectId is required when byo.platform=vertex" $v.projectId | quote }}
-- name: VERTEX_REGION
-  value: {{ required "observability.model.byo.vertex.region is required when byo.platform=vertex" $v.region | quote }}
-- name: OBSERVABILITY__MODEL__VERTEX_MODEL_ID
-  value: {{ required "observability.model.llmName is required when byo.platform=vertex" $model.llmName | quote }}
-{{- else }}
-{{- fail (printf "Unknown observability.model.byo.platform=%q. Expected anthropic | azureFoundry | bedrock | vertex." $platform) }}
-{{- end }}
-{{- else }}
-{{- fail (printf "Unknown observability.model.provider=%q. Expected helmAssistant | localLlm | byo." $provider) }}
+{{- else if eq $provider "google" }}
+# Google cloud-integration provider (Vertex AI).
+- name: OBSERVABILITY__INTELLIGENCE__GOOGLE__PROJECT
+  value: {{ required "observability.intelligence.google.project is required when intelligence.provider=google" $google.project | quote }}
+- name: OBSERVABILITY__INTELLIGENCE__GOOGLE__LOCATION
+  value: {{ required "observability.intelligence.google.location is required when intelligence.provider=google" $google.location | quote }}
+- name: OBSERVABILITY__INTELLIGENCE__GOOGLE__MODEL
+  value: {{ required "observability.intelligence.google.model is required when intelligence.provider=google" $google.model | quote }}
+{{- else if eq $provider "aws" }}
+# AWS cloud-integration provider (Bedrock).
+- name: OBSERVABILITY__INTELLIGENCE__AWS__REGION
+  value: {{ required "observability.intelligence.aws.region is required when intelligence.provider=aws" $aws.region | quote }}
+- name: OBSERVABILITY__INTELLIGENCE__AWS__MODEL_ID
+  value: {{ required "observability.intelligence.aws.modelId is required when intelligence.provider=aws" $aws.modelId | quote }}
 {{- end }}
 {{- end -}}
 

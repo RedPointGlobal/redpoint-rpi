@@ -1129,7 +1129,7 @@ observability:
   # ---- Node health panel -------------------------------------------------
   # Powers the Node Health section on the System Health tab. Reads node
   # state + per-node CPU/memory from the Kubernetes API and metrics-server.
-  # Nodes are cluster-scoped, so this binds a ClusterRole to the analyzer's
+  # Nodes are cluster-scoped, so this binds a ClusterRole to the observability service's
   # ServiceAccount granting get/list on nodes (core) and nodes
   # (metrics.k8s.io). When disabled, no ClusterRole is created and the
   # Node health panel renders a quiet "disabled by chart values" caption.
@@ -1138,101 +1138,127 @@ observability:
   nodeHealth:
     enabled: true
 
-  # ---- AI deployment posture ---------------------------------------------
-  # The RPI Observability's incident-intelligence experience is provider-
-  # agnostic from the operator's perspective: identical UX, identical
-  # analysis pipeline. What you choose here is the *deployment posture*
-  # -- where inference runs, who operates it, and where log data lives.
+  # ---- Intelligence Runtime ----------------------------------------------
+  # The observability service's AI surface (incident summarization, failure
+  # explanation, RCA, severity classification) is served by the
+  # Intelligence Runtime. It is part of the observability solution, not a
+  # separate feature with its own enable flag -- observability.enabled
+  # turns on the whole solution.
   #
-  # Three postures, each first-class:
+  # Single-provider selection: `intelligence.provider` picks one of:
   #
-  #   helmAssistant  (default, turnkey)
-  #     Best out-of-the-box experience. Inference runs on the Redpoint-
-  #     hosted Helm Assistant control plane. Redacted, clustered error
-  #     data is shipped over HTTPS; structured AI summaries come back.
-  #     Zero customer AI infrastructure required.
-  #     Privacy boundary: redacted samples leave the cluster.
-  #     Operational ownership: managed by Redpoint.
+  #   local   -- in-cluster inference (default, served by rpi-observability-llm)
+  #   azure   -- Azure AI Foundry or Azure OpenAI
+  #   google  -- Vertex AI
+  #   aws     -- Bedrock
   #
-  #   localLlm  (private, packaged)
-  #     Best privacy-preserving experience. All inference happens
-  #     in-cluster via the packaged Ollama deployment shipped with the
-  #     chart (see observability.localLlm below). No log data leaves the
-  #     customer network. Designed for highly regulated environments.
-  #     Privacy boundary: nothing leaves the cluster.
-  #     Operational ownership: customer (within the cluster).
-  #
-  #   byo  (customer-managed AI platform)
-  #     Best enterprise-platform integration. The analyzer integrates
-  #     with a customer-managed inference platform you choose under
-  #     `byo.platform` (Azure AI Foundry, AWS Bedrock, Google Vertex AI,
-  #     direct Anthropic). Auth piggybacks on the chart's existing
-  #     cloudIdentity helpers -- no creds duplicated here.
-  #     Privacy boundary: customer-managed.
-  #     Operational ownership: customer.
-  model:
-    provider: helmAssistant          # helmAssistant | localLlm | byo
+  # When provider=local, the chart deploys a StatefulSet
+  # (rpi-observability-intelligence) running the rpi-observability-llm
+  # image and the observability service routes to it via the in-cluster
+  # Service. When provider is azure/google/aws, no in-cluster serving
+  # layer is rendered; the observability service reaches the cloud
+  # provider directly over its public API using managed-identity-first
+  # auth (no static keys required when Workload Identity / IRSA / WIF
+  # are in place).
+  intelligence:
+    # Active provider. Drives:
+    #   - which provider implementation the runtime registers
+    #   - whether the chart renders the in-cluster serving StatefulSet
+    #     (only when provider=local)
+    #   - which sub-block (local / azure / google / aws) is consumed
+    provider: local                          # local | azure | google | aws
 
-    # Model identifier for the active posture. Ignored when
-    # provider=helmAssistant (the control plane selects the model)
-    # and when byo.platform=azureFoundry (the deployment name comes
-    # from redpointAI.naturalLanguage.ChatGptEngine).
-    #   localLlm           -> any tag from https://ollama.com/library
-    #                         (e.g., phi3:mini, gemma2:2b)
-    #   byo + anthropic    -> claude-sonnet-4-6, claude-opus-4-7, etc.
-    #   byo + bedrock      -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
-    #   byo + vertex       -> e.g., claude-sonnet-4@20250514
-    llmName: ""
+    # Per-inference timeout. Hard-bound so a slow inference cannot
+    # destabilize the analyzer cycle: when exceeded, the call returns
+    # a typed AIStatus.TIMEOUT and the cycle proceeds without an AI
+    # summary. Applies to whichever provider is active.
+    timeoutSeconds: 90
 
-    # ---- Posture: helmAssistant (managed control plane) -----------------
-    # Redpoint-hosted Helm Assistant control plane. Egress to this URL
-    # on 443 is required when provider=helmAssistant. The API key is
-    # customer-populated in the rpi-observability Secret under the
-    # fixed key `Observability_HelmAssistant_ApiKey`. Obtain the key
-    # from the Helm Assistant control plane and write it to the Secret
-    # before installing; startup pre-flight refuses to run without it.
-    helmAssistant:
-      url: https://rpi-helm-assistant.redpointcdp.com
+    # ---- Local (in-cluster serving) ------------------------------------
+    # Consumed only when provider=local. The serving layer is a
+    # StatefulSet running the rpi-observability-llm image:
+    # self-contained, llama.cpp server + Qwen 2.5 3B Instruct GGUF
+    # Q4_K_M baked in, no runtime downloads, deployable in air-gapped
+    # clusters.
+    local:
+      # Default points at the in-cluster Service. Override only if the
+      # operator self-hosts the serving layer elsewhere on the cluster.
+      baseUrl: ""                            # blank = http://rpi-observability-intelligence.<ns>.svc.cluster.local:8000/v1
 
-    # ---- Posture: byo (customer-managed AI platform) --------------------
-    # Active only when provider=byo. Pick the inference platform your
-    # AI governance / platform standards already cover. The analyzer
-    # uses the matching SDK and auth path; everything above this layer
-    # (UX, pipeline, summaries) stays identical across platforms.
-    byo:
-      platform: anthropic            # anthropic | azureFoundry | bedrock | vertex
+      # Model identifier the local runtime exposes via /v1/models.
+      # Telemetry + audit fields persist this string; it must match
+      # what the baked-in image's entrypoint reports.
+      model: "Qwen/Qwen2.5-3B-Instruct"
+      embeddingsModel: ""                    # blank = use the same model for embeddings
 
-      # Direct Anthropic API. Egress to api.anthropic.com:443 required.
-      # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
-      anthropic:
-        apiKeyVaultEntry: Observability-AnthropicApiKey
-        baseUrl: ""                  # optional egress proxy
+      # Serving-layer deployment. When enabled, the chart renders the
+      # StatefulSet using the canonical Redpoint-built
+      # rpi-observability-llm image. Disable when the operator
+      # self-hosts the serving layer elsewhere -- in that case set
+      # local.baseUrl to the operator's endpoint.
+      deployment:
+        enabled: true
 
-      # Azure AI Foundry / Azure OpenAI. Rides the chart-wide
-      # `redpointAI.naturalLanguage` block -- same Azure OpenAI config
-      # (ApiBase, ApiVersion, ChatGptEngine) the rest of RPI uses. Set
-      # redpointAI.enabled=true and configure that block; the chart
-      # fails fast if byo.platform=azureFoundry is selected without it.
-      # Auth: Workload Identity by default (reuses cloudIdentity.azure).
-      # In non-SDK mode AZURE_OPENAI_API_KEY binds from the standard
-      # RPI_NLP_API_KEY secret entry; in SDK mode the analyzer fetches
-      # the same entry from the cloud vault directly.
+        # Container image override. Blank means the chart resolves
+        # the canonical Redpoint-built rpi-observability-llm image
+        # via rpi.image. Set to a custom self-contained image for
+        # advanced overrides (alternate model, regulated registry,
+        # internal mirror). Whatever image is selected must serve
+        # the OpenAI-compatible /v1 API on the configured port.
+        image: ""
+        imagePullPolicy: ""                  # blank = global.deployment.images.imagePullPolicy
 
-      # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / Pod
-      # Identity). Customer grants the analyzer's IAM role
-      # `bedrock:InvokeModel` on the target model. No separate API key.
-      bedrock:
-        region: ""                   # e.g., us-east-1
+        # Container resources. Blank requests sensible defaults
+        # sized for the 3B Q4 model on standard worker nodes.
+        resources: {}
 
-      # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload
-      # Identity or SA key file). Customer grants
-      # `aiplatform.endpoints.predict`. No separate API key.
-      vertex:
-        projectId: ""
-        region: ""                   # e.g., us-central1
+        service:
+          port: 8000
+
+        serviceAccount:
+          enabled: true
+          annotations: {}
+
+        # Backend CLI args appended to the image's entrypoint. The
+        # image already wires the essential flags (model path, host,
+        # port, threads, context size). Use this for operator-
+        # specific tuning (KV cache size, sampling parameters, etc.).
+        extraArgs: []
+
+    # ---- Azure (AI Foundry or Azure OpenAI) -----------------------------
+    # Consumed only when provider=azure. Endpoint + deployment are
+    # required; the chart fails fast at render time if either is
+    # missing.
+    azure:
+      service: foundry                       # foundry | openai
+      endpoint: ""                           # e.g. https://<resource>.openai.azure.com
+      deployment: ""                         # the deployed model name
+      apiVersion: ""                         # only for service=openai
+      # Optional: when set in non-SDK mode, the chart binds
+      # AZURE_INTELLIGENCE_API_KEY from this Secret key. Leave blank to
+      # use managed identity (preferred).
+      apiKeySecretKey: ""
+
+    # ---- Google (Vertex AI) --------------------------------------------
+    # Consumed only when provider=google. Project + location + model
+    # are all required; the chart fails fast at render time if any is
+    # missing. Auth: ADC + Workload Identity Federation (reuses
+    # cloudIdentity.google).
+    google:
+      project: ""                            # GCP project ID
+      location: ""                           # e.g. us-central1
+      model: ""                              # e.g. gemini-2.0-flash-001
+
+    # ---- AWS (Bedrock) -------------------------------------------------
+    # Consumed only when provider=aws. Region + modelId are required;
+    # the chart fails fast at render time if either is missing. Auth:
+    # IRSA + Pod Identity (reuses cloudIdentity.amazon).
+    aws:
+      region: ""                             # e.g. us-east-1
+      modelId: ""                            # e.g. anthropic.claude-3-5-sonnet-20241022-v2:0
 
   # ---- Token + request budget --------------------------------------------
-  # Hard caps enforced inside the analyzer (token-bucket). When exceeded,
+  # Hard caps enforced inside the observability service (token-bucket). When exceeded,
   # the next analysis cycle is skipped and the budget event is logged.
   budget:
     maxTokensPerHour: 200000
@@ -1258,7 +1284,7 @@ observability:
   # The Diagnostics tab needs two tenant-specific database names:
   #   * the Interaction DB (op_InteractionWorkflows / op_DataWorkflows)
   #   * the InteractionAudit DB (SQLTraceLog / AuditHistory)
-  # These are NOT operator-typed chart values. The analyzer resolves them
+  # These are NOT operator-typed chart values. The observability service resolves them
   # at startup from Pulse_<env>.dbo.rpi_Clients using observability.clientId
   # (above) as the lookup key. See ADR-0009 strict refinement -- no
   # fallback, no inference. Behavior is identical for single-tenant and
@@ -1269,7 +1295,7 @@ observability:
   # "Download Diagnostics" zip). When fileOutput.enabled is true AND
   # storage.persistentVolumeClaims.FileOutputDirectory.enabled is also
   # true (chart-wide), the same PVC the .NET services write to is mounted
-  # read-only on the analyzer StatefulSet so the bundle can include the
+  # read-only on the observability service StatefulSet so the bundle can include the
   # workflow's output files. The mount tracks the existing FileOutput
   # claimName + mountPath -- no parallel value to maintain. When the
   # FileOutputDirectory PVC is not enabled chart-wide, this toggle is
@@ -1367,7 +1393,7 @@ observability:
         path: "/metrics"
 
   # ---- Email digest (opt-in) ---------------------------------------------
-  # When enabled, the analyzer posts a short HTML summary of each cycle's
+  # When enabled, the observability service posts a short HTML summary of each cycle's
   # report to the configured recipients. SMTP transport reuses the
   # chart-wide SMTPSettings block (same SMTP server, sender, credentials
   # the .NET services already use); only the recipient list and the
@@ -1382,7 +1408,7 @@ observability:
                                      # (set false to email every cycle)
 
   # ---- Microsoft Teams notification (opt-in) -----------------------------
-  # When enabled, the analyzer posts an Adaptive Card per cycle to a
+  # When enabled, the observability service posts an Adaptive Card per cycle to a
   # Teams channel via an incoming webhook. The webhook URL is sensitive
   # (anyone with it can post to the channel), so it lives in the K8s
   # Secret rather than this file -- set webhookSecretKey to the Secret
@@ -1396,35 +1422,8 @@ observability:
     webhookSecretKey: Observability_Teams_Webhook
     onlyOnNewErrors: true            # only post when first-seen errors exist
 
-  # ---- Posture: localLlm (private, packaged in-cluster inference) --------
-  # Deployment knobs (image, resources, persistence) for the in-cluster
-  # Ollama backend that powers the `localLlm` posture above. When
-  # model.provider=localLlm, this block must be enabled -- the chart
-  # fails fast otherwise. Leave it off when provider is helmAssistant
-  # or byo to avoid spending cluster resources on an unused backend.
-  #
-  # The model itself is named in `model.llmName` -- this block is purely
-  # the runtime / packaging story for that model.
-  localLlm:
-    enabled: false                   # set true when model.provider=localLlm
-    image: ollama/ollama:0.5.4
-    service:
-      port: 11434
-    resources:
-      requests:
-        cpu: "500m"
-        memory: "2Gi"
-      limits:
-        cpu: "4"
-        memory: "6Gi"
-    persistence:
-      enabled: true
-      size: 10Gi                     # holds the pulled model file(s)
-      storageClassName: ""           # default storage class when blank
-      accessMode: ReadWriteOnce
-
   # ---- Authentication and authorization ---------------------------------
-  # When enabled, the analyzer participates in the RPI trust domain:
+  # When enabled, the observability service participates in the RPI trust domain:
   # identity is delegated to whichever IDP RPI is configured against
   # (native rpi-interactionapi, Microsoft Entra, Keycloak, or Okta);
   # authorization is resolved through RPI's normalized user/group/
@@ -1447,7 +1446,7 @@ observability:
     # use the standard RPI Authentication__* env-var contract.
     mode: public
 
-    # Tenant identifier for the analyzer deployment. Required when
+    # Tenant identifier for the observability service deployment. Required when
     # mode != public. The RPI tenant scope this analyzer instance
     # serves; single-tenant per deployment in v1.
     tenantId: ""
@@ -1463,10 +1462,10 @@ observability:
     # this many seconds after assignment.
     authorizationCacheTtlSeconds: 60
 
-    # Hostname the analyzer is reachable at; used to build the OIDC
+    # Hostname the observability service is reachable at; used to build the OIDC
     # redirect URI advertised to the IDP for Entra mode. AUTO-DERIVED
     # from ingress.hosts.observability + ingress.domain when left empty.
-    # Override only if the analyzer is fronted by a different external
+    # Override only if the observability service is fronted by a different external
     # hostname (custom CNAME, external load balancer, etc.).
     ingressHost: ""
 
@@ -1514,13 +1513,13 @@ observability:
       diagnostics.viewLiveQueries:  ["Configuration", "System Administrator"]
       analyzer.admin:               ["System Administrator"]
 
-  # Pulse_Logging access: the analyzer reads the same 4 connection
+  # Pulse_Logging access: the observability service reads the same 4 connection
   # components the deploymentapi reads (host / username / password /
   # logging-db-name). No extra knobs here -- the chart's existing secrets
   # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
-  # The analyzer keeps its report history in a small SQLite file at
+  # The observability service keeps its report history in a small SQLite file at
   # /data/reports.db. SQLite needs a filesystem that honors POSIX byte-range
   # locks, so /data must be backed by block storage (Azure Disk, AWS EBS,
   # GCP PD) -- NOT Azure Files / NFS, which silently break SQLite locking.

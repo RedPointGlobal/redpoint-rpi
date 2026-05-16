@@ -21,16 +21,6 @@
 {{- fail "observability.replicas is not configurable; v1 RPI Observability is single-instance by design (local SQLite, in-process scheduler, in-process auth cache). Multi-replica is a v2 concern." -}}
 {{- end -}}
 
-{{- /* F-H03: chart/app contract for AI provider.
-       model.provider=localLlm runs against the in-cluster Ollama
-       deployment; the deployment is gated by localLlm.enabled. The two
-       knobs must agree. */ -}}
-{{- $modelProvider := ($cfg.model | default dict).provider | default "helmAssistant" -}}
-{{- $localLlmEnabled := ($cfg.localLlm | default dict).enabled | default false -}}
-{{- if and (eq $modelProvider "localLlm") (not $localLlmEnabled) -}}
-{{- fail "model.provider=localLlm requires observability.localLlm.enabled=true (the in-cluster Ollama deployment must be rendered for the application to reach it)." -}}
-{{- end -}}
-
 {{- /* F-N07: native auth authorization host must be derivable.
        When auth.mode=native, the chart synthesizes
        Authentication__RPIAuthentication__AuthorizationHost from
@@ -85,13 +75,6 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
-  # Deployments power the Overview platform-health pill: services
-  # count = rpi-* deployments in the namespace; pod counts = sum of
-  # spec.replicas + status.readyReplicas across those deployments.
-  # Authoritative source for "intent" (replicas) vs "observed" (ready).
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list"]
   # metrics-server. Optional; if absent, CPU/memory columns show "-".
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods"]
@@ -253,7 +236,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        {{- include "rpi.observability.modelEnvvars" . | nindent 8 }}
+        {{- include "rpi.observability.intelligenceEnvvars" . | nindent 8 }}
         {{- include "rpi.observability.runtimeEnvvars" . | nindent 8 }}
         {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
         # Same SDK + cloudIdentity envvar wiring the deploymentapi (and the

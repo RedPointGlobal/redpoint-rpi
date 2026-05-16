@@ -1,19 +1,40 @@
-{{- $cfg := .Values.observability | default dict -}}
-{{- $llm := $cfg.localLlm | default dict -}}
-{{- if and $cfg.enabled $llm.enabled -}}
-{{- $name := "rpi-observability-llm" -}}
-{{- $port := $llm.service.port | default 11434 -}}
-{{- $model := required "observability.model.llmName is required when localLlm is enabled" (($cfg.model | default dict).llmName) -}}
-{{- $persistence := $llm.persistence | default dict -}}
-{{- $resources := $llm.resources | default dict -}}
+{{- if not (include "rpi.observability.enabled" .) -}}{{- /* observability disabled */ -}}
+{{- else if ne (lower (default "local" (((.Values.observability | default dict).intelligence | default dict).provider))) "local" -}}{{- /* a cloud provider is active; no in-cluster serving layer */ -}}
+{{- else if not ((((((.Values.observability | default dict).intelligence | default dict).local | default dict).deployment | default dict).enabled | default false)) -}}{{- /* local deployment disabled (operator self-hosts) */ -}}
+{{- else -}}
 
+{{- $cfg := .Values.observability | default dict -}}
+{{- $intel := $cfg.intelligence | default dict -}}
+{{- $local := $intel.local | default dict -}}
+{{- $deploy := $local.deployment | default dict -}}
+{{- $svc := $deploy.service | default dict -}}
+{{- $name := "rpi-observability-intelligence" -}}
+{{- $port := int ($svc.port | default 8000) -}}
+
+{{- $image := $deploy.image | default (include "rpi.image" (dict "root" . "name" "rpi-observability-llm")) -}}
+
+{{- $defaultResources := dict
+      "requests" (dict "cpu" "4" "memory" "6Gi")
+      "limits"   (dict "cpu" "8" "memory" "12Gi") -}}
+{{- $resources := $deploy.resources | default $defaultResources -}}
+
+{{- if hasKey $deploy "replicas" -}}
+{{- fail "observability.intelligence.local.deployment.replicas is not configurable; v1 serving is single-instance. Multi-replica is a v2 concern." -}}
+{{- end -}}
+
+---
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability-llm") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "intelligence") | nindent 4 }}
+  {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
+  {{- if $svcAnnotations }}
+  annotations:
+    {{- $svcAnnotations | nindent 4 }}
+  {{- end }}
 spec:
   type: ClusterIP
   ports:
@@ -22,7 +43,10 @@ spec:
       targetPort: http
       protocol: TCP
   selector:
-    app.kubernetes.io/name: {{ $name }}
+    {{- include "redpoint-rpi.selectorLabels" (dict "root" . "name" $name) | nindent 4 }}
+
+---
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "cfg" $deploy) }}
 
 ---
 apiVersion: apps/v1
@@ -31,93 +55,69 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability-llm") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "intelligence") | nindent 4 }}
 spec:
-  replicas: 1
   serviceName: {{ $name }}
+  replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ $name }}
+      {{- include "redpoint-rpi.selectorLabels" (dict "root" . "name" $name) | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability-llm") | nindent 8 }}
+        {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "intelligence") | nindent 8 }}
+      {{- $podAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "pod") | trim }}
+      {{- if $podAnnotations }}
+      annotations:
+        {{- $podAnnotations | nindent 8 }}
+      {{- end }}
     spec:
+      serviceAccountName: {{ include "rpi.serviceAccountName" (dict "root" . "name" $name "cfg" $deploy) }}
       {{- if .Values.global.deployment.images.imagePullSecret.enabled }}
       imagePullSecrets:
         - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
+      {{- include "rpi.block.scheduling" (dict "root" . "name" $name "cfg" $deploy "topo" (dict "enabled" false)) | nindent 6 }}
+      securityContext:
+        fsGroup: 7777
+        fsGroupChangePolicy: OnRootMismatch
       containers:
-        - name: ollama
-          image: {{ $llm.image | default "ollama/ollama:0.5.4" | quote }}
-          imagePullPolicy: IfNotPresent
-          # Run ollama serve in the foreground; pull the configured model
-          # the first time the pod starts (no-op on subsequent restarts
-          # since the model file persists in the PVC). The pod stays
-          # NotReady until the readiness probe sees the model in the
-          # local registry, so the analyzer never hits an empty server.
-          command: ["sh", "-c"]
+        - name: server
+          image: {{ $image | quote }}
+          imagePullPolicy: {{ $deploy.imagePullPolicy | default .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
+          {{- with $deploy.extraArgs }}
           args:
-            - |
-              ollama serve &
-              SERVER_PID=$!
-              until ollama list >/dev/null 2>&1; do sleep 1; done
-              ollama pull "$OLLAMA_MODEL"
-              wait "$SERVER_PID"
-          env:
-            - name: OLLAMA_MODEL
-              value: {{ $model | quote }}
-            # Keep the model resident across requests so the first
-            # analyze call after idle isn't a 30s cold-load.
-            - name: OLLAMA_KEEP_ALIVE
-              value: "24h"
-            - name: OLLAMA_HOST
-              value: "0.0.0.0:{{ $port }}"
+            {{- range . }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ $port }}
               protocol: TCP
-          readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - ollama list | awk '{print $1}' | grep -qx "$OLLAMA_MODEL"
-            initialDelaySeconds: 10
-            periodSeconds: 15
-            failureThreshold: 60   # generous: first pull can take 5-10 min
-            timeoutSeconds: 5
-          livenessProbe:
-            tcpSocket:
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 30
-            failureThreshold: 4
-            timeoutSeconds: 5
-          {{- if $resources }}
+          {{- with $resources }}
           resources:
-            {{- toYaml $resources | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
-          volumeMounts:
-            - name: models
-              mountPath: /root/.ollama
-  {{- if $persistence.enabled }}
-  volumeClaimTemplates:
-    - metadata:
-        name: models
-      spec:
-        accessModes:
-          - {{ $persistence.accessMode | default "ReadWriteOnce" }}
-        {{- if $persistence.storageClassName }}
-        storageClassName: {{ $persistence.storageClassName | quote }}
-        {{- end }}
-        resources:
-          requests:
-            storage: {{ $persistence.size | default "10Gi" }}
-  {{- else }}
-      volumes:
-        - name: models
-          emptyDir:
-            sizeLimit: {{ $persistence.size | default "10Gi" }}
-  {{- end }}
-{{- end }}
+          startupProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+          livenessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 4
+{{- end -}}

@@ -23,3 +23,7 @@ scripts
 
 .pre-commit-config.yaml
 CONTRIBUTING.md
+
+# Local pre-commit secret scanner + auto-push helper (personal tool,
+# not part of the chart). Lives at repo root for convenience.
+pre-release.sh

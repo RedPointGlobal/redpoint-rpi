@@ -2244,7 +2244,7 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Enable the Node Health panel on the System Health tab. Binds a ClusterRole to the analyzer's ServiceAccount granting get/list on nodes (core) and nodes (metrics.k8s.io). Disable in clusters where cluster-scoped RBAC requires separate approval."
+              "description": "Enable the Node Health panel on the System Health tab. Binds a ClusterRole to the observability service's ServiceAccount granting get/list on nodes (core) and nodes (metrics.k8s.io). Disable in clusters where cluster-scoped RBAC requires separate approval."
             }
           }
         },
@@ -2266,7 +2266,7 @@
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "enabled":   { "type": "boolean", "description": "Mount the chart-managed FileOutputDirectory PVC read-only on the analyzer StatefulSet so bundle downloads include the workflow's output files. No-op unless storage.persistentVolumeClaims.FileOutputDirectory.enabled is also true; the mount tracks that block's claimName + mountPath." }
+                "enabled":   { "type": "boolean", "description": "Mount the chart-managed FileOutputDirectory PVC read-only on the observability service StatefulSet so bundle downloads include the workflow's output files. No-op unless storage.persistentVolumeClaims.FileOutputDirectory.enabled is also true; the mount tracks that block's claimName + mountPath." }
               }
             }
           }
@@ -2274,10 +2274,10 @@
         "auth": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Trust-domain participation. When enabled, the analyzer authenticates users against the IDP RPI is configured against and authorizes them through RPI's normalized user/group model. See AUTH_DESIGN_RFC.md for the engineering contract.",
+          "description": "Trust-domain participation. When enabled, the observability service authenticates users against the IDP RPI is configured against and authorizes them through RPI's normalized user/group model. See AUTH_DESIGN_RFC.md for the engineering contract.",
           "properties": {
             "enabled":  { "type": "boolean", "description": "Master switch. Default false; when false the legacy unauthenticated path is preserved." },
-            "tenantId": { "type": "string", "description": "RPI tenant identifier the analyzer's user lookup is scoped to. Required when enabled=true." },
+            "tenantId": { "type": "string", "description": "RPI tenant identifier the observability service's user lookup is scoped to. Required when enabled=true." },
             "anonymous": {
               "type": "string",
               "enum": ["deny", "observabilityViewOnly", "allowAnonymous"],
@@ -2286,7 +2286,7 @@
             "cookieSecure":               { "type": "boolean", "description": "Set the Secure attribute on session cookies. Set false only for local development without TLS." },
             "sessionLifetimeSeconds":     { "type": "integer", "minimum": 60, "description": "Session lifetime in seconds. Default 28800 (8 hours)." },
             "authorizationCacheTtlSeconds": { "type": "integer", "minimum": 0, "description": "Per-process AuthorizationProvider cache TTL in seconds. Set 0 to disable. Default 60." },
-            "ingressHost":                { "type": "string", "description": "Hostname the analyzer is reachable at; used to build the OIDC redirect URI advertised to the IDP. AUTO-DERIVED from ingress.hosts.observability + ingress.domain when empty; override only for custom CNAME / external LB scenarios." },
+            "ingressHost":                { "type": "string", "description": "Hostname the observability service is reachable at; used to build the OIDC redirect URI advertised to the IDP. AUTO-DERIVED from ingress.hosts.observability + ingress.domain when empty; override only for custom CNAME / external LB scenarios." },
             "provider": {
               "type": "object",
               "additionalProperties": true,
@@ -2321,62 +2321,87 @@
             }
           }
         },
-        "model": {
+        "intelligence": {
           "type": "object",
           "additionalProperties": true,
+          "description": "Intelligence Runtime topology. Part of the observability solution -- no solution-level enabled flag (observability.enabled controls the whole solution). The `provider` selector activates one of: local (in-cluster, served by rpi-observability-llm) | azure (AI Foundry / Azure OpenAI) | google (Vertex AI) | aws (Bedrock). Only the active provider's sub-block is consumed.",
           "properties": {
             "provider": {
               "type": "string",
-              "enum": ["helmAssistant", "localLlm", "byo"],
-              "description": "AI deployment posture. `helmAssistant` (default, turnkey) routes redacted analysis through the Redpoint-hosted control plane -- no customer AI infrastructure required. `localLlm` keeps all inference inside the cluster via the packaged Ollama deployment (see observability.localLlm) -- log data never leaves the customer network. `byo` integrates with a customer-managed inference platform; pick the platform under model.byo.platform."
+              "enum": ["local", "azure", "google", "aws"],
+              "description": "Active provider. Drives which provider the runtime registers and whether the chart renders the in-cluster serving StatefulSet (only when provider=local). When set to azure/google/aws, the chart fails at render time if that provider's required fields (endpoint+deployment / project+location+model / region+modelId) are missing."
             },
-            "llmName": {
-              "type": "string",
-              "description": "Model identifier for the active posture (e.g., phi3:mini for localLlm, claude-sonnet-4-6 for byo+anthropic, anthropic.claude-sonnet-4-20250514-v1:0 for byo+bedrock). Ignored when provider=helmAssistant (the control plane selects the model server-side) and when byo.platform=azureFoundry (the deployment name comes from redpointAI.naturalLanguage.ChatGptEngine)."
-            },
-            "helmAssistant": {
+            "timeoutSeconds": { "type": ["integer", "number"], "minimum": 1, "description": "Per-inference hard timeout. Bounds the analyzer cycle's exposure to slow inference. Applies to whichever provider is active." },
+            "local": {
               "type": "object",
               "additionalProperties": true,
+              "description": "Consumed only when provider=local.",
               "properties": {
-                "url": {
-                  "type": "string",
-                  "description": "Redpoint Helm Assistant control-plane URL. Egress to this URL on 443 is required when provider=helmAssistant. The API key is read from the existing redpoint-rpi-secrets Secret under the fixed key Observability_HelmAssistant_ApiKey."
+                "baseUrl":          { "type": "string", "description": "Override the default in-cluster Service URL. Blank = http://rpi-observability-intelligence.<ns>.svc.cluster.local:8000/v1." },
+                "model":            { "type": "string", "description": "Model identifier the local runtime serves. Must match what the active rpi-observability-llm image reports via /v1/models." },
+                "embeddingsModel":  { "type": "string", "description": "Embeddings model. Blank = use the chat model." },
+                "deployment": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "description": "Serving-layer StatefulSet. The chart deploys the self-contained rpi-observability-llm image (model + tokenizer + runtime baked in) deployable on standard worker nodes. Disable when the operator self-hosts the serving layer elsewhere.",
+                  "properties": {
+                    "enabled":         { "type": "boolean" },
+                    "image":           { "type": "string", "description": "Container image override. Blank = chart resolves the canonical Redpoint-built rpi-observability-llm image via rpi.image. Set to a custom image when overriding for an alternate model, regulated registry, or internal mirror; the image must serve the OpenAI-compatible /v1 API." },
+                    "imagePullPolicy": { "type": "string" },
+                    "resources":       { "type": "object", "additionalProperties": true, "description": "Container resource requests + limits. Blank = chart picks sensible defaults sized for the 3B Q4 model on standard worker nodes." },
+                    "service": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+                      }
+                    },
+                    "serviceAccount": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "enabled":     { "type": "boolean" },
+                        "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+                      }
+                    },
+                    "extraArgs": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "description": "Backend CLI args appended to the image's entrypoint. The image already wires the essential flags (model path, host, port, threads, context size). Use this for operator-specific tuning (KV cache size, custom sampling parameters)."
+                    }
+                  }
                 }
               }
             },
-            "byo": {
+            "azure": {
               "type": "object",
               "additionalProperties": true,
-              "description": "Bring-your-own inference platform configuration. Active only when provider=byo. The analyzer integrates with the customer-managed platform you choose under `platform`; auth piggybacks on the chart's cloudIdentity helpers (no separate creds duplicated here).",
+              "description": "Consumed only when provider=azure.",
               "properties": {
-                "platform": {
-                  "type": "string",
-                  "enum": ["anthropic", "azureFoundry", "bedrock", "vertex"],
-                  "description": "Customer-managed inference platform. `anthropic` = direct Anthropic API. `azureFoundry` = Azure AI Foundry / Azure OpenAI (rides redpointAI.naturalLanguage). `bedrock` = AWS Bedrock (auth via cloudIdentity.amazon). `vertex` = GCP Vertex AI (auth via cloudIdentity.google)."
-                },
-                "anthropic": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "properties": {
-                    "apiKeyVaultEntry": { "type": "string" },
-                    "baseUrl": { "type": "string" }
-                  }
-                },
-                "bedrock": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "properties": {
-                    "region": { "type": "string" }
-                  }
-                },
-                "vertex": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "properties": {
-                    "projectId": { "type": "string" },
-                    "region": { "type": "string" }
-                  }
-                }
+                "service":         { "type": "string", "enum": ["foundry", "openai"] },
+                "endpoint":        { "type": "string" },
+                "deployment":      { "type": "string" },
+                "apiVersion":      { "type": "string" },
+                "apiKeySecretKey": { "type": "string", "description": "Optional. When set in non-SDK mode, binds AZURE_INTELLIGENCE_API_KEY from this Secret key. Blank uses managed identity." }
+              }
+            },
+            "google": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Consumed only when provider=google.",
+              "properties": {
+                "project":  { "type": "string" },
+                "location": { "type": "string" },
+                "model":    { "type": "string" }
+              }
+            },
+            "aws": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Consumed only when provider=aws.",
+              "properties": {
+                "region":   { "type": "string" },
+                "modelId":  { "type": "string" }
               }
             }
           }
@@ -2454,33 +2479,6 @@
             "enabled": { "type": "boolean" },
             "webhookSecretKey": { "type": "string", "description": "Secret key holding the Teams incoming-webhook URL." },
             "onlyOnNewErrors": { "type": "boolean" }
-          }
-        },
-        "localLlm": {
-          "type": "object",
-          "description": "Built-in offline LLM (Ollama). Ships a small CPU-runnable model so the analyzer works out of the box without a cloud account.",
-          "additionalProperties": true,
-          "properties": {
-            "enabled": { "type": "boolean", "description": "Disable when using a cloud provider to save cluster resources." },
-            "image": { "type": "string", "description": "Ollama container image, e.g. ollama/ollama:0.5.4." },
-            "service": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "port": { "type": "integer", "default": 11434 }
-              }
-            },
-            "resources": { "type": "object", "additionalProperties": true },
-            "persistence": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": { "type": "boolean" },
-                "size": { "type": "string" },
-                "storageClassName": { "type": "string" },
-                "accessMode": { "type": "string" }
-              }
-            }
           }
         }
       }
