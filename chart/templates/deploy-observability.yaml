@@ -2,32 +2,6 @@
 {{- $cfg := .Values.observability | default dict -}}
 {{- if $cfg.enabled -}}
 
-{{/*
-  ----------------------------------------------------------------------
-  Chart-render contract assertions for RPI Observability.
-
-  These execute at `helm template` / `helm install` / `helm upgrade`
-  time. They reject deployment configurations that the v1 architecture
-  does not support, with an explicit error instead of a silently broken
-  install. The principle: absence (or contradiction) of configuration
-  is an error condition, not an alternate operating mode.
-  ----------------------------------------------------------------------
-*/}}
-
-{{- /* F-H01: single-instance deployment contract.
-       The component owns local SQLite + in-process scheduler/cache; it
-       cannot be safely scaled. Reject any explicit replicas override. */ -}}
-{{- if hasKey $cfg "replicas" -}}
-{{- fail "observability.replicas is not configurable; v1 RPI Observability is single-instance by design (local SQLite, in-process scheduler, in-process auth cache). Multi-replica is a v2 concern." -}}
-{{- end -}}
-
-{{- /* F-N07: native auth authorization host must be derivable.
-       When auth.mode=native, the chart synthesizes
-       Authentication__RPIAuthentication__AuthorizationHost from
-       ingress.hosts.client + ingress.domain unless explicitly
-       overridden. If neither is set, the synthesized URL is "https://"
-       (broken). Require one or the other when native mode is on.
-       Single-provider model: auth.mode is the only switch. */ -}}
 {{- $authCfg := $cfg.auth | default dict -}}
 {{- $authMode := $authCfg.mode | default "public" -}}
 {{- if eq $authMode "native" -}}
@@ -44,11 +18,7 @@
 {{- $storage := $cfg.storage | default dict -}}
 {{- $vct := $storage.volumeClaimTemplates | default dict -}}
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
-{{- /* Diagnostics tab mounts the chart-managed FileOutputDirectory PVC
-       read-only when both the analyzer's own toggle AND the chart's
-       FileOutputDirectory PVC are enabled. The analyzer toggle alone
-       cannot create a missing PVC; this gate prevents schedule failures
-       on customers without the FileOutputDirectory storage configured. */ -}}
+
 {{- $fileOutPvc := (.Values.storage.persistentVolumeClaims | default dict).FileOutputDirectory | default dict -}}
 {{- $diagFileOut := (($cfg.diagnostics | default dict).fileOutput | default dict) -}}
 {{- $mountFileOut := and $diagFileOut.enabled $fileOutPvc.enabled -}}
@@ -56,8 +26,8 @@
 {{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "observability" "cfg" $cfg) }}
 
 ---
-# Read-only K8s API access for the analyzer's pod-health and event
-# collectors. Namespace-scoped.
+# Read-only K8s API access for the observability service's pod-health
+# and event collectors. Namespace-scoped.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -101,8 +71,8 @@ subjects:
 ---
 # Cluster-scoped read-only access for the Node health panel. Nodes are
 # cluster-scoped resources, so a Role/RoleBinding cannot grant access.
-# Names are namespace-suffixed so multiple analyzer installs in the same
-# cluster don't collide on the cluster-scoped binding.
+# Names are namespace-suffixed so multiple observability installs in
+# the same cluster don't collide on the cluster-scoped binding.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -159,9 +129,6 @@ spec:
 
 {{- if (.Values.observability.auth | default dict).enabled }}
 ---
-# Sibling Service exposing FastAPI directly. Used by the ingress to
-# route /auth/* to the auth router without going through Streamlit.
-# Created only when auth is enabled.
 apiVersion: v1
 kind: Service
 metadata:
@@ -212,12 +179,12 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-      securityContext:
-        fsGroup: 7777
-        fsGroupChangePolicy: OnRootMismatch
-        {{- with $secCtx.pod }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+#      securityContext:
+#        fsGroup: 7777
+#        fsGroupChangePolicy: OnRootMismatch
+#        {{- with $secCtx.pod }}
+#        {{- toYaml . | nindent 8 }}
+#        {{- end }}
       containers:
       - name: {{ $name }}
         image: {{ include "rpi.image" (dict "root" . "name" "rpi-observability") }}
@@ -230,7 +197,7 @@ spec:
           containerPort: {{ $service.apiPort | default 8080 }}
           protocol: TCP
         env:
-        # Downward-API: lets the K8s events collector know which
+        # lets the K8s events collector know which
         # namespace to scope its event/pod queries to.
         - name: POD_NAMESPACE
           valueFrom:
@@ -239,10 +206,6 @@ spec:
         {{- include "rpi.observability.intelligenceEnvvars" . | nindent 8 }}
         {{- include "rpi.observability.runtimeEnvvars" . | nindent 8 }}
         {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
-        # Same SDK + cloudIdentity envvar wiring the deploymentapi (and the
-        # rest of the RPI services) use. The analyzer reads KeyVault__Provider
-        # to know which cloud vault to talk to in SDK mode -- same shape as
-        # the .NET services, no analyzer-specific knobs.
         {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
         {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 8 }}{{- end }}
@@ -251,36 +214,28 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-        {{- with $secCtx.container }}
-        securityContext:
-          {{- toYaml . | nindent 10 }}
-        {{- end }}
-        # Probes hit the FastAPI side. Streamlit is consumer-facing only.
-        # Generous thresholds because a local-LLM analysis cycle blocks
-        # the event loop for 30-90s on CPU, and the eager first-cycle
-        # runs during lifespan startup -- without this headroom kubelet
-        # SIGKILLs the pod before uvicorn opens the port.
+#        {{- with $secCtx.container }}
+#        securityContext:
+#          {{- toYaml . | nindent 10 }}
+#       {{- end }}
         readinessProbe:
           httpGet:
             path: /health/ready
             port: api
           initialDelaySeconds: 10
           periodSeconds: 15
-          failureThreshold: 30          # ~7.5 min before NotReady
+          failureThreshold: 30       
         livenessProbe:
           httpGet:
             path: /health/live
             port: api
           initialDelaySeconds: 60
           periodSeconds: 30
-          failureThreshold: 10          # ~6 min before SIGKILL
+          failureThreshold: 10 
         volumeMounts:
         - name: {{ $name }}-data
           mountPath: /data
         {{- if $mountFileOut }}
-        # Mount path inside the analyzer container is fixed; it does not
-        # need to track FileOutputDirectory.mountPath (different filesystem
-        # namespace from the .NET service pods).
         - name: fileoutputdirectory
           mountPath: /rpifileoutputdir
           readOnly: true

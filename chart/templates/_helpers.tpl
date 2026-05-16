@@ -1015,8 +1015,8 @@ Usage: {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 6 }}
      ============================================================ */}}
 
 {{/*
-Returns "true" when the observability is enabled. Used by templates and
-the ingress-routes file to gate analyzer-specific output.
+Returns "true" when observability is enabled. Used by templates and
+the ingress-routes file to gate observability-specific output.
 */}}
 {{- define "rpi.observability.enabled" -}}
 {{- if (.Values.observability | default dict).enabled -}}
@@ -1111,34 +1111,34 @@ Usage: {{- include "rpi.observability.intelligenceEnvvars" . | nindent 8 }}
 {{- end -}}
 
 {{/*
-Budget + schedule + database + storage env vars. Always emitted when the
-analyzer is enabled.
+Budget + schedule + database + storage env vars. Always emitted when
+observability is enabled.
 
-The analyzer rides the chart's existing connection-string convention --
-same env var name, same secret key, same secret name -- as the rest of
-the RPI services (callbackapi, executionservice, etc.):
+The observability service rides the chart's existing connection-string
+convention -- same env var name, same secret key, same secret name --
+as the rest of the RPI services (callbackapi, executionservice, etc.):
 
   env var:  CONNECTIONSTRINGS__LOGGINGDATABASE
   secret key: ConnectionString_Logging_Database
   secret name: rpi.secrets.secretName
 
 In kubernetes / csi mode the chart binds that env var via secretKeyRef.
-In sdk mode the analyzer fetches the same logical value from the cloud
-vault under the .NET-style entry name `ConnectionStrings--LoggingDatabase`
-(matches what the rest of RPI's SDK provider expects).
+In sdk mode the observability service fetches the same logical value
+from the cloud vault under the .NET-style entry name
+`ConnectionStrings--LoggingDatabase` (matches what the rest of RPI's
+SDK provider expects).
 
 Usage: {{- include "rpi.observability.runtimeEnvvars" . | nindent 8 }}
 */}}
 
 
 {{/*
-Mode-aware auth env-vars for the analyzer container. Emits nothing
+Mode-aware auth env-vars for the observability container. Emits nothing
 when observability.auth.mode=public. For Native and Entra modes,
 emits the provider's standard RPI Authentication__* env vars plus
 observability-side post-auth configuration.
 
 Active emission shape (when mode != public):
-  OBSERVABILITY__AUTH__TENANT_ID                        <values>
   OBSERVABILITY__AUTH__COOKIE_SECURE                    true | false
   OBSERVABILITY__AUTH__SESSION_LIFETIME_SECONDS         <values>
   OBSERVABILITY__AUTH__AUTHZ_CACHE_TTL_SECONDS          <values>
@@ -1189,12 +1189,12 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{/* Ingress host derived from the canonical ingress block; the
      customer's own observability hostname. */}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
-{{- $analyzerHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.observability "domain" $ingCfg.domain) -}}
+{{- $observabilityHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.observability "domain" $ingCfg.domain) -}}
 {{- $clientHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.client "domain" $ingCfg.domain) -}}
-{{- $ingressHost := $auth.ingressHost | default $analyzerHost -}}
-{{/* Observability-specific (post-authentication) configuration. */}}
-- name: OBSERVABILITY__AUTH__TENANT_ID
-  value: {{ required "observability.auth.tenantId is required when auth.mode != public" $auth.tenantId | quote }}
+{{- $ingressHost := $auth.ingressHost | default $observabilityHost -}}
+{{/* Observability-specific (post-authentication) configuration.
+     Tenant scope is sourced from observability.clientId at runtime
+     (ADR-0009) -- no separate auth-side tenant env var. */}}
 - name: OBSERVABILITY__AUTH__COOKIE_SECURE
   value: {{ ternary $auth.cookieSecure true (hasKey $auth "cookieSecure") | quote }}
 - name: OBSERVABILITY__AUTH__SESSION_LIFETIME_SECONDS
@@ -1209,8 +1209,8 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{/* Native = the standard RPI authentication contract (Authentication__*
      env vars) consumed directly. The OpenIddict client (default
      ClientId rpi-observability) is pre-registered externally; the
-     analyzer reads its secret from the chart's standard RPI Secret
-     (default: redpoint-rpi-secrets). */}}
+     observability service reads its secret from the chart's standard
+     RPI Secret (default: redpoint-rpi-secrets). */}}
 {{- $nativeBlock := $auth.native | default dict -}}
 {{- $nativeAuthHost := $nativeBlock.authorizationHost | default (printf "https://%s" $clientHost) -}}
 {{- $nativeMetaHost := $nativeBlock.authMetaHttpHost | default "" -}}
@@ -1307,8 +1307,8 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 - name: OBSERVABILITY__SQLITE_PATH
   value: "/data/reports.db"
 {{/* Diagnostics-tab DB names (Interaction + InteractionAudit) are NOT
-     emitted as env vars. The analyzer resolves them at startup from
-     Pulse_<env>.dbo.rpi_Clients via ClientResolver, using
+     emitted as env vars. The observability service resolves them at
+     startup from Pulse_<env>.dbo.rpi_Clients via ClientResolver, using
      OBSERVABILITY__CLIENT_ID (set above from observability.clientId)
      as the lookup key. No fallback, no inference -- ADR-0009 strict
      refinement. */}}
@@ -1318,7 +1318,7 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: {{ .enabled | toString | quote }}
 {{- end }}
 {{- end }}
-{{/* Custom Metrics (T4 telemetry). The analyzer scrapes
+{{/* Custom Metrics (T4 telemetry). The observability service scrapes
      Prometheus-style /metrics endpoints from configured RPI services.
      Service list is JSON-encoded so operators can override DNS names
      without code changes; defaults baked in values.yaml cover the
@@ -1330,8 +1330,8 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
      from dnsName to map to the values key (rpi-realtimeapi ->
      .Values.realtimeapi.enabled). When the customer disables a
      service via overrides (e.g. realtimeapi.enabled=false), the
-     entry is dropped from the emitted env var so the analyzer
-     never tries to scrape it. Operator-added scrape targets that
+     entry is dropped from the emitted env var so the observability
+     service never tries to scrape it. Operator-added scrape targets that
      don't correspond to a chart-managed service default to
      enabled=true so they always pass through. */}}
 {{- with $cfg.metrics }}
@@ -1417,8 +1417,8 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
       name: {{ $secretName | quote }}
       key: {{ $teams.webhookSecretKey | default "Observability_Teams_Webhook" | quote }}
 {{- end }}
-# Operational SQL database type. Drives the analyzer's connection
-# string. Always emitted (not a secret).
+# Operational SQL database type. Drives the observability service's
+# connection string. Always emitted (not a secret).
 {{- $platform := .Values.global.deployment.platform -}}
 {{- if eq $provider "postgresql" }}
 - name: ClusterEnvironment__OperationalDatabase__DatabaseType

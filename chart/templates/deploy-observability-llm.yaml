@@ -1,4 +1,4 @@
-{{- if not (include "rpi.observability.enabled" .) -}}{{- /* observability disabled */ -}}
+{{- if not (include "rpi.observability.enabled" .) -}}
 {{- else if ne (lower (default "local" (((.Values.observability | default dict).intelligence | default dict).provider))) "local" -}}{{- /* a cloud provider is active; no in-cluster serving layer */ -}}
 {{- else if not ((((((.Values.observability | default dict).intelligence | default dict).local | default dict).deployment | default dict).enabled | default false)) -}}{{- /* local deployment disabled (operator self-hosts) */ -}}
 {{- else -}}

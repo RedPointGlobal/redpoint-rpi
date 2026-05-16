@@ -2277,7 +2277,6 @@
           "description": "Trust-domain participation. When enabled, the observability service authenticates users against the IDP RPI is configured against and authorizes them through RPI's normalized user/group model. See AUTH_DESIGN_RFC.md for the engineering contract.",
           "properties": {
             "enabled":  { "type": "boolean", "description": "Master switch. Default false; when false the legacy unauthenticated path is preserved." },
-            "tenantId": { "type": "string", "description": "RPI tenant identifier the observability service's user lookup is scoped to. Required when enabled=true." },
             "anonymous": {
               "type": "string",
               "enum": ["deny", "observabilityViewOnly", "allowAnonymous"],
@@ -2317,7 +2316,7 @@
             "capabilityMap": {
               "type": "object",
               "additionalProperties": true,
-              "description": "Maps RPI group names to analyzer capabilities. Keys are capability identifiers (observability.view, diagnostics.view, diagnostics.viewSql, diagnostics.viewStackTrace, diagnostics.exportBundle, analyzer.admin); values are arrays of RPI group names."
+              "description": "Maps RPI group names to observability capabilities. Keys are capability identifiers (observability.view, diagnostics.view, diagnostics.viewSql, diagnostics.viewStackTrace, diagnostics.exportBundle, observability.admin); values are arrays of RPI group names."
             }
           }
         },
@@ -2331,7 +2330,7 @@
               "enum": ["local", "azure", "google", "aws"],
               "description": "Active provider. Drives which provider the runtime registers and whether the chart renders the in-cluster serving StatefulSet (only when provider=local). When set to azure/google/aws, the chart fails at render time if that provider's required fields (endpoint+deployment / project+location+model / region+modelId) are missing."
             },
-            "timeoutSeconds": { "type": ["integer", "number"], "minimum": 1, "description": "Per-inference hard timeout. Bounds the analyzer cycle's exposure to slow inference. Applies to whichever provider is active." },
+            "timeoutSeconds": { "type": ["integer", "number"], "minimum": 1, "description": "Per-inference hard timeout. Bounds the observability cycle's exposure to slow inference. Applies to whichever provider is active." },
             "local": {
               "type": "object",
               "additionalProperties": true,

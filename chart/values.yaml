@@ -1112,7 +1112,7 @@ observability:
     enabled: true                    # creates rpi-observability SA in per-service mode
 
   # ---- RPI ClientID (REQUIRED) ------------------------------------------
-  # The RPI tenant identifier (a GUID) that this analyzer instance serves.
+  # The RPI tenant identifier (a GUID) that this observability instance serves.
   # Used as the lookup key against Pulse_<env>.dbo.rpi_Clients to resolve
   # the tenant's Interaction + InteractionAudit DB names (ADR-0009).
   #
@@ -1169,10 +1169,12 @@ observability:
     provider: local                          # local | azure | google | aws
 
     # Per-inference timeout. Hard-bound so a slow inference cannot
-    # destabilize the analyzer cycle: when exceeded, the call returns
+    # destabilize the observability cycle: when exceeded, the call returns
     # a typed AIStatus.TIMEOUT and the cycle proceeds without an AI
-    # summary. Applies to whichever provider is active.
-    timeoutSeconds: 90
+    # summary. Sized for CPU inference of ~1000-token briefings on a
+    # standard worker; operators on GPU profiles or smaller workloads
+    # can lower it.
+    timeoutSeconds: 180
 
     # ---- Local (in-cluster serving) ------------------------------------
     # Consumed only when provider=local. The serving layer is a
@@ -1272,12 +1274,14 @@ observability:
   #               mode the email + teams digests fire on every run regardless
   #               of email.onlyOnNewErrors / teams.onlyOnNewErrors -- the
   #               assumption is you wanted a daily summary.
-  # `lookbackMinutes` defaults to 60 in interval mode, or 1440 (24h) in daily
-  # mode. Set it explicitly here to override either default.
+  # `lookbackMinutes` defaults to `intervalMinutes` in interval mode (so
+  # each cycle's data window matches its cadence with no gap or overlap),
+  # or 1440 (24h) in daily mode. Set it explicitly here to override either
+  # default.
   schedule:
     intervalMinutes: 30              # batch cycle period (interval mode)
     dailyAtUtc: ""                   # "HH:MM" UTC -- e.g. "00:00" for midnight
-    lookbackMinutes: ""              # leave empty for auto: 60 (interval) or 1440 (daily). Override with an int.
+    lookbackMinutes: ""              # leave empty for auto: matches intervalMinutes (interval mode) or 1440 (daily mode). Override with an int.
     onDemandEnabled: true            # exposes POST /analyze endpoint
 
   # ---- Operational DB names (Diagnostics tab) ----------------------------
@@ -1397,7 +1401,7 @@ observability:
   # report to the configured recipients. SMTP transport reuses the
   # chart-wide SMTPSettings block (same SMTP server, sender, credentials
   # the .NET services already use); only the recipient list and the
-  # "send when..." rule are analyzer-specific.
+  # "send when..." rule are observability-specific.
   #
   # The email is intentionally minimal: total errors, top types, and a
   # link back to the dashboard for the full breakdown / log downloads.
@@ -1446,10 +1450,10 @@ observability:
     # use the standard RPI Authentication__* env-var contract.
     mode: public
 
-    # Tenant identifier for the observability service deployment. Required when
-    # mode != public. The RPI tenant scope this analyzer instance
-    # serves; single-tenant per deployment in v1.
-    tenantId: ""
+    # Tenant scope is sourced from `observability.clientId` (the
+    # canonical rpi_Clients lookup key, per ADR-0009). The authorization
+    # provider and the diagnostics layer both consume that single
+    # identity, so no separate auth-side tenant field exists.
 
     # Cookie security. Set false only for local development without TLS.
     cookieSecure: true
@@ -1497,7 +1501,7 @@ observability:
       clientApplicationId: ""   # default: MicrosoftEntraID.interaction_client_id
       apiApplicationId: ""      # default: MicrosoftEntraID.interaction_api_id
 
-    # Capability mapping: maps RPI group names to analyzer capabilities.
+    # Capability mapping: maps RPI group names to observability capabilities.
     # Customers override per their RPI group conventions. The default
     # below references RPI built-in groups plus common conventions;
     # the System Administrator group exists on every RPI deployment.
@@ -1511,7 +1515,7 @@ observability:
       # because in-flight SQL text can carry PII through WHERE-clause
       # literals and parameter values.
       diagnostics.viewLiveQueries:  ["Configuration", "System Administrator"]
-      analyzer.admin:               ["System Administrator"]
+      observability.admin:          ["System Administrator"]
 
   # Pulse_Logging access: the observability service reads the same 4 connection
   # components the deploymentapi reads (host / username / password /
