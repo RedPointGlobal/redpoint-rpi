@@ -1409,7 +1409,7 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: "true"
 - name: OBSERVABILITY__TEAMS__ONLY_ON_NEW_ERRORS
   value: {{ ternary $teams.onlyOnNewErrors true (hasKey $teams "onlyOnNewErrors") | quote }}
-- name: OBSERVABILITY__TEAMS__WEBHOOK_URL
+- name: Observability_Teams_Webhook
   valueFrom:
     secretKeyRef:
       name: {{ $secretName | quote }}

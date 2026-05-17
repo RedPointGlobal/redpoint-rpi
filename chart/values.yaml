@@ -1412,15 +1412,21 @@ observability:
                                      # (set false to email every cycle)
 
   # ---- Microsoft Teams notification (opt-in) -----------------------------
-  # When enabled, the observability service posts an Adaptive Card per cycle to a
-  # Teams channel via an incoming webhook. The webhook URL is sensitive
-  # (anyone with it can post to the channel), so it lives in the K8s
-  # Secret rather than this file -- set webhookSecretKey to the Secret
-  # entry name. Default key is `Observability_Teams_Webhook`.
+  # When enabled, the observability service posts an Adaptive Card per
+  # cycle to a Teams channel via an incoming webhook.
+  #
+  # The webhook URL is credential-grade: anyone holding it can post into
+  # the channel. It MUST live in the chart's standard RPI Secret (default:
+  # redpoint-rpi-secrets), NEVER inline in this file or any override file.
+  # Treat it the same as an API key, SMTP password, or OAuth client secret.
+  #
+  # Populate the Secret key (default: Observability_Teams_Webhook) before
+  # setting enabled=true. Pod startup fails fast when enabled=true and
+  # the key is empty.
   #
   # Get the webhook URL from Teams: in the channel, ... > Workflows >
   # "Post to a channel when a webhook request is received". Copy the
-  # URL it generates into the secret.
+  # URL into the Secret; do not paste it into values.yaml.
   teams:
     enabled: false
     webhookSecretKey: Observability_Teams_Webhook
