@@ -179,12 +179,12 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.global.deployment.images.imagePullSecret.name }}
       {{- end }}
-#      securityContext:
-#        fsGroup: 7777
-#        fsGroupChangePolicy: OnRootMismatch
-#        {{- with $secCtx.pod }}
-#        {{- toYaml . | nindent 8 }}
-#        {{- end }}
+      securityContext:
+        fsGroup: 7777
+        fsGroupChangePolicy: OnRootMismatch
+        {{- with $secCtx.pod }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       containers:
       - name: {{ $name }}
         image: {{ include "rpi.image" (dict "root" . "name" "rpi-observability") }}
@@ -214,10 +214,10 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
-#        {{- with $secCtx.container }}
-#        securityContext:
-#          {{- toYaml . | nindent 10 }}
-#       {{- end }}
+        {{- with $secCtx.container }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         readinessProbe:
           httpGet:
             path: /health/ready
@@ -238,7 +238,7 @@ spec:
         {{- if $mountFileOut }}
         - name: fileoutputdirectory
           mountPath: /rpifileoutputdir
-          readOnly: false
+          readOnly: true
         {{- end }}
         {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 8 }}
         {{- include "rpi.customCACerts.volumeMount" . | nindent 8 }}
@@ -255,7 +255,7 @@ spec:
       - name: fileoutputdirectory
         persistentVolumeClaim:
           claimName: {{ $fileOutPvc.claimName | quote }}
-          readOnly: false
+          readOnly: true
       {{- end }}
       {{- include "rpi.cloudidentity.googleVolumes" . | nindent 6 }}
       {{- include "rpi.customCACerts.volume" . | nindent 6 }}
