@@ -1501,21 +1501,29 @@ observability:
       clientApplicationId: ""   # default: MicrosoftEntraID.interaction_client_id
       apiApplicationId: ""      # default: MicrosoftEntraID.interaction_api_id
 
-    # Capability mapping: maps RPI group names to observability capabilities.
-    # Customers override per their RPI group conventions. The default
-    # below references RPI built-in groups plus common conventions;
-    # the System Administrator group exists on every RPI deployment.
-    capabilityMap:
-      observability.view:           ["Operations", "Support", "Configuration", "System Administrator"]
-      diagnostics.view:             ["Operations", "Support", "Configuration", "System Administrator"]
-      diagnostics.viewSql:          ["Configuration", "System Administrator"]
-      diagnostics.viewStackTrace:   ["Configuration", "System Administrator"]
-      diagnostics.exportBundle:     ["Support", "Configuration", "System Administrator"]
-      # Database Queries (read-only). Narrower than diagnostics.view
-      # because in-flight SQL text can carry PII through WHERE-clause
-      # literals and parameter values.
-      diagnostics.viewLiveQueries:  ["Configuration", "System Administrator"]
-      observability.admin:          ["System Administrator"]
+    # Capability map: optional overlay for CUSTOM RPI groups only.
+    #
+    # RPI is the authorization authority. The canonical groups
+    # (System Administrators / Everyone / IntegrationAPI) map to
+    # capabilities via built-in defaults inside the observability
+    # service. Use this block ONLY when an enterprise deployment has
+    # a custom non-canonical group (e.g. DataOps, SRE) that needs
+    # observability access.
+    #
+    # Two prohibitions enforced at startup; violations fail the pod
+    # CrashLoopBackOff with a clear error:
+    #   * observability.admin cannot appear as a key. Administrative
+    #     access flows from membership in the System Administrators
+    #     RPI group only.
+    #   * Canonical group names (System Administrators / Everyone /
+    #     IntegrationAPI) cannot appear as values. Their capability
+    #     sets are owned by the built-in defaults.
+    #
+    # Example -- grant the custom "DataOps" group diagnostics access:
+    #   capabilityMap:
+    #     diagnostics.view: ["DataOps"]
+    #     diagnostics.viewSql: ["DataOps"]
+    capabilityMap: {}
 
   # Pulse_Logging access: the observability service reads the same 4 connection
   # components the deploymentapi reads (host / username / password /
