@@ -155,9 +155,9 @@ spec:
         # Auth flows route to FastAPI (port 8080); the Streamlit UI is the
         # default backend on /. Both sit in the same pod under a single
         # hostname so the auth session cookie is sent on every request.
-        # When observability.auth.enabled=false the /auth/* path simply 404s
-        # at FastAPI; the legacy Streamlit-only behavior is preserved.
-        {{- if (.Values.observability.auth | default dict).enabled }}
+        # In public mode the /auth path rule is omitted entirely so all
+        # traffic flows to the Streamlit backend.
+        {{- if ne ((.Values.observability.auth | default dict).mode | default "public") "public" }}
         - path: /auth
           pathType: Prefix
           backend:

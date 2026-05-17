@@ -1134,7 +1134,7 @@ Usage: {{- include "rpi.observability.runtimeEnvvars" . | nindent 8 }}
 Mode-aware auth env-vars for the observability container.
 observability.auth.mode is the single canonical switch (public |
 native | entra). It is emitted in every mode; the runtime derives
-auth.enabled and the per-provider activation from this one value.
+per-provider activation from this one value.
 
 Always emitted:
   OBSERVABILITY__AUTH__MODE                             public | native | entra

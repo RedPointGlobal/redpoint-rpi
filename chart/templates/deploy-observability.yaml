@@ -127,7 +127,7 @@ spec:
   selector:
     app.kubernetes.io/name: {{ $name }}
 
-{{- if (.Values.observability.auth | default dict).enabled }}
+{{- if ne ((.Values.observability.auth | default dict).mode | default "public") "public" }}
 ---
 apiVersion: v1
 kind: Service
