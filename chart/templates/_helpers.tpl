@@ -1037,8 +1037,6 @@ solution. Local is the in-cluster runtime served by the
 rpi-observability-llm image; azure/google/aws are cloud
 integrations.
 
-See workspace-docs ADR-INT-001 / ADR-INT-002.
-
 Usage: {{- include "rpi.observability.intelligenceEnvvars" . | nindent 8 }}
 */}}
 {{- define "rpi.observability.intelligenceEnvvars" -}}
@@ -1133,12 +1131,15 @@ Usage: {{- include "rpi.observability.runtimeEnvvars" . | nindent 8 }}
 
 
 {{/*
-Mode-aware auth env-vars for the observability container. Emits nothing
-when observability.auth.mode=public. For Native and Entra modes,
-emits the provider's standard RPI Authentication__* env vars plus
-observability-side post-auth configuration.
+Mode-aware auth env-vars for the observability container.
+observability.auth.mode is the single canonical switch (public |
+native | entra). It is emitted in every mode; the runtime derives
+auth.enabled and the per-provider activation from this one value.
 
-Active emission shape (when mode != public):
+Always emitted:
+  OBSERVABILITY__AUTH__MODE                             public | native | entra
+
+Additionally emitted when mode != public:
   OBSERVABILITY__AUTH__COOKIE_SECURE                    true | false
   OBSERVABILITY__AUTH__SESSION_LIFETIME_SECONDS         <values>
   OBSERVABILITY__AUTH__AUTHZ_CACHE_TTL_SECONDS          <values>
@@ -1179,22 +1180,19 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{- $cfg := .Values.observability | default dict -}}
 {{- $auth := $cfg.auth | default dict -}}
 {{- $mode := $auth.mode | default "public" -}}
-{{- if eq $mode "public" }}{{- "" -}}{{- else -}}
-{{- if not (or (eq $mode "native") (eq $mode "entra")) -}}
+{{- if not (or (eq $mode "public") (eq $mode "native") (eq $mode "entra")) -}}
 {{- fail (printf "observability.auth.mode must be one of: public | native | entra. Got: %q" $mode) -}}
 {{- end -}}
+- name: OBSERVABILITY__AUTH__MODE
+  value: {{ $mode | quote }}
+{{- if ne $mode "public" -}}
 {{- $secretName := include "rpi.secrets.secretName" . -}}
 {{- $secretsProvider := .Values.secretsManagement.provider | default "kubernetes" -}}
 {{- $isSdk := eq $secretsProvider "sdk" -}}
-{{/* Ingress host derived from the canonical ingress block; the
-     customer's own observability hostname. */}}
 {{- $ingCfg := fromYaml (include "rpi.merged.ingress" .) -}}
 {{- $observabilityHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.observability "domain" $ingCfg.domain) -}}
 {{- $clientHost := include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.client "domain" $ingCfg.domain) -}}
-{{- $ingressHost := $auth.ingressHost | default $observabilityHost -}}
-{{/* Observability-specific (post-authentication) configuration.
-     Tenant scope is sourced from observability.clientId at runtime
-     (ADR-0009) -- no separate auth-side tenant env var. */}}
+{{- $ingressHost := $auth.ingressHost | default $observabilityHost }}
 - name: OBSERVABILITY__AUTH__COOKIE_SECURE
   value: {{ ternary $auth.cookieSecure true (hasKey $auth "cookieSecure") | quote }}
 - name: OBSERVABILITY__AUTH__SESSION_LIFETIME_SECONDS
