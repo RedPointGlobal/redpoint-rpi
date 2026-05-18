@@ -1296,8 +1296,6 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 - name: OBSERVABILITY__SCHEDULE__LOOKBACK_MINUTES
   value: {{ $schedule.lookbackMinutes | quote }}
 {{- end }}
-- name: OBSERVABILITY__SCHEDULE__ON_DEMAND_ENABLED
-  value: {{ ternary $schedule.onDemandEnabled true (hasKey $schedule "onDemandEnabled") | quote }}
 {{- if $schedule.dailyAtUtc }}
 - name: OBSERVABILITY__SCHEDULE__DAILY_AT_UTC
   value: {{ $schedule.dailyAtUtc | quote }}

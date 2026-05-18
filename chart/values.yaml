@@ -1282,7 +1282,6 @@ observability:
     intervalMinutes: 30              # batch cycle period (interval mode)
     dailyAtUtc: ""                   # "HH:MM" UTC -- e.g. "00:00" for midnight
     lookbackMinutes: ""              # leave empty for auto: matches intervalMinutes (interval mode) or 1440 (daily mode). Override with an int.
-    onDemandEnabled: true            # exposes POST /analyze endpoint
 
   # ---- Operational DB names (Diagnostics tab) ----------------------------
   # The Diagnostics tab needs two tenant-specific database names:
