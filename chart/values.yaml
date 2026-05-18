@@ -27,10 +27,10 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
-      # net-utils (used by the database-upgrade job and the validation pods)
-      # resolves through the canonical rpi.image helper, same as every other
-      # service. Default: {registry}/net-utils:{tag}. Override via overrides
-      # or nameOverrides below.
+      # net-utils (used by the database-upgrade job) resolves through the
+      # canonical rpi.image helper, same as every other service. Default:
+      # {registry}/net-utils:{tag}. Override via overrides or nameOverrides
+      # below.
       # Image resolution priority: overrides > nameOverrides > default ({registry}/{service-name}:{tag})
       #
       # overrides: Full URI per service, used verbatim (no registry/tag appended).

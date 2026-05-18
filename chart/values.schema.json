@@ -2655,6 +2655,10 @@
               "serviceAccountName": {
                 "type": "string",
                 "description": "Service account name for the test pod"
+              },
+              "image": {
+                "type": "string",
+                "description": "Container image for the test pod"
               }
             }
           }
