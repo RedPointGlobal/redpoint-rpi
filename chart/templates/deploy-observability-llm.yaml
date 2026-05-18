@@ -14,8 +14,8 @@
 {{- $image := $deploy.image | default (include "rpi.image" (dict "root" . "name" "rpi-observability-llm")) -}}
 
 {{- $defaultResources := dict
-      "requests" (dict "cpu" "4" "memory" "6Gi")
-      "limits"   (dict "cpu" "8" "memory" "12Gi") -}}
+      "requests" (dict "cpu" "4" "memory" "8Gi")
+      "limits"   (dict "cpu" "8" "memory" "16Gi") -}}
 {{- $resources := $deploy.resources | default $defaultResources -}}
 
 {{- if hasKey $deploy "replicas" -}}

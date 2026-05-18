@@ -27,8 +27,10 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
-      # To override the utility image (net-utils) used by jobs and validation pods,
-      # use images.overrides or images.nameOverrides. Defaults to {registry}/net-utils:latest.
+      # net-utils (used by the database-upgrade job and the validation pods)
+      # resolves through the canonical rpi.image helper, same as every other
+      # service. Default: {registry}/net-utils:{tag}. Override via overrides
+      # or nameOverrides below.
       # Image resolution priority: overrides > nameOverrides > default ({registry}/{service-name}:{tag})
       #
       # overrides: Full URI per service, used verbatim (no registry/tag appended).
@@ -1172,26 +1174,27 @@ observability:
     # destabilize the observability cycle: when exceeded, the call returns
     # a typed AIStatus.TIMEOUT and the cycle proceeds without an AI
     # summary. Sized for CPU inference of ~1000-token briefings on a
-    # standard worker; operators on GPU profiles or smaller workloads
-    # can lower it.
-    timeoutSeconds: 180
+    # standard worker with the 7B Q4 model (~5-8 tokens/sec across
+    # 8 cores); operators on GPU profiles or smaller workloads can
+    # lower it.
+    timeoutSeconds: 240
 
     # ---- Local (in-cluster serving) ------------------------------------
     # Consumed only when provider=local. The serving layer is a
-    # StatefulSet running the rpi-observability-llm image:
-    # self-contained, llama.cpp server + Qwen 2.5 3B Instruct GGUF
-    # Q4_K_M baked in, no runtime downloads, deployable in air-gapped
+    # StatefulSet running the rpi-observability-llm image: self-
+    # contained, llama.cpp server + Qwen 2.5 7B Instruct GGUF Q4_K_M
+    # baked in, no runtime downloads, deployable in air-gapped
     # clusters.
+    #
+    # The model is shipped with the image and is NOT a customer-
+    # configurable knob. The chart deploys exactly one model under
+    # provider=local. To use a different model, switch
+    # intelligence.provider to azure | google | aws and configure
+    # that provider's block.
     local:
       # Default points at the in-cluster Service. Override only if the
       # operator self-hosts the serving layer elsewhere on the cluster.
       baseUrl: ""                            # blank = http://rpi-observability-llm.<ns>.svc.cluster.local:8000/v1
-
-      # Model identifier the local runtime exposes via /v1/models.
-      # Telemetry + audit fields persist this string; it must match
-      # what the baked-in image's entrypoint reports.
-      model: "Qwen/Qwen2.5-3B-Instruct"
-      embeddingsModel: ""                    # blank = use the same model for embeddings
 
       # Serving-layer deployment. When enabled, the chart renders the
       # StatefulSet using the canonical Redpoint-built
@@ -1203,15 +1206,17 @@ observability:
 
         # Container image override. Blank means the chart resolves
         # the canonical Redpoint-built rpi-observability-llm image
-        # via rpi.image. Set to a custom self-contained image for
-        # advanced overrides (alternate model, regulated registry,
-        # internal mirror). Whatever image is selected must serve
-        # the OpenAI-compatible /v1 API on the configured port.
+        # via rpi.image. Set to an internal registry mirror or
+        # regulated-registry pull path; the image must be a
+        # rpi-observability-llm build serving the same baked-in
+        # model. Overriding to a different model variant is NOT
+        # supported under provider=local; switch the provider to
+        # azure | google | aws for a different model.
         image: ""
         imagePullPolicy: ""                  # blank = global.deployment.images.imagePullPolicy
 
         # Container resources. Blank requests sensible defaults
-        # sized for the 3B Q4 model on standard worker nodes.
+        # sized for the 7B Q4 model on standard worker nodes.
         resources: {}
 
         service:

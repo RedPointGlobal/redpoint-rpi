@@ -14,6 +14,11 @@
 {{- $secCtx := fromYaml (include "rpi.merged.securityContext" .) -}}
 {{- $saMode := .Values.cloudIdentity.serviceAccount.mode | default "per-service" -}}
 {{- $vpSAName := (.Values.validationPods).serviceAccountName | default "rpi-validationpods" -}}
+{{- range $i, $d := ((.Values.validationPods).deployments | default list) }}
+{{- if hasKey $d "image" }}
+{{- fail (printf "validationPods.deployments[%d].image is not configurable. The net-utils image resolves through the canonical rpi.image helper. To override, set global.deployment.images.overrides.net-utils (full URI) or global.deployment.images.nameOverrides.net-utils (registry stays, basename changes)." $i) }}
+{{- end }}
+{{- end }}
 {{- if and (eq $saMode "per-service") ((.Values.validationPods).deployments) }}
 ---
 apiVersion: v1
@@ -94,7 +99,7 @@ spec:
       {{- end }}
       containers:
         - name: {{ $containerName }}
-          image: {{ .image | default (printf "%s/net-utils:latest" $.Values.global.deployment.images.registry) }}
+          image: {{ include "rpi.image" (dict "root" $ "name" "net-utils") }}
           imagePullPolicy: "Always"
           {{- if $secCtx.enabled }}
           securityContext:

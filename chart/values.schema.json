@@ -2333,21 +2333,19 @@
             "timeoutSeconds": { "type": ["integer", "number"], "minimum": 1, "description": "Per-inference hard timeout. Bounds the observability cycle's exposure to slow inference. Applies to whichever provider is active." },
             "local": {
               "type": "object",
-              "additionalProperties": true,
-              "description": "Consumed only when provider=local.",
+              "additionalProperties": false,
+              "description": "Consumed only when provider=local. The model shipped with the rpi-observability-llm image is the only model under this provider; it is NOT a customer-configurable knob. To use a different model, switch intelligence.provider to azure | google | aws.",
               "properties": {
                 "baseUrl":          { "type": "string", "description": "Override the default in-cluster Service URL. Blank = http://rpi-observability-llm.<ns>.svc.cluster.local:8000/v1." },
-                "model":            { "type": "string", "description": "Model identifier the local runtime serves. Must match what the active rpi-observability-llm image reports via /v1/models." },
-                "embeddingsModel":  { "type": "string", "description": "Embeddings model. Blank = use the chat model." },
                 "deployment": {
                   "type": "object",
                   "additionalProperties": true,
                   "description": "Serving-layer StatefulSet. The chart deploys the self-contained rpi-observability-llm image (model + tokenizer + runtime baked in) deployable on standard worker nodes. Disable when the operator self-hosts the serving layer elsewhere.",
                   "properties": {
                     "enabled":         { "type": "boolean" },
-                    "image":           { "type": "string", "description": "Container image override. Blank = chart resolves the canonical Redpoint-built rpi-observability-llm image via rpi.image. Set to a custom image when overriding for an alternate model, regulated registry, or internal mirror; the image must serve the OpenAI-compatible /v1 API." },
+                    "image":           { "type": "string", "description": "Container image override. Blank = chart resolves the canonical Redpoint-built rpi-observability-llm image via rpi.image. Set to an internal registry mirror or regulated-registry path; the image must be a rpi-observability-llm build serving the canonical baked-in model. Overriding to a different model variant is NOT supported under provider=local." },
                     "imagePullPolicy": { "type": "string" },
-                    "resources":       { "type": "object", "additionalProperties": true, "description": "Container resource requests + limits. Blank = chart picks sensible defaults sized for the 3B Q4 model on standard worker nodes." },
+                    "resources":       { "type": "object", "additionalProperties": true, "description": "Container resource requests + limits. Blank = chart picks sensible defaults sized for the 7B Q4 model on standard worker nodes." },
                     "service": {
                       "type": "object",
                       "additionalProperties": true,
@@ -2594,16 +2592,12 @@
     },
 "databaseUpgrade": {
       "type": "object",
-      "description": "Automatic database upgrade job \u2014 calls the upgrade endpoint after an image tag change",
+      "description": "Automatic database upgrade job - calls the upgrade endpoint after an image tag change. The net-utils image resolves through the canonical rpi.image helper; override via global.deployment.images.overrides.net-utils or global.deployment.images.nameOverrides.net-utils.",
       "additionalProperties": true,
       "properties": {
         "enabled": {
           "type": "boolean",
           "description": "Enable automatic database upgrade"
-        },
-        "image": {
-          "type": "string",
-          "description": "Full image URI for the upgrade job (used verbatim, no registry/tag appended). Leave empty to use the chart default {registry}/net-utils:latest."
         },
         "notification": {
           "type": "object",
@@ -2661,10 +2655,6 @@
               "serviceAccountName": {
                 "type": "string",
                 "description": "Service account name for the test pod"
-              },
-              "image": {
-                "type": "string",
-                "description": "Container image for the test pod"
               }
             }
           }

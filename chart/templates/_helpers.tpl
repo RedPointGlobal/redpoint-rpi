@@ -1063,15 +1063,19 @@ Usage: {{- include "rpi.observability.intelligenceEnvvars" . | nindent 8 }}
 {{- if eq $provider "local" }}
 # Local provider (in-cluster serving layer). The model identifier
 # matches what the active rpi-observability-llm image reports via
-# /v1/models.
+# /v1/models. The model is shipped with the image and is not a
+# customer-configurable knob; operators who need a different model
+# switch intelligence.provider to azure | google | aws.
+{{- if hasKey $local "model" }}
+{{- fail "observability.intelligence.local.model is not configurable. The model is shipped with the rpi-observability-llm image. To use a different model, set observability.intelligence.provider to azure | google | aws and configure that provider's block." }}
+{{- end }}
+{{- if hasKey $local "embeddingsModel" }}
+{{- fail "observability.intelligence.local.embeddingsModel is not configurable. The model is shipped with the rpi-observability-llm image and serves both chat and embeddings. To use a different model, set observability.intelligence.provider to azure | google | aws." }}
+{{- end }}
 - name: OBSERVABILITY__INTELLIGENCE__LOCAL__BASE_URL
   value: {{ $local.baseUrl | default (printf "http://rpi-observability-llm.%s.svc.cluster.local:8000/v1" .Release.Namespace) | quote }}
 - name: OBSERVABILITY__INTELLIGENCE__LOCAL__MODEL
-  value: {{ $local.model | default "Qwen/Qwen2.5-3B-Instruct" | quote }}
-{{- if $local.embeddingsModel }}
-- name: OBSERVABILITY__INTELLIGENCE__LOCAL__EMBEDDINGS_MODEL
-  value: {{ $local.embeddingsModel | quote }}
-{{- end }}
+  value: "Qwen/Qwen2.5-7B-Instruct"
 {{- else if eq $provider "azure" }}
 # Azure cloud-integration provider (AI Foundry or Azure OpenAI).
 - name: OBSERVABILITY__INTELLIGENCE__AZURE__SERVICE
