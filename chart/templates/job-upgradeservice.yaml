@@ -52,7 +52,7 @@ spec:
       {{- include "rpi.pod.securityContext" (dict "sc" $secCtx "noSupplementalGroups" true) | nindent 6 }}
       containers:
       - name: db-upgrade
-        image: {{ include "rpi.image" (dict "root" . "name" "net-utils") }}
+        image: rg1acrpub.azurecr.io/docker/redpointglobal/releases/net-utils:latest
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         {{- include "rpi.container.securityContext" (dict "sc" $secCtx) | nindent 8 }}
         {{- if $cfg.notification.enabled }}

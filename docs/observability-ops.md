@@ -14,6 +14,79 @@ The aim is that an operator landing here at 2am with a paged-out RPI environment
 <details>
 <summary><strong style="font-size:1.25em;">Reading the dashboard</strong></summary>
 
+### API operational posture rail
+
+The first row on the System Health page. Five fixed rail items: an **Execution Capacity** tile in the leftmost slot (Execution Service thread-pool ceiling + current utilization), followed by four customer-facing Interaction API journeys (Workflows/Start, Authentication/Token, Pulse/Retrieve, ClientJobs/Status). Each item carries a headline value, a posture badge, a micro telemetry sparkline, and a chip row of operational signals.
+
+```
+WORKFLOWS/START              AUTHENTICATION/TOKEN          PULSE/RETRIEVE              CLIENTJOBS/STATUS
+4,550 req   healthy           2 req   idle                  46k req   healthy           136k req   healthy
+∿∿∿∿∿∿∿                       _______ (baseline hairline)   ∿∿∿∿∿∿∿                     ∿∿∿∿∿∿∿
+[p95 45ms] [4xx 0] [5xx 0]   [no traffic]                  [p95 28ms] [4xx 0] [5xx 0]  [p95 22ms] [4xx 0] [5xx 0]
+```
+
+The five rail items are **fixed and operator-centric** -- they always appear in the same position and in the same order so an operator scanning the rail knows where each signal lives without recalibrating. The rail is not dynamic and does not reorder or substitute items based on traffic patterns.
+
+The Execution Capacity tile uses a slightly different chip vocabulary from the four routes: `[util N%] [executing N] [headroom N]` rather than `[p95 N ms] [4xx N] [5xx N]`. The composition shape (eyebrow + headline + badge + sparkline + chip row) is identical; only the values carried in each slot reflect the tile's capacity-posture role rather than the routes' latency-posture role. The Capacity tile's badge vocabulary is also capacity-flavored: `headroom` (util < 70%), `under load` (70-80%), `saturated` (>= 80%), `idle` (no samples). Brand-red on the sparkline + chip is reserved for current util >= 80% (matches the Execution Service card's 80% scaling-concern threshold directly below the rail).
+
+#### Rail layout
+
+| Element | What it shows |
+|:---|:---|
+| **Eyebrow** (e.g. `WORKFLOWS/START`) | The customer journey. The label is the operator-facing name; the actual API route the pod emits is mapped internally (see the route-mapping table below). |
+| **Headline value** (e.g. `4,550 req` or `136k req`) | Cumulative request count for that route since the Interaction API pod last started, with a subtle `req` unit so the number is self-describing. See "cumulative vs windowed timescales" below. |
+| **Badge** (e.g. `healthy` / `under load` / `slow` / `degraded` / `idle`) | Qualitative latency posture derived from the windowed p95. When 5xx > 0 in the window, the badge becomes `N 5xx` (1-5 5xx) or `degraded` (>5 5xx) regardless of latency. |
+| **Sparkline** (thin micro waveform) | Per-tick request-volume sparkline across the last 15 minutes. Single-tone slate baseline at every posture; only shifts to brand-red when the route is in `degraded` posture (sustained 5xx). No fill, no glow, no severity colour ramp. Idle routes render a faint baseline hairline so the row's vertical rhythm stays intact. |
+| **Chip row** (e.g. `[p95 22ms] [4xx 0] [5xx 0]`) | Three tiny chips with the operational metrics. Each chip has a lowercase key + tabular value. Tone discipline: `p95` is neutral slate until thresholds cross (>=100ms = amber, >=200ms = brand red); `4xx` stays muted while zero and shifts to amber when non-zero; `5xx` stays muted while zero and shifts to brand red when non-zero. Idle routes collapse to a single `[no traffic]` chip rather than a prose sentence so the row keeps its scan rhythm. |
+
+#### Route mapping
+
+The rail uses operator-facing labels. The mapping to the literal API route emitted by the Interaction API pod is:
+
+| Rail label | Emitted route |
+|:---|:---|
+| `Workflows/Start` | `api/Workflows/Interactions/Interaction` |
+| `Authentication/Token` | `connect/token` (OpenIddict standard) |
+| `Pulse/Retrieve` | `api/Pulses/Retrieve` |
+| `ClientJobs/Status` | `api/ClientJobs/{jobID}/Status` |
+
+#### Cumulative vs windowed timescales
+
+The rail deliberately mixes two timescales. Different metrics answer different questions, so they're measured on different windows:
+
+| Signal | Timescale | Why |
+|:---|:---|:---|
+| **Headline request count** | Cumulative since the Interaction API pod started | "Scale of work this endpoint has handled." A stable identifier of which routes carry the load. Survives quiet periods (a route between heavy traffic still shows its lifetime total instead of `0`). |
+| **P95 latency** | Last 15 minutes | "How is the endpoint responding right now?" If p95 were cumulative, a current latency spike would be averaged across hours of lifetime data and barely register. Windowed surfaces it immediately. |
+| **4xx count** | Last 15 minutes | Active client-side error pressure. Windowed so a current incident is visible without being diluted by historical bad client behaviour. |
+| **5xx count** | Last 15 minutes | Active server-side failures. Same reasoning as 4xx -- windowed for incident sensitivity. |
+
+The cumulative headline is held in the Interaction API pod's memory (via the .NET metrics SDK). It resets to `0` only on a pod restart -- e.g. `helm upgrade` rolling the deployment, a pod crash, an OOM kill, eviction, or `kubectl rollout restart`. If you see `ClientJobs/Status: 1,200` when you expected `136k`, the Interaction API pod has been recently restarted; check `kubectl get pod -n <namespace> rpi-interactionapi-<hash> -o jsonpath='{.status.startTime}'`.
+
+#### Posture badge meaning
+
+The vocabulary stays operational rather than alarmist. `degraded` is reserved for genuine platform-failure shape (sustained 5xx); latency-only postures use `under load` and `slow` so the badge tells operators what they're actually seeing.
+
+| Badge | Trigger | Reading |
+|:---|:---|:---|
+| `healthy` | P95 < 100ms, no 5xx | Latency within typical tolerance. Steady state. |
+| `under load` | P95 100-200ms, no 5xx | Latency above baseline but not yet critical. Worth keeping an eye on if sustained. |
+| `slow` | P95 >=200ms, no 5xx | Latency-only degradation. The route is responding but slowly; users feel it. |
+| `degraded` | 5xx > 5 in window | Sustained server-side failures. Platform issue, not a latency issue. Active operator attention. |
+| `N 5xx` | 1-5 5xx in window | The badge shows the 5xx count directly when fewer than the `degraded` threshold; the meter and signal strip pick up the amber tone. |
+| `idle` | No samples in the 15-min window | The route is quiet (no traffic, not a failure). The headline still shows the cumulative count (muted) so the rail item stays visible. |
+
+#### What to do when
+
+| State | Action |
+|:---|:---|
+| Everything `healthy` | Steady state. Nothing to do. |
+| One route shows `under load` | Note it; check if it correlates with workflow load or known maintenance. If sustained for multiple 15-min windows, drill into Custom Metrics tab for the per-route histogram detail. |
+| One route shows `slow` | Latency has crossed 200ms but the platform itself is responding. Check the Workflow Activity hero for correlated workload spikes; if the platform is otherwise healthy, the route may be queuing behind a slow downstream dependency. |
+| Any route shows `degraded` or non-zero 5xx | Brand-red is earned. Customers are seeing failures. Check the Failure Analysis tab for the corresponding cluster, then Diagnostics for individual request traces. |
+| Any route shows non-zero 4xx (amber, softer weight) | Client-side errors -- often indicates RPI Client misconfiguration, expired tokens, or unauthorized access attempts. Worth checking if the rate is unusual; not always an operator-side issue. The softer amber signals "warning, not failure". |
+| All routes show `idle` | Either no users are active (off-hours, weekend) or the Interaction API is unreachable from clients. Check the platform-health pill on the right of the page and the Service Availability ribbon. |
+
 ### Status pills (Overview row)
 
 | Pill | What it means |
