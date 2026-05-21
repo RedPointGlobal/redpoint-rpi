@@ -257,8 +257,13 @@ spec:
         {{- if $cfg.internalCache.enabled }}
         {{- if eq $cfg.internalCache.provider "azureblob" }}
         {{- if not $cfg.internalCache.azureStorageSettings.useCloudIdentity }}
+        {{- if not (eq .Values.secretsManagement.provider "sdk") }}
         - name: InternalCache__StatePersistence__AzureBlobStorage__ConnectionString
-          value: {{ $cfg.internalCache.azureStorageSettings.connectionString | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rpi.secrets.secretName" . | quote }}
+              key: ExecutionService_AzureBlob_ConnectionString
+        {{- end }}
         {{- end }}
         {{- end }}
         {{- end }}

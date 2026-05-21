@@ -6,6 +6,35 @@
 # service ports, rollout strategies, etc.) are managed by the
 # chart via _defaults.tpl.
 # ============================================================
+#
+# IMPORTANT - HOW CREDENTIALS FLOW:
+#
+# This file documents the SHAPE of values an operator can set. But
+# credential-bearing fields (passwords, API keys, connection
+# strings, access keys) are NOT consumed by the Helm chart from this
+# file. They flow through the K8s Secret named by
+# `secretsManagement.{kubernetes,csi}.secretName` (default
+# `redpoint-rpi-secrets`) and the chart reads them via
+# `secretKeyRef`. Operators populate the Secret in one of two ways:
+#
+#   1. rpihelmcli secrets -f overrides.yaml -n <namespace>
+#        Reads non-secret connection metadata (host, username, db
+#        names, etc.) from this file and PROMPTS interactively for
+#        every credential-bearing field. Generates a Secret YAML
+#        the operator applies with `kubectl apply -f`.
+#
+#   2. Direct K8s Secret authoring (kubernetes mode), CSI sync
+#      (csi mode), or cloud vault population (sdk mode). The
+#      operator writes the Secret keys named in the inline
+#      `→ K8s Secret: <KEY>` comments throughout this file.
+#
+# Each credential field below carries an inline comment naming the
+# Secret key its value lands in. If a field shows
+# `→ K8s Secret: X (prompt-only via rpihelmcli)`, the CLI ignores
+# any value you put in this file and prompts at run time.
+#
+# Per-service Secret key full list: see docs/secrets-management.md.
+# ============================================================
 
 # ==========================
 # Global Settings
@@ -131,11 +160,18 @@ databases:
   operational:
     # Supported: sqlserver, postgresql, sqlserveronvm
     provider: sqlserver
-    server_host: <my-database-server-host>
-    server_username: <my-database-server-username>
-    server_password: <my-database-server-password>
-    pulse_database_name: <my-pulse-database-name>
-    pulse_logging_database_name: <my-logging-database-name>
+    # NOTE on credentials in this section:
+    #   `provider` and `encrypt` are read by the chart at deploy time.
+    #   The connection-string parts below (host, username, db names) are
+    #   read by `rpihelmcli secrets` to pre-fill the K8s Secret -- the
+    #   chart itself reads them from the Secret keys listed beside each
+    #   field. `server_password` is NEVER read from this file; the CLI
+    #   always prompts for it interactively.
+    server_host: <my-database-server-host>                  # → K8s Secret: Operations_Database_ServerHost
+    server_username: <my-database-server-username>          # → K8s Secret: Operations_Database_Server_Username
+    server_password: <my-database-server-password>          # → K8s Secret: Operations_Database_Server_Password (prompt-only via rpihelmcli)
+    pulse_database_name: <my-pulse-database-name>           # → K8s Secret: Operations_Database_Pulse_Database_Name
+    pulse_logging_database_name: <my-logging-database-name> # → K8s Secret: Operations_Database_Pulse_Logging_Database_Name
     encrypt: true
 
     # Google Cloud SQL Auth Proxy (GKE only; PostgreSQL or SQL Server).
@@ -509,8 +545,15 @@ realtimeapi:
     enabled: true
     # Supported: mongodb, azureredis, redis, inMemorySql, googlebigtable
     provider: ""
+    # NOTE on credentials in cacheProvider sub-blocks:
+    #   `provider`, `databaseName`, `collectionName`, mongodb auth
+    #   mechanism options, and similar non-secret config knobs are
+    #   read by the chart from this file. Connection strings and
+    #   passwords are NOT read from this file -- `rpihelmcli secrets`
+    #   prompts for them interactively and writes them to the K8s
+    #   Secret keys listed beside each field below.
     mongodb:
-      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true
+      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true  # → K8s Secret: RealtimeAPI_MongoCache_ConnectionString (prompt-only)
       databaseName: <my-realtime-cache-db>
       collectionName: <my-realtime-cache-collection>
       # Authentication mechanism for MongoDB Atlas.
@@ -540,13 +583,20 @@ realtimeapi:
       # internal: chart-managed Redis | external: BYO Redis
       type: internal
       redisSettings:
-        # Required if type=external
-        connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
+        # Required if type=external. Connection string is NOT read from
+        # this file -- `rpihelmcli secrets` prompts for it interactively
+        # and writes it to the K8s Secret as RealtimeAPI_RedisCache_ConnectionString.
+        # For type=internal, the chart auto-generates the Redis password
+        # and stores it as RealtimeAPI_RedisCache_Password (operator never touches).
+        connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # → K8s Secret: RealtimeAPI_RedisCache_ConnectionString (prompt-only)
     inMemorySql:
-      server_host: <my-cache-database-server-host>
-      database_name: <my-cache-database-name>
-      username: <my-cache-database-username>
-      password: <my-cache-database-password>
+      # inMemorySql connection details are NOT read from this file.
+      # `rpihelmcli secrets` prompts for the full connection string and
+      # writes it to the K8s Secret as RealtimeAPI_inMemorySql_ConnectionString.
+      server_host: <my-cache-database-server-host>     # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
+      database_name: <my-cache-database-name>          # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
+      username: <my-cache-database-username>           # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
+      password: <my-cache-database-password>           # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
     googlebigtable:
       projectId: <my-bigtable-project-id>
       instanceId: <my-bigtable-instance-id>
@@ -556,6 +606,14 @@ realtimeapi:
     enabled: true
     # Supported: amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq, azurestorage, amazonmsk
     provider: ""
+    # NOTE on credentials in queueProvider sub-blocks:
+    #   `provider`, `queueNames`, projectId, region, eventHubName,
+    #   NamespaceName, storageAccountName, useAzureIdentityAuthentication,
+    #   and other non-secret config knobs are read by the chart from
+    #   this file. Connection strings, access keys, and passwords are
+    #   NOT read from this file -- `rpihelmcli secrets` prompts for
+    #   them interactively and writes them to the K8s Secret keys
+    #   listed beside each field below.
     queueNames:
       formQueuePath: RPIWebFormSubmission
       eventsQueuePath: RPIWebEvents
@@ -567,25 +625,30 @@ realtimeapi:
       # Supported: accessKey (configure keys under cloudIdentity.amazonSettings)
       credentialsType: accessKey
     azureservicebus:
-      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>
+      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>  # → K8s Secret: RealtimeAPI_ServiceBus_ConnectionString (prompt-only)
     azurestorage:
-      connectionString: DefaultEndpointsProtocol=https;AccountName=myAccoutName;AccountKey=myAccountAccessKey;EndpointSuffix=core.windows.net
+      connectionString: DefaultEndpointsProtocol=https;AccountName=myAccoutName;AccountKey=myAccountAccessKey;EndpointSuffix=core.windows.net  # → K8s Secret: RealtimeAPI_AzureStorage_ConnectionString (prompt-only)
       storageAccountName: myStorageAccountName
       useAzureIdentityAuthentication: false
     googlepubsub:
       projectId: <my-google-project-id>
     azureeventhubs:
-      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>;EntityPath=<my-hub>
+      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>;EntityPath=<my-hub>  # → K8s Secret: RealtimeAPI_EventHub_ConnectionString (prompt-only)
       eventHubName: RPIQueueListener
       NamespaceName: my_eventhub_namespace_name
       PartitionIds:
         - "0"
     rabbitmq:
-      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
+      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ.
+      # Internal RabbitMQ password is chart-auto-generated and stored
+      # as RealtimeAPI_RabbitMQ_Password in the K8s Secret (operator
+      # never touches). External RabbitMQ password is prompted by
+      # rpihelmcli secrets.
       type: internal
     amazonmsk:
       region: <my-aws-region>
-      accessKeyId: <my-aws-iam-access-key>
+      accessKeyId: <my-aws-iam-access-key>      # → K8s Secret: AWS_Access_Key_ID (prompt-only)
+      # secretAccessKey is also prompted; lands in K8s Secret as AWS_Secret_Access_Key
       secretAccessKey: <my-aws-iam-secret-access-key>
       bootstrapServers: <my-server1.c2.kafka.us-east-1.amazonaws.com:9198>
 
@@ -837,19 +900,31 @@ executionservice:
   # Internal cache for execution state
   internalCache:
     enabled: true
-    # Supported: default, filesystem, azureblob
+    # Supported: filesystem, azureblob.
+    # NOTE: the "default" / Redis provider for executionservice
+    # internalCache is NOT wired in the current chart. The
+    # `redisSettings` sub-block below is documentation-only and is
+    # not consumed.
     provider: filesystem
-    # Redis settings (when provider=default or for state caching)
+    # redisSettings: documented for parity with other services but
+    # NOT consumed by deploy-executionservice.yaml (no Redis provider
+    # is wired). Leave defaults; no operator action needed.
     redisSettings:
-      # internal: chart-managed Redis | external: BYO Redis
       type: internal
-      # Required if type=external
-      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
-    # Azure Blob settings (when provider=azureblob)
+      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # (unused — dead value)
+    # Azure Blob settings (when provider=azureblob).
+    # NOTE on credentials:
+    #   accountName + containerName are read by the chart from this file.
+    #   connectionString is NOT read from this file -- `rpihelmcli secrets`
+    #   prompts for it and writes it to the K8s Secret as
+    #   ExecutionService_AzureBlob_ConnectionString; the chart reads
+    #   it via secretKeyRef. Prefer `useCloudIdentity: true` for
+    #   production -- the pod then authenticates via Workload Identity
+    #   and no connection-string secret is needed at all.
     azureStorageSettings:
       accountName: my_storage_account_name
       containerName: rpi
-      connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net
+      connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net  # → K8s Secret: ExecutionService_AzureBlob_ConnectionString (prompt-only; only when useCloudIdentity=false)
       useCloudIdentity: false
   autoscaling:
     enabled: false
@@ -1066,9 +1141,13 @@ integrationapi:
   enabled: true
   replicas: 1
   enableRPIAuthentication: true
-  # Credentials (required if Smart Activation is enabled)
+  # Credentials (required if Smart Activation is enabled).
+  # `password` is NOT read from this file -- the chart reads it from
+  # the K8s Secret as CDP_Integration_Password (consumed by
+  # cdp-init, cdp-authservices, cdp-servicesapi). Populate via
+  # rpihelmcli secrets or directly in the chart Secret.
   username: admin@noemail.com
-  password: my_Super_Strong_Pwd
+  password: my_Super_Strong_Pwd  # → K8s Secret: CDP_Integration_Password
   autoscaling:
     enabled: false
 
@@ -1209,15 +1288,25 @@ queuereader:
   realtimeConfiguration:
     # Enable distributed processing for high-volume transactions
     isDistributed: false
-  # Internal cache for distributed processing (top-level, not nested under realtimeConfiguration)
+  # Internal cache for distributed processing (top-level, not nested under realtimeConfiguration).
+  # NOTE on credentials:
+  #   For internal Redis, the chart auto-generates the password and
+  #   stores it as QueueService_RedisCache_Password in the K8s Secret.
+  #   For external Redis, `rpihelmcli secrets` prompts for the
+  #   connection string and writes it to QueueService_RedisCache_ConnectionString.
   internalCache:
     provider: redis
     # internal: chart-managed Redis | external: BYO Redis
     type: internal
     redisSettings:
-      # Required if type=external
-      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
-  # Internal queue for distributed processing
+      # Required if type=external. NOT read from this file.
+      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # → K8s Secret: QueueService_RedisCache_ConnectionString (prompt-only)
+  # Internal queue for distributed processing.
+  # NOTE on credentials:
+  #   For internal RabbitMQ, the chart auto-generates the password
+  #   and stores it as QueueService_RabbitMQ_Password in the K8s
+  #   Secret. For external RabbitMQ, `rpihelmcli secrets` prompts
+  #   for the password.
   internalQueues:
     provider: rabbitmq
     # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
@@ -1225,7 +1314,7 @@ queuereader:
     rabbitmqSettings:
       hostname: "rpi-queuereader-rabbitmq"
       username: redpointrpi
-      password: my_Super_Strong_Pwd
+      password: my_Super_Strong_Pwd  # → K8s Secret: QueueService_RabbitMQ_Password (chart-auto for internal; prompt-only for external)
     # RPI client IDs for this cluster
     tenantIds:
       - 00000000-0000-0000-0000-000000000000
@@ -1333,17 +1422,25 @@ queuereader:
 # ==========================
 # Rebrandly (URL Shortener)
 # ==========================
+# NOTE on credentials in this section:
+#   The Rebrandly API key is NOT read from this file. `rpihelmcli secrets`
+#   prompts for it interactively and writes it to the K8s Secret as
+#   `Rebrandly_ApiKey`; the chart reads that Secret key at deploy time.
+#   The internal Redis password is chart-auto-generated and stored as
+#   `Rebrandly_RedisPassword` in the K8s Secret -- operator never touches it.
+#   See docs/secrets-management.md for the full list of Secret keys.
 rebrandly:
   enabled: false
-  apiKey: my_rebrandly_api_key
-  secretName: rpi-rebrandly
+  # apiKey: <DEPRECATED; ignored. Value lives in K8s Secret key Rebrandly_ApiKey>
+  # secretName: <DEPRECATED; ignored. Chart uses the shared Secret via rpi.secrets.secretName>
   redisSettings:
     # internal: chart-managed Redis | external: BYO Redis
     type: internal
-    # External Redis settings (if type=external)
+    # External Redis settings (used only when type=external)
     hostname: rpi-rebrandly-cache
-    username: my_redis_username
-    password: my_redis_password
+    # username / password for an external Redis are NOT read from this
+    # file. When type=external, `rpihelmcli secrets` prompts for the
+    # password and writes it to the K8s Secret as `Rebrandly_RedisPassword`.
     useAzureCredentials: false
     port: 6379
 
@@ -1395,7 +1492,10 @@ diagnosticsMode:
   copytoAzureBlob:
     enabled: false
     accountName: <yourstorageaccount>
-    accessKey: <yourstorageaccount-access-key>
+    # accessKey is NOT read from this file -- it lives in the K8s Secret
+    # as CopyToAzureBlobAccessKey. Populate it via `rpihelmcli secrets`
+    # (or directly in the chart Secret for non-CLI deployments).
+    accessKey: <yourstorageaccount-access-key>  # → K8s Secret: CopyToAzureBlobAccessKey
     containerName: <yourstorageaccount-container-name>
     blobServiceEndpoint: https://yourstorage.blob.core.windows.net
     enableCdn: false
@@ -1404,7 +1504,10 @@ diagnosticsMode:
     enabled: false
     sftpHost: <your-sftp-host>
     sftpUsername: <your-sftp-username>
-    sftpPassword: <your-sftp-password>
+    # sftpPassword is NOT read from this file -- it lives in the K8s
+    # Secret as CopyToSFTPSecureFTPPassword. Populate it via
+    # `rpihelmcli secrets` (or directly in the chart Secret).
+    sftpPassword: <your-sftp-password>  # → K8s Secret: CopyToSFTPSecureFTPPassword
     sftpPort: "22"
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
@@ -1687,13 +1790,19 @@ redpointAI:
 # ==========================
 smartActivation:
   enabled: false
+  # secretName: <DEPRECATED; ignored. Smart Activation credentials live
+  # in the shared chart Secret via the CDP_* keys read by the authservice,
+  # keycloak, cdp-init, cdp-servicesapi pods.>
   secretName: rpi-smartactivation
 
 # Auth Service (Smart Activation)
 authservice:
   replicas: 1
   default_username: admin@noemail.com
-  default_password: my_Super_Strong_Pwd
+  # default_password is NOT read from this file. The chart reads the
+  # Keycloak admin password from the K8s Secret key CDP_Keycloak_Admin_Password.
+  # Populate via rpihelmcli secrets or directly in the chart Secret.
+  default_password: my_Super_Strong_Pwd  # → K8s Secret: CDP_Keycloak_Admin_Password
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
   # Uncomment and modify any of the lines below to override the
@@ -1746,11 +1855,14 @@ keycloak:
   replicas: 1
   hostname: keycloak
   username: admin@noemail.com
-  password: my_Super_Strong_Pwd
+  # password and realm_client_secret are NOT read from this file. The
+  # chart reads both from the K8s Secret. Populate via rpihelmcli secrets
+  # or directly in the chart Secret.
+  password: my_Super_Strong_Pwd                     # → K8s Secret: CDP_Keycloak_Admin_Password
   database_name: keycloak
   realm_name: redpoint-mercury
   realm_client_id: rpi-service
-  realm_client_secret: <my-realm-client-secret>
+  realm_client_secret: <my-realm-client-secret>     # → K8s Secret: CDP_Keycloak_Client_Secret
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
   # Uncomment and modify any of the lines below to override the
@@ -1798,7 +1910,9 @@ reportingservice:
     enabled: false
     api_url: https://api.us.azure.sigmacomputing.com
     client_id: 48dd1982ab835ff53177e9cbd7fb5608b1db8c56491a040f2f0843a3bfc6b440
-    client_secret: my_sigma_client_secret
+    # client_secret is NOT read from this file. The chart reads it from
+    # the K8s Secret as CDP_SIGMA_Client_Secret.
+    client_secret: my_sigma_client_secret  # → K8s Secret: CDP_SIGMA_Client_Secret
 
 # Init Service (Smart Activation)
 initservice:
@@ -1806,7 +1920,10 @@ initservice:
   database:
     operational:
       name: smart_activation_db
-      connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
+      # connection_string is NOT read from this file. The chart reads
+      # the Mongo connection string from the K8s Secret as
+      # CDP_Mongo_ConnectionString. Populate via rpihelmcli secrets.
+      connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority  # → K8s Secret: CDP_Mongo_ConnectionString
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
   # Uncomment and modify any of the lines below to override the

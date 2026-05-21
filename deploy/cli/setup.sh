@@ -2659,6 +2659,32 @@ SECRETS_AUTO
     echo ""
   fi
 
+  # --- Execution Service internal-cache Azure Blob connection string ---
+  # Only prompt when executionservice.internalCache.provider is azureblob
+  # AND useCloudIdentity is false. The connection string lands in the
+  # shared K8s Secret as ExecutionService_AzureBlob_ConnectionString;
+  # the chart reads it via secretKeyRef. When useCloudIdentity is true,
+  # the pod authenticates via Workload Identity and no secret is needed.
+  local exec_internal_cache_provider exec_use_cloud_identity
+  exec_internal_cache_provider=$(read_val "$overrides" "executionservice.internalCache.provider")
+  exec_use_cloud_identity=$(read_val "$overrides" "executionservice.internalCache.azureStorageSettings.useCloudIdentity")
+  exec_use_cloud_identity="${exec_use_cloud_identity:-false}"
+  if [ "$exec_internal_cache_provider" = "azureblob" ] \
+     && [ "$exec_use_cloud_identity" != "true" ] \
+     && [ "$exec_use_cloud_identity" != "True" ]; then
+    echo "  ${BOLD}Execution Service internal cache (Azure Blob)${RESET}"
+    local exec_azure_blob_conn
+    read -rsp "    Connection string: " exec_azure_blob_conn
+    echo ""
+
+    cat >> "$output" << SECRETS_EXEC_AZBLOB
+  # -- Execution Service internal cache (Azure Blob) --
+  ExecutionService_AzureBlob_ConnectionString: "${exec_azure_blob_conn}"
+SECRETS_EXEC_AZBLOB
+    echo "  ${GREEN}✔ Execution Service Azure Blob secret added${RESET}"
+    echo ""
+  fi
+
   # --- Rebrandly secrets ---
   local rebrandly_enabled_k8s
   rebrandly_enabled_k8s=$(read_val "$overrides" "rebrandly.enabled")

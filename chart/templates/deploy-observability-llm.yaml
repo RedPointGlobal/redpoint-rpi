@@ -46,7 +46,7 @@ spec:
     {{- include "redpoint-rpi.selectorLabels" (dict "root" . "name" $name) | nindent 4 }}
 
 ---
-{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "cfg" $deploy) }}
+{{- include "rpi.block.serviceAccount" (dict "root" . "name" $name "component" "intelligence" "cfg" $deploy) }}
 
 ---
 apiVersion: apps/v1
