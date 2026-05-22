@@ -1500,6 +1500,9 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: {{ .timeoutSeconds | default 5 | quote }}
 - name: OBSERVABILITY__METRICS__BUFFER_SIZE
   value: {{ .bufferSize | default 240 | quote }}
+{{- $otelEnabled := eq (include "rpi.otel.enabled" $) "true" -}}
+{{- $otelCfg := ((($.Values.observability).telemetry).otel) | default dict -}}
+{{- $otelPort := $otelCfg.scrapePort | default 9464 -}}
 {{- $enabledSvcs := list -}}
 {{- range $svc := (.services | default list) -}}
 {{-   $shortName := trimPrefix "rpi-" ($svc.dnsName | default "") -}}
@@ -1511,7 +1514,12 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{-     end -}}
 {{-   end -}}
 {{-   if $isEnabled -}}
-{{-     $enabledSvcs = append $enabledSvcs $svc -}}
+{{-     if and $otelEnabled (eq ($svc.dnsName | default "") "rpi-interactionapi") -}}
+{{-       $swapped := dict "name" $svc.name "dnsName" $svc.dnsName "port" $otelPort "path" "/metrics" -}}
+{{-       $enabledSvcs = append $enabledSvcs $swapped -}}
+{{-     else -}}
+{{-       $enabledSvcs = append $enabledSvcs $svc -}}
+{{-     end -}}
 {{-   end -}}
 {{- end }}
 - name: OBSERVABILITY__METRICS__SERVICES
@@ -1624,4 +1632,79 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
       name: {{ $secretName | quote }}
       key: Operations_Database_Pulse_Database_Name
 {{- end }}
+{{- end -}}
+
+{{- define "rpi.otel.enabled" -}}
+{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
+{{- if $otel.enabled -}}true{{- end -}}
+{{- end -}}
+
+{{- define "rpi.otel.image" -}}
+{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
+{{- $img := $otel.autoInstrImage | default dict -}}
+{{- $repo := $img.repository | default "ghcr.io/open-telemetry/opentelemetry-dotnet-instrumentation/autoinstrumentation-dotnet" -}}
+{{- $tag := $img.tag | default "1.6.0" -}}
+{{- $overrides := .Values.global.deployment.images.overrides | default dict -}}
+{{- if hasKey $overrides "otel-autoinstrumentation" -}}
+{{ index $overrides "otel-autoinstrumentation" }}
+{{- else -}}
+{{ $repo }}:{{ $tag }}
+{{- end -}}
+{{- end -}}
+
+{{- define "rpi.otel.initContainer" -}}
+- name: otel-autoinstrumentation
+  image: {{ include "rpi.otel.image" . }}
+  command: ["cp", "-a", "/autoinstrumentation/.", "/otel-auto/"]
+  volumeMounts:
+  - name: otel-auto
+    mountPath: /otel-auto
+{{- end -}}
+
+{{- define "rpi.otel.envvars" -}}
+{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
+{{- $port := $otel.scrapePort | default 9464 -}}
+- name: CORECLR_ENABLE_PROFILING
+  value: "1"
+- name: CORECLR_PROFILER
+  value: "{918728DD-259F-4A6A-AC2B-B85E1B658318}"
+- name: CORECLR_PROFILER_PATH
+  value: /otel-auto/linux-x64/OpenTelemetry.AutoInstrumentation.Native.so
+- name: DOTNET_ADDITIONAL_DEPS
+  value: /otel-auto/AdditionalDeps
+- name: DOTNET_SHARED_STORE
+  value: /otel-auto/store
+- name: DOTNET_STARTUP_HOOKS
+  value: /otel-auto/net/OpenTelemetry.AutoInstrumentation.StartupHook.dll
+- name: OTEL_DOTNET_AUTO_HOME
+  value: /otel-auto
+- name: OTEL_SERVICE_NAME
+  value: rpi-interactionapi
+- name: OTEL_METRICS_EXPORTER
+  value: prometheus
+- name: OTEL_EXPORTER_PROMETHEUS_PORT
+  value: {{ $port | quote }}
+- name: OTEL_TRACES_EXPORTER
+  value: none
+- name: OTEL_LOGS_EXPORTER
+  value: none
+{{- end -}}
+
+{{- define "rpi.otel.volume" -}}
+- name: otel-auto
+  emptyDir: {}
+{{- end -}}
+
+{{- define "rpi.otel.volumeMount" -}}
+- name: otel-auto
+  mountPath: /otel-auto
+{{- end -}}
+
+{{- define "rpi.otel.servicePort" -}}
+{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
+{{- $port := $otel.scrapePort | default 9464 -}}
+- name: otel-metrics
+  port: {{ $port }}
+  targetPort: {{ $port }}
+  protocol: TCP
 {{- end -}}

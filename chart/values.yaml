@@ -1400,6 +1400,32 @@ observability:
         port: 80
         path: "/metrics"
 
+  # ---- Telemetry source enhancements (opt-in) ----------------------------
+  # OpenTelemetry .NET auto-instrumentation injects via the CLR Profiler
+  # at process startup. When enabled for the Interaction API, the chart
+  # adds an init container that drops the OTel runtime into the IAPI
+  # pod, sets the env vars that activate the profiler, and exposes the
+  # OTel Prometheus exporter on port 9464. The observability scraper
+  # switches the IAPI scrape target from port 80 (native) to port 9464
+  # (OTel) for the duration of the flag being on.
+  #
+  # Single source per deployment: the obs pod never scrapes both ports.
+  # Source selection is presence-driven at the application layer; the
+  # obs pod's surfaces work identically whichever source flows.
+  #
+  # Metrics only; no traces, no OTel Collector sidecar, no tracing
+  # backend. Enabling traces is a separate future decision.
+  telemetry:
+    otel:
+      enabled: false
+      autoInstrImage:
+        # Pinned ghcr.io OTel Project image. Customers with mirrored
+        # registries can override the full URI via
+        # global.deployment.images.overrides.otel-autoinstrumentation.
+        repository: "ghcr.io/open-telemetry/opentelemetry-dotnet-instrumentation/autoinstrumentation-dotnet"
+        tag: "1.6.0"
+      scrapePort: 9464
+
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the observability service posts a short HTML summary of each cycle's
   # report to the configured recipients. SMTP transport reuses the
