@@ -1418,13 +1418,21 @@ observability:
   telemetry:
     otel:
       enabled: false
-      autoInstrImage:
-        # Pinned ghcr.io OTel Project image. Customers with mirrored
-        # registries can override the full URI via
-        # global.deployment.images.overrides.otel-autoinstrumentation.
-        repository: "ghcr.io/open-telemetry/opentelemetry-dotnet-instrumentation/autoinstrumentation-dotnet"
-        tag: "1.6.0"
       scrapePort: 9464
+      # The OTel auto-instrumentation init-container image is resolved
+      # through the canonical chart image-resolution path under image
+      # name "rpi-observability-otel". Default pull is
+      # {global.deployment.images.registry}/rpi-observability-otel:
+      # {global.deployment.images.tag} -- so the chart's release
+      # process must mirror the upstream OTel Operator image
+      # (ghcr.io/open-telemetry/opentelemetry-operator/
+      # autoinstrumentation-dotnet) into the canonical registry under
+      # this name and tag. Customers with mirrored registries can
+      # override via:
+      #   global.deployment.images.overrides.rpi-observability-otel
+      #     -> full URI replacement
+      #   global.deployment.images.nameOverrides.rpi-observability-otel
+      #     -> alternate image name at the canonical registry
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the observability service posts a short HTML summary of each cycle's

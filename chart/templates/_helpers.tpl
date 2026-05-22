@@ -1640,20 +1640,11 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{- end -}}
 
 {{- define "rpi.otel.image" -}}
-{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
-{{- $img := $otel.autoInstrImage | default dict -}}
-{{- $repo := $img.repository | default "ghcr.io/open-telemetry/opentelemetry-dotnet-instrumentation/autoinstrumentation-dotnet" -}}
-{{- $tag := $img.tag | default "1.6.0" -}}
-{{- $overrides := .Values.global.deployment.images.overrides | default dict -}}
-{{- if hasKey $overrides "otel-autoinstrumentation" -}}
-{{ index $overrides "otel-autoinstrumentation" }}
-{{- else -}}
-{{ $repo }}:{{ $tag }}
-{{- end -}}
+{{ include "rpi.image" (dict "root" . "name" "rpi-observability-otel") }}
 {{- end -}}
 
 {{- define "rpi.otel.initContainer" -}}
-- name: otel-autoinstrumentation
+- name: rpi-observability-otel
   image: {{ include "rpi.otel.image" . }}
   command: ["cp", "-a", "/autoinstrumentation/.", "/otel-auto/"]
   volumeMounts:
