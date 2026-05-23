@@ -1673,6 +1673,8 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: rpi-interactionapi
 - name: OTEL_METRICS_EXPORTER
   value: prometheus
+- name: OTEL_EXPORTER_PROMETHEUS_HOST
+  value: "+"
 - name: OTEL_EXPORTER_PROMETHEUS_PORT
   value: {{ $port | quote }}
 - name: OTEL_TRACES_EXPORTER
