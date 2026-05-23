@@ -1400,39 +1400,49 @@ observability:
         port: 80
         path: "/metrics"
 
-  # ---- Telemetry source enhancements (opt-in) ----------------------------
-  # OpenTelemetry .NET auto-instrumentation injects via the CLR Profiler
-  # at process startup. When enabled for the Interaction API, the chart
-  # adds an init container that drops the OTel runtime into the IAPI
-  # pod, sets the env vars that activate the profiler, and exposes the
-  # OTel Prometheus exporter on port 9464. The observability scraper
-  # switches the IAPI scrape target from port 80 (native) to port 9464
-  # (OTel) for the duration of the flag being on.
+  # ---- Telemetry mode (opt-in advanced) ----------------------------------
+  # Telemetry source mode. One of: scrape | otel
   #
-  # Single source per deployment: the obs pod never scrapes both ports.
-  # Source selection is presence-driven at the application layer; the
-  # obs pod's surfaces work identically whichever source flows.
+  # scrape (default): rpi-observability scrapes the IAPI's native
+  #   Microsoft.AspNetCore.Hosting Meter exposition on port 80
+  #   directly. Minimal footprint; production-safe baseline.
   #
-  # Metrics only; no traces, no OTel Collector sidecar, no tracing
-  # backend. Enabling traces is a separate future decision.
+  # otel: enables zero-code .NET auto-instrumentation on the
+  #   Interaction API. An init container drops the OTel runtime into
+  #   the IAPI pod; the IAPI process exports OTLP gRPC on loopback
+  #   :4317 to an OpenTelemetry Collector sidecar running in the
+  #   same pod. The sidecar re-exposes Prometheus on port 8889,
+  #   which rpi-observability scrapes through the IAPI Service.
+  #
+  # Modes are mutually exclusive. No fallback. No hybrid. Flipping
+  # the value re-rolls the IAPI deployment; exactly one source is
+  # active per deployment.
+  #
+  # Two init-container / sidecar images are pulled when mode=otel,
+  # both via the canonical rpi.image helper:
+  #   rpi-observability-otel
+  #     - upstream: ghcr.io/open-telemetry/opentelemetry-operator/
+  #                 autoinstrumentation-dotnet
+  #   rpi-observability-otel-collector
+  #     - upstream: otel/opentelemetry-collector (core distribution)
+  # Customers with mirrored registries override via the standard
+  # global.deployment.images.overrides.<name> (full URI) or
+  # global.deployment.images.nameOverrides.<name> (alternate name).
   telemetry:
+    mode: scrape
+
     otel:
-      enabled: false
-      scrapePort: 9464
-      # The OTel auto-instrumentation init-container image is resolved
-      # through the canonical chart image-resolution path under image
-      # name "rpi-observability-otel". Default pull is
-      # {global.deployment.images.registry}/rpi-observability-otel:
-      # {global.deployment.images.tag} -- so the chart's release
-      # process must mirror the upstream OTel Operator image
-      # (ghcr.io/open-telemetry/opentelemetry-operator/
-      # autoinstrumentation-dotnet) into the canonical registry under
-      # this name and tag. Customers with mirrored registries can
-      # override via:
-      #   global.deployment.images.overrides.rpi-observability-otel
-      #     -> full URI replacement
-      #   global.deployment.images.nameOverrides.rpi-observability-otel
-      #     -> alternate image name at the canonical registry
+      collector:
+        # Collector sidecar resource shape. Defaults sized for the
+        # metrics-only pipeline with memory_limiter at 100Mi soft
+        # cap and 128Mi K8s hard limit.
+        resources:
+          requests:
+            cpu: 20m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the observability service posts a short HTML summary of each cycle's

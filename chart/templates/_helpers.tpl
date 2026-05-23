@@ -1500,9 +1500,7 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   value: {{ .timeoutSeconds | default 5 | quote }}
 - name: OBSERVABILITY__METRICS__BUFFER_SIZE
   value: {{ .bufferSize | default 240 | quote }}
-{{- $otelEnabled := eq (include "rpi.otel.enabled" $) "true" -}}
-{{- $otelCfg := ((($.Values.observability).telemetry).otel) | default dict -}}
-{{- $otelPort := $otelCfg.scrapePort | default 9464 -}}
+{{- $otelEnabled := eq (include "rpi.telemetry.mode" $) "otel" -}}
 {{- $enabledSvcs := list -}}
 {{- range $svc := (.services | default list) -}}
 {{-   $shortName := trimPrefix "rpi-" ($svc.dnsName | default "") -}}
@@ -1515,7 +1513,7 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{-   end -}}
 {{-   if $isEnabled -}}
 {{-     if and $otelEnabled (eq ($svc.dnsName | default "") "rpi-interactionapi") -}}
-{{-       $swapped := dict "name" $svc.name "dnsName" $svc.dnsName "port" $otelPort "path" "/metrics" -}}
+{{-       $swapped := dict "name" $svc.name "dnsName" $svc.dnsName "port" 8889 "path" "/metrics" -}}
 {{-       $enabledSvcs = append $enabledSvcs $swapped -}}
 {{-     else -}}
 {{-       $enabledSvcs = append $enabledSvcs $svc -}}
@@ -1634,13 +1632,21 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{- end }}
 {{- end -}}
 
-{{- define "rpi.otel.enabled" -}}
-{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
-{{- if $otel.enabled -}}true{{- end -}}
+{{- define "rpi.telemetry.mode" -}}
+{{- $tel := (.Values.observability).telemetry | default dict -}}
+{{- $tel.mode | default "scrape" -}}
+{{- end -}}
+
+{{- define "rpi.telemetry.mode.otel" -}}
+{{- if eq (include "rpi.telemetry.mode" .) "otel" -}}true{{- end -}}
 {{- end -}}
 
 {{- define "rpi.otel.image" -}}
 {{ include "rpi.image" (dict "root" . "name" "rpi-observability-otel") }}
+{{- end -}}
+
+{{- define "rpi.otel.collector.image" -}}
+{{ include "rpi.image" (dict "root" . "name" "rpi-observability-otel-collector") }}
 {{- end -}}
 
 {{- define "rpi.otel.initContainer" -}}
@@ -1653,8 +1659,6 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{- end -}}
 
 {{- define "rpi.otel.envvars" -}}
-{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
-{{- $port := $otel.scrapePort | default 9464 -}}
 - name: CORECLR_ENABLE_PROFILING
   value: "1"
 - name: CORECLR_PROFILER
@@ -1672,11 +1676,11 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 - name: OTEL_SERVICE_NAME
   value: rpi-interactionapi
 - name: OTEL_METRICS_EXPORTER
-  value: prometheus
-- name: OTEL_EXPORTER_PROMETHEUS_HOST
-  value: "+"
-- name: OTEL_EXPORTER_PROMETHEUS_PORT
-  value: {{ $port | quote }}
+  value: otlp
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: "http://127.0.0.1:4317"
+- name: OTEL_EXPORTER_OTLP_PROTOCOL
+  value: grpc
 - name: OTEL_TRACES_EXPORTER
   value: none
 - name: OTEL_LOGS_EXPORTER
@@ -1693,11 +1697,48 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
   mountPath: /otel-auto
 {{- end -}}
 
+{{- define "rpi.otel.collectorSidecar" -}}
+{{- $col := ((($.Values.observability).telemetry).otel).collector | default dict -}}
+{{- $res := $col.resources | default dict -}}
+- name: rpi-observability-otel-collector
+  image: {{ include "rpi.otel.collector.image" . }}
+  args: ["--config=/etc/otelcol/config.yaml"]
+  ports:
+  - name: prometheus
+    containerPort: 8889
+    protocol: TCP
+  volumeMounts:
+  - name: otel-collector-config
+    mountPath: /etc/otelcol
+    readOnly: true
+  resources:
+    {{- if $res.requests }}
+    requests:
+      {{- toYaml $res.requests | nindent 6 }}
+    {{- else }}
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    {{- end }}
+    {{- if $res.limits }}
+    limits:
+      {{- toYaml $res.limits | nindent 6 }}
+    {{- else }}
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    {{- end }}
+{{- end -}}
+
+{{- define "rpi.otel.collectorVolume" -}}
+- name: otel-collector-config
+  configMap:
+    name: rpi-interactionapi-otel-collector
+{{- end -}}
+
 {{- define "rpi.otel.servicePort" -}}
-{{- $otel := (((.Values.observability).telemetry).otel) | default dict -}}
-{{- $port := $otel.scrapePort | default 9464 -}}
 - name: otel-metrics
-  port: {{ $port }}
-  targetPort: {{ $port }}
+  port: 8889
+  targetPort: 8889
   protocol: TCP
 {{- end -}}

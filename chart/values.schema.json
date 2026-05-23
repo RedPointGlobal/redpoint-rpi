@@ -2258,6 +2258,55 @@
             "interaction":  { "type": "string", "description": "Main Interaction_<env> DB hosting op_InteractionWorkflows / op_DataWorkflows. Read by the Diagnostics tab for per-Interaction drill-down + bundle download." }
           }
         },
+        "telemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Telemetry source mode contract. Selects the IAPI metric source: native scrape (default) or zero-code OTel auto-instrumentation with a Collector sidecar. Modes are mutually exclusive; no fallback.",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["scrape", "otel"],
+              "description": "scrape (default): rpi-observability scrapes the IAPI's native Microsoft.AspNetCore.Hosting Meter exposition on port 80. otel: an init container injects the OTel .NET auto-instrumentation runtime; the IAPI exports OTLP gRPC to a Collector sidecar in the same pod; the Collector re-exposes Prometheus on port 8889, which rpi-observability scrapes. Flipping the value re-rolls the IAPI deployment."
+            },
+            "otel": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Configuration applied only when mode=otel.",
+              "properties": {
+                "collector": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "OpenTelemetry Collector sidecar configuration.",
+                  "properties": {
+                    "resources": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "description": "Resource shape for the Collector sidecar. Defaults sized for the metrics-only pipeline with memory_limiter at 100Mi soft cap.",
+                      "properties": {
+                        "requests": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "cpu":    { "type": "string", "pattern": "^[0-9]+(m|\\.[0-9]+)?$" },
+                            "memory": { "type": "string", "pattern": "^[0-9]+(Mi|Gi|Ki|M|G|K)?$" }
+                          }
+                        },
+                        "limits": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "cpu":    { "type": "string", "pattern": "^[0-9]+(m|\\.[0-9]+)?$" },
+                            "memory": { "type": "string", "pattern": "^[0-9]+(Mi|Gi|Ki|M|G|K)?$" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "diagnostics": {
           "type": "object",
           "additionalProperties": true,

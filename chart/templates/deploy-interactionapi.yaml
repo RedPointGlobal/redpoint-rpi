@@ -50,7 +50,7 @@ spec:
     port: {{ $cfg.service.port }}
     protocol: TCP
     targetPort: 8080
-  {{- if eq (include "rpi.otel.enabled" .) "true" }}
+  {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
   {{- include "rpi.otel.servicePort" . | nindent 2 }}
   {{- end }}
   selector:
@@ -78,7 +78,7 @@ spec:
     port: {{ $cfg.service.port }}
     protocol: TCP
     targetPort: 8080
-  {{- if eq (include "rpi.otel.enabled" .) "true" }}
+  {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
   {{- include "rpi.otel.servicePort" . | nindent 2 }}
   {{- end }}
   selector:
@@ -169,19 +169,19 @@ spec:
             matchLabels:
               app.kubernetes.io/name: {{ $name }}
       {{- end }}
-      {{- $needsInitContainers := or (eq (include "rpi.cloudSqlProxy.enabled" .) "true") (eq (include "rpi.otel.enabled" .) "true") }}
+      {{- $needsInitContainers := or (eq (include "rpi.cloudSqlProxy.enabled" .) "true") (eq (include "rpi.telemetry.mode.otel" .) "true") }}
       {{- if $needsInitContainers }}
       initContainers:
         {{- if eq (include "rpi.cloudSqlProxy.enabled" .) "true" }}
         {{- include "rpi.block.cloudSqlProxy.sidecar" . | nindent 8 }}
         {{- end }}
-        {{- if eq (include "rpi.otel.enabled" .) "true" }}
+        {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
         {{- include "rpi.otel.initContainer" . | nindent 8 }}
         {{- end }}
       {{- end }}
       containers:
       - env:
-        {{- if eq (include "rpi.otel.enabled" .) "true" }}
+        {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
         {{- include "rpi.otel.envvars" . | nindent 8 }}
         {{- end }}
         {{- if .Values.global.deployment.podTimezone }}
@@ -476,7 +476,7 @@ spec:
         volumeMounts:
           - name: tempstore
             mountPath: /tmp
-          {{- if eq (include "rpi.otel.enabled" .) "true" }}
+          {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
           {{- include "rpi.otel.volumeMount" . | nindent 10 }}
           {{- end }}
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
@@ -508,11 +508,15 @@ spec:
           {{- end }}
           {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
           {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 10 }}
+      {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
+      {{- include "rpi.otel.collectorSidecar" . | nindent 6 }}
+      {{- end }}
       volumes:
         - name: tempstore
           emptyDir: {}
-        {{- if eq (include "rpi.otel.enabled" .) "true" }}
+        {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
         {{- include "rpi.otel.volume" . | nindent 8 }}
+        {{- include "rpi.otel.collectorVolume" . | nindent 8 }}
         {{- end }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}

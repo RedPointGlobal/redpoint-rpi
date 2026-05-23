@@ -1,0 +1,41 @@
+{{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rpi-interactionapi-otel-collector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" "rpi-interactionapi-otel-collector" "component" "telemetry") | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 127.0.0.1:4317
+
+    processors:
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 100
+        spike_limit_mib: 25
+      batch:
+        send_batch_size: 1000
+        timeout: 10s
+
+    exporters:
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        resource_to_telemetry_conversion:
+          enabled: true
+
+    service:
+      telemetry:
+        logs:
+          level: warn
+      pipelines:
+        metrics:
+          receivers:  [otlp]
+          processors: [memory_limiter, batch]
+          exporters:  [prometheus]
+{{- end }}
