@@ -152,27 +152,17 @@ spec:
     - host: {{ include "rpi.ingress.fqdn" (dict "host" $ingCfg.hosts.observability "domain" $ingCfg.domain) }}
       http:
         paths:
-        # Auth flows route to FastAPI (port 8080); the Streamlit UI is the
-        # default backend on /. Both sit in the same pod under a single
-        # hostname so the auth session cookie is sent on every request.
-        # In public mode the /auth path rule is omitted entirely so all
-        # traffic flows to the Streamlit backend.
-        {{- if ne ((.Values.observability.auth | default dict).mode | default "public") "public" }}
-        - path: /auth
+        # React SPA + JSON API + auth routes all served by the FastAPI
+        # process on port 8080. The static React export is mounted as
+        # a catch-all under FastAPI; /api/* and /auth/* take
+        # precedence over the catch-all in the FastAPI router.
+        - path: /
           pathType: Prefix
           backend:
             service:
               name: rpi-observability-api
               port:
                 number: {{ (.Values.observability.service | default dict).apiPort | default 8080 }}
-        {{- end }}
-        - path: /
-          pathType: Prefix
-          backend:
-            service:
-              name: rpi-observability
-              port:
-                number: {{ (.Values.observability.service | default dict).port | default 80 }}
     {{- end }}
 
 ---

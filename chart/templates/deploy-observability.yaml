@@ -109,10 +109,10 @@ subjects:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $name }}
+  name: {{ $name }}-api
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" $name "component" "observability") | nindent 4 }}
+    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" (printf "%s-api" $name) "component" "observability-api") | nindent 4 }}
   {{- $svcAnnotations := include "rpi.mergedAnnotations" (dict "root" . "type" "service") | trim }}
   {{- if $svcAnnotations }}
   annotations:
@@ -121,30 +121,11 @@ metadata:
 spec:
   ports:
   - name: http
-    port: {{ $service.port | default 80 }}
-    protocol: TCP
-    targetPort: ui
-  selector:
-    app.kubernetes.io/name: {{ $name }}
-
-{{- if ne ((.Values.observability.auth | default dict).mode | default "public") "public" }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ $name }}-api
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "redpoint-rpi.componentLabels" (dict "root" . "name" (printf "%s-api" $name) "component" "observability-api") | nindent 4 }}
-spec:
-  ports:
-  - name: http
     port: {{ $service.apiPort | default 8080 }}
     protocol: TCP
     targetPort: api
   selector:
     app.kubernetes.io/name: {{ $name }}
-{{- end }}
 
 ---
 apiVersion: apps/v1
@@ -190,9 +171,6 @@ spec:
         image: {{ include "rpi.image" (dict "root" . "name" "rpi-observability") }}
         imagePullPolicy: {{ .Values.global.deployment.images.imagePullPolicy | default "IfNotPresent" }}
         ports:
-        - name: ui
-          containerPort: {{ $service.uiPort | default 8501 }}
-          protocol: TCP
         - name: api
           containerPort: {{ $service.apiPort | default 8080 }}
           protocol: TCP

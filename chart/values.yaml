@@ -1602,12 +1602,10 @@ observability:
       storage: 5Gi
 
   # ---- HTTP service ------------------------------------------------------
-  # The container runs two processes (same pattern as the Helm Assistant):
-  #   - Streamlit UI on uiPort (8501) -- this is what the ingress routes to
-  #   - FastAPI API on apiPort (8080) -- internal-only, used by Streamlit and kubelet probes
+  # FastAPI is the sole runtime: serves the React static export at /,
+  # the JSON API at /api, auth flows at /auth, and kubelet probes at
+  # /health. Ingress routes every observability path to apiPort.
   service:
-    port: 80
-    uiPort: 8501
     apiPort: 8080
 
   # ---- Resources ---------------------------------------------------------

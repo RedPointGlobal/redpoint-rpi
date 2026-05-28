@@ -2498,8 +2498,6 @@
           "type": "object",
           "additionalProperties": true,
           "properties": {
-            "port": { "type": "integer" },
-            "uiPort": { "type": "integer" },
             "apiPort": { "type": "integer" }
           }
         },
