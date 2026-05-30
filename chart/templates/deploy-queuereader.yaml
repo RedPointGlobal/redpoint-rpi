@@ -369,7 +369,7 @@ spec:
           value: "true"
         - name: InternalQueues__HostName
           {{- if eq $cfg.internalQueues.type "internal" }}
-          value: {{ printf "rpi-queuereader-rabbitmq.%s.svc.cluster.local." .Release.Namespace | quote }}
+          value: rpi-queuereader-rabbitmq
           {{- else }}
           value: {{ $cfg.internalQueues.rabbitmqSettings.hostname | quote }}
           {{- end }}
