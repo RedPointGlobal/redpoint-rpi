@@ -1,4 +1,4 @@
-{{- if eq (include "rpi.telemetry.databaseMetrics" .) "true" }}
+{{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
 {{- $col := ((($.Values.observability).telemetry).otel).collector | default dict -}}
 {{- $res := $col.resources | default dict -}}
 # Shared OpenTelemetry Collector. The DB-touching RPI services export

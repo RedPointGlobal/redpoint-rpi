@@ -1429,28 +1429,29 @@ observability:
   # global.deployment.images.overrides.<name> (full URI) or
   # global.deployment.images.nameOverrides.<name> (alternate name).
   telemetry:
+    # scrape (default): native /metrics scrape, no OTel.
+    # otel: every participating RPI service is auto-instrumented (no
+    #   sidecars) and reports OTLP metrics to one shared OTel Collector,
+    #   which re-exposes them as Prometheus on :8889 for the
+    #   observability service to scrape. Includes the native SqlClient
+    #   db.client.operation.duration metrics (per service -> database
+    #   edge: calls / latency / errors) plus HTTP/runtime metrics.
+    #   Participating services: interactionapi, executionservice,
+    #   nodemanager, queuereader, realtimeapi, integrationapi,
+    #   callbackapi, deploymentapi.
     mode: scrape
-
-    # When true (and mode=otel), the DB-touching RPI services are
-    # auto-instrumented and report OTLP metrics to a single shared
-    # OTel Collector, which re-exposes them as Prometheus on :8889 for
-    # the observability service to scrape. Surfaces native SqlClient
-    # db.client.operation.duration metrics (calls / latency / errors)
-    # per service -> database edge. Additive: HTTP/runtime metrics for
-    # services that emit them are unaffected.
-    databaseMetrics: false
 
     otel:
       collector:
-        # Collector resource shape (shared collector when databaseMetrics
-        # is on; legacy per-IAPI sidecar otherwise).
+        # Shared Collector resource shape (it aggregates OTLP from all
+        # participating services).
         resources:
           requests:
-            cpu: 20m
-            memory: 64Mi
+            cpu: 100m
+            memory: 256Mi
           limits:
-            cpu: 200m
-            memory: 128Mi
+            cpu: 500m
+            memory: 512Mi
 
   # ---- Email digest (opt-in) ---------------------------------------------
   # When enabled, the observability service posts a short HTML summary of each cycle's

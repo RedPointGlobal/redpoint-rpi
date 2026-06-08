@@ -50,9 +50,6 @@ spec:
     port: {{ $cfg.service.port }}
     protocol: TCP
     targetPort: 8080
-  {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
-  {{- include "rpi.otel.servicePort" . | nindent 2 }}
-  {{- end }}
   selector:
     app.kubernetes.io/name: {{ $name }}
 {{- end }}
@@ -78,9 +75,6 @@ spec:
     port: {{ $cfg.service.port }}
     protocol: TCP
     targetPort: 8080
-  {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
-  {{- include "rpi.otel.servicePort" . | nindent 2 }}
-  {{- end }}
   selector:
     app.kubernetes.io/name: {{ $name }}
 
@@ -182,7 +176,7 @@ spec:
       containers:
       - env:
         {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
-        {{- include "rpi.otel.envvars" . | nindent 8 }}
+        {{- include "rpi.otel.envvars.shared" (dict "root" . "svc" "rpi-interactionapi") | nindent 8 }}
         {{- end }}
         {{- if .Values.global.deployment.podTimezone }}
         - name: TZ
@@ -508,15 +502,11 @@ spec:
           {{- end }}
           {{- include "rpi.customCACerts.volumeMount" . | nindent 10 }}
           {{- include "rpi.cloudidentity.googleVolumeMounts" . | nindent 10 }}
-      {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
-      {{- include "rpi.otel.collectorSidecar" . | nindent 6 }}
-      {{- end }}
       volumes:
         - name: tempstore
           emptyDir: {}
         {{- if eq (include "rpi.telemetry.mode.otel" .) "true" }}
         {{- include "rpi.otel.volume" . | nindent 8 }}
-        {{- include "rpi.otel.collectorVolume" . | nindent 8 }}
         {{- end }}
         {{- if (($dw.bigquery | default dict).enabled | default false) }}
         {{- range .Values.databases.datawarehouse.bigquery.connections }}
