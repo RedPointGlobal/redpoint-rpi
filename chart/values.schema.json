@@ -2268,6 +2268,11 @@
               "enum": ["scrape", "otel"],
               "description": "scrape (default): rpi-observability scrapes the IAPI's native Microsoft.AspNetCore.Hosting Meter exposition on port 80. otel: an init container injects the OTel .NET auto-instrumentation runtime; the IAPI exports OTLP gRPC to a Collector sidecar in the same pod; the Collector re-exposes Prometheus on port 8889, which rpi-observability scrapes. Flipping the value re-rolls the IAPI deployment."
             },
+            "muslServices": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "RPI service DNS names whose container image is musl-based (Alpine). These get the linux-musl-x64 OTel native profiler path instead of linux-x64; a musl image pointed at the glibc profiler emits no telemetry. Default: [rpi-integrationapi, rpi-callbackapi]."
+            },
             "otel": {
               "type": "object",
               "additionalProperties": false,

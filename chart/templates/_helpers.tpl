@@ -1661,12 +1661,18 @@ Metrics-only: native SqlClient db.client.* metrics ride the OTLP metrics
 pipeline; traces stay off (no spans, no spanmetrics).
 */}}
 {{- define "rpi.otel.envvars.shared" -}}
+{{- /* The native CLR profiler is libc-specific. glibc images load the
+       linux-x64 build; musl (Alpine) images need linux-musl-x64, else the
+       profiler fails to load and NO telemetry is emitted. The musl image
+       set is operator-declared (observability.telemetry.muslServices). */ -}}
+{{- $musl := .root.Values.observability.telemetry.muslServices | default (list "rpi-integrationapi" "rpi-callbackapi" "rpi-deploymentapi") -}}
+{{- $arch := ternary "linux-musl-x64" "linux-x64" (has .svc $musl) -}}
 - name: CORECLR_ENABLE_PROFILING
   value: "1"
 - name: CORECLR_PROFILER
   value: "{918728DD-259F-4A6A-AC2B-B85E1B658318}"
 - name: CORECLR_PROFILER_PATH
-  value: /otel-auto/linux-x64/OpenTelemetry.AutoInstrumentation.Native.so
+  value: /otel-auto/{{ $arch }}/OpenTelemetry.AutoInstrumentation.Native.so
 - name: DOTNET_ADDITIONAL_DEPS
   value: /otel-auto/AdditionalDeps
 - name: DOTNET_SHARED_STORE

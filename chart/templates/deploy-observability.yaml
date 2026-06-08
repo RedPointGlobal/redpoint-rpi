@@ -45,6 +45,11 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
+  # PersistentVolumeClaims back the engine pages' Backing storage panel
+  # (capacity + which service mounts each claim). Read-only.
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
   # metrics-server. Optional; if absent, CPU/memory columns show "-".
   - apiGroups: ["metrics.k8s.io"]
     resources: ["pods"]

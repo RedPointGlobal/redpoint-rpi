@@ -1441,6 +1441,18 @@ observability:
     #   callbackapi, deploymentapi.
     mode: scrape
 
+    # RPI service images that are musl-based (Alpine). The .NET OTel
+    # auto-instrumentation native profiler is libc-specific: glibc images
+    # load linux-x64, musl images need linux-musl-x64. Pointing a musl
+    # image at the glibc profiler makes it fail to load - the service
+    # then emits NO telemetry at all. Services listed here get the
+    # linux-musl-x64 profiler path; everything else gets linux-x64.
+    # Override if a service image's base libc changes between releases.
+    muslServices:
+      - rpi-integrationapi
+      - rpi-callbackapi
+      - rpi-deploymentapi
+
     otel:
       collector:
         # Shared Collector resource shape (it aggregates OTLP from all
