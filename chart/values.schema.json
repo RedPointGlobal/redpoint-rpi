@@ -2268,6 +2268,10 @@
               "enum": ["scrape", "otel"],
               "description": "scrape (default): rpi-observability scrapes the IAPI's native Microsoft.AspNetCore.Hosting Meter exposition on port 80. otel: an init container injects the OTel .NET auto-instrumentation runtime; the IAPI exports OTLP gRPC to a Collector sidecar in the same pod; the Collector re-exposes Prometheus on port 8889, which rpi-observability scrapes. Flipping the value re-rolls the IAPI deployment."
             },
+            "databaseMetrics": {
+              "type": "boolean",
+              "description": "When true (requires mode=otel), the DB-touching RPI services are auto-instrumented and report OTLP metrics to a single shared OTel Collector (Deployment + Service), which re-exposes native SqlClient db.client.operation.duration metrics (per service->database edge: calls, latency, errors) as Prometheus on :8889 for rpi-observability to scrape. Additive to any HTTP/runtime metrics."
+            },
             "otel": {
               "type": "object",
               "additionalProperties": false,

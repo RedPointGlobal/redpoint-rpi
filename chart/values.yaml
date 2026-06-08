@@ -1431,11 +1431,19 @@ observability:
   telemetry:
     mode: scrape
 
+    # When true (and mode=otel), the DB-touching RPI services are
+    # auto-instrumented and report OTLP metrics to a single shared
+    # OTel Collector, which re-exposes them as Prometheus on :8889 for
+    # the observability service to scrape. Surfaces native SqlClient
+    # db.client.operation.duration metrics (calls / latency / errors)
+    # per service -> database edge. Additive: HTTP/runtime metrics for
+    # services that emit them are unaffected.
+    databaseMetrics: false
+
     otel:
       collector:
-        # Collector sidecar resource shape. Defaults sized for the
-        # metrics-only pipeline with memory_limiter at 100Mi soft
-        # cap and 128Mi K8s hard limit.
+        # Collector resource shape (shared collector when databaseMetrics
+        # is on; legacy per-IAPI sidecar otherwise).
         resources:
           requests:
             cpu: 20m

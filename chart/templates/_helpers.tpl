@@ -1649,6 +1649,56 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
 {{ include "rpi.image" (dict "root" . "name" "rpi-observability-otel-collector") }}
 {{- end -}}
 
+{{/*
+Database-metrics expansion gate: auto-instrument the DB-touching
+services and ship OTLP metrics to the shared Collector. Requires
+mode=otel; additive to (and independent of) the legacy per-IAPI sidecar.
+*/}}
+{{- define "rpi.telemetry.databaseMetrics" -}}
+{{- $tel := (.Values.observability).telemetry | default dict -}}
+{{- if and (eq (include "rpi.telemetry.mode" .) "otel") ($tel.databaseMetrics) -}}true{{- end -}}
+{{- end -}}
+
+{{/* OTLP gRPC endpoint of the shared Collector Service. */}}
+{{- define "rpi.otel.collector.endpoint" -}}
+http://rpi-observability-otel-collector.{{ .Release.Namespace }}.svc.cluster.local:4317
+{{- end -}}
+
+{{/*
+OTel auto-instrumentation env for a DB-touching service reporting to the
+SHARED Collector. Call as (dict "root" $ "svc" "rpi-executionservice").
+Metrics-only: native SqlClient db.client.* metrics ride the OTLP metrics
+pipeline; traces stay off (no spans, no spanmetrics).
+*/}}
+{{- define "rpi.otel.envvars.shared" -}}
+- name: CORECLR_ENABLE_PROFILING
+  value: "1"
+- name: CORECLR_PROFILER
+  value: "{918728DD-259F-4A6A-AC2B-B85E1B658318}"
+- name: CORECLR_PROFILER_PATH
+  value: /otel-auto/linux-x64/OpenTelemetry.AutoInstrumentation.Native.so
+- name: DOTNET_ADDITIONAL_DEPS
+  value: /otel-auto/AdditionalDeps
+- name: DOTNET_SHARED_STORE
+  value: /otel-auto/store
+- name: DOTNET_STARTUP_HOOKS
+  value: /otel-auto/net/OpenTelemetry.AutoInstrumentation.StartupHook.dll
+- name: OTEL_DOTNET_AUTO_HOME
+  value: /otel-auto
+- name: OTEL_SERVICE_NAME
+  value: {{ .svc }}
+- name: OTEL_METRICS_EXPORTER
+  value: otlp
+- name: OTEL_EXPORTER_OTLP_ENDPOINT
+  value: {{ include "rpi.otel.collector.endpoint" .root | quote }}
+- name: OTEL_EXPORTER_OTLP_PROTOCOL
+  value: grpc
+- name: OTEL_TRACES_EXPORTER
+  value: none
+- name: OTEL_LOGS_EXPORTER
+  value: none
+{{- end -}}
+
 {{- define "rpi.otel.initContainer" -}}
 - name: rpi-observability-otel
   image: {{ include "rpi.otel.image" . }}
