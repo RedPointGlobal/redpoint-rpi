@@ -6,6 +6,35 @@
 # service ports, rollout strategies, etc.) are managed by the
 # chart via _defaults.tpl.
 # ============================================================
+#
+# IMPORTANT - HOW CREDENTIALS FLOW:
+#
+# This file documents the SHAPE of values an operator can set. But
+# credential-bearing fields (passwords, API keys, connection
+# strings, access keys) are NOT consumed by the Helm chart from this
+# file. They flow through the K8s Secret named by
+# `secretsManagement.{kubernetes,csi}.secretName` (default
+# `redpoint-rpi-secrets`) and the chart reads them via
+# `secretKeyRef`. Operators populate the Secret in one of two ways:
+#
+#   1. rpihelmcli secrets -f overrides.yaml -n <namespace>
+#        Reads non-secret connection metadata (host, username, db
+#        names, etc.) from this file and PROMPTS interactively for
+#        every credential-bearing field. Generates a Secret YAML
+#        the operator applies with `kubectl apply -f`.
+#
+#   2. Direct K8s Secret authoring (kubernetes mode), CSI sync
+#      (csi mode), or cloud vault population (sdk mode). The
+#      operator writes the Secret keys named in the inline
+#      `→ K8s Secret: <KEY>` comments throughout this file.
+#
+# Each credential field below carries an inline comment naming the
+# Secret key its value lands in. If a field shows
+# `→ K8s Secret: X (prompt-only via rpihelmcli)`, the CLI ignores
+# any value you put in this file and prompts at run time.
+#
+# Per-service Secret key full list: see docs/secrets-management.md.
+# ============================================================
 
 # ==========================
 # Global Settings
@@ -22,7 +51,7 @@ global:
     images:
       registry: rg1acrpub.azurecr.io/docker/redpointglobal/releases
       # RPI version: <major.minor>.<year>-<MMDD>-<HHMM>
-      tag: "7.7.20260220.1524"
+      tag: "7.7.20260414.1238"
       imagePullPolicy: Always
       imagePullSecret:
         enabled: true
@@ -131,12 +160,89 @@ databases:
   operational:
     # Supported: sqlserver, postgresql, sqlserveronvm
     provider: sqlserver
-    server_host: <my-database-server-host>
-    server_username: <my-database-server-username>
-    server_password: <my-database-server-password>
-    pulse_database_name: <my-pulse-database-name>
-    pulse_logging_database_name: <my-logging-database-name>
+    # NOTE on credentials in this section:
+    #   `provider` and `encrypt` are read by the chart at deploy time.
+    #   The connection-string parts below (host, username, db names) are
+    #   read by `rpihelmcli secrets` to pre-fill the K8s Secret -- the
+    #   chart itself reads them from the Secret keys listed beside each
+    #   field. `server_password` is NEVER read from this file; the CLI
+    #   always prompts for it interactively.
+    server_host: <my-database-server-host>                  # → K8s Secret: Operations_Database_ServerHost
+    server_username: <my-database-server-username>          # → K8s Secret: Operations_Database_Server_Username
+    server_password: <my-database-server-password>          # → K8s Secret: Operations_Database_Server_Password (prompt-only via rpihelmcli)
+    pulse_database_name: <my-pulse-database-name>           # → K8s Secret: Operations_Database_Pulse_Database_Name
+    pulse_logging_database_name: <my-logging-database-name> # → K8s Secret: Operations_Database_Pulse_Logging_Database_Name
     encrypt: true
+
+    # Google Cloud SQL Auth Proxy (GKE only; PostgreSQL or SQL Server).
+    # When enabled, injects a native K8s sidecar (initContainers[*].restartPolicy: Always)
+    # running the Cloud SQL Auth Proxy next to every pod that talks to the operational DB.
+    # The chart rewrites ConnectionSettings__Server to 127.0.0.1 so the app connects
+    # through the proxy instead of to the Cloud SQL instance directly.
+    #
+    # The proxy v2 binary speaks both PostgreSQL and SQL Server, so the chart picks the
+    # right connection-string format based on `databases.operational.provider`.
+    #
+    # Activation gate: global.deployment.platform=google AND enabled=true
+    #                  AND provider in {postgresql, sqlserver}
+    #                  AND secretsManagement.provider=sdk (chart will fail if not).
+    #
+    # Cloud SQL Auth Proxy is supported only with secretsManagement.provider=sdk.
+    # The proxy and the SDK secret provider share the same cloud-native security
+    # realm (vault-backed, IAM-bound). The chart's job here is to inject the proxy
+    # sidecar; ALL connection-string env vars come from your vault. Configure the
+    # vault entries (ConnectionStrings--OperationalDatabase, ConnectionStrings--
+    # LoggingDatabase, ClusterEnvironment--OperationalDatabase--ConnectionSettings--
+    # Server, etc.) so the host points at 127.0.0.1 and the port matches
+    # `cloudSqlProxy.port` (default 5432 / 1433).
+    #
+    # SQL Server gotchas (apply if provider=sqlserver):
+    #   * Set `databases.operational.encrypt: false` in your overrides. The default
+    #     is `true`, which makes Microsoft.Data.SqlClient negotiate TLS during
+    #     pre-login. The loopback proxy is plaintext and SqlClient bails with
+    #     "an error occurred during the pre-login handshake". Encryption on the
+    #     wire is still handled by the proxy → Cloud SQL leg via mTLS.
+    #   * Use comma-port syntax: `Server=tcp:127.0.0.1,1433` (NOT `:1433`). The
+    #     colon form fails to parse and the proxy log will show zero connections.
+    #   * Cloud SQL for SQL Server does NOT support IAM DB auth via the proxy.
+    #     Leave `autoIamAuthn: false` and put a real SQL login/password in the vault.
+    #   * Vault `ConnectionStrings--*` entries should include
+    #     `Encrypt=False;TrustServerCertificate=True;` for the same reason as #1.
+    cloudSqlProxy:
+      enabled: false
+      # Required when enabled: "<project>:<region>:<instance>"
+      connectionName: ""
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.2
+      # Local port the proxy exposes; the chart emits ConnectionSettings__Port with this value.
+      # Defaults per engine: 5432 for postgresql, 1433 for sqlserver. Override here if needed.
+      # port: 5432
+      # Use the Cloud SQL instance's private IP (requires VPC peering between GKE and Cloud SQL).
+      privateIp: true
+      # Use IAM database authentication instead of password auth. PostgreSQL only;
+      # ignored for SQL Server (Cloud SQL for SQL Server doesn't expose IAM DB auth via
+      # the proxy). When true, the chart uses `cloudIdentity.google.serviceAccountEmail`
+      # as the DB user and omits the password segment from the connection string; the
+      # proxy injects an IAM token at connection time. Requires the SA email to be
+      # registered as a Cloud SQL IAM user with the right grants:
+      #   gcloud sql users create <sa-email> --type=cloud_iam_service_account ...
+      autoIamAuthn: false
+      # Graceful shutdown window; proxy drains connections before exiting.
+      terminationGracePeriod: "30s"
+      # Authentication mode (auto-detected):
+      # - Workload Identity (default): pod SA must be bound to a GCP SA with
+      #   roles/cloudsql.client. No key file is mounted.
+      # - Service-account key file: triggered when `cloudIdentity.enabled=true`,
+      #   `global.deployment.platform=google`, and `cloudIdentity.google.configMapName`
+      #   is set. The proxy mounts the same ConfigMap into the sidecar at the same
+      #   path the app sees as GOOGLE_APPLICATION_CREDENTIALS
+      #   (`cloudIdentity.google.configMapFilePath` + `cloudIdentity.google.keyName`)
+      #   and starts with --credentials-file pointing at that path. Reuses the
+      #   platform-wide Google SA JSON; no separate ConfigMap or path is needed.
+      resources:
+        requests: { cpu: 50m, memory: 64Mi }
+        limits:   { cpu: 200m, memory: 256Mi }
+      # Extra CLI args appended to the proxy command (e.g., ["--structured-logs", "--debug"]).
+      additionalArgs: []
 
   # ==========================
   # Data Warehouse Providers
@@ -261,6 +367,10 @@ secretsManagement:
     # How the CSI sync is triggered. Options:
     #   none          - use dedicated validation pods (default)
     #   deploymentapi - mount CSI volume on the Deployment API pod to trigger sync
+    # When set to deploymentapi, the Deployment API pod mounts the CSI volume on
+    # startup, which triggers the CSI driver to sync secrets from the vault into
+    # the K8s Secret. No validation pods needed. All other service pods read from
+    # the K8s Secret via secretKeyRef as usual.
     syncService: none
     # SecretProviderClass definitions
     secretProviderClasses:
@@ -435,8 +545,15 @@ realtimeapi:
     enabled: true
     # Supported: mongodb, azureredis, redis, inMemorySql, googlebigtable
     provider: ""
+    # NOTE on credentials in cacheProvider sub-blocks:
+    #   `provider`, `databaseName`, `collectionName`, mongodb auth
+    #   mechanism options, and similar non-secret config knobs are
+    #   read by the chart from this file. Connection strings and
+    #   passwords are NOT read from this file -- `rpihelmcli secrets`
+    #   prompts for them interactively and writes them to the K8s
+    #   Secret keys listed beside each field below.
     mongodb:
-      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true
+      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true  # → K8s Secret: RealtimeAPI_MongoCache_ConnectionString (prompt-only)
       databaseName: <my-realtime-cache-db>
       collectionName: <my-realtime-cache-collection>
       # Authentication mechanism for MongoDB Atlas.
@@ -466,13 +583,20 @@ realtimeapi:
       # internal: chart-managed Redis | external: BYO Redis
       type: internal
       redisSettings:
-        # Required if type=external
-        connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
+        # Required if type=external. Connection string is NOT read from
+        # this file -- `rpihelmcli secrets` prompts for it interactively
+        # and writes it to the K8s Secret as RealtimeAPI_RedisCache_ConnectionString.
+        # For type=internal, the chart auto-generates the Redis password
+        # and stores it as RealtimeAPI_RedisCache_Password (operator never touches).
+        connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # → K8s Secret: RealtimeAPI_RedisCache_ConnectionString (prompt-only)
     inMemorySql:
-      server_host: <my-cache-database-server-host>
-      database_name: <my-cache-database-name>
-      username: <my-cache-database-username>
-      password: <my-cache-database-password>
+      # inMemorySql connection details are NOT read from this file.
+      # `rpihelmcli secrets` prompts for the full connection string and
+      # writes it to the K8s Secret as RealtimeAPI_inMemorySql_ConnectionString.
+      server_host: <my-cache-database-server-host>     # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
+      database_name: <my-cache-database-name>          # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
+      username: <my-cache-database-username>           # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
+      password: <my-cache-database-password>           # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
     googlebigtable:
       projectId: <my-bigtable-project-id>
       instanceId: <my-bigtable-instance-id>
@@ -482,6 +606,14 @@ realtimeapi:
     enabled: true
     # Supported: amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq, azurestorage, amazonmsk
     provider: ""
+    # NOTE on credentials in queueProvider sub-blocks:
+    #   `provider`, `queueNames`, projectId, region, eventHubName,
+    #   NamespaceName, storageAccountName, useAzureIdentityAuthentication,
+    #   and other non-secret config knobs are read by the chart from
+    #   this file. Connection strings, access keys, and passwords are
+    #   NOT read from this file -- `rpihelmcli secrets` prompts for
+    #   them interactively and writes them to the K8s Secret keys
+    #   listed beside each field below.
     queueNames:
       formQueuePath: RPIWebFormSubmission
       eventsQueuePath: RPIWebEvents
@@ -493,25 +625,30 @@ realtimeapi:
       # Supported: accessKey (configure keys under cloudIdentity.amazonSettings)
       credentialsType: accessKey
     azureservicebus:
-      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>
+      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>  # → K8s Secret: RealtimeAPI_ServiceBus_ConnectionString (prompt-only)
     azurestorage:
-      connectionString: DefaultEndpointsProtocol=https;AccountName=myAccoutName;AccountKey=myAccountAccessKey;EndpointSuffix=core.windows.net
+      connectionString: DefaultEndpointsProtocol=https;AccountName=myAccoutName;AccountKey=myAccountAccessKey;EndpointSuffix=core.windows.net  # → K8s Secret: RealtimeAPI_AzureStorage_ConnectionString (prompt-only)
       storageAccountName: myStorageAccountName
       useAzureIdentityAuthentication: false
     googlepubsub:
       projectId: <my-google-project-id>
     azureeventhubs:
-      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>;EntityPath=<my-hub>
+      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>;EntityPath=<my-hub>  # → K8s Secret: RealtimeAPI_EventHub_ConnectionString (prompt-only)
       eventHubName: RPIQueueListener
       NamespaceName: my_eventhub_namespace_name
       PartitionIds:
         - "0"
     rabbitmq:
-      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
+      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ.
+      # Internal RabbitMQ password is chart-auto-generated and stored
+      # as RealtimeAPI_RabbitMQ_Password in the K8s Secret (operator
+      # never touches). External RabbitMQ password is prompted by
+      # rpihelmcli secrets.
       type: internal
     amazonmsk:
       region: <my-aws-region>
-      accessKeyId: <my-aws-iam-access-key>
+      accessKeyId: <my-aws-iam-access-key>      # → K8s Secret: AWS_Access_Key_ID (prompt-only)
+      # secretAccessKey is also prompted; lands in K8s Secret as AWS_Secret_Access_Key
       secretAccessKey: <my-aws-iam-secret-access-key>
       bootstrapServers: <my-server1.c2.kafka.us-east-1.amazonaws.com:9198>
 
@@ -522,6 +659,181 @@ realtimeapi:
 
   autoscaling:
     enabled: false
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # multitenant: false
+  # name: rpi-realtimeapi
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # authentication:
+  #   type: basic
+  #   basic:
+  #     standard: false
+  #     forms: true
+  #     listenerQueue: true
+  #     recommendations: true
+  # enableHelpPages: true
+  # enableEventListening: true
+  # realtimeProcessingEnabled: true
+  # ThresholdBetweenSiteVisitsMinutes: 120
+  # ThresholdBetweenPageVisitsMinutes: 1
+  # CacheWebFormData: false
+  # decisionCacheDuration: 60
+  # enableAuditMetricsInHeaders: true
+  # cacheOutputQueueEnabled: true
+  # RealtimeServerCookieEnabled: false
+  # RealtimeServerCookieName: rg-visitor
+  # RealtimeServerCookieExpires: 60
+  # RealtimeServerCookieDomain: ""
+  # RealtimeServerCookieHttpOnly: false
+  # CacheOutputCollectIPAddress: true
+  # HashVisitorID: false
+  # EventListeningLocalCacheDuration: 60
+  # dataMaps:
+  #   visitorProfile:
+  #     DaysToPersist: 365
+  #     CompressData: true
+  #   visitorHistory:
+  #     DaysToPersist: 365
+  #     CompressData: true
+  #   nonVisitorData:
+  #     DaysToPersist: 365
+  #     CompressData: true
+  #   productRecommendation:
+  #     DaysToPersist: 365
+  #     CompressData: true
+  #   offerHistory:
+  #     DaysToPersist: 365
+  #     CompressData: true
+  #   messageHistory:
+  #     DaysToPersist: 365
+  #     CompressData: true
+  # idValidation:
+  #   enableVisitorIDValidation: true
+  #   visitorID:
+  #     minimumLength: 1
+  #     maximumLength: 36
+  #     enableLetters: true
+  #     enableNumbers: true
+  #     permittedCharacters:
+  #       - "-"
+  #       - "_"
+  #       - "/"
+  #       - "."
+  #       - "@"
+  #       - "#"
+  #       - "&"
+  #       - "?"
+  #   enableDeviceIDValidation: true
+  #   deviceID:
+  #     minimumLength: 1
+  #     maximumLength: 36
+  #     enableLetters: true
+  #     enableNumbers: true
+  #     permittedCharacters:
+  #       - "-"
+  #       - "_"
+  #       - "/"
+  #       - "."
+  #       - "@"
+  #       - "#"
+  #       - "&"
+  #       - "?"
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: true
+  # terminationGracePeriodSeconds: 120
+  # logging:
+  #   realtimeagent:
+  #     default: Error
+  #     database: Error
+  #     rpiTrace: Error
+  #     rpiError: Error
+  #     console: Error
+  #   realtimeapi:
+  #     default: Error
+  #     endpoint: Error
+  #     shared: Error
+  #     plugins: Error
+  #     other: Error
+  #     console: "false"
+  # autoscaling:
+  #   enabled: false
+  #   type: hpa
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # resources:
+  #   enabled: true
+  # queueProvider:
+  #   amazonsqs:
+  #     visibilityTimeout: "301"
+  #   azurestorage:
+  #     sendVisibilityTimeout: 1
+  #     receiveVisibilityTimeout: 1
+  #   azureeventhubs:
+  #     SendMessageBatchSize: 200
+  #     ReceiveMessageBatchSize: 200
+  #   amazonmsk:
+  #     Acks: None
+  #     CompressionType: Snappy
+  #     MaxRetryAttempt: 10
+  #     BatchSize: "1000000"
+  #     LingerTime: 0
+  #     UseAwsMsk: "True"
+  #   rabbitmq:
+  #     rabbitmqSettings:
+  #       hostname: "rpi-realtimeapi-rabbitmq"
+  #       username: redpointrpi
+  #       virtualhost: /
+  #       resources:
+  #         enabled: true
+  #         requests:
+  #           cpu: 100m
+  #           memory: 256Mi
+  #         limits:
+  #           cpu: 1
+  #           memory: 1Gi
+  #       volumeClaimTemplates:
+  #         enabled: true
+  #         storage: 100Gi
+  #       volumes:
+  #         enabled: false
+  #         claimName: rpi-realtimeapi-rabbitmq-data
+  #       podDisruptionBudget:
+  #         enabled: false
+  #         minAvailable: 1
+  # cacheProvider:
+  #   redis:
+  #     redisSettings:
+  #       resources:
+  #         enabled: true
+  #         requests:
+  #           cpu: 100m
+  #           memory: 256Mi
+  #         limits:
+  #           memory: 3Gi
+  #       volumeClaimTemplates:
+  #         enabled: true
+  #         storage: 50Gi
+  #       podDisruptionBudget:
+  #         enabled: false
+  #         minAvailable: 1
+
 
 # ==========================
 # Callback API
@@ -541,6 +853,43 @@ callbackapi:
   autoscaling:
     enabled: false
 
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: true
+  # terminationGracePeriodSeconds: 120
+  # logging:
+  #   default: Error
+  #   database: Error
+  #   rpiTrace: Error
+  #   rpiError: Error
+  #   Console: Error
+  # autoscaling:
+  #   enabled: false
+  #   type: hpa
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # resources:
+  #   enabled: true
+
+
 # ==========================
 # Execution Service
 # ==========================
@@ -551,22 +900,181 @@ executionservice:
   # Internal cache for execution state
   internalCache:
     enabled: true
-    # Supported: default, filesystem, azureblob
+    # Supported: filesystem, azureblob.
+    # NOTE: the "default" / Redis provider for executionservice
+    # internalCache is NOT wired in the current chart. The
+    # `redisSettings` sub-block below is documentation-only and is
+    # not consumed.
     provider: filesystem
-    # Redis settings (when provider=default or for state caching)
+    # redisSettings: documented for parity with other services but
+    # NOT consumed by deploy-executionservice.yaml (no Redis provider
+    # is wired). Leave defaults; no operator action needed.
     redisSettings:
-      # internal: chart-managed Redis | external: BYO Redis
       type: internal
-      # Required if type=external
-      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
-    # Azure Blob settings (when provider=azureblob)
+      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # (unused — dead value)
+    # Azure Blob settings (when provider=azureblob).
+    # NOTE on credentials:
+    #   accountName + containerName are read by the chart from this file.
+    #   connectionString is NOT read from this file -- `rpihelmcli secrets`
+    #   prompts for it and writes it to the K8s Secret as
+    #   ExecutionService_AzureBlob_ConnectionString; the chart reads
+    #   it via secretKeyRef. Prefer `useCloudIdentity: true` for
+    #   production -- the pod then authenticates via Workload Identity
+    #   and no connection-string secret is needed at all.
     azureStorageSettings:
       accountName: my_storage_account_name
       containerName: rpi
-      connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net
+      connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net  # → K8s Secret: ExecutionService_AzureBlob_ConnectionString (prompt-only; only when useCloudIdentity=false)
       useCloudIdentity: false
   autoscaling:
     enabled: false
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: false
+  # terminationGracePeriodSeconds: 120
+  # enableRPIAuthentication: true
+  # logging:
+  #   default: Error
+  #   database: Error
+  #   rpiTrace: Error
+  #   rpiError: Error
+  #   Console: Error
+  # autoscaling:
+  #   enabled: false
+  #   type: hpa
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  #   kedaScaledObject:
+  #     serverAddress: ""
+  #     useTriggerAuthentication: true
+  #     authenticationRef: rpi-executionservice
+  #     identityId: ""
+  #     metricName: execution_max_thread_count
+  #     query: ""
+  #     threshold: "80"
+  #     pollingInterval: 30
+  #     minReplicaCount: 2
+  #     maxReplicaCount: 10
+  #     fallback:
+  #       failureThreshold: 3
+  #       replicas: 2
+  #     behavior:
+  #       scaleUp:
+  #         stabilizationWindowSeconds: 300
+  #         policies:
+  #           type: Percent
+  #           value: 100
+  #           periodSeconds: 60
+  #       scaleDown:
+  #         stabilizationWindowSeconds: 300
+  #         policies:
+  #           type: Percent
+  #           value: 50
+  #           periodSeconds: 60
+  #     terminationGracePeriodSeconds: 120
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # resources:
+  #   enabled: true
+  # jobExecution:
+  #   internalAddress: ""
+  #   auditTaskEvents: true
+  #   maxThreadsPerExecutionService: 100
+  #   executionShutdownWaitForActivity: "00:08:00"
+  #   overrideCustomSQLReservedWords: false
+  #   maxSmartAssetInstancesForOfferCodes: "100000"
+  #   rpdmOApiPrefixUri: /v1/
+  #   rpdmOApiRequestTimeout: "200"
+  #   taskTimeout: 60
+  #   triggerCheckCriteriaInterval: 60
+  #   triggersMaxDaysInactive: 180
+  #   defaultMaintenanceModeBufferTime: "00:05:00"
+  #   workflowPrioritization:
+  #     enabled: true
+  #     maxConcurrentWorkflowActivities: 100
+  #     maximumQueueTime: "24:00:00"
+  #   luxScisendRequestCount: 5
+  # internalCache:
+  #   backupToOpsDBInterval: "00:00:20"
+  #   maxNumberRetries: "100"
+  #   maxRetryDelay: "00:01:00"
+  #   failOnPrimaryDataLoss: true
+  #   failOnCacheConnectionError: true
+  #   redisSettings:
+  #     type: internal
+  #     replicas: 1
+  #     resources:
+  #       enabled: true
+  #       requests:
+  #         cpu: 100m
+  #         memory: 256Mi
+  #       limits:
+  #         memory: 3Gi
+  #     volumeClaimTemplates:
+  #       enabled: true
+  #       storage: 100Gi
+  #     podDisruptionBudget:
+  #       enabled: false
+  #       minAvailable: 1
+  # seedService:
+  #   memoryCacheSize: "10"
+  #   maxNumberRetries: "100"
+  #   maxRetryDelay: "00:01:00"
+  # extraEnvs:
+  #   - name: Plugins__LuxSci__IsSandboxMode
+  #     enabled: false
+  #     value: "true"
+  #   - name: Plugins__SendGrid__EnableSandBoxMode
+  #     enabled: false
+  #     value: "true"
+  #   - name: Plugins__Twilio__DisableSendSMSCampaign
+  #     enabled: false
+  #     value: "true"
+  #   - name: RPI_MPULSE_UPSERT_CONTACT_DEBUG
+  #     enabled: false
+  #     value: "1"
+  #   - name: RPI_MPULSE_EVENT_UPLOAD_DEBUG
+  #     enabled: false
+  #     value: "1"
+  #   - name: LC_ALL
+  #     enabled: false
+  #     value: "en_US.UTF-8"
+  #   - name: LANG
+  #     enabled: false
+  #     value: "en_US.UTF-8"
+  #   - name: LANGUAGE
+  #     enabled: false
+  #     value: "en_US.UTF-8"
+  #   - name: RPI_MPULSE_EVENT_UPLOAD_FAIL_DEBUG
+  #     enabled: false
+  #     value: "0"
+  #   - name: RPI_MPULSE_EVENT_UPLOAD_SCENARIO
+  #     enabled: false
+  #     value: "1,5,2,3,5,7"
+  #   - name: RPI_MPULSE_SAVE_MPULSE_EVENT_CONTENT_DEBUG
+  #     enabled: false
+  #     value: "1"
+  #   - name: RPI_MPULSE_UPSERT_CONTACT_IMPORT_PATH_DEBUG
+  #     enabled: false
+  #     value: "/rpifileoutputdir/mpulse-debug-path"
+
     # Supported: hpa, keda (KEDA is recommended for execution service)
     # type: hpa
 
@@ -580,6 +1088,52 @@ interactionapi:
   autoscaling:
     enabled: false
 
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # authMetaHttpEnabled: true
+  # enableSwagger: true
+  # allowSavingLoginDetails: true
+  # alwaysShowClientsAtLogin: true
+  # useExternalUserManagement: false
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: false
+  # terminationGracePeriodSeconds: 120
+  # enableRPIAuthentication: true
+  # productUpdateFeed:
+  #   enabled: true 
+  #   url: https://www.redpointglobal.com/feed/productfeed
+  # logging:
+  #   default: Error
+  #   database: Error
+  #   rpiTrace: Error
+  #   rpiError: Error
+  #   Console: Error
+  # autoscaling:
+  #   enabled: false
+  #   type: hpa
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # resources:
+  #   enabled: true
+
+
 # ==========================
 # Integration API
 # ==========================
@@ -587,11 +1141,56 @@ integrationapi:
   enabled: true
   replicas: 1
   enableRPIAuthentication: true
-  # Credentials (required if Smart Activation is enabled)
+  # Credentials (required if Smart Activation is enabled).
+  # `password` is NOT read from this file -- the chart reads it from
+  # the K8s Secret as CDP_Integration_Password (consumed by
+  # cdp-init, cdp-authservices, cdp-servicesapi). Populate via
+  # rpihelmcli secrets or directly in the chart Secret.
   username: admin@noemail.com
-  password: my_Super_Strong_Pwd
+  password: my_Super_Strong_Pwd  # → K8s Secret: CDP_Integration_Password
   autoscaling:
     enabled: false
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # enableSwagger: true
+  # authMetaHttpEnabled: false
+  # read_timeout: "300000"
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: true
+  # terminationGracePeriodSeconds: 120
+  # enableRPIAuthentication: true
+  # logging:
+  #   default: Error
+  #   database: Error
+  #   rpiTrace: Error
+  #   rpiError: Error
+  #   Console: Error
+  # autoscaling:
+  #   enabled: false
+  #   type: hpa
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # resources:
+  #   enabled: true
+
 
 # ==========================
 # Node Manager
@@ -602,6 +1201,44 @@ nodemanager:
   enableRPIAuthentication: true
   autoscaling:
     enabled: false
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: false
+  # terminationGracePeriodSeconds: 120
+  # enableRPIAuthentication: true
+  # logging:
+  #   default: Error
+  #   database: Error
+  #   rpiTrace: Error
+  #   rpiError: Error
+  #   Console: Error
+  # autoscaling:
+  #   enabled: false
+  #   type: hpa
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # resources:
+  #   enabled: true
+
 
 # ==========================
 # Deployment API
@@ -615,6 +1252,33 @@ deploymentapi:
     templateTenantFilesPath: "/tmp/templatetenantfiles"
     volumeClaimName: templatetenantfiles
 
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: false
+  # terminationGracePeriodSeconds: 120
+  # logging:
+  #   default: Error
+  #   database: Error
+  #   rpiTrace: Error
+  #   rpiError: Error
+  #   Console: Error
+  # resources:
+  #   enabled: true
+
+
 # ==========================
 # Queue Reader
 # ==========================
@@ -624,15 +1288,25 @@ queuereader:
   realtimeConfiguration:
     # Enable distributed processing for high-volume transactions
     isDistributed: false
-  # Internal cache for distributed processing (top-level, not nested under realtimeConfiguration)
+  # Internal cache for distributed processing (top-level, not nested under realtimeConfiguration).
+  # NOTE on credentials:
+  #   For internal Redis, the chart auto-generates the password and
+  #   stores it as QueueService_RedisCache_Password in the K8s Secret.
+  #   For external Redis, `rpihelmcli secrets` prompts for the
+  #   connection string and writes it to QueueService_RedisCache_ConnectionString.
   internalCache:
     provider: redis
     # internal: chart-managed Redis | external: BYO Redis
     type: internal
     redisSettings:
-      # Required if type=external
-      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
-  # Internal queue for distributed processing
+      # Required if type=external. NOT read from this file.
+      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # → K8s Secret: QueueService_RedisCache_ConnectionString (prompt-only)
+  # Internal queue for distributed processing.
+  # NOTE on credentials:
+  #   For internal RabbitMQ, the chart auto-generates the password
+  #   and stores it as QueueService_RabbitMQ_Password in the K8s
+  #   Secret. For external RabbitMQ, `rpihelmcli secrets` prompts
+  #   for the password.
   internalQueues:
     provider: rabbitmq
     # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
@@ -640,7 +1314,7 @@ queuereader:
     rabbitmqSettings:
       hostname: "rpi-queuereader-rabbitmq"
       username: redpointrpi
-      password: my_Super_Strong_Pwd
+      password: my_Super_Strong_Pwd  # → K8s Secret: QueueService_RabbitMQ_Password (chart-auto for internal; prompt-only for external)
     # RPI client IDs for this cluster
     tenantIds:
       - 00000000-0000-0000-0000-000000000000
@@ -649,22 +1323,167 @@ queuereader:
   autoscaling:
     enabled: false
 
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # service:
+  #   port: 80
+  # serviceAccount:
+  #   enabled: true
+  # isFormProcessingEnabled: true
+  # isEventProcessingEnabled: true
+  # isCacheProcessingEnabled: true
+  # queueListenerEnabled: true
+  # isCallbackServiceProcessingEnabled: true
+  # nonActiveQueuePath: listenerQueueNonActive
+  # listenerQueueNonActiveTTLDays: 14
+  # errorQueuePath: listenerQueueError
+  # listenerQueueErrorTTLDays: 14
+  # maintenanceModeBufferTime: "00:01:00"
+  # threadPoolSize: 10
+  # timeoutMinutes: 60
+  # maxBatchSize: 50
+  # useMessageLocks: true
+  # partitionHandler:
+  #   partitionLockDuration: "00:02:00"
+  #   offsetPositionTTL: "23:59:59"
+  #   deduplicationCacheTTL: "01:00:00"
+  # seedService:
+  #   memoryCacheSize: "10"
+  #   maxNumberRetries: "100"
+  #   maxRetryDelay: "00:01:00"
+  # realtimeConfiguration:
+  #   isDistributed: true
+  # internalCache:
+  #   backupToOpsDBInterval: "00:00:20"
+  #   redisSettings:
+  #     replicas: 1
+  #     resources:
+  #       enabled: true
+  #       requests:
+  #         cpu: 100m
+  #         memory: 256Mi
+  #       limits:
+  #         memory: 3Gi
+  #     volumeClaimTemplates:
+  #       enabled: true
+  #       storage: 100Gi
+  #     podDisruptionBudget:
+  #       enabled: false
+  #       minAvailable: 1
+  # internalQueues:
+  #   rabbitmqSettings:
+  #     virtualhost: /
+  #     hostname: rpi-queuereader-rabbitmq
+  #     username: rabbitmq
+  #     resources:
+  #       enabled: true
+  #       requests:
+  #         cpu: 100m
+  #         memory: 256Mi
+  #       limits:
+  #         memory: 3Gi
+  #     volumeClaimTemplates:
+  #       enabled: true
+  #       storage: 100Gi
+  #     volumes:
+  #       enabled: false
+  #       claimName: rpi-queuereader-rabbitmq-data
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: true
+  # terminationGracePeriodSeconds: 120
+  # logging:
+  #   default: Error
+  #   database: Error
+  #   rpiTrace: Error
+  #   rpiError: Error
+  #   Console: Error
+  # autoscaling:
+  #   enabled: false
+  #   type: hpa
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # resources:
+  #   enabled: true
+
+
 # ==========================
 # Rebrandly (URL Shortener)
 # ==========================
+# NOTE on credentials in this section:
+#   The Rebrandly API key is NOT read from this file. `rpihelmcli secrets`
+#   prompts for it interactively and writes it to the K8s Secret as
+#   `Rebrandly_ApiKey`; the chart reads that Secret key at deploy time.
+#   The internal Redis password is chart-auto-generated and stored as
+#   `Rebrandly_RedisPassword` in the K8s Secret -- operator never touches it.
+#   See docs/secrets-management.md for the full list of Secret keys.
 rebrandly:
   enabled: false
-  apiKey: my_rebrandly_api_key
-  secretName: rpi-rebrandly
+  # apiKey: <DEPRECATED; ignored. Value lives in K8s Secret key Rebrandly_ApiKey>
+  # secretName: <DEPRECATED; ignored. Chart uses the shared Secret via rpi.secrets.secretName>
   redisSettings:
     # internal: chart-managed Redis | external: BYO Redis
     type: internal
-    # External Redis settings (if type=external)
+    # External Redis settings (used only when type=external)
     hostname: rpi-rebrandly-cache
-    username: my_redis_username
-    password: my_redis_password
+    # username / password for an external Redis are NOT read from this
+    # file. When type=external, `rpihelmcli secrets` prompts for the
+    # password and writes it to the K8s Secret as `Rebrandly_RedisPassword`.
     useAzureCredentials: false
     port: 6379
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # podAnnotations: {}
+  # podLabels: {}
+  # baseUrl: https://api.rebrandly.com
+  # enterpriseBaseUrl: https://enterprise-api.rebrandly.com
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # replicas: 1
+  # serviceAccount:
+  #   enabled: true
+  # redisSettings:
+  #   resources:
+  #     requests:
+  #       cpu: 50m
+  #       memory: 256Mi
+  #     limits:
+  #       memory: 3Gi
+  #       cpu: 3000m
+  #   volumeClaimTemplates:
+  #     enabled: false
+  #     type: dynamic
+  #     size: 50Gi
+  #     storageClassName: default
+  #     accessModes: ReadWriteOnce
+  # service:
+  #   port: 80
+  # customMetrics:
+  #   enabled: false
+  #   prometheus_scrape: false
+  # terminationGracePeriodSeconds: 120
+  # logging:
+  #   default: Error
+  #   aspNetCore: Error
+  # resources:
+  #   enabled: true
+
 
 # ==========================
 # Diagnostics Mode
@@ -673,7 +1492,10 @@ diagnosticsMode:
   copytoAzureBlob:
     enabled: false
     accountName: <yourstorageaccount>
-    accessKey: <yourstorageaccount-access-key>
+    # accessKey is NOT read from this file -- it lives in the K8s Secret
+    # as CopyToAzureBlobAccessKey. Populate it via `rpihelmcli secrets`
+    # (or directly in the chart Secret for non-CLI deployments).
+    accessKey: <yourstorageaccount-access-key>  # → K8s Secret: CopyToAzureBlobAccessKey
     containerName: <yourstorageaccount-container-name>
     blobServiceEndpoint: https://yourstorage.blob.core.windows.net
     enableCdn: false
@@ -682,8 +1504,36 @@ diagnosticsMode:
     enabled: false
     sftpHost: <your-sftp-host>
     sftpUsername: <your-sftp-username>
-    sftpPassword: <your-sftp-password>
+    # sftpPassword is NOT read from this file -- it lives in the K8s
+    # Secret as CopyToSFTPSecureFTPPassword. Populate it via
+    # `rpihelmcli secrets` (or directly in the chart Secret).
+    sftpPassword: <your-sftp-password>  # → K8s Secret: CopyToSFTPSecureFTPPassword
     sftpPort: "22"
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # dotNetTools:
+  #   enabled: false
+  #   useGcDump: false
+  #   useCounters: false
+  #   path: /app/dotnet-tools
+  #   extractionBaseDir: /tmp
+  # netutils:
+  #   enabled: false
+  #   securityContext:
+  #     runAsNonRoot: true
+  #     runAsUser: 7777
+  #     runAsGroup: 7777
+  #     readOnlyRootFilesystem: true
+  #     allowPrivilegeEscalation: false
+  #     privileged: false
+  #     appArmorProfile: ""
+  #     capabilities:
+  #       drop:
+  #         - ALL
+  #       add: ["NET_ADMIN", "NET_RAW"]
+
 
 # ==========================
 # Microsoft Entra ID Authentication
@@ -709,8 +1559,8 @@ OpenIdProviders:
   validateIssuer: false
   validateAudience: true
   logoutIdTokenParameter: id_token_hint
-  customScopes:
-    - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
+  # customScopes:
+  #   - api://00000000-0000-0000-0000-000000000000/Interaction.Clients
   supportsUserManagement: false
 
 # ==========================
@@ -760,12 +1610,32 @@ ingress:
     queuereader: rpi-queuereader
     rabbitmqconsole: rpi-rabbitmq-console
     smartactivation: rpi-smartActivation
+    observability: rpi-observability            # only used when observability.enabled=true
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # className: {{ .Release.Namespace }}
+  # internalImageOverride:
+  #   enabled: false
+  #   image: registry.k8s.io/ingress-nginx/controller:v1.14.3@sha256:82917be97c0939f6ada1717bb39aa7e66c229d6cfb10dcfc8f1bd42f9efe0f81
+  # service:
+  #   port: 80
+  # tls:
+  #   - secretName: ingress-tls
+
 
 # ==========================
 # Network Policy
 # ==========================
 networkPolicy:
   enabled: false
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # allowDNS: true
+
 
 # ==========================
 # Service Mesh
@@ -920,24 +1790,119 @@ redpointAI:
 # ==========================
 smartActivation:
   enabled: false
+  # secretName: <DEPRECATED; ignored. Smart Activation credentials live
+  # in the shared chart Secret via the CDP_* keys read by the authservice,
+  # keycloak, cdp-init, cdp-servicesapi pods.>
   secretName: rpi-smartactivation
 
 # Auth Service (Smart Activation)
 authservice:
   replicas: 1
   default_username: admin@noemail.com
-  default_password: my_Super_Strong_Pwd
+  # default_password is NOT read from this file. The chart reads the
+  # Keycloak admin password from the K8s Secret key CDP_Keycloak_Admin_Password.
+  # Populate via rpihelmcli secrets or directly in the chart Secret.
+  default_password: my_Super_Strong_Pwd  # → K8s Secret: CDP_Keycloak_Admin_Password
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # logging:
+  #   verbosity: DEBUG
+  # autoscaling:
+  #   enabled: false
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # terminationGracePeriodSeconds: 120
+  # resources:
+  #   enabled: true
+  #   java_opts: "-Xmx1536m"
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: true
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  #   seccompProfile:
+  #     type: RuntimeDefault
+  # rollingUpdate:
+  #   maxUnavailable: "25%"
+  #   maxSurge: "25%"
+  #   progressDeadlineSeconds: 600
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+
 
 # Keycloak (Smart Activation)
 keycloak:
   replicas: 1
   hostname: keycloak
   username: admin@noemail.com
-  password: my_Super_Strong_Pwd
+  # password and realm_client_secret are NOT read from this file. The
+  # chart reads both from the K8s Secret. Populate via rpihelmcli secrets
+  # or directly in the chart Secret.
+  password: my_Super_Strong_Pwd                     # → K8s Secret: CDP_Keycloak_Admin_Password
   database_name: keycloak
   realm_name: redpoint-mercury
   realm_client_id: rpi-service
-  realm_client_secret: <my-realm-client-secret>
+  realm_client_secret: <my-realm-client-secret>     # → K8s Secret: CDP_Keycloak_Client_Secret
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # autoscaling:
+  #   enabled: false
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # resources:
+  #   enabled: true
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 1001
+  #   runAsGroup: 1001
+  #   fsGroup: 1001
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: false
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # rollingUpdate:
+  #   maxUnavailable: "25%"
+  #   maxSurge: "25%"
+  #   progressDeadlineSeconds: 600
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+
 
 # Reporting Service
 reportingservice:
@@ -945,7 +1910,9 @@ reportingservice:
     enabled: false
     api_url: https://api.us.azure.sigmacomputing.com
     client_id: 48dd1982ab835ff53177e9cbd7fb5608b1db8c56491a040f2f0843a3bfc6b440
-    client_secret: my_sigma_client_secret
+    # client_secret is NOT read from this file. The chart reads it from
+    # the K8s Secret as CDP_SIGMA_Client_Secret.
+    client_secret: my_sigma_client_secret  # → K8s Secret: CDP_SIGMA_Client_Secret
 
 # Init Service (Smart Activation)
 initservice:
@@ -953,34 +1920,285 @@ initservice:
   database:
     operational:
       name: smart_activation_db
-      connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
+      # connection_string is NOT read from this file. The chart reads
+      # the Mongo connection string from the K8s Secret as
+      # CDP_Mongo_ConnectionString. Populate via rpihelmcli secrets.
+      connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority  # → K8s Secret: CDP_Mongo_ConnectionString
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # resources:
+  #   enabled: true
+  #   java_opts: "-Xmx2150m"
+  # logging:
+  #   verbosity: DEBUG
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: false
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # rollingUpdate:
+  #   maxUnavailable: "25%"
+  #   maxSurge: "25%"
+  #   progressDeadlineSeconds: 600
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+
 
 # Message Queue (Smart Activation)
 messageq:
   replicas: 1
   username: redpointrpi
 
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: StatefulSet
+  # port: 5672
+  # serviceAccount:
+  #   enabled: true
+  # resources:
+  #   enabled: true
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: true
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # volumeClaimTemplates:
+  #   storage: 100Gi
+
+
 # Maintenance Service (Smart Activation)
 maintenanceservice:
   replicas: 1
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # port: 80
+  # resources:
+  #   enabled: true
+  #   java_opts: "-Xmx1536m"
+  # logging:
+  #   verbosity: DEBUG
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: false
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # rollingUpdate:
+  #   maxUnavailable: "25%"
+  #   maxSurge: "25%"
+  #   progressDeadlineSeconds: 600
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+
 
 # Services API (Smart Activation)
 servicesapi:
   replicas: 1
   sso_enabled: true
 
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # resources:
+  #   enabled: true
+  #   java_opts: "-Xmx2150m"
+  # logging:
+  #   verbosity: DEBUG
+  # autoscaling:
+  #   enabled: false
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: false
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+
+
 # Socket.io (Smart Activation)
 socketio:
   replicas: 1
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # keycloak_realm: "redpoint-mercury"
+  # service:
+  #   port: 80
+  # resources:
+  #   enabled: true
+  #   java_opts: "-Xmx1536m"
+  # logging:
+  #   verbosity: DEBUG
+  # autoscaling:
+  #   enabled: false
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: false
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+
 
 # UI Service (Smart Activation)
 uiservice:
   replicas: 1
 
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: deployment
+  # rollout:
+  #   autoPromotionEnabled: true
+  #   revisionHistoryLimit: 3
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 80
+  # resources:
+  #   enabled: true
+  #   java_opts: "-Xmx2150m"
+  # logging:
+  #   verbosity: DEBUG
+  # autoscaling:
+  #   enabled: false
+  #   minReplicas: 2
+  #   maxReplicas: 5
+  #   targetCPUUtilizationPercentage: 80
+  #   targetMemoryUtilizationPercentage: 80
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: false
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+
+
 # CDP Cache (Smart Activation)
 cdpcache:
   enabled: true
   replicas: 1
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # type: StatefulSet
+  # serviceAccount:
+  #   enabled: true
+  # service:
+  #   port: 6379
+  # resources:
+  #   enabled: true
+  # securityContext:
+  #   enabled: true
+  #   runAsUser: 7777
+  #   runAsGroup: 7777
+  #   fsGroup: 7777
+  #   runAsNonRoot: true
+  #   readOnlyRootFilesystem: false
+  #   privileged: false
+  #   appArmorProfile: ""
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop: ["ALL"]
+  # podDisruptionBudget:
+  #   enabled: false
+  #   minAvailable: 1
+  # volumeClaimTemplates:
+  #   storage: 100Gi
+
 
 # ==========================
 # Custom Labels and Annotations
@@ -1009,6 +2227,166 @@ customMetrics:
   enabled: false
 
 # ==========================
+# RPI Observability (AI-driven Pulse_Logging summarizer; opt-in)
+# ==========================
+# Standalone in-cluster service that periodically reads the Pulse_Logging
+# database (READ-ONLY), clusters errors/traces, and asks an LLM to produce
+# human-readable summaries plus chart/values recommendations. Reports are
+# stored in a local SQLite file (PVC-backed) and served via a built-in UI
+# at https://<ingress.hosts.observability>.<ingress.domain>.
+#
+# All in-cluster: nothing leaves the customer's perimeter except outbound
+# calls to the configured LLM provider's endpoint. Pulse_Logging access is
+# via a dedicated read-only DB user the customer creates and stores in the
+# cloud vault as `Observability-LoggingDatabaseConnectionString` (full
+# connection string, including the host -- 127.0.0.1 if cloudSqlProxy is on).
+observability:
+  enabled: false
+  replicas: 1
+  serviceAccount:
+    enabled: true                    # creates rpi-observability SA in per-service mode
+
+  # ---- AI deployment posture ---------------------------------------------
+  # The RPI Observability treats AI inference as a deployment-posture decision:
+  # where inference runs, who operates it, and where log data lives. The
+  # operator UX is identical across postures; only the deployment
+  # architecture and privacy boundary differ.
+  #
+  #   helmAssistant  (default, turnkey)
+  #     Redpoint-hosted control plane. Redacted, clustered error data
+  #     leaves the cluster over HTTPS; structured AI summaries come back.
+  #     Zero customer AI infrastructure required.
+  #
+  #   localLlm  (private, packaged)
+  #     In-cluster Ollama deployment (see observability.localLlm). Nothing
+  #     leaves the customer network. Designed for highly regulated envs.
+  #
+  #   byo  (customer-managed AI platform)
+  #     Customer-managed inference platform you choose under
+  #     `byo.platform` (anthropic | azureFoundry | bedrock | vertex). Auth
+  #     piggybacks on the chart's existing cloudIdentity helpers.
+  model:
+    provider: helmAssistant          # helmAssistant | localLlm | byo
+
+    # Model identifier for the active posture. Ignored when
+    # provider=helmAssistant (the control plane selects the model)
+    # and when byo.platform=azureFoundry (the deployment name comes
+    # from redpointAI.naturalLanguage.ChatGptEngine).
+    #   localLlm           -> any tag from https://ollama.com/library
+    #                         (e.g., phi3:mini, gemma2:2b)
+    #   byo + anthropic    -> claude-sonnet-4-6, claude-opus-4-7, etc.
+    #   byo + bedrock      -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
+    #   byo + vertex       -> e.g., claude-sonnet-4@20250514
+    llmName: ""
+
+    # ---- Posture: helmAssistant (managed control plane) -----------------
+    # API key from the redpoint-rpi-secrets Secret under the fixed key
+    # Observability_HelmAssistant_ApiKey (mirrors RPI_NLP_API_KEY pattern).
+    # Egress to this URL on 443 is required.
+    helmAssistant:
+      url: https://rpi-helm-assistant.redpointcdp.com
+
+    # ---- Posture: byo (customer-managed AI platform) --------------------
+    # Active only when provider=byo.
+    byo:
+      platform: anthropic            # anthropic | azureFoundry | bedrock | vertex
+
+      # Direct Anthropic API. Egress to api.anthropic.com:443 required.
+      # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
+      anthropic:
+        apiKeyVaultEntry: Observability-AnthropicApiKey
+        baseUrl: ""                  # optional egress proxy
+
+      # Azure AI Foundry / Azure OpenAI. Rides the chart-wide
+      # `redpointAI.naturalLanguage` block (ApiBase, ApiVersion,
+      # ChatGptEngine). Set redpointAI.enabled=true and configure that
+      # block; the chart fails fast if byo.platform=azureFoundry is
+      # selected without it. Auth: WI by default (reuses
+      # cloudIdentity.azure). In non-SDK mode AZURE_OPENAI_API_KEY binds
+      # from the standard RPI_NLP_API_KEY secret entry; in SDK mode the
+      # analyzer fetches the same entry from the cloud vault directly.
+
+      # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / Pod
+      # Identity). Customer grants the analyzer's IAM role
+      # `bedrock:InvokeModel` on the target model. No separate API key.
+      bedrock:
+        region: ""                   # e.g., us-east-1
+
+      # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload
+      # Identity or SA key file). Customer grants
+      # `aiplatform.endpoints.predict`. No separate API key.
+      vertex:
+        projectId: ""
+        region: ""                   # e.g., us-central1
+
+  # ---- Token + request budget --------------------------------------------
+  # Hard caps enforced inside the analyzer (token-bucket). When exceeded,
+  # the next analysis cycle is skipped and the budget event is logged.
+  budget:
+    maxTokensPerHour: 200000
+    maxRequestsPerHour: 60
+
+  # ---- Analysis cadence --------------------------------------------------
+  schedule:
+    intervalMinutes: 30              # batch cycle period
+    lookbackMinutes: 60              # how far back to query each cycle
+    onDemandEnabled: true            # exposes POST /analyze endpoint
+
+  # ---- Operational DB names (Diagnostics tab) ----------------------------
+  # clientServer is informational only -- Pulse_Logging connection still
+  # comes from the chart secret. sqlTrace + audit drive the Diagnostics
+  # tab. When empty, the corresponding section renders a "not configured"
+  # caption.
+  logSources:
+    clientServer: ""    # e.g. Pulse_qarc_a400ca_Logging
+    sqlTrace: ""        # e.g. InteractionAudit_qarc_a400ca
+    audit: ""           # e.g. InteractionAudit_qarc_a400ca
+
+  # ---- Email digest (opt-in) ---------------------------------------------
+  # When enabled, the analyzer posts a short HTML summary of each cycle's
+  # report to the configured recipients. SMTP transport reuses the
+  # chart-wide SMTPSettings block (same SMTP server, sender, credentials
+  # the .NET services already use); only the recipient list and the
+  # "send when..." rule are analyzer-specific.
+  #
+  # The email is intentionally minimal: total errors, top types, and a
+  # link back to the dashboard for the full breakdown / log downloads.
+  email:
+    enabled: false
+    recipients: []                   # ["support@example.com", ...]
+    onlyOnNewErrors: true            # only send when first-seen errors exist
+                                     # (set false to email every cycle)
+
+  # Pulse_Logging access: the analyzer reads the same 4 connection
+  # components the deploymentapi reads (host / username / password /
+  # logging-db-name). No extra knobs here -- the chart's existing secrets
+  # wiring takes care of everything.
+
+  # ---- Local report store (SQLite) ---------------------------------------
+  # The component keeps its SQLite report store at /data/reports.db. The
+  # chart mounts a persistent volume (StatefulSet volumeClaimTemplates,
+  # or an existingClaim you provide) at /data; the path is canonical and
+  # is not environment-dependent. Reports survive pod restarts.
+
+  # ---- HTTP service ------------------------------------------------------
+  # The container runs two processes (same pattern as the Helm Assistant):
+  #   - Streamlit UI on uiPort (8501) -- this is what the ingress routes to
+  #   - FastAPI API on apiPort (8080) -- internal-only, used by Streamlit and kubelet probes
+  service:
+    port: 80
+    uiPort: 8501
+    apiPort: 8080
+
+  # ---- Resources ---------------------------------------------------------
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+# ==========================
 # Post-Install Automation
 # ==========================
 # Automates license activation, cluster DB install, and optional tenant creation.
@@ -1035,6 +2413,41 @@ postInstall:
       password: ""
   waitTimeout: 360
   backoffLimit: 3
+
+  # === Per-service overridable defaults (from _defaults.tpl) ===
+  # Uncomment and modify any of the lines below to override the
+  # chart's per-service default.
+  # enabled: false
+  # existingSecret: ""
+  # activationKey: ""
+  # systemName: ""
+  # adminUsername: coreuser
+  # adminPassword: ""
+  # adminEmail: ""
+  # deploymentapiHost: rpi-deploymentapi
+  # deploymentapiPort: "80"
+  # waitTimeout: "360"
+  # maxReadyWaitSeconds: "600"
+  # pollIntervalSeconds: "15"
+  # backoffLimit: 3
+  # tenant:
+  #   enabled: false
+  #   name: ""
+  #   existingSecret: ""
+  #   dataWarehouse:
+  #     provider: SQLServer
+  #     server: ""
+  #     database: ""
+  #     username: ""
+  #     password: ""
+  # resources:
+  #   requests:
+  #     cpu: 50m
+  #     memory: 64Mi
+  #   limits:
+  #     cpu: 200m
+  #     memory: 128Mi
+
 
 # ==========================
 # Pre-flight Validation
