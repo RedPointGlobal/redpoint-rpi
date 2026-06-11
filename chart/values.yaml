@@ -907,7 +907,7 @@ redpointAI:
   naturalLanguage:
     ApiBase: https://example.openai.azure.com/
     ApiVersion: 2023-07-01-preview
-    ChatGptEngine: gpt-5.1
+    ChatGptEngine: gpt-5.2
     ChatGptTemp: 0.5
   cognitiveSearch:
     SearchEndpoint: https://example.search.windows.net
