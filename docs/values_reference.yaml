@@ -6,35 +6,6 @@
 # service ports, rollout strategies, etc.) are managed by the
 # chart via _defaults.tpl.
 # ============================================================
-#
-# IMPORTANT - HOW CREDENTIALS FLOW:
-#
-# This file documents the SHAPE of values an operator can set. But
-# credential-bearing fields (passwords, API keys, connection
-# strings, access keys) are NOT consumed by the Helm chart from this
-# file. They flow through the K8s Secret named by
-# `secretsManagement.{kubernetes,csi}.secretName` (default
-# `redpoint-rpi-secrets`) and the chart reads them via
-# `secretKeyRef`. Operators populate the Secret in one of two ways:
-#
-#   1. rpihelmcli secrets -f overrides.yaml -n <namespace>
-#        Reads non-secret connection metadata (host, username, db
-#        names, etc.) from this file and PROMPTS interactively for
-#        every credential-bearing field. Generates a Secret YAML
-#        the operator applies with `kubectl apply -f`.
-#
-#   2. Direct K8s Secret authoring (kubernetes mode), CSI sync
-#      (csi mode), or cloud vault population (sdk mode). The
-#      operator writes the Secret keys named in the inline
-#      `→ K8s Secret: <KEY>` comments throughout this file.
-#
-# Each credential field below carries an inline comment naming the
-# Secret key its value lands in. If a field shows
-# `→ K8s Secret: X (prompt-only via rpihelmcli)`, the CLI ignores
-# any value you put in this file and prompts at run time.
-#
-# Per-service Secret key full list: see docs/secrets-management.md.
-# ============================================================
 
 # ==========================
 # Global Settings
@@ -56,8 +27,10 @@ global:
       imagePullSecret:
         enabled: true
         name: redpoint-rpi
-      # To override the utility image (net-utils) used by jobs and validation pods,
-      # use images.overrides or images.nameOverrides. Defaults to {registry}/net-utils:latest.
+      # net-utils (used by the database-upgrade job) resolves through the
+      # canonical rpi.image helper, same as every other service. Default:
+      # {registry}/net-utils:{tag}. Override via overrides or nameOverrides
+      # below.
       # Image resolution priority: overrides > nameOverrides > default ({registry}/{service-name}:{tag})
       #
       # overrides: Full URI per service, used verbatim (no registry/tag appended).
@@ -160,18 +133,11 @@ databases:
   operational:
     # Supported: sqlserver, postgresql, sqlserveronvm
     provider: sqlserver
-    # NOTE on credentials in this section:
-    #   `provider` and `encrypt` are read by the chart at deploy time.
-    #   The connection-string parts below (host, username, db names) are
-    #   read by `rpihelmcli secrets` to pre-fill the K8s Secret -- the
-    #   chart itself reads them from the Secret keys listed beside each
-    #   field. `server_password` is NEVER read from this file; the CLI
-    #   always prompts for it interactively.
-    server_host: <my-database-server-host>                  # → K8s Secret: Operations_Database_ServerHost
-    server_username: <my-database-server-username>          # → K8s Secret: Operations_Database_Server_Username
-    server_password: <my-database-server-password>          # → K8s Secret: Operations_Database_Server_Password (prompt-only via rpihelmcli)
-    pulse_database_name: <my-pulse-database-name>           # → K8s Secret: Operations_Database_Pulse_Database_Name
-    pulse_logging_database_name: <my-logging-database-name> # → K8s Secret: Operations_Database_Pulse_Logging_Database_Name
+    server_host: <my-database-server-host>
+    server_username: <my-database-server-username>
+    server_password: <my-database-server-password>
+    pulse_database_name: <my-pulse-database-name>
+    pulse_logging_database_name: <my-logging-database-name>
     encrypt: true
 
     # Google Cloud SQL Auth Proxy (GKE only; PostgreSQL or SQL Server).
@@ -545,15 +511,8 @@ realtimeapi:
     enabled: true
     # Supported: mongodb, azureredis, redis, inMemorySql, googlebigtable
     provider: ""
-    # NOTE on credentials in cacheProvider sub-blocks:
-    #   `provider`, `databaseName`, `collectionName`, mongodb auth
-    #   mechanism options, and similar non-secret config knobs are
-    #   read by the chart from this file. Connection strings and
-    #   passwords are NOT read from this file -- `rpihelmcli secrets`
-    #   prompts for them interactively and writes them to the K8s
-    #   Secret keys listed beside each field below.
     mongodb:
-      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true  # → K8s Secret: RealtimeAPI_MongoCache_ConnectionString (prompt-only)
+      connectionString: mongodb://<my_username>:<my_password>@myserver.mongodb.net:27017/Pulse?authSource=admin&ssl=true
       databaseName: <my-realtime-cache-db>
       collectionName: <my-realtime-cache-collection>
       # Authentication mechanism for MongoDB Atlas.
@@ -583,20 +542,13 @@ realtimeapi:
       # internal: chart-managed Redis | external: BYO Redis
       type: internal
       redisSettings:
-        # Required if type=external. Connection string is NOT read from
-        # this file -- `rpihelmcli secrets` prompts for it interactively
-        # and writes it to the K8s Secret as RealtimeAPI_RedisCache_ConnectionString.
-        # For type=internal, the chart auto-generates the Redis password
-        # and stores it as RealtimeAPI_RedisCache_Password (operator never touches).
-        connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # → K8s Secret: RealtimeAPI_RedisCache_ConnectionString (prompt-only)
+        # Required if type=external
+        connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
     inMemorySql:
-      # inMemorySql connection details are NOT read from this file.
-      # `rpihelmcli secrets` prompts for the full connection string and
-      # writes it to the K8s Secret as RealtimeAPI_inMemorySql_ConnectionString.
-      server_host: <my-cache-database-server-host>     # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
-      database_name: <my-cache-database-name>          # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
-      username: <my-cache-database-username>           # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
-      password: <my-cache-database-password>           # → K8s Secret: RealtimeAPI_inMemorySql_ConnectionString (prompt-only)
+      server_host: <my-cache-database-server-host>
+      database_name: <my-cache-database-name>
+      username: <my-cache-database-username>
+      password: <my-cache-database-password>
     googlebigtable:
       projectId: <my-bigtable-project-id>
       instanceId: <my-bigtable-instance-id>
@@ -606,14 +558,6 @@ realtimeapi:
     enabled: true
     # Supported: amazonsqs, azureservicebus, googlepubsub, azureeventhubs, rabbitmq, azurestorage, amazonmsk
     provider: ""
-    # NOTE on credentials in queueProvider sub-blocks:
-    #   `provider`, `queueNames`, projectId, region, eventHubName,
-    #   NamespaceName, storageAccountName, useAzureIdentityAuthentication,
-    #   and other non-secret config knobs are read by the chart from
-    #   this file. Connection strings, access keys, and passwords are
-    #   NOT read from this file -- `rpihelmcli secrets` prompts for
-    #   them interactively and writes them to the K8s Secret keys
-    #   listed beside each field below.
     queueNames:
       formQueuePath: RPIWebFormSubmission
       eventsQueuePath: RPIWebEvents
@@ -625,30 +569,25 @@ realtimeapi:
       # Supported: accessKey (configure keys under cloudIdentity.amazonSettings)
       credentialsType: accessKey
     azureservicebus:
-      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>  # → K8s Secret: RealtimeAPI_ServiceBus_ConnectionString (prompt-only)
+      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>
     azurestorage:
-      connectionString: DefaultEndpointsProtocol=https;AccountName=myAccoutName;AccountKey=myAccountAccessKey;EndpointSuffix=core.windows.net  # → K8s Secret: RealtimeAPI_AzureStorage_ConnectionString (prompt-only)
+      connectionString: DefaultEndpointsProtocol=https;AccountName=myAccoutName;AccountKey=myAccountAccessKey;EndpointSuffix=core.windows.net
       storageAccountName: myStorageAccountName
       useAzureIdentityAuthentication: false
     googlepubsub:
       projectId: <my-google-project-id>
     azureeventhubs:
-      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>;EntityPath=<my-hub>  # → K8s Secret: RealtimeAPI_EventHub_ConnectionString (prompt-only)
+      connectionstring: Endpoint=sb://<my-namespace>.servicebus.windows.net/;SharedAccessKeyName=<my-policy>;SharedAccessKey=<my-key>;EntityPath=<my-hub>
       eventHubName: RPIQueueListener
       NamespaceName: my_eventhub_namespace_name
       PartitionIds:
         - "0"
     rabbitmq:
-      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ.
-      # Internal RabbitMQ password is chart-auto-generated and stored
-      # as RealtimeAPI_RabbitMQ_Password in the K8s Secret (operator
-      # never touches). External RabbitMQ password is prompted by
-      # rpihelmcli secrets.
+      # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
       type: internal
     amazonmsk:
       region: <my-aws-region>
-      accessKeyId: <my-aws-iam-access-key>      # → K8s Secret: AWS_Access_Key_ID (prompt-only)
-      # secretAccessKey is also prompted; lands in K8s Secret as AWS_Secret_Access_Key
+      accessKeyId: <my-aws-iam-access-key>
       secretAccessKey: <my-aws-iam-secret-access-key>
       bootstrapServers: <my-server1.c2.kafka.us-east-1.amazonaws.com:9198>
 
@@ -900,31 +839,19 @@ executionservice:
   # Internal cache for execution state
   internalCache:
     enabled: true
-    # Supported: filesystem, azureblob.
-    # NOTE: the "default" / Redis provider for executionservice
-    # internalCache is NOT wired in the current chart. The
-    # `redisSettings` sub-block below is documentation-only and is
-    # not consumed.
+    # Supported: default, filesystem, azureblob
     provider: filesystem
-    # redisSettings: documented for parity with other services but
-    # NOT consumed by deploy-executionservice.yaml (no Redis provider
-    # is wired). Leave defaults; no operator action needed.
+    # Redis settings (when provider=default or for state caching)
     redisSettings:
+      # internal: chart-managed Redis | external: BYO Redis
       type: internal
-      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # (unused — dead value)
-    # Azure Blob settings (when provider=azureblob).
-    # NOTE on credentials:
-    #   accountName + containerName are read by the chart from this file.
-    #   connectionString is NOT read from this file -- `rpihelmcli secrets`
-    #   prompts for it and writes it to the K8s Secret as
-    #   ExecutionService_AzureBlob_ConnectionString; the chart reads
-    #   it via secretKeyRef. Prefer `useCloudIdentity: true` for
-    #   production -- the pod then authenticates via Workload Identity
-    #   and no connection-string secret is needed at all.
+      # Required if type=external
+      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
+    # Azure Blob settings (when provider=azureblob)
     azureStorageSettings:
       accountName: my_storage_account_name
       containerName: rpi
-      connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net  # → K8s Secret: ExecutionService_AzureBlob_ConnectionString (prompt-only; only when useCloudIdentity=false)
+      connectionString: DefaultEndpointsProtocol=https;AccountName=<myAccoutName;AccountKey=<myAccountAccessKey;EndpointSuffix=core.windows.net
       useCloudIdentity: false
   autoscaling:
     enabled: false
@@ -1141,13 +1068,9 @@ integrationapi:
   enabled: true
   replicas: 1
   enableRPIAuthentication: true
-  # Credentials (required if Smart Activation is enabled).
-  # `password` is NOT read from this file -- the chart reads it from
-  # the K8s Secret as CDP_Integration_Password (consumed by
-  # cdp-init, cdp-authservices, cdp-servicesapi). Populate via
-  # rpihelmcli secrets or directly in the chart Secret.
+  # Credentials (required if Smart Activation is enabled)
   username: admin@noemail.com
-  password: my_Super_Strong_Pwd  # → K8s Secret: CDP_Integration_Password
+  password: my_Super_Strong_Pwd
   autoscaling:
     enabled: false
 
@@ -1288,25 +1211,15 @@ queuereader:
   realtimeConfiguration:
     # Enable distributed processing for high-volume transactions
     isDistributed: false
-  # Internal cache for distributed processing (top-level, not nested under realtimeConfiguration).
-  # NOTE on credentials:
-  #   For internal Redis, the chart auto-generates the password and
-  #   stores it as QueueService_RedisCache_Password in the K8s Secret.
-  #   For external Redis, `rpihelmcli secrets` prompts for the
-  #   connection string and writes it to QueueService_RedisCache_ConnectionString.
+  # Internal cache for distributed processing (top-level, not nested under realtimeConfiguration)
   internalCache:
     provider: redis
     # internal: chart-managed Redis | external: BYO Redis
     type: internal
     redisSettings:
-      # Required if type=external. NOT read from this file.
-      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"  # → K8s Secret: QueueService_RedisCache_ConnectionString (prompt-only)
-  # Internal queue for distributed processing.
-  # NOTE on credentials:
-  #   For internal RabbitMQ, the chart auto-generates the password
-  #   and stores it as QueueService_RabbitMQ_Password in the K8s
-  #   Secret. For external RabbitMQ, `rpihelmcli secrets` prompts
-  #   for the password.
+      # Required if type=external
+      connectionString: "my-redis-host:6379,password=<your-password>,abortConnect=False"
+  # Internal queue for distributed processing
   internalQueues:
     provider: rabbitmq
     # internal: chart-managed RabbitMQ | external: BYO RabbitMQ
@@ -1314,7 +1227,7 @@ queuereader:
     rabbitmqSettings:
       hostname: "rpi-queuereader-rabbitmq"
       username: redpointrpi
-      password: my_Super_Strong_Pwd  # → K8s Secret: QueueService_RabbitMQ_Password (chart-auto for internal; prompt-only for external)
+      password: my_Super_Strong_Pwd
     # RPI client IDs for this cluster
     tenantIds:
       - 00000000-0000-0000-0000-000000000000
@@ -1422,25 +1335,17 @@ queuereader:
 # ==========================
 # Rebrandly (URL Shortener)
 # ==========================
-# NOTE on credentials in this section:
-#   The Rebrandly API key is NOT read from this file. `rpihelmcli secrets`
-#   prompts for it interactively and writes it to the K8s Secret as
-#   `Rebrandly_ApiKey`; the chart reads that Secret key at deploy time.
-#   The internal Redis password is chart-auto-generated and stored as
-#   `Rebrandly_RedisPassword` in the K8s Secret -- operator never touches it.
-#   See docs/secrets-management.md for the full list of Secret keys.
 rebrandly:
   enabled: false
-  # apiKey: <DEPRECATED; ignored. Value lives in K8s Secret key Rebrandly_ApiKey>
-  # secretName: <DEPRECATED; ignored. Chart uses the shared Secret via rpi.secrets.secretName>
+  apiKey: my_rebrandly_api_key
+  secretName: rpi-rebrandly
   redisSettings:
     # internal: chart-managed Redis | external: BYO Redis
     type: internal
-    # External Redis settings (used only when type=external)
+    # External Redis settings (if type=external)
     hostname: rpi-rebrandly-cache
-    # username / password for an external Redis are NOT read from this
-    # file. When type=external, `rpihelmcli secrets` prompts for the
-    # password and writes it to the K8s Secret as `Rebrandly_RedisPassword`.
+    username: my_redis_username
+    password: my_redis_password
     useAzureCredentials: false
     port: 6379
 
@@ -1492,10 +1397,7 @@ diagnosticsMode:
   copytoAzureBlob:
     enabled: false
     accountName: <yourstorageaccount>
-    # accessKey is NOT read from this file -- it lives in the K8s Secret
-    # as CopyToAzureBlobAccessKey. Populate it via `rpihelmcli secrets`
-    # (or directly in the chart Secret for non-CLI deployments).
-    accessKey: <yourstorageaccount-access-key>  # → K8s Secret: CopyToAzureBlobAccessKey
+    accessKey: <yourstorageaccount-access-key>
     containerName: <yourstorageaccount-container-name>
     blobServiceEndpoint: https://yourstorage.blob.core.windows.net
     enableCdn: false
@@ -1504,10 +1406,7 @@ diagnosticsMode:
     enabled: false
     sftpHost: <your-sftp-host>
     sftpUsername: <your-sftp-username>
-    # sftpPassword is NOT read from this file -- it lives in the K8s
-    # Secret as CopyToSFTPSecureFTPPassword. Populate it via
-    # `rpihelmcli secrets` (or directly in the chart Secret).
-    sftpPassword: <your-sftp-password>  # → K8s Secret: CopyToSFTPSecureFTPPassword
+    sftpPassword: <your-sftp-password>
     sftpPort: "22"
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
@@ -1773,7 +1672,7 @@ redpointAI:
   naturalLanguage:
     ApiBase: https://example.openai.azure.com/
     ApiVersion: 2023-07-01-preview
-    ChatGptEngine: gpt-5.1
+    ChatGptEngine: gpt-5.2
     ChatGptTemp: 0.5
   cognitiveSearch:
     SearchEndpoint: https://example.search.windows.net
@@ -1784,25 +1683,21 @@ redpointAI:
     ModelDimensions: 1536
     ContainerName: my_blob_container_name
     BlobFolder: my_blob_container_folder_name
+    # Verbose NLP request/response tracing for diagnostics. Off by default.
+    EnableTrace: false
 
 # ==========================
 # Smart Activation
 # ==========================
 smartActivation:
   enabled: false
-  # secretName: <DEPRECATED; ignored. Smart Activation credentials live
-  # in the shared chart Secret via the CDP_* keys read by the authservice,
-  # keycloak, cdp-init, cdp-servicesapi pods.>
   secretName: rpi-smartactivation
 
 # Auth Service (Smart Activation)
 authservice:
   replicas: 1
   default_username: admin@noemail.com
-  # default_password is NOT read from this file. The chart reads the
-  # Keycloak admin password from the K8s Secret key CDP_Keycloak_Admin_Password.
-  # Populate via rpihelmcli secrets or directly in the chart Secret.
-  default_password: my_Super_Strong_Pwd  # → K8s Secret: CDP_Keycloak_Admin_Password
+  default_password: my_Super_Strong_Pwd
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
   # Uncomment and modify any of the lines below to override the
@@ -1855,14 +1750,11 @@ keycloak:
   replicas: 1
   hostname: keycloak
   username: admin@noemail.com
-  # password and realm_client_secret are NOT read from this file. The
-  # chart reads both from the K8s Secret. Populate via rpihelmcli secrets
-  # or directly in the chart Secret.
-  password: my_Super_Strong_Pwd                     # → K8s Secret: CDP_Keycloak_Admin_Password
+  password: my_Super_Strong_Pwd
   database_name: keycloak
   realm_name: redpoint-mercury
   realm_client_id: rpi-service
-  realm_client_secret: <my-realm-client-secret>     # → K8s Secret: CDP_Keycloak_Client_Secret
+  realm_client_secret: <my-realm-client-secret>
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
   # Uncomment and modify any of the lines below to override the
@@ -1910,9 +1802,7 @@ reportingservice:
     enabled: false
     api_url: https://api.us.azure.sigmacomputing.com
     client_id: 48dd1982ab835ff53177e9cbd7fb5608b1db8c56491a040f2f0843a3bfc6b440
-    # client_secret is NOT read from this file. The chart reads it from
-    # the K8s Secret as CDP_SIGMA_Client_Secret.
-    client_secret: my_sigma_client_secret  # → K8s Secret: CDP_SIGMA_Client_Secret
+    client_secret: my_sigma_client_secret
 
 # Init Service (Smart Activation)
 initservice:
@@ -1920,10 +1810,7 @@ initservice:
   database:
     operational:
       name: smart_activation_db
-      # connection_string is NOT read from this file. The chart reads
-      # the Mongo connection string from the K8s Secret as
-      # CDP_Mongo_ConnectionString. Populate via rpihelmcli secrets.
-      connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority  # → K8s Secret: CDP_Mongo_ConnectionString
+      connection_string: mongodb+srv://<my_username>:<my_password>@<my_hostname>/?retryWrites=true&w=majority
 
   # === Per-service overridable defaults (from _defaults.tpl) ===
   # Uncomment and modify any of the lines below to override the
@@ -2240,114 +2127,378 @@ customMetrics:
 # via a dedicated read-only DB user the customer creates and stores in the
 # cloud vault as `Observability-LoggingDatabaseConnectionString` (full
 # connection string, including the host -- 127.0.0.1 if cloudSqlProxy is on).
+# ---- Single-instance deployment contract (v1) --------------------------
+# RPI Observability is single-instance by design. The pod owns local
+# SQLite state, runs the cycle scheduler in-process, holds the auth
+# cache + token-budget bucket in memory, and binds K8s collectors to a
+# single namespace. There is no leader election or shared-state
+# coordination. Setting `observability.replicas` (or any value that
+# implies more than one running instance) is rejected at chart-render
+# time. Multi-replica is a v2 concern; do not interpret the
+# single-instance shape as an accidental limitation.
 observability:
   enabled: false
-  replicas: 1
   serviceAccount:
     enabled: true                    # creates rpi-observability SA in per-service mode
 
-  # ---- AI deployment posture ---------------------------------------------
-  # The RPI Observability treats AI inference as a deployment-posture decision:
-  # where inference runs, who operates it, and where log data lives. The
-  # operator UX is identical across postures; only the deployment
-  # architecture and privacy boundary differ.
+  # ---- RPI ClientID (REQUIRED) ------------------------------------------
+  # The RPI tenant identifier (a GUID) that this observability instance serves.
+  # Used as the lookup key against Pulse_<env>.dbo.rpi_Clients to resolve
+  # the tenant's Interaction + InteractionAudit DB names (ADR-0009).
   #
-  #   helmAssistant  (default, turnkey)
-  #     Redpoint-hosted control plane. Redacted, clustered error data
-  #     leaves the cluster over HTTPS; structured AI summaries come back.
-  #     Zero customer AI infrastructure required.
+  # REQUIRED whenever observability.enabled=true. Empty / missing causes
+  # `helm template` and `helm install` to fail. There is no fallback,
+  # no inference, no single-tenant auto-detection -- behavior is
+  # identical for single-tenant and multi-tenant deployments. See
+  # workspace doc forbidden/silent-fallback-in-config.md.
   #
-  #   localLlm  (private, packaged)
-  #     In-cluster Ollama deployment (see observability.localLlm). Nothing
-  #     leaves the customer network. Designed for highly regulated envs.
+  # Find the value: SELECT ClientID FROM Pulse_<env>.dbo.rpi_Clients
+  # (uppercase GUID, e.g. 9A39D66C-111C-408E-AE5B-D97880BAC496).
+  clientId: ""
+
+  # ---- Node health panel -------------------------------------------------
+  # Powers the Node Health section on the System Health tab. Reads node
+  # state + per-node CPU/memory from the Kubernetes API and metrics-server.
+  # Nodes are cluster-scoped, so this binds a ClusterRole to the observability service's
+  # ServiceAccount granting get/list on nodes (core) and nodes
+  # (metrics.k8s.io). When disabled, no ClusterRole is created and the
+  # Node health panel renders a quiet "disabled by chart values" caption.
+  # Some security teams require explicit approval for cluster-scoped RBAC;
+  # leave this off in those clusters.
+  nodeHealth:
+    enabled: true
+
+  # ---- Intelligence Runtime ----------------------------------------------
+  # The observability service's AI surface (incident summarization, failure
+  # explanation, RCA, severity classification) is served by the
+  # Intelligence Runtime. It is part of the observability solution, not a
+  # separate feature with its own enable flag -- observability.enabled
+  # turns on the whole solution.
   #
-  #   byo  (customer-managed AI platform)
-  #     Customer-managed inference platform you choose under
-  #     `byo.platform` (anthropic | azureFoundry | bedrock | vertex). Auth
-  #     piggybacks on the chart's existing cloudIdentity helpers.
-  model:
-    provider: helmAssistant          # helmAssistant | localLlm | byo
+  # Single-provider selection: `intelligence.provider` picks one of:
+  #
+  #   local   -- in-cluster inference (default, served by rpi-observability-llm)
+  #   azure   -- Azure AI Foundry or Azure OpenAI
+  #   google  -- Vertex AI
+  #   aws     -- Bedrock
+  #
+  # When provider=local, the chart deploys a StatefulSet
+  # (rpi-observability-llm) running the rpi-observability-llm
+  # image and the observability service routes to it via the in-cluster
+  # Service. When provider is azure/google/aws, no in-cluster serving
+  # layer is rendered; the observability service reaches the cloud
+  # provider directly over its public API using managed-identity-first
+  # auth (no static keys required when Workload Identity / IRSA / WIF
+  # are in place).
+  intelligence:
+    # Active provider. Drives:
+    #   - which provider implementation the runtime registers
+    #   - whether the chart renders the in-cluster serving StatefulSet
+    #     (only when provider=local)
+    #   - which sub-block (local / azure / google / aws) is consumed
+    provider: local                          # local | azure | google | aws
 
-    # Model identifier for the active posture. Ignored when
-    # provider=helmAssistant (the control plane selects the model)
-    # and when byo.platform=azureFoundry (the deployment name comes
-    # from redpointAI.naturalLanguage.ChatGptEngine).
-    #   localLlm           -> any tag from https://ollama.com/library
-    #                         (e.g., phi3:mini, gemma2:2b)
-    #   byo + anthropic    -> claude-sonnet-4-6, claude-opus-4-7, etc.
-    #   byo + bedrock      -> e.g., anthropic.claude-sonnet-4-20250514-v1:0
-    #   byo + vertex       -> e.g., claude-sonnet-4@20250514
-    llmName: ""
+    # Per-inference timeout. Hard-bound so a slow inference cannot
+    # destabilize the observability cycle: when exceeded, the call returns
+    # a typed AIStatus.TIMEOUT and the cycle proceeds without an AI
+    # summary. Sized for CPU inference of ~1000-token briefings on a
+    # standard worker with the 7B Q4 model (~5-8 tokens/sec across
+    # 8 cores); operators on GPU profiles or smaller workloads can
+    # lower it.
+    timeoutSeconds: 240
 
-    # ---- Posture: helmAssistant (managed control plane) -----------------
-    # API key from the redpoint-rpi-secrets Secret under the fixed key
-    # Observability_HelmAssistant_ApiKey (mirrors RPI_NLP_API_KEY pattern).
-    # Egress to this URL on 443 is required.
-    helmAssistant:
-      url: https://rpi-helm-assistant.redpointcdp.com
+    # ---- Local (in-cluster serving) ------------------------------------
+    # Consumed only when provider=local. The serving layer is a
+    # StatefulSet running the rpi-observability-llm image: self-
+    # contained, llama.cpp server + Qwen 2.5 7B Instruct GGUF Q4_K_M
+    # baked in, no runtime downloads, deployable in air-gapped
+    # clusters.
+    #
+    # The model is shipped with the image and is NOT a customer-
+    # configurable knob. The chart deploys exactly one model under
+    # provider=local. To use a different model, switch
+    # intelligence.provider to azure | google | aws and configure
+    # that provider's block.
+    local:
+      # Default points at the in-cluster Service. Override only if the
+      # operator self-hosts the serving layer elsewhere on the cluster.
+      baseUrl: ""                            # blank = http://rpi-observability-llm.<ns>.svc.cluster.local:8000/v1
 
-    # ---- Posture: byo (customer-managed AI platform) --------------------
-    # Active only when provider=byo.
-    byo:
-      platform: anthropic            # anthropic | azureFoundry | bedrock | vertex
+      # Serving-layer deployment. When enabled, the chart renders the
+      # StatefulSet using the canonical Redpoint-built
+      # rpi-observability-llm image. Disable when the operator
+      # self-hosts the serving layer elsewhere -- in that case set
+      # local.baseUrl to the operator's endpoint.
+      deployment:
+        enabled: true
 
-      # Direct Anthropic API. Egress to api.anthropic.com:443 required.
-      # The chart wires ANTHROPIC_API_KEY from this Key Vault entry.
-      anthropic:
-        apiKeyVaultEntry: Observability-AnthropicApiKey
-        baseUrl: ""                  # optional egress proxy
+        # Container image override. Blank means the chart resolves
+        # the canonical Redpoint-built rpi-observability-llm image
+        # via rpi.image. Set to an internal registry mirror or
+        # regulated-registry pull path; the image must be a
+        # rpi-observability-llm build serving the same baked-in
+        # model. Overriding to a different model variant is NOT
+        # supported under provider=local; switch the provider to
+        # azure | google | aws for a different model.
+        image: ""
+        imagePullPolicy: ""                  # blank = global.deployment.images.imagePullPolicy
 
-      # Azure AI Foundry / Azure OpenAI. Rides the chart-wide
-      # `redpointAI.naturalLanguage` block (ApiBase, ApiVersion,
-      # ChatGptEngine). Set redpointAI.enabled=true and configure that
-      # block; the chart fails fast if byo.platform=azureFoundry is
-      # selected without it. Auth: WI by default (reuses
-      # cloudIdentity.azure). In non-SDK mode AZURE_OPENAI_API_KEY binds
-      # from the standard RPI_NLP_API_KEY secret entry; in SDK mode the
-      # analyzer fetches the same entry from the cloud vault directly.
+        # Container resources. Blank requests sensible defaults
+        # sized for the 7B Q4 model on standard worker nodes.
+        resources: {}
 
-      # AWS Bedrock. Auth reuses cloudIdentity.amazon (IRSA / Pod
-      # Identity). Customer grants the analyzer's IAM role
-      # `bedrock:InvokeModel` on the target model. No separate API key.
-      bedrock:
-        region: ""                   # e.g., us-east-1
+        service:
+          port: 8000
 
-      # GCP Vertex AI. Auth reuses cloudIdentity.google (Workload
-      # Identity or SA key file). Customer grants
-      # `aiplatform.endpoints.predict`. No separate API key.
-      vertex:
-        projectId: ""
-        region: ""                   # e.g., us-central1
+        serviceAccount:
+          enabled: true
+          annotations: {}
+
+        # Backend CLI args appended to the image's entrypoint. The
+        # image already wires the essential flags (model path, host,
+        # port, threads, context size). Use this for operator-
+        # specific tuning (KV cache size, sampling parameters, etc.).
+        extraArgs: []
+
+    # ---- Azure (AI Foundry or Azure OpenAI) -----------------------------
+    # Consumed only when provider=azure. Endpoint + deployment are
+    # required; the chart fails fast at render time if either is
+    # missing.
+    azure:
+      service: foundry                       # foundry | openai
+      endpoint: ""                           # e.g. https://<resource>.openai.azure.com
+      deployment: ""                         # the deployed model name
+      apiVersion: ""                         # only for service=openai
+      # Optional: when set in non-SDK mode, the chart binds
+      # AZURE_INTELLIGENCE_API_KEY from this Secret key. Leave blank to
+      # use managed identity (preferred).
+      apiKeySecretKey: ""
+
+    # ---- Google (Vertex AI) --------------------------------------------
+    # Consumed only when provider=google. Project + location + model
+    # are all required; the chart fails fast at render time if any is
+    # missing. Auth: ADC + Workload Identity Federation (reuses
+    # cloudIdentity.google).
+    google:
+      project: ""                            # GCP project ID
+      location: ""                           # e.g. us-central1
+      model: ""                              # e.g. gemini-2.0-flash-001
+
+    # ---- AWS (Bedrock) -------------------------------------------------
+    # Consumed only when provider=aws. Region + modelId are required;
+    # the chart fails fast at render time if either is missing. Auth:
+    # IRSA + Pod Identity (reuses cloudIdentity.amazon).
+    aws:
+      region: ""                             # e.g. us-east-1
+      modelId: ""                            # e.g. anthropic.claude-3-5-sonnet-20241022-v2:0
 
   # ---- Token + request budget --------------------------------------------
-  # Hard caps enforced inside the analyzer (token-bucket). When exceeded,
+  # Hard caps enforced inside the observability service (token-bucket). When exceeded,
   # the next analysis cycle is skipped and the budget event is logged.
   budget:
     maxTokensPerHour: 200000
     maxRequestsPerHour: 60
 
   # ---- Analysis cadence --------------------------------------------------
+  # Two scheduling modes:
+  #   - interval: runs every `intervalMinutes` after pod startup (default).
+  #   - daily:    set `dailyAtUtc` to "HH:MM" (UTC). Overrides intervalMinutes
+  #               and fires once per day at that wall-clock time. In daily
+  #               mode the email + teams digests fire on every run regardless
+  #               of email.onlyOnNewErrors / teams.onlyOnNewErrors -- the
+  #               assumption is you wanted a daily summary.
+  # `lookbackMinutes` defaults to `intervalMinutes` in interval mode (so
+  # each cycle's data window matches its cadence with no gap or overlap),
+  # or 1440 (24h) in daily mode. Set it explicitly here to override either
+  # default.
   schedule:
-    intervalMinutes: 30              # batch cycle period
-    lookbackMinutes: 60              # how far back to query each cycle
-    onDemandEnabled: true            # exposes POST /analyze endpoint
+    intervalMinutes: 30              # batch cycle period (interval mode)
+    dailyAtUtc: ""                   # "HH:MM" UTC -- e.g. "00:00" for midnight
+    lookbackMinutes: ""              # leave empty for auto: matches intervalMinutes (interval mode) or 1440 (daily mode). Override with an int.
 
   # ---- Operational DB names (Diagnostics tab) ----------------------------
-  # clientServer is informational only -- Pulse_Logging connection still
-  # comes from the chart secret. sqlTrace + audit drive the Diagnostics
-  # tab. When empty, the corresponding section renders a "not configured"
-  # caption.
-  logSources:
-    clientServer: ""    # e.g. Pulse_qarc_a400ca_Logging
-    sqlTrace: ""        # e.g. InteractionAudit_qarc_a400ca
-    audit: ""           # e.g. InteractionAudit_qarc_a400ca
+  # The Diagnostics tab needs two tenant-specific database names:
+  #   * the Interaction DB (op_InteractionWorkflows / op_DataWorkflows)
+  #   * the InteractionAudit DB (SQLTraceLog / AuditHistory)
+  # These are NOT operator-typed chart values. The observability service resolves them
+  # at startup from Pulse_<env>.dbo.rpi_Clients using observability.clientId
+  # (above) as the lookup key. See ADR-0009 strict refinement -- no
+  # fallback, no inference. Behavior is identical for single-tenant and
+  # multi-tenant deployments.
+
+  # ---- Diagnostics tab ---------------------------------------------------
+  # Per-Interaction lookup + bundle download (parity with the on-prem
+  # "Download Diagnostics" zip). When fileOutput.enabled is true AND
+  # storage.persistentVolumeClaims.FileOutputDirectory.enabled is also
+  # true (chart-wide), the same PVC the .NET services write to is mounted
+  # read-only on the observability service StatefulSet so the bundle can include the
+  # workflow's output files. The mount tracks the existing FileOutput
+  # claimName + mountPath -- no parallel value to maintain. When the
+  # FileOutputDirectory PVC is not enabled chart-wide, this toggle is
+  # a no-op and the bundle's Files/ folder gets _empty.txt.
+  diagnostics:
+    fileOutput:
+      enabled: true
+
+  # ---- Database Queries (read-only) --------------------------------------
+  # The Database Queries tab is a live snapshot of in-flight database
+  # commands sourced directly from rpi_ExecutionQueries via the same
+  # shared RPI operational-database connection every other RPI service
+  # uses (no new env vars, no new secrets, no new chart values). The
+  # surface is read-only: Observability does not cancel, kill, or
+  # otherwise mutate execution state -- operators perform those
+  # actions through the native RPI client.
+  #
+  # Capability:
+  #   diagnostics.viewLiveQueries -- Configuration, System Administrator
+  #
+  # The capability defaults to restrictive groups because in-flight SQL
+  # text can carry PII through WHERE-clause literals and parameter values.
+
+  # ---- Custom Metrics (T4 telemetry) -------------------------------------
+  # Reads Prometheus-style /metrics endpoints exposed by RPI services
+  # in-cluster, parses them, and renders the Custom Metrics tab. T4
+  # telemetry only -- never authoritative for identity / topology /
+  # configuration. See workspace docs:
+  #   reference/rpi-metrics-catalog.md
+  #   principles/discovery-authority.md
+  #
+  # No external monitoring system is required. Parsing uses a Python
+  # library (prometheus-client); no cluster-side Prometheus stack is
+  # assumed or installed by Observability.
+  #
+  # Defaults below cover the standard RPI deployment shape; operator
+  # overrides are not required. To disable the feature entirely, set
+  # enabled: false.
+  metrics:
+    enabled: true
+    scrapeIntervalSeconds: 15
+    timeoutSeconds: 5
+    bufferSize: 240               # ~60 min of 15s samples per series
+    # Curated list of RPI services that expose a Prometheus /metrics
+    # endpoint. Two filters apply at chart-render time:
+    #   1. Capability (this list): a service is included here ONLY
+    #      if it actually exposes /metrics. Listing a service that
+    #      doesn't will produce phantom "X unreachable" incidents
+    #      on the System Health surface.
+    #   2. Deployment (.enabled flag): each entry is automatically
+    #      filtered out when the corresponding top-level service is
+    #      disabled (e.g. realtimeapi.enabled=false drops "Realtime
+    #      API" from the emitted OBSERVABILITY__METRICS__SERVICES).
+    # Convention: dnsName matches the K8s Service name; the
+    # service's values key is dnsName minus the "rpi-" prefix.
+    #
+    # NOT listed (and why):
+    #   - rpi-rebrandly: does not expose /metrics. Adding it here
+    #     causes a phantom "Rebrandly unreachable" active incident.
+    #   - rpi-deploymentapi, rpi-rabbitmq-console, rpi-smartActivation:
+    #     no /metrics today. Add when the service ships an endpoint.
+    #
+    # K8s Service port is 80 (targetPort 8080 inside the container).
+    # Service-to-service traffic in the cluster always uses port 80;
+    # 8080 only works from INSIDE the pod (localhost:8080) and is NOT
+    # the cross-pod path.
+    services:
+      - name: "Execution Service"
+        dnsName: "rpi-executionservice"
+        port: 80
+        path: "/metrics"
+      - name: "Node Manager"
+        dnsName: "rpi-nodemanager"
+        port: 80
+        path: "/metrics"
+      - name: "Queue Reader"
+        dnsName: "rpi-queuereader"
+        port: 80
+        path: "/metrics"
+      - name: "Interaction API"
+        dnsName: "rpi-interactionapi"
+        port: 80
+        path: "/metrics"
+      - name: "Integration API"
+        dnsName: "rpi-integrationapi"
+        port: 80
+        path: "/metrics"
+      - name: "Callback API"
+        dnsName: "rpi-callbackapi"
+        port: 80
+        path: "/metrics"
+      - name: "Realtime API"
+        dnsName: "rpi-realtimeapi"
+        port: 80
+        path: "/metrics"
+
+  # ---- Telemetry mode (opt-in advanced) ----------------------------------
+  # Telemetry source mode. One of: scrape | otel
+  #
+  # scrape (default): rpi-observability scrapes the IAPI's native
+  #   Microsoft.AspNetCore.Hosting Meter exposition on port 80
+  #   directly. Minimal footprint; production-safe baseline.
+  #
+  # otel: enables zero-code .NET auto-instrumentation on the
+  #   Interaction API. An init container drops the OTel runtime into
+  #   the IAPI pod; the IAPI process exports OTLP gRPC on loopback
+  #   :4317 to an OpenTelemetry Collector sidecar running in the
+  #   same pod. The sidecar re-exposes Prometheus on port 8889,
+  #   which rpi-observability scrapes through the IAPI Service.
+  #
+  # Modes are mutually exclusive. No fallback. No hybrid. Flipping
+  # the value re-rolls the IAPI deployment; exactly one source is
+  # active per deployment.
+  #
+  # Two init-container / sidecar images are pulled when mode=otel,
+  # both via the canonical rpi.image helper:
+  #   rpi-observability-otel
+  #     - upstream: ghcr.io/open-telemetry/opentelemetry-operator/
+  #                 autoinstrumentation-dotnet
+  #   rpi-observability-otel-collector
+  #     - upstream: otel/opentelemetry-collector (core distribution)
+  # Customers with mirrored registries override via the standard
+  # global.deployment.images.overrides.<name> (full URI) or
+  # global.deployment.images.nameOverrides.<name> (alternate name).
+  telemetry:
+    # scrape (default): native /metrics scrape, no OTel.
+    # otel: every participating RPI service is auto-instrumented (no
+    #   sidecars) and reports OTLP metrics to one shared OTel Collector,
+    #   which re-exposes them as Prometheus on :8889 for the
+    #   observability service to scrape. Includes the native SqlClient
+    #   db.client.operation.duration metrics (per service -> database
+    #   edge: calls / latency / errors) plus HTTP/runtime metrics.
+    #   Participating services: interactionapi, executionservice,
+    #   nodemanager, queuereader, realtimeapi, integrationapi,
+    #   callbackapi, deploymentapi.
+    mode: scrape
+
+    # RPI service images that are musl-based (Alpine). The .NET OTel
+    # auto-instrumentation native profiler is libc-specific: glibc images
+    # load linux-x64, musl images need linux-musl-x64. Pointing a musl
+    # image at the glibc profiler makes it fail to load - the service
+    # then emits NO telemetry at all. Services listed here get the
+    # linux-musl-x64 profiler path; everything else gets linux-x64.
+    # Override if a service image's base libc changes between releases.
+    muslServices:
+      - rpi-integrationapi
+      - rpi-callbackapi
+      - rpi-deploymentapi
+
+    otel:
+      collector:
+        # Shared Collector resource shape (it aggregates OTLP from all
+        # participating services).
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
 
   # ---- Email digest (opt-in) ---------------------------------------------
-  # When enabled, the analyzer posts a short HTML summary of each cycle's
+  # When enabled, the observability service posts a short HTML summary of each cycle's
   # report to the configured recipients. SMTP transport reuses the
   # chart-wide SMTPSettings block (same SMTP server, sender, credentials
   # the .NET services already use); only the recipient list and the
-  # "send when..." rule are analyzer-specific.
+  # "send when..." rule are observability-specific.
   #
   # The email is intentionally minimal: total errors, top types, and a
   # link back to the dashboard for the full breakdown / log downloads.
@@ -2357,24 +2508,153 @@ observability:
     onlyOnNewErrors: true            # only send when first-seen errors exist
                                      # (set false to email every cycle)
 
-  # Pulse_Logging access: the analyzer reads the same 4 connection
+  # ---- Microsoft Teams notification (opt-in) -----------------------------
+  # When enabled, the observability service posts an Adaptive Card per
+  # cycle to a Teams channel via an incoming webhook.
+  #
+  # The webhook URL is credential-grade: anyone holding it can post into
+  # the channel. It MUST live in the chart's standard RPI Secret (default:
+  # redpoint-rpi-secrets), NEVER inline in this file or any override file.
+  # Treat it the same as an API key, SMTP password, or OAuth client secret.
+  #
+  # Populate the Secret key (default: Observability_Teams_Webhook) before
+  # setting enabled=true. Pod startup fails fast when enabled=true and
+  # the key is empty.
+  #
+  # Get the webhook URL from Teams: in the channel, ... > Workflows >
+  # "Post to a channel when a webhook request is received". Copy the
+  # URL into the Secret; do not paste it into values.yaml.
+  teams:
+    enabled: false
+    webhookSecretKey: Observability_Teams_Webhook
+    onlyOnNewErrors: true            # only post when first-seen errors exist
+
+  # ---- Authentication and authorization ---------------------------------
+  # When enabled, the observability service participates in the RPI trust domain:
+  # identity is delegated to whichever IDP RPI is configured against
+  # (native rpi-interactionapi, Microsoft Entra, Keycloak, or Okta);
+  # authorization is resolved through RPI's normalized user/group/
+  # permission model in the operational database. Disabled by default
+  # so existing deployments preserve the legacy unauthenticated path
+  # until the operator explicitly opts in.
+  #
+  # See AUTH_DESIGN_RFC.md and SECURITY_BOUNDARIES_AND_DATA_HANDLING.md
+  # in the observability source tree for the engineering contract and
+  # security posture.
+  auth:
+    # Single-provider deployment model. Each deployment resolves to
+    # exactly ONE of:
+    #   public  -- no authentication; UI is fully anonymous
+    #   native  -- RPI native auth (rpi-interactionapi / OpenIddict)
+    #   entra   -- Microsoft Entra ID
+    # Hybrid configurations are rejected at chart-render time.
+    # Switching modes is a deployment-time decision, not a runtime
+    # negotiation. Authentication mode and auth-provider configuration
+    # use the standard RPI Authentication__* env-var contract.
+    mode: public
+
+    # Tenant scope is sourced from `observability.clientId` (the
+    # canonical rpi_Clients lookup key, per ADR-0009). The authorization
+    # provider and the diagnostics layer both consume that single
+    # identity, so no separate auth-side tenant field exists.
+
+    # Cookie security. Set false only for local development without TLS.
+    cookieSecure: true
+
+    # Session lifetime in seconds. Default 8 hours.
+    sessionLifetimeSeconds: 28800
+
+    # Per-process AuthorizationProvider cache TTL in seconds. Set 0 to
+    # disable. Group membership changes in RPI take effect at most
+    # this many seconds after assignment.
+    authorizationCacheTtlSeconds: 60
+
+    # Hostname the observability service is reachable at; used to build the OIDC
+    # redirect URI advertised to the IDP for Entra mode. AUTO-DERIVED
+    # from ingress.hosts.observability + ingress.domain when left empty.
+    # Override only if the observability service is fronted by a different external
+    # hostname (custom CNAME, external load balancer, etc.).
+    ingressHost: ""
+
+    # ---- Native posture overrides --------------------------------------
+    # Used only when mode=native. Defaults are derived from the
+    # canonical RPI ingress block.
+    native:
+      # AUTO-DERIVED from ingress.hosts.client + ingress.domain (the
+      # rpi-interactionapi public host) when left empty.
+      authorizationHost: ""
+      # Optional separate metadata host (auth-meta endpoints). RPI
+      # services that use a different metadata host set this; most
+      # deployments leave it empty.
+      authMetaHttpHost: ""
+      # The OpenIddict client ID Observability uses. The customer (RPI
+      # platform / DBA / identity admin) pre-registers a confidential
+      # OpenIddict client with this ClientId and populates the chart's
+      # standard RPI Secret (default: redpoint-rpi-secrets) under the
+      # key Observability_NativeAuth_ClientSecret with the matching
+      # ClientSecret. Observability never writes to OpenIddictApplications.
+      clientId: rpi-observability
+
+    # ---- Entra posture overrides ---------------------------------------
+    # Used only when mode=entra. Defaults to the chart-wide
+    # MicrosoftEntraID block. Override here only if Observability
+    # needs different Entra config than the rest of the RPI deployment.
+    microsoft:
+      tenantId: ""              # default: MicrosoftEntraID.tenant_id
+      clientApplicationId: ""   # default: MicrosoftEntraID.interaction_client_id
+      apiApplicationId: ""      # default: MicrosoftEntraID.interaction_api_id
+
+    # Capability map: optional overlay for CUSTOM RPI groups only.
+    #
+    # RPI is the authorization authority. The canonical groups
+    # (System Administrators / Everyone / IntegrationAPI) map to
+    # capabilities via built-in defaults inside the observability
+    # service. Use this block ONLY when an enterprise deployment has
+    # a custom non-canonical group (e.g. DataOps, SRE) that needs
+    # observability access.
+    #
+    # Two prohibitions enforced at startup; violations fail the pod
+    # CrashLoopBackOff with a clear error:
+    #   * observability.admin cannot appear as a key. Administrative
+    #     access flows from membership in the System Administrators
+    #     RPI group only.
+    #   * Canonical group names (System Administrators / Everyone /
+    #     IntegrationAPI) cannot appear as values. Their capability
+    #     sets are owned by the built-in defaults.
+    #
+    # Example -- grant the custom "DataOps" group diagnostics access:
+    #   capabilityMap:
+    #     diagnostics.view: ["DataOps"]
+    #     diagnostics.viewSql: ["DataOps"]
+    capabilityMap: {}
+
+  # Pulse_Logging access: the observability service reads the same 4 connection
   # components the deploymentapi reads (host / username / password /
   # logging-db-name). No extra knobs here -- the chart's existing secrets
   # wiring takes care of everything.
 
   # ---- Local report store (SQLite) ---------------------------------------
-  # The component keeps its SQLite report store at /data/reports.db. The
-  # chart mounts a persistent volume (StatefulSet volumeClaimTemplates,
-  # or an existingClaim you provide) at /data; the path is canonical and
-  # is not environment-dependent. Reports survive pod restarts.
+  # The observability service keeps its report history in a small SQLite file at
+  # /data/reports.db. SQLite needs a filesystem that honors POSIX byte-range
+  # locks, so /data must be backed by block storage (Azure Disk, AWS EBS,
+  # GCP PD) -- NOT Azure Files / NFS, which silently break SQLite locking.
+  # Pattern matches Redis/RabbitMQ: dynamic provisioning by default, BYO
+  # supported via existingClaim.
+  storage:
+    # BYO: name of a PVC you've already created. If set, volumeClaimTemplates
+    # is ignored. The PVC must support RWO and POSIX locks (see above).
+    existingClaim: ""
+    volumeClaimTemplates:
+      enabled: true                  # false + no existingClaim => emptyDir (data is lost on pod restart)
+      accessModes: ReadWriteOnce
+      storageClassName: ""           # empty = use cluster default storage class
+      storage: 5Gi
 
   # ---- HTTP service ------------------------------------------------------
-  # The container runs two processes (same pattern as the Helm Assistant):
-  #   - Streamlit UI on uiPort (8501) -- this is what the ingress routes to
-  #   - FastAPI API on apiPort (8080) -- internal-only, used by Streamlit and kubelet probes
+  # FastAPI is the sole runtime: serves the React static export at /,
+  # the JSON API at /api, auth flows at /auth, and kubelet probes at
+  # /health. Ingress routes every observability path to apiPort.
   service:
-    port: 80
-    uiPort: 8501
     apiPort: 8080
 
   # ---- Resources ---------------------------------------------------------

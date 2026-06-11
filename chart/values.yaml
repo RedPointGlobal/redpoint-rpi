@@ -991,6 +991,8 @@ redpointAI:
     ModelDimensions: 1536
     ContainerName: my_blob_container_name
     BlobFolder: my_blob_container_folder_name
+    # Verbose NLP request/response tracing for diagnostics. Off by default.
+    EnableTrace: false
 
 # ==========================
 # Smart Activation

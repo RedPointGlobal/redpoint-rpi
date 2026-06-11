@@ -1928,6 +1928,10 @@
             "BlobFolder": {
               "type": "string",
               "description": "Blob folder name for models"
+            },
+            "EnableTrace": {
+              "type": "boolean",
+              "description": "Enable verbose NLP request/response tracing for diagnostics (default false)"
             }
           }
         }

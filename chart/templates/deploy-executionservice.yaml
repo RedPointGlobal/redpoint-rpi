@@ -435,6 +435,8 @@ spec:
           value: {{ .Values.redpointAI.modelStorage.ContainerName | quote }}
         - name: RPI__NLP__Model__BlobFolder
           value: {{ .Values.redpointAI.modelStorage.BlobFolder | quote }}
+        - name: RPI__NLP__EnableTrace
+          value: {{ .Values.redpointAI.modelStorage.EnableTrace | quote }}
         {{- end }}
         {{- if .Values.redpointAI.enabled }}
         {{- if not (eq .Values.secretsManagement.provider "sdk") }}
