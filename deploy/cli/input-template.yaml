@@ -214,7 +214,7 @@ features:
   # --- Redpoint AI ---
   # redpoint_ai:
   #   endpoint: https://my-openai.openai.azure.com/
-  #   deployment: gpt-5.1
+  #   deployment: gpt-5.2
   #   api_version: "2023-07-01-preview"
   #   temperature: "0.5"
   #   search_endpoint: https://my-search.search.windows.net

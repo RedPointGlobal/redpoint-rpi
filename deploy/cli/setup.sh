@@ -1064,7 +1064,7 @@ add_redpoint_ai() {
   local api_base api_version engine temp
   prompt api_base "OpenAI API base URL" "https://example.openai.azure.com/"
   prompt api_version "API version" "2023-07-01-preview"
-  prompt engine "ChatGPT engine/model" "gpt-5.1"
+  prompt engine "ChatGPT engine/model" "gpt-5.2"
   prompt temp "ChatGPT temperature (0.0–1.0)" "0.5"
   echo ""
   echo "  ${BOLD}Azure Cognitive Search${RESET}"
