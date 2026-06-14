@@ -1503,6 +1503,66 @@ observability:
     webhookSecretKey: Observability_Teams_Webhook
     onlyOnNewErrors: true            # only post when first-seen errors exist
 
+  # ---- Incident-intelligence notifications (opt-in) ---------------------
+  # Deterministic, lifecycle-driven email notifications over the analyzer's
+  # significance-ranked incidents. Delivery is decided by code (lifecycle
+  # transitions: NEW / ESCALATED / RESOLVED), NEVER by AI - the LLM only
+  # narrates the Daily Brief body. Reuses the SMTPSettings transport above;
+  # no new SMTP/secret config.
+  #
+  # Master gate. When false (default) NO notification env vars are emitted
+  # and the engine no-ops. Per-type blocks below are only needed to change
+  # a default - omit a field to accept the documented default.
+  notifications:
+    enabled: false
+    # Fallback recipients when a per-type list is empty.
+    defaultRecipients: []            # ["platform-leads@example.com", ...]
+
+    # Daily Operations Brief (awareness, leadership-oriented). One send
+    # per UTC day at atUtc; summarizes platform posture + error activity +
+    # tenant impact + primary concerns.
+    dailyBrief:
+      enabled: true
+      atUtc: "13:00"                 # HH:MM UTC
+      recipients: []
+
+    # Weekly Executive Summary (strategic). Recurring incidents, categories,
+    # resolved-this-week. Off by default.
+    weeklySummary:
+      enabled: false
+      dayOfWeek: 0                   # Mon=0 .. Sun=6 (UTC)
+      atUtc: "13:00"
+      recipients: []
+
+    # New Critical Incident alert. Fires when a NEW-lifecycle incident
+    # (first appearance, or reappearance after resolution) reaches the
+    # significance threshold.
+    newIncident:
+      enabled: true
+      significanceThreshold: 60
+      cooldownMinutes: 0
+      recipients: []
+
+    # Incident Escalation alert. Fires when an active incident materially
+    # worsens for >= sustainCycles consecutive cycles (significance jump,
+    # band upgrade, tenant-breadth jump, or growth turning to spiking),
+    # subject to cooldownMinutes.
+    escalation:
+      enabled: true
+      minBand: medium                # low | medium | high (current band must be >= this)
+      scoreDelta: 15                 # significance jump vs the stable baseline
+      tenantDelta: 2                 # tenant-breadth jump vs the baseline
+      sustainCycles: 2               # worsening must persist >= N consecutive cycles
+      cooldownMinutes: 240           # suppress repeat escalations within this window
+      recipients: []
+
+    # Incident Resolution notice. Fires after an incident is absent for
+    # absentCycles consecutive analysis cycles (~6h at a 30-min cadence).
+    resolution:
+      enabled: true
+      absentCycles: 12
+      recipients: []
+
   # ---- Authentication and authorization ---------------------------------
   # When enabled, the observability service participates in the RPI trust domain:
   # identity is delegated to whichever IDP RPI is configured against

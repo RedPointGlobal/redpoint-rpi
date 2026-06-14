@@ -1580,6 +1580,109 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
       name: {{ $secretName | quote }}
       key: {{ $teams.webhookSecretKey | default "Observability_Teams_Webhook" | quote }}
 {{- end }}
+{{- /* Incident-intelligence notifications. Delivery is decided by the
+       deterministic lifecycle engine, never by AI. Only the master gate +
+       any explicitly-set tunables are emitted; the app supplies matching
+       defaults for everything omitted. hasKey is used for booleans and
+       numerics so an explicit false / 0 is honored (default would mask it). */ -}}
+{{- $notif := $cfg.notifications | default dict }}
+{{- if $notif.enabled }}
+- name: OBSERVABILITY__NOTIFICATIONS__ENABLED
+  value: "true"
+{{- with $notif.defaultRecipients }}
+- name: OBSERVABILITY__NOTIFICATIONS__DEFAULT_RECIPIENTS
+  value: {{ join "," . | quote }}
+{{- end }}
+{{- $db := $notif.dailyBrief | default dict }}
+{{- if hasKey $db "enabled" }}
+- name: OBSERVABILITY__NOTIFICATIONS__DAILY_BRIEF__ENABLED
+  value: {{ $db.enabled | quote }}
+{{- end }}
+{{- with $db.atUtc }}
+- name: OBSERVABILITY__NOTIFICATIONS__DAILY_BRIEF__AT_UTC
+  value: {{ . | quote }}
+{{- end }}
+{{- with $db.recipients }}
+- name: OBSERVABILITY__NOTIFICATIONS__DAILY_BRIEF__RECIPIENTS
+  value: {{ join "," . | quote }}
+{{- end }}
+{{- $ws := $notif.weeklySummary | default dict }}
+{{- if hasKey $ws "enabled" }}
+- name: OBSERVABILITY__NOTIFICATIONS__WEEKLY_SUMMARY__ENABLED
+  value: {{ $ws.enabled | quote }}
+{{- end }}
+{{- if hasKey $ws "dayOfWeek" }}
+- name: OBSERVABILITY__NOTIFICATIONS__WEEKLY_SUMMARY__DAY_OF_WEEK
+  value: {{ $ws.dayOfWeek | quote }}
+{{- end }}
+{{- with $ws.atUtc }}
+- name: OBSERVABILITY__NOTIFICATIONS__WEEKLY_SUMMARY__AT_UTC
+  value: {{ . | quote }}
+{{- end }}
+{{- with $ws.recipients }}
+- name: OBSERVABILITY__NOTIFICATIONS__WEEKLY_SUMMARY__RECIPIENTS
+  value: {{ join "," . | quote }}
+{{- end }}
+{{- $ni := $notif.newIncident | default dict }}
+{{- if hasKey $ni "enabled" }}
+- name: OBSERVABILITY__NOTIFICATIONS__NEW_INCIDENT__ENABLED
+  value: {{ $ni.enabled | quote }}
+{{- end }}
+{{- if hasKey $ni "significanceThreshold" }}
+- name: OBSERVABILITY__NOTIFICATIONS__NEW_INCIDENT__SIGNIFICANCE_THRESHOLD
+  value: {{ $ni.significanceThreshold | quote }}
+{{- end }}
+{{- if hasKey $ni "cooldownMinutes" }}
+- name: OBSERVABILITY__NOTIFICATIONS__NEW_INCIDENT__COOLDOWN_MINUTES
+  value: {{ $ni.cooldownMinutes | quote }}
+{{- end }}
+{{- with $ni.recipients }}
+- name: OBSERVABILITY__NOTIFICATIONS__NEW_INCIDENT__RECIPIENTS
+  value: {{ join "," . | quote }}
+{{- end }}
+{{- $esc := $notif.escalation | default dict }}
+{{- if hasKey $esc "enabled" }}
+- name: OBSERVABILITY__NOTIFICATIONS__ESCALATION__ENABLED
+  value: {{ $esc.enabled | quote }}
+{{- end }}
+{{- with $esc.minBand }}
+- name: OBSERVABILITY__NOTIFICATIONS__ESCALATION__MIN_BAND
+  value: {{ . | quote }}
+{{- end }}
+{{- if hasKey $esc "scoreDelta" }}
+- name: OBSERVABILITY__NOTIFICATIONS__ESCALATION__SCORE_DELTA
+  value: {{ $esc.scoreDelta | quote }}
+{{- end }}
+{{- if hasKey $esc "tenantDelta" }}
+- name: OBSERVABILITY__NOTIFICATIONS__ESCALATION__TENANT_DELTA
+  value: {{ $esc.tenantDelta | quote }}
+{{- end }}
+{{- if hasKey $esc "sustainCycles" }}
+- name: OBSERVABILITY__NOTIFICATIONS__ESCALATION__SUSTAIN_CYCLES
+  value: {{ $esc.sustainCycles | quote }}
+{{- end }}
+{{- if hasKey $esc "cooldownMinutes" }}
+- name: OBSERVABILITY__NOTIFICATIONS__ESCALATION__COOLDOWN_MINUTES
+  value: {{ $esc.cooldownMinutes | quote }}
+{{- end }}
+{{- with $esc.recipients }}
+- name: OBSERVABILITY__NOTIFICATIONS__ESCALATION__RECIPIENTS
+  value: {{ join "," . | quote }}
+{{- end }}
+{{- $res := $notif.resolution | default dict }}
+{{- if hasKey $res "enabled" }}
+- name: OBSERVABILITY__NOTIFICATIONS__RESOLUTION__ENABLED
+  value: {{ $res.enabled | quote }}
+{{- end }}
+{{- if hasKey $res "absentCycles" }}
+- name: OBSERVABILITY__NOTIFICATIONS__RESOLUTION__ABSENT_CYCLES
+  value: {{ $res.absentCycles | quote }}
+{{- end }}
+{{- with $res.recipients }}
+- name: OBSERVABILITY__NOTIFICATIONS__RESOLUTION__RECIPIENTS
+  value: {{ join "," . | quote }}
+{{- end }}
+{{- end }}
 # Operational SQL database type. Drives the observability service's
 # connection string. Always emitted (not a secret).
 {{- $platform := .Values.global.deployment.platform -}}

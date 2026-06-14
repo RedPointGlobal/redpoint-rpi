@@ -2532,6 +2532,61 @@
             "webhookSecretKey": { "type": "string", "description": "Secret key holding the Teams incoming-webhook URL." },
             "onlyOnNewErrors": { "type": "boolean" }
           }
+        },
+        "notifications": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Incident-intelligence email notifications. Delivery is deterministic (lifecycle-driven), never AI-gated.",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "defaultRecipients": { "type": "array", "items": { "type": "string" } },
+            "dailyBrief": {
+              "type": "object", "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "atUtc": { "type": "string", "description": "HH:MM UTC; one send per day." },
+                "recipients": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "weeklySummary": {
+              "type": "object", "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "dayOfWeek": { "type": "integer", "minimum": 0, "maximum": 6, "description": "Mon=0 .. Sun=6 (UTC)." },
+                "atUtc": { "type": "string" },
+                "recipients": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "newIncident": {
+              "type": "object", "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "significanceThreshold": { "type": "integer" },
+                "cooldownMinutes": { "type": "integer" },
+                "recipients": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "escalation": {
+              "type": "object", "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "minBand": { "type": "string", "enum": ["low", "medium", "high"] },
+                "scoreDelta": { "type": "integer" },
+                "tenantDelta": { "type": "integer" },
+                "sustainCycles": { "type": "integer" },
+                "cooldownMinutes": { "type": "integer" },
+                "recipients": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "resolution": {
+              "type": "object", "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "absentCycles": { "type": "integer" },
+                "recipients": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
         }
       }
     },
