@@ -2511,28 +2511,6 @@
           }
         },
         "resources": { "type": "object", "additionalProperties": true },
-        "email": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "recipients": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Recipient email addresses. Required when enabled."
-            },
-            "onlyOnNewErrors": { "type": "boolean", "description": "Only send when first-seen errors exist; ignored in daily-schedule mode." }
-          }
-        },
-        "teams": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "webhookSecretKey": { "type": "string", "description": "Secret key holding the Teams incoming-webhook URL." },
-            "onlyOnNewErrors": { "type": "boolean" }
-          }
-        },
         "notifications": {
           "type": "object",
           "additionalProperties": true,
@@ -2540,6 +2518,17 @@
           "properties": {
             "enabled": { "type": "boolean" },
             "defaultRecipients": { "type": "array", "items": { "type": "string" } },
+            "email": {
+              "type": "object", "additionalProperties": true,
+              "properties": { "enabled": { "type": "boolean" } }
+            },
+            "teams": {
+              "type": "object", "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "webhookSecretKey": { "type": "string", "description": "Secret key holding the Teams incoming-webhook URL." }
+              }
+            },
             "dailyBrief": {
               "type": "object", "additionalProperties": true,
               "properties": {

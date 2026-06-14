@@ -1467,42 +1467,6 @@ observability:
             cpu: 500m
             memory: 512Mi
 
-  # ---- Email digest (opt-in) ---------------------------------------------
-  # When enabled, the observability service posts a short HTML summary of each cycle's
-  # report to the configured recipients. SMTP transport reuses the
-  # chart-wide SMTPSettings block (same SMTP server, sender, credentials
-  # the .NET services already use); only the recipient list and the
-  # "send when..." rule are observability-specific.
-  #
-  # The email is intentionally minimal: total errors, top types, and a
-  # link back to the dashboard for the full breakdown / log downloads.
-  email:
-    enabled: false
-    recipients: []                   # ["support@example.com", ...]
-    onlyOnNewErrors: true            # only send when first-seen errors exist
-                                     # (set false to email every cycle)
-
-  # ---- Microsoft Teams notification (opt-in) -----------------------------
-  # When enabled, the observability service posts an Adaptive Card per
-  # cycle to a Teams channel via an incoming webhook.
-  #
-  # The webhook URL is credential-grade: anyone holding it can post into
-  # the channel. It MUST live in the chart's standard RPI Secret (default:
-  # redpoint-rpi-secrets), NEVER inline in this file or any override file.
-  # Treat it the same as an API key, SMTP password, or OAuth client secret.
-  #
-  # Populate the Secret key (default: Observability_Teams_Webhook) before
-  # setting enabled=true. Pod startup fails fast when enabled=true and
-  # the key is empty.
-  #
-  # Get the webhook URL from Teams: in the channel, ... > Workflows >
-  # "Post to a channel when a webhook request is received". Copy the
-  # URL into the Secret; do not paste it into values.yaml.
-  teams:
-    enabled: false
-    webhookSecretKey: Observability_Teams_Webhook
-    onlyOnNewErrors: true            # only post when first-seen errors exist
-
   # ---- Incident-intelligence notifications (opt-in) ---------------------
   # Deterministic, lifecycle-driven email notifications over the analyzer's
   # significance-ranked incidents. Delivery is decided by code (lifecycle
@@ -1517,6 +1481,23 @@ observability:
     enabled: false
     # Fallback recipients when a per-type list is empty.
     defaultRecipients: []            # ["platform-leads@example.com", ...]
+
+    # ---- Delivery channels -------------------------------------------
+    # email transport reuses the chart-wide SMTPSettings block (same SMTP
+    # server / sender / credentials the .NET services use); only the
+    # channel toggle is observability-specific. Recipients live above
+    # (defaultRecipients) or per-type below - NOT here.
+    email:
+      enabled: false
+    # Microsoft Teams channel. The webhook URL is credential-grade and
+    # MUST live in the chart's standard RPI Secret (default:
+    # redpoint-rpi-secrets) under webhookSecretKey - NEVER inline here.
+    # Pod startup fails fast when enabled=true and the key is empty.
+    # (Per-type Teams cards are a Phase-1 follow-up; the channel config
+    # is accepted now.)
+    teams:
+      enabled: false
+      webhookSecretKey: Observability_Teams_Webhook
 
     # Daily Operations Brief (awareness, leadership-oriented). One send
     # per UTC day at atUtc; summarizes platform posture + error activity +

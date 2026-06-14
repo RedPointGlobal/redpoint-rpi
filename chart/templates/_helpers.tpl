@@ -1554,41 +1554,39 @@ Usage: {{- include "rpi.observability.authEnvvars" . | nindent 8 }}
       key: SMTP_Password
 {{- end }}
 {{- end }}
-{{- $email := $cfg.email | default dict }}
+{{- /* Incident-intelligence notifications. Delivery is decided by the
+       deterministic lifecycle engine, never by AI. email + teams are
+       CHANNELS nested under notifications (notifications.email /
+       notifications.teams). Only the master gate + explicitly-set tunables
+       are emitted; the app supplies matching defaults for everything
+       omitted. hasKey is used for booleans/numerics so an explicit
+       false / 0 is honored (default would mask it). The app still consumes
+       the OBSERVABILITY__EMAIL__ and __TEAMS__ env names - an internal
+       contract; operators configure the channels under notifications. */ -}}
+{{- $notif := $cfg.notifications | default dict }}
+{{- if $notif.enabled }}
+- name: OBSERVABILITY__NOTIFICATIONS__ENABLED
+  value: "true"
+{{- $email := $notif.email | default dict }}
 {{- if $email.enabled }}
 - name: OBSERVABILITY__EMAIL__ENABLED
   value: "true"
-- name: OBSERVABILITY__EMAIL__RECIPIENTS
-  value: {{ join "," ($email.recipients | default list) | quote }}
-- name: OBSERVABILITY__EMAIL__ONLY_ON_NEW_ERRORS
-  value: {{ ternary $email.onlyOnNewErrors true (hasKey $email "onlyOnNewErrors") | quote }}
 {{- $ingCfg := .Values.ingress | default dict }}
 {{- if and ($ingCfg.hosts).observability $ingCfg.domain }}
 - name: OBSERVABILITY__EMAIL__INGRESS_URL
   value: {{ printf "https://%s.%s" $ingCfg.hosts.observability $ingCfg.domain | quote }}
 {{- end }}
 {{- end }}
-{{- $teams := $cfg.teams | default dict }}
+{{- $teams := $notif.teams | default dict }}
 {{- if $teams.enabled }}
 - name: OBSERVABILITY__TEAMS__ENABLED
   value: "true"
-- name: OBSERVABILITY__TEAMS__ONLY_ON_NEW_ERRORS
-  value: {{ ternary $teams.onlyOnNewErrors true (hasKey $teams "onlyOnNewErrors") | quote }}
 - name: Observability_Teams_Webhook
   valueFrom:
     secretKeyRef:
       name: {{ $secretName | quote }}
       key: {{ $teams.webhookSecretKey | default "Observability_Teams_Webhook" | quote }}
 {{- end }}
-{{- /* Incident-intelligence notifications. Delivery is decided by the
-       deterministic lifecycle engine, never by AI. Only the master gate +
-       any explicitly-set tunables are emitted; the app supplies matching
-       defaults for everything omitted. hasKey is used for booleans and
-       numerics so an explicit false / 0 is honored (default would mask it). */ -}}
-{{- $notif := $cfg.notifications | default dict }}
-{{- if $notif.enabled }}
-- name: OBSERVABILITY__NOTIFICATIONS__ENABLED
-  value: "true"
 {{- with $notif.defaultRecipients }}
 - name: OBSERVABILITY__NOTIFICATIONS__DEFAULT_RECIPIENTS
   value: {{ join "," . | quote }}
