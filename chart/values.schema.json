@@ -2381,12 +2381,12 @@
         "intelligence": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Intelligence Runtime topology. Part of the observability solution -- no solution-level enabled flag (observability.enabled controls the whole solution). The `provider` selector activates one of: local (in-cluster, served by rpi-observability-llm) | azure (AI Foundry / Azure OpenAI) | google (Vertex AI) | aws (Bedrock). Only the active provider's sub-block is consumed.",
+          "description": "Intelligence Runtime topology. Part of the observability solution -- no solution-level enabled flag (observability.enabled controls the whole solution). The `provider` selector activates one of: local (in-cluster, served by rpi-observability-llm) | helmAssistant (Redpoint-managed AI service) | azure (AI Foundry / Azure OpenAI) | aws (Bedrock). Only the active provider's sub-block is consumed.",
           "properties": {
             "provider": {
               "type": "string",
-              "enum": ["local", "azure", "google", "aws"],
-              "description": "Active provider. Drives which provider the runtime registers and whether the chart renders the in-cluster serving StatefulSet (only when provider=local). When set to azure/google/aws, the chart fails at render time if that provider's required fields (endpoint+deployment / project+location+model / region+modelId) are missing."
+              "enum": ["local", "helmAssistant", "azure", "aws"],
+              "description": "Active provider. Drives which provider the runtime registers and whether the chart renders the in-cluster serving StatefulSet (only when provider=local). helmAssistant calls the Redpoint-managed Helm Assistant service and requires no customer cloud AI configuration (only the Observability_HelmAssistant_ApiKey Secret key). When set to azure/aws, the chart fails at render time if that provider's required fields (endpoint+deployment / region+modelId) are missing."
             },
             "timeoutSeconds": { "type": ["integer", "number"], "minimum": 1, "description": "Per-inference hard timeout. Bounds the observability cycle's exposure to slow inference. Applies to whichever provider is active." },
             "local": {
@@ -2440,14 +2440,12 @@
                 "apiKeySecretKey": { "type": "string", "description": "Optional. When set in non-SDK mode, binds AZURE_INTELLIGENCE_API_KEY from this Secret key. Blank uses managed identity." }
               }
             },
-            "google": {
+            "helmAssistant": {
               "type": "object",
               "additionalProperties": true,
-              "description": "Consumed only when provider=google.",
+              "description": "Consumed only when provider=helmAssistant. The Redpoint-managed AI service -- the customer provisions no cloud AI infrastructure. Auth is the customer-populated Secret key Observability_HelmAssistant_ApiKey (issued by Redpoint).",
               "properties": {
-                "project":  { "type": "string" },
-                "location": { "type": "string" },
-                "model":    { "type": "string" }
+                "url": { "type": "string", "description": "Helm Assistant base URL. Blank uses the Redpoint-hosted endpoint (https://rpi-helm-assistant.redpointcdp.com)." }
               }
             },
             "aws": {

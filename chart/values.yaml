@@ -1169,8 +1169,8 @@ observability:
     #   - which provider implementation the runtime registers
     #   - whether the chart renders the in-cluster serving StatefulSet
     #     (only when provider=local)
-    #   - which sub-block (local / azure / google / aws) is consumed
-    provider: local                          # local | azure | google | aws
+    #   - which sub-block (local / helmAssistant / azure / aws) is consumed
+    provider: local                          # local | helmAssistant | azure | aws
 
     # Per-inference timeout. Hard-bound so a slow inference cannot
     # destabilize the observability cycle: when exceeded, the call returns
@@ -1191,8 +1191,8 @@ observability:
     # The model is shipped with the image and is NOT a customer-
     # configurable knob. The chart deploys exactly one model under
     # provider=local. To use a different model, switch
-    # intelligence.provider to azure | google | aws and configure
-    # that provider's block.
+    # intelligence.provider to helmAssistant | azure | aws and
+    # configure that provider's block.
     local:
       # Default points at the in-cluster Service. Override only if the
       # operator self-hosts the serving layer elsewhere on the cluster.
@@ -1213,7 +1213,7 @@ observability:
         # rpi-observability-llm build serving the same baked-in
         # model. Overriding to a different model variant is NOT
         # supported under provider=local; switch the provider to
-        # azure | google | aws for a different model.
+        # helmAssistant | azure | aws for a different model.
         image: ""
         imagePullPolicy: ""                  # blank = global.deployment.images.imagePullPolicy
 
@@ -1234,6 +1234,21 @@ observability:
         # specific tuning (KV cache size, sampling parameters, etc.).
         extraArgs: []
 
+    # ---- helmAssistant (Redpoint-managed AI) ---------------------------
+    # Consumed only when provider=helmAssistant. The turnkey managed-AI
+    # path: the customer provisions NO cloud AI infrastructure -- no
+    # endpoint, deployment, API key creation, model selection, or model
+    # lifecycle. Observability sends a provider-agnostic generation
+    # request to the Redpoint-operated Helm Assistant service, which
+    # performs the inference and returns prose. The only auth is the
+    # customer-populated Secret key Observability_HelmAssistant_ApiKey
+    # (issued by Redpoint); in SDK mode it is fetched from the cloud
+    # vault under the same name. Enabling this provider is a one-line
+    # change: set provider to helmAssistant and populate that Secret key.
+    helmAssistant:
+      # Helm Assistant base URL. Blank = the Redpoint-hosted endpoint.
+      url: ""                                # blank = https://rpi-helm-assistant.redpointcdp.com
+
     # ---- Azure (AI Foundry or Azure OpenAI) -----------------------------
     # Consumed only when provider=azure. Endpoint + deployment are
     # required; the chart fails fast at render time if either is
@@ -1247,16 +1262,6 @@ observability:
       # AZURE_INTELLIGENCE_API_KEY from this Secret key. Leave blank to
       # use managed identity (preferred).
       apiKeySecretKey: ""
-
-    # ---- Google (Vertex AI) --------------------------------------------
-    # Consumed only when provider=google. Project + location + model
-    # are all required; the chart fails fast at render time if any is
-    # missing. Auth: ADC + Workload Identity Federation (reuses
-    # cloudIdentity.google).
-    google:
-      project: ""                            # GCP project ID
-      location: ""                           # e.g. us-central1
-      model: ""                              # e.g. gemini-2.0-flash-001
 
     # ---- AWS (Bedrock) -------------------------------------------------
     # Consumed only when provider=aws. Region + modelId are required;
