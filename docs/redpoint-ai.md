@@ -258,7 +258,7 @@ redpointAI:
     EmbeddingsModel: text-embedding-ada-002                 # embeddings deployment name
     ModelDimensions: 1536                                   # must match the embedding model (ada-002 is 1536)
     ContainerName: redpoint-ai                              # Blob container
-    BlobFolder: ""                                          # optional Blob folder
+    BlobFolder: redpoint-ai                                 # Blob folder for the index source documents
     EnableTrace: false                                      # verbose OpenAI-call tracing (see Step 5)
 ```
 
@@ -430,7 +430,7 @@ Checklist:
 | `modelStorage.EmbeddingsModel` | `RPI__NLP__EmbeddingsModel` | yes | Embeddings deployment name. |
 | `modelStorage.ModelDimensions` | `RPI__NLP__Model__ModelDimensions` | yes | `1536` for ada-002. |
 | `modelStorage.ContainerName` | `RPI__NLP__Model__ContainerName` | yes | Blob container. |
-| `modelStorage.BlobFolder` | `RPI__NLP__Model__BlobFolder` | no | Blob folder. |
+| `modelStorage.BlobFolder` | `RPI__NLP__Model__BlobFolder` | yes | Blob folder for the index source documents. |
 | `modelStorage.EnableTrace` | `RPI__NLP__EnableTrace` | no | Verbose tracing. Default `false`. |
 | `RPI_NLP_API_KEY` (Secret) | `RPI__NLP__ApiKey` | yes | Azure OpenAI key. |
 | `RPI_NLP_SEARCH_KEY` (Secret) | `RPI__NLP__SearchKey` | yes | Search admin key. |
