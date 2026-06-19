@@ -1893,14 +1893,6 @@
             "SearchKey": {
               "type": "string",
               "description": "Cognitive Search API key"
-            },
-            "VectorSearchProfile": {
-              "type": "string",
-              "description": "Vector search profile name"
-            },
-            "VectorSearchConfig": {
-              "type": "string",
-              "description": "Vector search configuration name"
             }
           }
         },

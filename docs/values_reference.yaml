@@ -1676,8 +1676,6 @@ redpointAI:
     ChatGptTemp: 0.5
   cognitiveSearch:
     SearchEndpoint: https://example.search.windows.net
-    VectorSearchProfile: vector-profile-000000000000
-    VectorSearchConfig: vector-config-000000000000
   modelStorage:
     EmbeddingsModel: text-embedding-ada-002
     ModelDimensions: 1536

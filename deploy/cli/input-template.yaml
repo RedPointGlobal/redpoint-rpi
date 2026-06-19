@@ -218,8 +218,6 @@ features:
   #   api_version: "2023-07-01-preview"
   #   temperature: "0.5"
   #   search_endpoint: https://my-search.search.windows.net
-  #   vector_profile: vector-profile-000000000000
-  #   vector_config: vector-config-000000000000
   #   embeddings_model: text-embedding-ada-002
   #   model_dimensions: "1536"
   #   container_name: ""                        # Blob container name

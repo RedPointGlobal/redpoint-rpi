@@ -360,8 +360,6 @@ if [ "$FILE_MODE" = "true" ]; then
   _CFG[engine]=$(cfg '.features.redpoint_ai.deployment' '')
   _CFG[temp]=$(cfg '.features.redpoint_ai.temperature' '')
   _CFG[search_endpoint]=$(cfg '.features.redpoint_ai.search_endpoint' '')
-  _CFG[vector_profile]=$(cfg '.features.redpoint_ai.vector_profile' '')
-  _CFG[vector_config]=$(cfg '.features.redpoint_ai.vector_config' '')
   _CFG[embeddings_model]=$(cfg '.features.redpoint_ai.embeddings_model' '')
   _CFG[model_dims]=$(cfg '.features.redpoint_ai.model_dimensions' '')
   _CFG[container_name]=$(cfg '.features.redpoint_ai.container_name' '')
@@ -1067,11 +1065,9 @@ add_redpoint_ai() {
   prompt engine "ChatGPT engine/model" "gpt-5.2"
   prompt temp "ChatGPT temperature (0.0–1.0)" "0.5"
   echo ""
-  echo "  ${BOLD}Azure Cognitive Search${RESET}"
-  local search_endpoint vector_profile vector_config
+  echo "  ${BOLD}Azure AI Search${RESET}"
+  local search_endpoint
   prompt search_endpoint "Search endpoint URL" "https://example.search.windows.net"
-  prompt vector_profile "Vector search profile" "vector-profile-000000000000"
-  prompt vector_config "Vector search config" "vector-config-000000000000"
   echo ""
   echo "  ${BOLD}Model Storage${RESET}"
   local embeddings_model model_dims container_name blob_folder
@@ -1096,8 +1092,6 @@ redpointAI:
     ChatGptTemp: ${temp}
   cognitiveSearch:
     SearchEndpoint: ${search_endpoint}
-    VectorSearchProfile: ${vector_profile}
-    VectorSearchConfig: ${vector_config}
   modelStorage:
     EmbeddingsModel: ${embeddings_model}
     ModelDimensions: ${model_dims}

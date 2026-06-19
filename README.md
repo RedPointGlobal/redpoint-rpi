@@ -28,6 +28,7 @@ This chart deploys RPI on Kubernetes using Helm.
 | [RPI Helm CLI](docs/readme-cli.md) | Pre-flight checks, secrets generation, deployment, troubleshooting |
 | [Custom Plugins](docs/plugins.md) | Realtime API plugins: decision, event, form, visitor profile, geolocation |
 | [RPI Observability](docs/observability.md) | Scheduled error digest from Pulse_Logging - email, Teams, dashboard |
+| [Redpoint AI](docs/redpoint-ai.md) | Natural-language basic selection rules - Azure OpenAI, AI Search, Blob Storage |
 | [Automation](docs/readme-terraform.md) | CI/CD, vault setup, ArgoCD, Flux |
 
 ## Resources

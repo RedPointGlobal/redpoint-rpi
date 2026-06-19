@@ -983,9 +983,10 @@ redpointAI:
     ChatGptEngine: gpt-5.2
     ChatGptTemp: 0.5
   cognitiveSearch:
+    # RPI creates and uses the vector-search profile + config dynamically
+    # when it generates the index (SQL Database Definition > Update AI
+    # Model); no client-facing setting is required for them.
     SearchEndpoint: https://example.search.windows.net
-    VectorSearchProfile: vector-profile-000000000000
-    VectorSearchConfig: vector-config-000000000000
   modelStorage:
     EmbeddingsModel: text-embedding-ada-002
     ModelDimensions: 1536
