@@ -207,11 +207,8 @@ az deployment group create -g "$RG" -f redpoint-ai.bicep \
 
 ### Azure OpenAI model deployments
 
-Deploy one chat model and the embeddings model. Supported chat models:
+Deploy one chat model and the embeddings model. Supported chat model:
 
-- `GPT-5`
-- `GPT-5-mini`
-- `GPT-5.1`
 - `GPT-5.2`
 
 The embeddings model is `text-embedding-ada-002`, which produces 1536-dimension vectors.
