@@ -65,10 +65,10 @@ The feature runs in the same cluster and namespace as the rest of RPI. It is con
 |:------------|:-------|
 | Azure subscription | Approved for Azure OpenAI, with model quota in your target region. |
 | Azure permissions | Ability to create resource groups, Azure OpenAI (Cognitive Services), Azure AI Search, and Storage resources, and to read their keys. `Owner` or `Contributor` on the target resource group is sufficient. |
-| RPI version | RPI v7.8 (the basic selection rule AI integration). |
+| RPI version | Any current v7 GA release of RPI. |
 | Helm chart | A chart that includes the `redpointAI` values block (this chart). |
 | RPI tenant | A configured tenant with at least one **basic SQL Database Definition**. This is the object you run Update AI Model on. |
-| Integration API | The RPI Integration API service must be running. It is part of the standard RPI deployment, and the chart configures it for this feature automatically. No separate OAuth or external-application setup is required. |
+| Integration API | The RPI Integration API service must be running. |
 | CLI tooling | `az` (Azure CLI) and `helm`. |
 
 > Azure OpenAI model availability and version strings vary by region and change over time. Choose a supported chat model that is available in your region. The examples below use placeholders for version strings; substitute the version Azure offers you.
@@ -318,7 +318,7 @@ helm upgrade --install rpi ./chart -n <rpi-namespace> -f my-values.yaml
    Re-run Update AI Model whenever the attribute set changes. Each run recreates the index.
 4. In a basic selection rule, use the natural-language assist to generate criteria.
 
-> The RPI Integration API service must be running for this feature. It is part of the standard RPI deployment, and the chart configures it automatically when `redpointAI.enabled` is `true`, so no separate Integration API, OAuth, or external-application setup is required. The original v6.6 proof of concept needed those because it ran as an external application. See [Getting started with Resolution Levels](../deploy/redpoint-ai/Getting%20started%20with%20Resolution%20Levels.pdf) for related resolution-level concepts.
+> The RPI Integration API service must be running for this feature.
 
 </details>
 
@@ -438,17 +438,5 @@ Checklist:
 | `RPI_NLP_API_KEY` (Secret) | `RPI__NLP__ApiKey` | yes | Azure OpenAI key. |
 | `RPI_NLP_SEARCH_KEY` (Secret) | `RPI__NLP__SearchKey` | yes | Search admin key. |
 | `RPI_NLP_MODEL_CONNECTION_STRING` (Secret) | `RPI__NLP__Model__ConnectionString` | yes | Blob connection string. |
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">Legacy proof-of-concept material</strong></summary>
-
-The `deploy/redpoint-ai/` folder contains the original research proof of concept, kept for historical reference. It is not part of the current deployment flow:
-
-- The POC design document describes the original approach on RPI v6.6, which used an external Python application, manual Azure portal index creation, and OAuth and Integration API calls to create rules.
-- The `deploy/redpoint-ai/embeddings/` scripts manually generated the index source files. The Update AI Model action replaces them. The scripts also depend on a helper module that is not part of this repository.
-
-In the current product you do not run these scripts and do not create the index by hand.
 
 </details>
