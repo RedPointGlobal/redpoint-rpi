@@ -325,12 +325,14 @@ spec:
           {{- with (include "rpi.secrets.sdk.envvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
           {{- with (include "rpi.cloudidentity.envvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
           {{- with (include "rpi.cloudidentity.awsAccessKeyEnvvars" . | trim) }}{{- . | nindent 10 }}{{- end }}
-#          {{- if and (not .Values.cloudIdentity.enabled) (eq ($cfg.cacheProvider.mongodb.authMechanism | default "default") "iamRole") }}
-#          - name: AWS_STS_REGIONAL_ENDPOINTS
-#            value: "regional"
-#          - name: AWS_DEFAULT_REGION
-#            value: {{ $cfg.cacheProvider.mongodb.region | default "us-east-1" | quote }}
-#          {{- end }}
+          {{- if and (not .Values.cloudIdentity.enabled) (eq ($cfg.cacheProvider.mongodb.authMechanism | default "default") "iamRole") }}
+          - name: AWS_ROLE_ARN
+            value: {{ $cfg.cacheProvider.mongodb.roleArn | quote }}
+          - name: AWS_STS_REGIONAL_ENDPOINTS
+            value: "regional"
+          - name: AWS_DEFAULT_REGION
+            value: {{ $cfg.cacheProvider.mongodb.region | default "us-east-1" | quote }}
+          {{- end }}
           {{- include "rpi.customCACerts.envVar" . | nindent 10 }}
           {{- if eq .Values.global.deployment.platform "azure" }}
           {{- if (($dw.bigquery | default dict).enabled | default false) }}
