@@ -7,39 +7,44 @@
 
 ## Overview
 
-**RPI Observability** is the operations component for RPI. It reads recent error rows from Pulse Logging, groups identical errors together, produces a per-cycle report (what is failing, where, how often), and surfaces it through a dashboard, an HTML email digest, and a Microsoft Teams Adaptive Card. Alongside the cycle reports it provides live system-health (pods + nodes), per-Interaction diagnostics with a downloadable bundle, and an optional auth + capability layer that integrates with the rest of the RPI trust domain.
+**RPI Observability** is the operations component for RPI. It reads recent error rows from Pulse Logging, groups identical errors together, ranks them by operational significance, and produces a per-cycle report (what is failing, where, how often, and what matters most). It surfaces this through an operator web UI, deterministic lifecycle-driven email and Microsoft Teams notifications, and a JSON API. Alongside the cycle reports it provides a live operational view of the platform (services, workflows, tenants, nodes), per-Interaction diagnostics with a downloadable bundle, and an optional auth and capability layer that integrates with the rest of the RPI trust domain.
 
-It is built for SRE and operations teams who want a single operations view of error activity across services, tenants, plugins, and hosts, plus the ability to drill into a specific Interaction for diagnostics. It does not replace your APM, metrics, or paging stack -- it complements them with a scheduled (interval or daily) digest plus a small dashboard for follow-up investigation.
+It is built for SRE and operations teams who want a single operational workspace spanning error activity, workflow health, tenant impact, and platform topology, plus the ability to drill into a specific Interaction for diagnostics. It does not replace your APM, metrics, or paging stack; it complements them with a scheduled (interval or daily) analysis cycle plus an operator dashboard for follow-up investigation.
 
-The component runs in the same cluster and namespace as the rest of the RPI services. It connects to Pulse Logging using the chart's existing operational database credentials and writes its own report history to a local SQLite database on a dedicated volume.
+The component runs in the same cluster and namespace as the rest of the RPI services. It connects to Pulse Logging using the chart's existing operational database credentials, writes its report history to a local SQLite database on a dedicated volume, and runs its AI narration through a configurable intelligence provider (in-cluster by default).
 
 ---
 
 <details>
 <summary><strong style="font-size:1.25em;">Prerequisites</strong></summary>
 
-Provision the model backend before turning on the observability component. Pick one provider. The model is called per cycle (not per error row), so traffic is light, but the resource has to exist and be reachable from the cluster.
+Choose an **intelligence provider** before turning on the component. The provider supplies the narrative summaries only; the rankings, dashboard, and notifications are deterministic and remain fully functional even when the model is unavailable. The model is called per cycle (not per error row), so traffic is light. Pick one of `local`, `helmAssistant`, `azure`, or `aws`.
 
-### Azure (Azure OpenAI / AI Foundry)
+### `local` (default, in-cluster)
 
-- Azure OpenAI or AI Foundry resource with a model deployment (for example, a `gpt-5` deployment).
-- Endpoint, API version, and deployment name. Read via the chart-wide `redpointAI.naturalLanguage` block (`ApiBase`, `ApiVersion`, `ChatGptEngine`).
-- API key in `redpoint-rpi-secrets` under `RPI_NLP_API_KEY`.
-- Network egress to the OpenAI endpoint. Private Endpoint is supported.
+- No external AI infrastructure and no egress. The chart deploys an in-cluster serving StatefulSet (the `rpi-observability-llm` image: a llama.cpp server with Qwen 2.5 7B Instruct GGUF baked in, no runtime downloads, deployable in air-gapped clusters).
+- The model is shipped with the image and is not a customer-configurable knob. To use a different model, switch to one of the providers below.
+- Sized for CPU inference on a standard worker node; GPU is not required.
 
-### AWS (Bedrock)
+### `helmAssistant` (Redpoint-hosted)
 
-- Bedrock service in the target region (model availability varies by region).
-- **Model access approved** for the `modelId` you plan to use.
-- `bedrock:InvokeModel` granted on the target model ARN to the IAM role from `cloudIdentity.amazon.roleArn`. The component rides the chart's standard IRSA / EKS Pod Identity binding.
+- Inference runs on the Redpoint-operated Helm Assistant service. No customer AI infrastructure.
+- Requires egress to the Helm Assistant endpoint and the customer-populated secret `Observability_HelmAssistant_ApiKey` (issued by Redpoint).
+- Redacted, deterministic incident facts leave the cluster over HTTPS; prose comes back.
+
+### `azure` (Azure AI Foundry or Azure OpenAI)
+
+- Your own Azure AI Foundry or Azure OpenAI resource with a model deployment.
+- Requires `endpoint` and `deployment`; the chart fails fast at render time if either is missing. Managed identity is preferred; an API-key secret is optional.
+- Network egress to the endpoint. Private Endpoint is supported.
+
+### `aws` (Amazon Bedrock)
+
+- Bedrock in the target region (model availability varies by region), with **model access approved** for the `modelId`.
+- `bedrock:InvokeModel` granted to the role from `cloudIdentity.amazon` (the chart's standard IRSA / EKS Pod Identity binding). Requires `region` and `modelId`.
 - Network egress to `bedrock-runtime.<region>.amazonaws.com`. PrivateLink is supported.
 
-### GCP (Vertex AI)
-
-- Vertex AI API enabled on the project.
-- For Anthropic-on-Vertex: model access enabled.
-- `roles/aiplatform.user` (or narrower `aiplatform.endpoints.predict`) on the GCP service account from `cloudIdentity.google.serviceAccountEmail`. The component rides the chart's standard Workload Identity binding.
-- Network egress to `<region>-aiplatform.googleapis.com`.
+GCP / Vertex AI is not a supported intelligence provider.
 
 </details>
 
@@ -52,16 +57,17 @@ Each cycle:
 2. Filters rows below the configured severity floor.
 3. Groups errors by their root pattern. Volatile content (timestamps, IDs, IPs, paths) is stripped before grouping so variants of the same underlying error land together.
 4. Aggregates totals by service, tenant, plugin, and host.
-5. For each cluster, asks the configured model to produce a short explanation and a suggested fix; also asks for a 2-4 sentence summary of the cycle as a whole.
-6. Persists the full report to a local SQLite store.
-7. Marks each error type as `new`, `recurring`, or `resolved`. An error is `new` the first time it ever appears in any report; after that it is `recurring`. An error is `resolved` if it was in the previous report but is not in the current one.
-8. Sends an HTML email digest and a Teams Adaptive Card if either channel is enabled and the trigger gates pass.
+5. Ranks each cluster by **operational significance** (deterministic: novelty, exception family, tenant breadth, growth, recurrence) and extracts a structured, redacted **evidence** record from the sample exception. This ranking and evidence are computed in code, never by the model.
+6. Asks the configured intelligence provider for a short narrative summary and an investigative interpretation of the ranked, evidence-backed facts. The model narrates; it never decides severity, category, ranking, or routing.
+7. Persists the full report to a local SQLite store.
+8. Marks each error type as `new`, `recurring`, or `resolved`. An error is `new` the first time it ever appears in any report; after that it is `recurring`. An error is `resolved` if it was in the previous report but is not in the current one.
+9. Runs the deterministic notification engine. Lifecycle transitions (NEW / ESCALATED / RESOLVED) over the significance-ranked incidents decide what is sent; see Notifications below.
 
-Outside the cycle the component also serves:
+Outside the cycle the component serves an operator web UI (Operational Core, Workflows, Tenants, Platform, Activity, Investigations) plus:
 
-- **System Health** -- live pod and node state from the Kubernetes API (and metrics-server when present), so operators can correlate workload health with error activity.
+- **Live platform state** -- pod and node state from the Kubernetes API (and metrics-server when present), so operators can correlate workload health with error activity.
 - **Diagnostics** -- per-Interaction lookup with SQL trace timeline, audit timeline, application logs, and a downloadable bundle (parity with the on-prem "Download Diagnostics" zip).
-- **Authentication and capability-based authorization** -- opt-in trust-domain participation that gates sensitive surfaces by capability (see "Authentication" below).
+- **Authentication and capability-based authorization** -- opt-in trust-domain participation that gates sensitive surfaces by capability (see Authentication below).
 
 The dashboard at `https://<your-ingress>/` is the primary entry point.
 
@@ -79,9 +85,9 @@ Two scheduling modes:
 | **Interval** (default) | Every `intervalMinutes` after pod startup | Active monitoring, short reaction time |
 | **Daily** | Once a day at `dailyAtUtc` (`HH:MM` UTC) | Operations digest at a fixed time |
 
-In daily mode the lookback window auto-defaults to 24 hours so consecutive cycles cover the full day. Daily mode also bypasses `onlyOnNewErrors` on email and Teams: if you opted into a daily summary, you get it every day even on quiet days.
+In daily mode the lookback window auto-defaults to 24 hours so consecutive cycles cover the full day. The schedule drives the analysis cycle; notification delivery is governed separately by the lifecycle engine and its own cadences (see Notifications).
 
-The **Run analysis now** button in the sidebar (and `POST /api/analyze`) fires an off-schedule cycle. Same downstream code path. When auth is enabled, this requires the `analyzer.admin` capability.
+An off-schedule cycle can be triggered via `POST /api/analyze` (and from the command palette in the web UI). Same downstream code path. When auth is enabled, this requires the `analyzer.admin` capability.
 
 ### Single-instance deployment contract
 
@@ -107,49 +113,58 @@ SQLite needs a filesystem that honors POSIX byte-range locks, so `/data` must be
 
 When `diagnostics.fileOutput.enabled` is true and the chart-wide `storage.persistentVolumeClaims.FileOutputDirectory` PVC exists, that PVC is also mounted read-only at `/rpifileoutputdir` so diagnostic bundles can include the workflow's output files.
 
-### AI deployment postures
+### Intelligence provider
 
-AI inference is a deployment-posture decision: where inference runs, who operates it, where log data lives. The user experience is identical across postures; only the deployment architecture differs.
+Where AI inference runs is a deployment decision set by `intelligence.provider`. The operator experience is identical across providers; only where inference runs, who operates it, and where data goes differ. The provider narrates already-computed facts; rankings, severity, categories, and notification delivery are deterministic regardless of provider.
 
-| Posture | What it is | Privacy boundary | Operational ownership |
-|:--------|:-----------|:-----------------|:----------------------|
-| **`helmAssistant`** (default, turnkey) | Inference runs on the Redpoint-hosted control plane. Redacted, clustered error data is shipped over HTTPS; structured AI summaries come back. Zero customer AI infrastructure required. | redacted samples leave the cluster | Redpoint-managed |
-| **`localLlm`** (private, packaged) | Inference runs in-cluster via the chart-shipped Ollama deployment. No log data leaves the customer network. | nothing leaves the cluster | customer (in-cluster) |
-| **`byo`** (customer-managed) | Inference runs on a customer-managed AI platform (`anthropic`, `azureFoundry`, `bedrock`, `vertex`). Auth piggybacks on the chart's existing `cloudIdentity` helpers. | customer-managed | customer |
+| Provider | Where inference runs | Privacy boundary | Operational ownership |
+|:---------|:---------------------|:-----------------|:----------------------|
+| **`local`** (default) | In-cluster serving StatefulSet (`rpi-observability-llm` image, Qwen 2.5 7B baked in). | Nothing leaves the cluster. | Customer (in-cluster) |
+| **`helmAssistant`** | The Redpoint-hosted Helm Assistant service. | Redacted, deterministic incident facts leave the cluster over HTTPS. | Redpoint-managed |
+| **`azure`** | Your Azure AI Foundry or Azure OpenAI resource. | Customer-managed (your Azure tenant). | Customer |
+| **`aws`** | Amazon Bedrock. | Customer-managed (your AWS account). | Customer |
 
-For `byo`:
+Per-provider configuration:
 
-| `byo.platform` | Configuration |
-|:---------------|:--------------|
-| `anthropic` | API key in the cloud vault under `Observability-AnthropicApiKey`. |
-| `azureFoundry` | Reuses chart-wide `redpointAI.naturalLanguage` (`ApiBase`, `ApiVersion`, `ChatGptEngine`). |
-| `bedrock` | Auth via `cloudIdentity.amazon` (IRSA / EKS Pod Identity). Permission: `bedrock:InvokeModel`. |
-| `vertex` | Auth via `cloudIdentity.google` (Workload Identity). Permission: `aiplatform.endpoints.predict`. |
+| Provider | Configuration |
+|:---------|:--------------|
+| `local` | None required. `intelligence.local.deployment.enabled` (default true) renders the serving StatefulSet; set `intelligence.local.baseUrl` only if you self-host the serving layer elsewhere. |
+| `helmAssistant` | `Observability_HelmAssistant_ApiKey` in `redpoint-rpi-secrets` (issued by Redpoint). `intelligence.helmAssistant.url` defaults to the Redpoint endpoint. |
+| `azure` | `intelligence.azure.{service, endpoint, deployment}` (and `apiVersion` for `service: openai`). Managed identity preferred; set `intelligence.azure.apiKeySecretKey` for key auth. |
+| `aws` | `intelligence.aws.{region, modelId}`. Auth via `cloudIdentity.amazon` (IRSA / EKS Pod Identity), permission `bedrock:InvokeModel`. |
 
-The model is called per cycle, not per row. Rate limits are enforced via `budget.maxTokensPerHour` and `budget.maxRequestsPerHour`. When a budget is exceeded the next cycle is skipped and the budget event is logged.
+The model is called per cycle, not per row, with a hard `intelligence.timeoutSeconds` (default 240) so a slow inference cannot stall the cycle. Rate limits are enforced via `budget.maxTokensPerHour` and `budget.maxRequestsPerHour`; when a budget is exceeded the next cycle is skipped and the event is logged. If the provider is unavailable, the cycle still completes and the deterministic report, rankings, dashboard, and notifications are unaffected; only the narrative prose is omitted.
 
 ### Authentication and authorization (opt-in)
 
-When `auth.enabled=true`, RPI Observability participates in the RPI trust domain as a peer service. Authentication is delegated to the IDP your RPI deployment already uses (native RPI auth via OpenIddict, Microsoft Entra ID, Keycloak, or Okta). Authorization is resolved through RPI's normalized user / group / permission model in the operational database -- no parallel identity store.
+Authentication is a single-provider, deployment-time choice set by `auth.mode`, resolving to exactly one of:
 
-Above the auth layer, the dashboard and the API consume **capabilities** (`observability.view`, `diagnostics.view`, `diagnostics.viewSql`, `diagnostics.viewStackTrace`, `diagnostics.exportBundle`, `analyzer.admin`), not raw groups or roles. The capability map is configurable via chart values; defaults are shipped.
+| `auth.mode` | Authentication |
+|:------------|:---------------|
+| **`public`** (default) | No authentication. The UI and API are anonymous. |
+| **`native`** | RPI native auth via `rpi-interactionapi` / OpenIddict. Uses the confidential client `auth.native.clientId` (default `rpi-observability`) and the secret `Observability_NativeAuth_ClientSecret`. |
+| **`entra`** | Microsoft Entra ID, via the chart-wide `MicrosoftEntraID` block (override under `auth.microsoft`). |
 
-The login surface is rendered inside the dashboard shell as one of two states (authenticated vs. unauthenticated) -- there is no separate login page. FastAPI sets the session cookie and 303-redirects back to `/`; the browser holds the cookie and the dashboard reads identity via `/auth/whoami` on every render.
+Hybrid configurations are rejected at chart-render time. In `native` and `entra` modes, authorization is resolved through RPI's normalized user / group / permission model in the operational database (no parallel identity store), and the tenant scope comes from `observability.clientId`.
 
-When `auth.enabled=false` (default), the dashboard remains anonymous and the legacy unauthenticated path is preserved. See the chart's `observability.auth` block for the full set of values.
+Above the auth layer, the API and UI consume **capabilities** (`observability.view`, `diagnostics.view`, `diagnostics.viewSql`, `diagnostics.viewStackTrace`, `diagnostics.exportBundle`, `analyzer.admin`), not raw groups or roles. The canonical RPI groups map to capabilities through built-in defaults; use `auth.capabilityMap` only to grant a custom (non-canonical) RPI group access.
 
-### Dashboard tabs
+> **Login UI pending.** Authentication is wired end-to-end on the API (capability enforcement, native/entra token exchange, session cookies), but the current operator web UI does not yet render an in-app login screen. In `native` / `entra` mode a browser therefore cannot establish a session through the UI today. Until the login surface ships, run `auth.mode: public`, or place the dashboard behind your own authenticating proxy. API-level capability enforcement is unaffected. See the chart's `observability.auth` block for the full set of values.
 
-The Streamlit UI surfaces four top-level tabs:
+### Dashboard surfaces
 
-| Tab | What it shows | Required capability |
-|:----|:--------------|:--------------------|
-| **Overview** | Latest cycle summary (NEW / RECURRING / RESOLVED pills), four breakdown pies (service, tenant, plugin, host), 24-hour trend per service, per-cluster cards (count, source, headline, explanation, suggested fix), and a downloads list for recent reports. | `observability.view` |
-| **System Health** | Live pod state and node state from the Kubernetes API + metrics-server (CPU, memory, restart counts, recent events). RBAC: namespace-scoped Role for pods, optional cluster-scoped ClusterRole for nodes (gated by `nodeHealth.enabled`). | `observability.view` |
-| **Log Analysis** | Per-cluster incident-intelligence cards with the model's explanation + suggested fix, drill-down into raw rows, and a per-cluster log download. | `observability.view` |
-| **Diagnostics** | Per-Interaction lookup. SQL trace clusters, audit timeline, application logs, and a downloadable diagnostic bundle (mirrors the on-prem "Download Diagnostics" zip). Some sub-views require additional capabilities (`diagnostics.viewSql`, `diagnostics.viewStackTrace`, `diagnostics.exportBundle`). | `diagnostics.view` |
+The operator web UI is a single operational workspace. Navigation preserves context across these areas, all gated by `observability.view`; diagnostic drill-downs add the `diagnostics.*` capabilities.
 
-The sidebar carries the token-budget bar, the **Run analysis now** button (gated by `analyzer.admin`), and the signed-in identity strip when auth is on.
+| Workspace | What it shows |
+|:----------|:--------------|
+| **Operational Core** | The landing surface. A live Service Map (the RPI services arranged around the operational database, with measured flow rates), per-service capacity cards, and the **Operations Brief** (significance-ranked incidents, platform posture, and the AI narrative). |
+| **Workflows** | Workflow definitions to instances to activities, with lifecycle status and per-run diagnostic bundle export. |
+| **Tenants** | Per-tenant health and execution-status breakdown across the deployment. |
+| **Platform** | The scheduling view: which pods run on which nodes, replica spread and single-point-of-failure checks, per-node CPU / memory, and dependency health. Node panels bind a cluster-scoped ClusterRole when `nodeHealth.enabled`. |
+| **Activity** | Recent failures, SQL traces, and the audit timeline. |
+| **Investigations** | Incident intelligence: significance-ranked incidents, the extracted evidence, and the AI investigative interpretation. |
+
+Clicking any entity (service, pod, node, tenant, workflow, incident) opens a **dossier** flyout without leaving the current surface. Sensitive sub-views (SQL text, stack traces, bundle export) require the matching `diagnostics.*` capability; off-schedule analysis requires `analyzer.admin`.
 
 </details>
 
@@ -158,21 +173,24 @@ The sidebar carries the token-budget bar, the **Run analysis now** button (gated
 
 The component is opt-in. Add the following block to your overrides.
 
-### Example A: `helmAssistant` (default, turnkey)
+### Example A: `local` (default, in-cluster)
 
-Best out-of-the-box experience. Zero AI infrastructure required.
+No external AI infrastructure and no egress. The chart deploys the in-cluster serving layer automatically.
 
 ```yaml
 observability:
   enabled: true
+  clientId: "<rpi_Clients GUID for this deployment>"
+  intelligence:
+    provider: local
   schedule:
     dailyAtUtc: "00:00"             # daily mode, 24 h lookback (auto)
-  email:
+  notifications:
     enabled: true
-    recipients:
+    defaultRecipients:
       - sre@example.com
-  teams:
-    enabled: true                   # webhookSecretKey defaults to Observability_Teams_Webhook
+    teams:
+      enabled: true                 # webhookSecretKey defaults to Observability_Teams_Webhook
   storage:
     volumeClaimTemplates:
       enabled: true
@@ -181,87 +199,94 @@ observability:
       storageClassName: ""          # empty = cluster default storage class
 ```
 
-The Helm Assistant API key drops into `redpoint-rpi-secrets` under `Observability_HelmAssistant_ApiKey` (format: `<username>:<password>`).
-
-### Example B: `localLlm` (private, packaged in-cluster)
-
-Inference runs in-cluster via Ollama; no log data leaves the network.
+### Example B: `helmAssistant` (Redpoint-hosted)
 
 ```yaml
 observability:
   enabled: true
-  model:
-    provider: localLlm
-    llmName: phi3:mini              # any tag from https://ollama.com/library
-  localLlm:
-    enabled: true
-  schedule:
-    intervalMinutes: 30
-    lookbackMinutes: 60
+  clientId: "<rpi_Clients GUID for this deployment>"
+  intelligence:
+    provider: helmAssistant         # url defaults to the Redpoint-hosted endpoint
 ```
 
-### Example C: `byo` + AWS Bedrock (customer-managed)
+The Helm Assistant API key drops into `redpoint-rpi-secrets` under `Observability_HelmAssistant_ApiKey` (issued by Redpoint).
 
-Customer-managed inference; auth via `cloudIdentity.amazon`.
+### Example C: `azure` (Azure AI Foundry or Azure OpenAI)
 
 ```yaml
 observability:
   enabled: true
-  model:
-    provider: byo
-    llmName: anthropic.claude-sonnet-4-20250514-v1:0
-    byo:
-      platform: bedrock
-      bedrock:
-        region: us-east-1
-  email:
-    enabled: true
-    recipients:
-      - sre@example.com
-    onlyOnNewErrors: true
+  clientId: "<rpi_Clients GUID for this deployment>"
+  intelligence:
+    provider: azure
+    azure:
+      service: foundry              # foundry | openai
+      endpoint: https://<resource>.openai.azure.com
+      deployment: <model-deployment-name>
+      # apiVersion: "..."           # only for service: openai
+      # apiKeySecretKey: ""         # blank = managed identity (preferred)
+```
+
+### Example D: `aws` (Amazon Bedrock)
+
+```yaml
+observability:
+  enabled: true
+  clientId: "<rpi_Clients GUID for this deployment>"
+  intelligence:
+    provider: aws
+    aws:
+      region: us-east-1
+      modelId: anthropic.claude-3-5-sonnet-20241022-v2:0
 
 cloudIdentity:
   amazon:
     roleArn: arn:aws:iam::123456789012:role/rpi-observability
 ```
 
-For other `byo` platforms: `byo.platform: anthropic` + `byo.anthropic.apiKeyVaultEntry`; `byo.platform: vertex` + `byo.vertex.{projectId, region}`; `byo.platform: azureFoundry` (uses chart-wide `redpointAI.naturalLanguage`).
-
 ### Reference
 
 | Key | Default | Description |
 |:----|:--------|:------------|
 | `enabled` | `false` | Master switch. |
-| `replicas` | `1` | StatefulSet replica count. |
-| `model.provider` | `helmAssistant` | AI deployment posture: `helmAssistant`, `localLlm`, or `byo`. |
-| `model.llmName` | `""` | Model identifier for the active posture. Ignored for `helmAssistant` and for `byo.platform=azureFoundry`. |
-| `model.helmAssistant.url` | `https://rpi-helm-assistant.redpointcdp.com` | Helm Assistant control-plane URL. |
-| `model.byo.platform` | _(unset)_ | Required when `provider=byo`. One of `anthropic`, `azureFoundry`, `bedrock`, `vertex`. |
-| `localLlm.enabled` | `false` | Deploy the in-cluster Ollama backend. Required when `provider=localLlm`. |
+| `clientId` | `""` | The deployment's `rpi_Clients` GUID. Tenant scope for authorization and per-Interaction diagnostics (ADR-0009). |
+| `intelligence.provider` | `local` | Intelligence provider: `local`, `helmAssistant`, `azure`, or `aws`. |
+| `intelligence.timeoutSeconds` | `240` | Per-inference timeout. On timeout the cycle proceeds without an AI summary. |
+| `intelligence.local.deployment.enabled` | `true` | Render the in-cluster serving StatefulSet (`provider=local`). |
+| `intelligence.local.baseUrl` | `""` | Override only to self-host the serving layer elsewhere. Blank = the in-cluster Service. |
+| `intelligence.helmAssistant.url` | `""` | Blank = the Redpoint-hosted endpoint. Requires the `Observability_HelmAssistant_ApiKey` secret. |
+| `intelligence.azure.service` | `foundry` | `foundry` or `openai` (`provider=azure`). |
+| `intelligence.azure.endpoint` | `""` | Required for `provider=azure`. Renders an error if missing. |
+| `intelligence.azure.deployment` | `""` | Required for `provider=azure`. The deployed model name. |
+| `intelligence.azure.apiKeySecretKey` | `""` | Optional. Blank = managed identity (preferred). |
+| `intelligence.aws.region` | `""` | Required for `provider=aws`. |
+| `intelligence.aws.modelId` | `""` | Required for `provider=aws`. Auth via `cloudIdentity.amazon`. |
 | `schedule.intervalMinutes` | `30` | Interval mode period. Ignored when `dailyAtUtc` is set. |
 | `schedule.dailyAtUtc` | `""` | Daily mode time as `HH:MM` UTC. Empty = interval mode. |
 | `schedule.lookbackMinutes` | auto | Defaults to 60 in interval mode, 1440 in daily mode. |
 | `schedule.onDemandEnabled` | `true` | Exposes `POST /api/analyze`. |
 | `budget.maxTokensPerHour` | `200000` | Hard cap; exceeding skips the next cycle. |
 | `budget.maxRequestsPerHour` | `60` | Hard cap; exceeding skips the next cycle. |
-| `nodeHealth.enabled` | `true` | Powers the Node Health panel; binds a cluster-scoped ClusterRole. Set `false` if cluster-scoped RBAC is not allowed. |
-| `logSources.interaction` | `""` | Interaction DB name; required for the Diagnostics tab's per-Interaction drill-down. |
-| `logSources.sqlTrace` | `""` | InteractionAudit DB name; required for SQL trace clusters. |
-| `logSources.audit` | `""` | InteractionAudit DB name; required for the audit timeline (often same as `sqlTrace`). |
-| `logSources.clientServer` | `""` | Informational; the actual Pulse_Logging connection comes from the chart secret. |
+| `nodeHealth.enabled` | `true` | Powers the Platform node panels; binds a cluster-scoped ClusterRole. Set `false` if cluster-scoped RBAC is not allowed. |
+| `telemetry.mode` | `scrape` | `scrape` (native `/metrics`) or `otel` (auto-instrument participating services through a shared OTel Collector, adding per-service database-edge metrics). |
+| `telemetry.muslServices` | `[rpi-integrationapi, rpi-callbackapi, rpi-deploymentapi]` | Services on musl images that need the `linux-musl-x64` OTel profiler. |
 | `diagnostics.fileOutput.enabled` | `false` | Mounts the chart-wide FileOutputDirectory PVC read-only at `/rpifileoutputdir` so diagnostic bundles can include workflow output files. |
-| `auth.enabled` | `false` | Opt-in trust-domain participation. |
-| `auth.tenantId` | `""` | Required when `auth.enabled=true`. |
-| `auth.anonymous` | `deny` | Anonymous-access posture: `deny`, `observabilityViewOnly`, or `allowAnonymous`. |
+| `auth.mode` | `public` | `public`, `native`, or `entra`. Hybrid is rejected at render. |
+| `auth.native.clientId` | `rpi-observability` | OpenIddict confidential client ID (`mode=native`); paired secret `Observability_NativeAuth_ClientSecret`. |
+| `auth.microsoft.{tenantId,clientApplicationId,apiApplicationId}` | `""` (chart-wide) | Entra overrides (`mode=entra`); default to the chart-wide `MicrosoftEntraID` block. |
 | `auth.cookieSecure` | `true` | Set `false` only for local dev without TLS. |
 | `auth.sessionLifetimeSeconds` | `28800` | 8 hours. |
 | `auth.ingressHost` | auto | Auto-derived from `ingress.hosts.observability` + `ingress.domain` when empty. |
-| `email.enabled` | `false` | Send the cycle digest as HTML email. |
-| `email.recipients` | `[]` | List of email addresses. |
-| `email.onlyOnNewErrors` | `true` | Skip cycles with no first-seen error types. Bypassed in daily mode. |
-| `teams.enabled` | `false` | Post the cycle digest to a Teams channel. |
-| `teams.webhookSecretKey` | `Observability_Teams_Webhook` | Key in `redpoint-rpi-secrets` holding the webhook URL. |
-| `teams.onlyOnNewErrors` | `true` | Same semantics as `email.onlyOnNewErrors`. Bypassed in daily mode. |
+| `notifications.enabled` | `false` | Master gate for the notification engine. |
+| `notifications.defaultRecipients` | `[]` | Fallback recipients when a per-type list is empty. |
+| `notifications.email.enabled` | `false` | Email channel (reuses the chart-wide `SMTPSettings`). |
+| `notifications.teams.enabled` | `false` | Teams channel. |
+| `notifications.teams.webhookSecretKey` | `Observability_Teams_Webhook` | Secret key holding the Teams webhook URL. |
+| `notifications.dailyBrief.{enabled,atUtc,recipients}` | `true`, `"13:00"`, `[]` | Daily Operations Brief. |
+| `notifications.weeklySummary.{enabled,dayOfWeek,atUtc,recipients}` | `false`, `0`, `"13:00"`, `[]` | Weekly Executive Summary. |
+| `notifications.newIncident.{enabled,significanceThreshold,cooldownMinutes,recipients}` | `true`, `60`, `0`, `[]` | New Critical Incident alert. |
+| `notifications.escalation.{enabled,minBand,scoreDelta,tenantDelta,sustainCycles,cooldownMinutes,recipients}` | `true`, `medium`, `15`, `2`, `2`, `240`, `[]` | Incident Escalation alert. |
+| `notifications.resolution.{enabled,absentCycles,recipients}` | `true`, `12`, `[]` | Incident Resolution notice. |
 | `storage.existingClaim` | `""` | Mount an existing PVC instead of provisioning a new one. |
 | `storage.volumeClaimTemplates.enabled` | `true` | Provision via StatefulSet `volumeClaimTemplates`. |
 | `storage.volumeClaimTemplates.storage` | `5Gi` | Volume size. |
@@ -274,36 +299,42 @@ The full set of `auth.*` keys (capability map, native + federated provider block
 <details>
 <summary><strong style="font-size:1.25em;">Notifications</strong></summary>
 
-### Email
+Notifications are **deterministic and lifecycle-driven**. Delivery is decided in code from each incident's lifecycle transitions over the significance-ranked clusters; the AI never gates delivery (it only narrates the Daily Brief body). The engine is off by default; set `notifications.enabled: true` to turn it on. Each notification type can be enabled or disabled independently and accepts its documented defaults unless overridden.
 
-The component reuses the chart-wide `SMTPSettings` block (the same SMTP server, sender address, and credentials the .NET RPI services already use). No component-specific SMTP configuration is required.
+### Incident lifecycle
 
-The HTML body shows total errors, the new / recurring / resolved breakdown pills, four breakdown pies (service, tenant, plugin, host), the cycle summary, and a button that links back to the dashboard.
+Each distinct incident (by fingerprint) moves through a code-defined lifecycle that drives the alert types:
 
-![Email digest](../chart/images/email_card.jpg)
+| State | Meaning |
+|:------|:--------|
+| **NEW** | First appearance, or reappearance after a prior resolution. |
+| **ACTIVE** | Seen again; tracked against a stable baseline. |
+| **ESCALATED** | Materially worse for `escalation.sustainCycles` consecutive cycles (significance jump, band upgrade, tenant-breadth jump, or growth turning to spiking). |
+| **RESOLVED** | Absent for `resolution.absentCycles` consecutive cycles. |
 
-### Microsoft Teams
+### Notification types
 
-The Teams card is posted to a Workflow incoming webhook. To get the URL:
+| Type | Fires when | Cadence / key settings |
+|:-----|:-----------|:-----------------------|
+| **Daily Operations Brief** | Once per UTC day | `dailyBrief.atUtc` (default `13:00`). Platform posture, error activity, tenant impact, primary concerns. |
+| **Weekly Executive Summary** | Once per week (off by default) | `weeklySummary.dayOfWeek` (Mon=0..Sun=6), `weeklySummary.atUtc`. Recurring incidents, categories, resolved-this-week. |
+| **New Critical Incident** | A NEW-lifecycle incident reaches the threshold | `newIncident.significanceThreshold` (default `60`), `newIncident.cooldownMinutes`. |
+| **Incident Escalation** | An active incident escalates | `escalation.minBand`, `escalation.scoreDelta`, `escalation.tenantDelta`, `escalation.sustainCycles`, `escalation.cooldownMinutes` (default 240). |
+| **Incident Resolution** | An incident clears | `resolution.absentCycles` (default `12`, about 6h at a 30-min cadence). |
+
+### Channels
+
+Email and Teams are independent channels under `notifications`. Recipients come from the per-type `recipients` list, falling back to `notifications.defaultRecipients`.
+
+- **Email** (`notifications.email.enabled`) reuses the chart-wide `SMTPSettings` block (the same SMTP server, sender, and credentials the .NET RPI services use). No component-specific SMTP configuration is required.
+- **Teams** (`notifications.teams.enabled`) posts to a Workflow incoming webhook whose URL is stored in `redpoint-rpi-secrets` under `notifications.teams.webhookSecretKey` (default `Observability_Teams_Webhook`). The pod fails fast at startup if the channel is enabled and the key is empty.
+
+To create the Teams webhook URL:
 
 1. In the target Teams channel, click `...` -> `Workflows`.
 2. Pick the template `Post to a channel when a webhook request is received`.
 3. Copy the URL the workflow generates.
-4. Store it in `redpoint-rpi-secrets` under `Observability_Teams_Webhook` (override with `teams.webhookSecretKey` if you use a different key).
-
-The card mirrors the email content. The Redpoint logo and the four breakdown pies are inlined into the card payload as base64 data URIs, so the card renders correctly even when the dashboard's ingress is private.
-
-![Teams card](../chart/images/teams_card.jpg)
-
-### Trigger gates
-
-A digest fires only when all of these are true:
-
-| Channel | Gates |
-|:--------|:------|
-| Email | `email.enabled`, recipients list non-empty, SMTP address and sender address configured. |
-| Teams | `teams.enabled`, webhook URL present in the secret. |
-| Both | Cycle has at least one `new` (first-seen) error type, **unless** `onlyOnNewErrors: false` or daily mode is on. |
+4. Store it in `redpoint-rpi-secrets` under `Observability_Teams_Webhook` (or your `webhookSecretKey`).
 
 </details>
 
@@ -321,16 +352,11 @@ ingress:
     observability: rpi-observability        # final URL: https://rpi-observability.example.com
 ```
 
-The chart wires this into `OBSERVABILITY__EMAIL__INGRESS_URL` so the email and Teams CTA buttons link back to a working dashboard URL. When `auth.enabled=true`, the same host is used to construct the OIDC redirect URI advertised to the IDP (override with `auth.ingressHost` if you front the dashboard with a different external hostname).
+The chart wires this into `OBSERVABILITY__EMAIL__INGRESS_URL` so the email and Teams CTA buttons link back to a working dashboard URL. When `auth.mode` is `native` or `entra`, the same host is used to construct the OIDC redirect URI advertised to the IDP (override with `auth.ingressHost` if you front the dashboard with a different external hostname).
 
 ### Internal API
 
-Two processes run inside the pod:
-
-| Process | Port | Reachable from |
-|:--------|:-----|:---------------|
-| Streamlit UI | `8501` | The public ingress (this is what operators see). |
-| FastAPI | `8080` | Inside the pod only. The Streamlit UI calls it on `localhost`. Kubelet hits it for probes. The chart's ingress also routes `/auth/*` to FastAPI when auth is enabled. |
+The pod runs a single FastAPI process on port `8080` that serves both the operator web UI (a static Next.js build, served by FastAPI; no Node runtime in the pod) and the JSON API. The chart's ingress routes to it, and kubelet hits it for probes. When auth is enabled, `/auth/*` is served by the same process.
 
 For ad-hoc inspection of the FastAPI surface, use a port-forward:
 
@@ -339,7 +365,7 @@ kubectl port-forward -n <namespace> pod/rpi-observability-0 8080:8080
 curl http://localhost:8080/api/budget
 ```
 
-Available endpoints (capability gating applies when `auth.enabled=true`):
+Available endpoints (capability gating applies when `auth.mode` is `native` or `entra`):
 
 | Endpoint | Purpose | Capability |
 |:---------|:--------|:-----------|
@@ -376,9 +402,9 @@ The pod logs cycle results, scheduling decisions, and notification outcomes. Sam
 INFO  app.scheduler scheduler running in daily mode at 00:00 UTC
 INFO  app.scheduler next cycle in 32400 s (daily at 00:00 UTC)
 INFO  app.analyze.pipeline cycle complete: report_id=42 errors=511 clusters=8
-INFO  app.email_sender email digest sent: report=#42 recipients=1
-INFO  app.teams_sender Teams notification sent: report=#42
-INFO  app.teams_sender Teams notification skipped: no first-seen errors this cycle
+INFO  app.notify daily brief sent: recipients=1
+INFO  app.notify new-incident alert sent: significance=72 tenants=5
+INFO  app.notify no lifecycle transitions this cycle; nothing to send
 INFO  rpi-observability.audit auth.login.success identity_email=alice@example.com idp=native
 INFO  rpi-observability.audit authz.denied capability_required=diagnostics.viewSql route=/api/diagnostics/lookup/...
 ```
