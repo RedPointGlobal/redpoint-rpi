@@ -48,7 +48,7 @@ jobs:
         run: kubectl rollout status deploy -n redpoint-rpi --timeout=10m
 ```
 
-Store the cluster credentials and any cloud service-principal secrets in your CI system's secret store - never commit them to the repository.
+Store the cluster credentials and any cloud service-principal secrets in your CI system's secret store. Never commit them to the repository.
 
 ### Optional: image mirroring
 

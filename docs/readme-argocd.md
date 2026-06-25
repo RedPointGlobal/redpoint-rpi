@@ -6,9 +6,9 @@ This is the recommended GitOps setup for RPI: a single ArgoCD Application that r
 
 - ArgoCD installed in the cluster (namespace `argocd`) with the `argocd` CLI or UI available.
 - Cluster access for ArgoCD to your target namespace.
-- The deployment's **secrets created in the target namespace before the first sync**. ArgoCD renders the chart but does not create application secrets - the chart only references them. Create them with the RPI Helm CLI (`setup.sh secrets`) or your cloud vault first. See the Secrets Management guide.
+- The deployment's **secrets created in the target namespace before the first sync**. ArgoCD renders the chart but does not create application secrets. The chart only references them. Create them with the RPI Helm CLI (`setup.sh secrets`) or your cloud vault first. See the Secrets Management guide.
 
-## Step 1 - Set up your repository
+## Step 1: Set up your repository
 
 Mirror the RPI chart repository into your own Git server, then add your overrides alongside the chart. The repository keeps this structure:
 
@@ -31,7 +31,7 @@ git push --mirror
 
 Then commit your overrides to `deploy/values/production.yaml` in that repository.
 
-## Step 2 - Create the ArgoCD Application
+## Step 2: Create the ArgoCD Application
 
 One Application, one source: it points at your repository, renders the chart at `chart/`, and applies your overrides from `deploy/values/`. Automated sync keeps the cluster reconciled; Secrets are excluded from diffs so they don't show as out-of-sync.
 
@@ -68,7 +68,7 @@ spec:
 
 Save it as `rpi-application.yaml`. The `valueFiles` path is relative to the chart directory: `../` steps up to the repo root, then into `deploy/values/`.
 
-## Step 3 - Apply and sync
+## Step 3: Apply and sync
 
 ```bash
 kubectl apply -f rpi-application.yaml -n argocd
@@ -77,7 +77,7 @@ argocd app sync rpi
 
 With `automated` sync enabled, ArgoCD also reconciles on every commit to the repository.
 
-## Step 4 - Verify
+## Step 4: Verify
 
 ```bash
 argocd app get rpi
@@ -102,6 +102,6 @@ ArgoCD detects the change and reconciles. To promote deliberately, review `argoc
 ## Troubleshooting
 
 - **`helm template failed` on sync:** ensure `path` is `chart` (where `Chart.yaml` lives), not the repo root.
-- **Values file not found:** the `valueFiles` path is relative to the chart directory - `../deploy/values/production.yaml` steps up to the repo root, then into `deploy/values/`.
+- **Values file not found:** the `valueFiles` path is relative to the chart directory. `../deploy/values/production.yaml` steps up to the repo root, then into `deploy/values/`.
 - **Pods fail to start / `CreateContainerConfigError`:** the namespace is missing the secrets the chart references. Create them (see Prerequisites) before syncing.
 - **Secrets show as out-of-sync every cycle:** confirm the `ignoreDifferences` block for `Secret` is present.
