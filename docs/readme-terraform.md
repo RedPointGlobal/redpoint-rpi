@@ -1,223 +1,70 @@
-![redpoint_logo](../chart/images/redpoint.png)
-# Automation Guide
+# CI/CD & Automation Guide
 
-[< Back to Home](../README.md)
+This guide covers automating RPI deployments with CI/CD pipelines, plus pointers to the cloud setup and GitOps options. RPI installs with a single `helm upgrade --install`; automation simply runs that for you on every change to your configuration.
 
-## Overview
+## CI/CD Pipelines
 
-The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab generates cloud-native CLI scripts and CI/CD pipeline files tailored to your configuration.
+Run `helm upgrade --install` from your pipeline so every commit to your overrides deploys RPI. The same flow works on any runner.
 
-<details>
-<summary><strong style="font-size:1.25em;">CI/CD Pipelines</strong></summary>
+### Pipeline definitions
 
-The [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com) **Automate** tab generates ready-to-use CI/CD pipeline files for deploying RPI via Helm. Pipelines are built from your Generate tab configuration.
+| Tool | File path |
+|:-----|:----------|
+| GitHub Actions | `.github/workflows/rpi-deploy.yml` |
+| Azure DevOps | `azure-pipelines.yml` |
+| GitLab CI | `.gitlab-ci.yml` |
 
-### Supported Pipeline Tools
+### What the pipeline does
 
-| Tool | File generated |
-|:-----|:---------------|
-| **GitHub Actions** | `.github/workflows/rpi-deploy.yml` |
-| **Azure DevOps** | `azure-pipelines.yml` |
-| **GitLab CI** | `.gitlab-ci.yml` |
+Each pipeline performs the same four steps:
 
-### What the Pipeline Does
-
-Each generated pipeline includes:
-
-1. **Checkout** the chart repository
-2. **Configure** cloud credentials (Azure, AWS, or GCP)
+1. **Checkout** the chart repository (or your internal mirror) and your overrides file
+2. **Authenticate** to your cloud (Azure, AWS, or GCP) and to the cluster
 3. **Helm upgrade/install** with your overrides file
-4. **Rollout monitoring** to verify pods are healthy
+4. **Verify** the rollout completes and pods are healthy
 
-### Optional: Image Mirroring
-
-When enabled, the pipeline adds a step to mirror RPI container images from the Redpoint Container Registry into your own registry before deploying. This is useful for air-gapped environments or organizations that require all images to come from an internal registry.
-
-### Getting Started
-
-1. Go to the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com)
-2. Configure your deployment in the **Generate** tab
-3. Switch to the **Automate** tab and select **CI/CD Pipeline**
-4. Choose your pipeline tool and download the generated file
-5. Add your overrides file and the pipeline to your repository
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">Vault Secrets Setup</strong></summary>
-
-The **Automate** tab generates cloud-native CLI scripts for creating vault secrets and configuring identity for your platform:
-
-| Platform | What it generates |
-|:---------|:------------------|
-| **Azure** | `az keyvault secret set` commands, managed identity creation, workload identity federation |
-| **Amazon** | `aws secretsmanager` commands, IAM role creation, IRSA trust policy |
-| **Google** | `gcloud secrets create` commands, service account creation, workload identity binding |
-
-Each script creates all required vault secrets (database, realtime, SMTP, callback, Redpoint AI, Rebrandly) with the correct naming convention for your secrets provider (SDK or CSI).
-
-### Getting Started
-
-1. Go to the [Helm Assistant Web UI](https://rpi-helm-assistant.redpointcdp.com)
-2. Switch to the **Automate** tab
-3. Expand your cloud platform (Azure, Amazon, or Google)
-4. Select **Vault Secrets Setup**
-5. Fill in your environment details and download the script
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">Entra ID Setup</strong></summary>
-
-The **Automate** tab > **Azure** > **Entra ID Setup** generates an `az` CLI script for configuring Microsoft Entra ID (formerly Azure AD) authentication for the RPI Interaction API. The script creates the required app registrations, API permissions, and redirect URIs.
-
-</details>
-
-<details>
-<summary><strong style="font-size:1.25em;">GitOps (ArgoCD / Flux)</strong></summary>
-
-GitOps is an operational model where your deployment state is declared in Git. A controller (ArgoCD, Flux) watches your repository and automatically reconciles the cluster to match.
-
-### Why GitOps for RPI
-
-- Every change is a Git commit with author, timestamp, and diff
-- Rollback by reverting a commit
-- Dev, staging, and production deploy the same way
-- Self-healing: manual cluster changes are reverted automatically
-
-### Repository Setup
-
-Keep the chart and your overrides in separate repositories:
-
-```
-# Chart source (clean import of upstream, no edits)
-https://git.yourorg.com/platform/redpoint-rpi.git
-
-# Config repo (overrides per environment)
-https://git.yourorg.com/platform/rpi-config.git
-  rpi/
-    dev.yaml
-    staging.yaml
-    production.yaml
-```
-
-Import the upstream chart into your internal repository for security scanning and change control:
-
-```bash
-git clone https://github.com/RedPointGlobal/redpoint-rpi.git
-cd redpoint-rpi && git checkout main
-git remote add internal https://git.yourorg.com/platform/redpoint-rpi.git
-git push internal main
-```
-
-### ArgoCD Application (Multi-Source)
+### Example: GitHub Actions
 
 ```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: rpi-production
-  namespace: argocd
-spec:
-  project: default
-  sources:
-    - repoURL: https://git.yourorg.com/platform/redpoint-rpi.git
-      targetRevision: main
-      path: chart
-      helm:
-        valueFiles:
-          - $config/rpi/production.yaml
-    - repoURL: https://git.yourorg.com/platform/rpi-config.git
-      targetRevision: main
-      ref: config
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: rpi-production
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-  ignoreDifferences:
-    - group: ""
-      kind: Secret
-      jsonPointers:
-        - /data
+name: Deploy RPI
+on:
+  push:
+    paths:
+      - "overrides/**"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Authenticate to the cluster
+        run: az aks get-credentials --resource-group <rg> --name <cluster>
+      - name: Deploy
+        run: |
+          helm upgrade --install rpi ./chart \
+            -f overrides/production.yaml \
+            -n redpoint-rpi --create-namespace
+      - name: Wait for rollout
+        run: kubectl rollout status deploy -n redpoint-rpi --timeout=10m
 ```
 
-### ApplicationSet (Multi-Environment)
+Store the cluster credentials and any cloud service-principal secrets in your CI system's secret store - never commit them to the repository.
 
-Manage all environments from a single definition:
+### Optional: image mirroring
 
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: ApplicationSet
-metadata:
-  name: rpi
-  namespace: argocd
-spec:
-  generators:
-    - list:
-        elements:
-        - env: dev
-          namespace: rpi-dev
-          valuesFile: rpi/dev.yaml
-        - env: staging
-          namespace: rpi-staging
-          valuesFile: rpi/staging.yaml
-        - env: production
-          namespace: rpi-production
-          valuesFile: rpi/production.yaml
-  template:
-    metadata:
-      name: rpi-{{env}}
-    spec:
-      project: default
-      sources:
-        - repoURL: https://git.yourorg.com/platform/redpoint-rpi.git
-          targetRevision: main
-          path: chart
-          helm:
-            valueFiles:
-              - $config/{{valuesFile}}
-        - repoURL: https://git.yourorg.com/platform/rpi-config.git
-          targetRevision: main
-          ref: config
-      destination:
-        server: https://kubernetes.default.svc
-        namespace: "{{namespace}}"
-      syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
-```
+For air-gapped environments or organizations that require all images to come from an internal registry, add a step that mirrors the RPI container images from the Redpoint Container Registry into your own registry before the Helm step, and set `global.deployment.images.registry` in your overrides to that registry.
 
-### Version Pinning
+## Cloud secrets & identity
 
-| Strategy | `targetRevision` | When to use |
-|:---------|:-----------------|:------------|
-| Track latest | `main` | Dev/staging |
-| Pin to a tag | `v7.7.1` | Production |
-| Pin to a commit | `abc123def` | Maximum stability |
+A pipeline needs the deployment's secrets in place before it installs. Create them once per environment:
 
-### Pulling Chart Updates
+- **Application secrets** (database, realtime cache, SMTP, callback, and so on): see the Secrets Management guide. With the `kubernetes` provider you apply a generated `secrets.yaml`; with `sdk` or `csi` the secrets come from your cloud vault.
+- **Cloud identity** (Azure Workload Identity, AWS IRSA, GCP Workload Identity Federation): see the Cloud Identity section of the Values Reference.
 
-```bash
-cd redpoint-rpi
-git fetch origin
-git push internal main
-```
+## Authentication (Entra ID / SSO)
 
-No merge conflicts since you don't edit the chart. Your overrides stay in the config repo.
+For Microsoft Entra ID or OpenID Connect (Okta, Keycloak) authentication on the Interaction API, see the Single Sign-On guide.
 
-### Troubleshooting
+## GitOps (ArgoCD)
 
-- **"helm template failed"**: Ensure `path` points to `chart` (where `Chart.yaml` lives), not the repo root.
-- **Values file not found**: When using multi-source, the `$config` ref must match the `ref:` name on the config source.
-- **Secrets diff on every sync**: Add `ignoreDifferences` for Secrets (see Application example above).
-
-</details>
-
----
-<sub>Redpoint Interaction v7.7 | [Helm Assistant](https://rpi-helm-assistant.redpointcdp.com) | [Support](mailto:support@redpointglobal.com) | [redpointglobal.com](https://www.redpointglobal.com)</sub>
+For a declarative, continuously-reconciled alternative to pipeline-driven `helm upgrade`, deploy RPI with ArgoCD: store your overrides in Git and let the controller reconcile the cluster to match. See the ArgoCD / GitOps guide for Application and ApplicationSet examples, repository layout, and version-pinning strategies.
