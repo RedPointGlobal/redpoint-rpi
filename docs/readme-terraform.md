@@ -1,70 +1,86 @@
-# CI/CD & Automation Guide
+# Deploying RPI with Terraform
 
-This guide covers automating RPI deployments with CI/CD pipelines, plus pointers to the cloud setup and GitOps options. RPI installs with a single `helm upgrade --install`; automation simply runs that for you on every change to your configuration.
+Manage the RPI Helm release as code with Terraform's Helm provider. Terraform installs and upgrades the chart from a single `helm_release` resource, so your deployment is versioned, reviewable, and repeatable in CI/CD.
 
-## CI/CD Pipelines
+## Prerequisites
 
-Run `helm upgrade --install` from your pipeline so every commit to your overrides deploys RPI. The same flow works on any runner.
+- Terraform 1.x installed.
+- `kubectl` access to the target cluster (a kubeconfig Terraform can read).
+- The deployment's **secrets created in the target namespace before you apply**. The chart references application secrets but does not create them. Create them with the RPI Helm CLI (`setup.sh secrets`) or your cloud vault first. See the Secrets Management guide.
+- A local copy of the chart so Terraform can reference it by path:
+  ```bash
+  git clone https://github.com/RedPointGlobal/redpoint-rpi.git
+  # check out a release tag for a pinned, reproducible deploy:
+  cd redpoint-rpi && git checkout v7.7.0
+  ```
 
-### Pipeline definitions
+## Step 1: Configure the Helm provider
 
-| Tool | File path |
-|:-----|:----------|
-| GitHub Actions | `.github/workflows/rpi-deploy.yml` |
-| Azure DevOps | `azure-pipelines.yml` |
-| GitLab CI | `.gitlab-ci.yml` |
+`providers.tf` points the Helm provider at your cluster:
 
-### What the pipeline does
+```hcl
+terraform {
+  required_providers {
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.13"
+    }
+  }
+}
 
-Each pipeline performs the same four steps:
-
-1. **Checkout** the chart repository (or your internal mirror) and your overrides file
-2. **Authenticate** to your cloud (Azure, AWS, or GCP) and to the cluster
-3. **Helm upgrade/install** with your overrides file
-4. **Verify** the rollout completes and pods are healthy
-
-### Example: GitHub Actions
-
-```yaml
-name: Deploy RPI
-on:
-  push:
-    paths:
-      - "overrides/**"
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
-      - name: Authenticate to the cluster
-        run: az aks get-credentials --resource-group <rg> --name <cluster>
-      - name: Deploy
-        run: |
-          helm upgrade --install rpi ./chart \
-            -f overrides/production.yaml \
-            -n redpoint-rpi --create-namespace
-      - name: Wait for rollout
-        run: kubectl rollout status deploy -n redpoint-rpi --timeout=10m
+provider "helm" {
+  kubernetes {
+    config_path = "~/.kube/config"
+    # config_context = "<your-cluster-context>"
+  }
+}
 ```
 
-Store the cluster credentials and any cloud service-principal secrets in your CI system's secret store. Never commit them to the repository.
+## Step 2: Define the Helm release
 
-### Optional: image mirroring
+`main.tf` installs the chart from your local clone, with the overrides file from the Configure stage:
 
-For air-gapped environments or organizations that require all images to come from an internal registry, add a step that mirrors the RPI container images from the Redpoint Container Registry into your own registry before the Helm step, and set `global.deployment.images.registry` in your overrides to that registry.
+```hcl
+resource "helm_release" "rpi" {
+  name             = "rpi"
+  namespace        = "redpoint-rpi"
+  create_namespace = true
 
-## Cloud secrets & identity
+  # Path to the chart directory in your local clone of redpoint-rpi.
+  chart = "${path.module}/redpoint-rpi/chart"
 
-A pipeline needs the deployment's secrets in place before it installs. Create them once per environment:
+  # Your overrides (produced in the Configure stage).
+  values = [file("${path.module}/overrides/production.yaml")]
 
-- **Application secrets** (database, realtime cache, SMTP, callback, and so on): see the Secrets Management guide. With the `kubernetes` provider you apply a generated `secrets.yaml`; with `sdk` or `csi` the secrets come from your cloud vault.
-- **Cloud identity** (Azure Workload Identity, AWS IRSA, GCP Workload Identity Federation): see the Cloud Identity section of the Values Reference.
+  # Wait for the workloads to become ready before the apply completes.
+  wait    = true
+  timeout = 600
+}
+```
 
-## Authentication (Entra ID / SSO)
+## Step 3: Initialize, plan, and apply
 
-For Microsoft Entra ID or OpenID Connect (Okta, Keycloak) authentication on the Interaction API, see the Single Sign-On guide.
+```bash
+terraform init
+terraform plan
+terraform apply
+```
 
-## GitOps (ArgoCD)
+## Step 4: Verify
 
-For a declarative, continuously-reconciled alternative to pipeline-driven `helm upgrade`, deploy RPI with ArgoCD: store your overrides in Git and let the controller reconcile the cluster to match. See the ArgoCD / GitOps guide for Application and ApplicationSet examples, repository layout, and version-pinning strategies.
+```bash
+kubectl get pods -n redpoint-rpi
+```
+
+The pods should reach `Running`. Terraform records the release in its state, so subsequent applies only roll out what changed.
+
+## Upgrading
+
+1. Pull the new chart version into your clone (`git fetch && git checkout <new-tag>`).
+2. Update your overrides if the new version needs them (see the Migration guide).
+3. Run `terraform apply` - Terraform diffs the release and rolls out the change.
+
+## Notes
+
+- **Keep secrets out of Terraform and its state.** Create them out-of-band (the RPI Helm CLI or your cloud vault); the `helm_release` only references them, so no credentials live in `.tf` files or state.
+- **CI/CD:** run `terraform init` / `apply` in your pipeline with the cluster kubeconfig and any cloud credentials supplied from the pipeline's secret store.
