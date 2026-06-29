@@ -98,7 +98,7 @@ Re-running Update AI Model frequently, or on very large definitions, increases A
 | RPI services running | The build and rule-generation jobs run server-side, not in the desktop client. The **Integration API** (or client) *submits* the job; the **Execution Service** *executes* it, with the **Node Manager** assigning the work. All three must be running, and the Execution Service must have the NLP configuration so it can reach Azure (see Step 3, "What the chart wires"). |
 | CLI tooling | `az` (Azure CLI) and `helm`. |
 
-> Azure OpenAI model availability, version strings, and deployment types vary by region and change over time. Choose a supported chat model available in your region — see [Region availability for Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability). The examples below deploy the tested `gpt-5.1` / `2025-11-13` (Global Standard); substitute the model and version Azure offers in your region. Step 2 lists the full tested deployment.
+> Azure OpenAI model availability, version strings, and deployment types vary by region and change over time. Choose a supported chat model available in your region - see [Region availability for Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability). The examples below deploy the tested `gpt-5.1` / `2025-11-13` (Global Standard); substitute the model and version Azure offers in your region. Step 2 lists the full tested deployment.
 
 </details>
 
@@ -238,10 +238,10 @@ Deploy one chat model and the embeddings model.
 
 **Chat model.** Redpoint AI works with the current GPT‑5.x chat models. Model names, versions, deployment types, and regional availability change over time, so deploy a model that is generally available **in your Azure region**. Check Azure's lists before deploying:
 
-- [Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure) — the supported models and their version strings.
-- [Region availability for Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability) — which models and deployment types are offered in each region.
+- [Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure) - the supported models and their version strings.
+- [Region availability for Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability) - which models and deployment types are offered in each region.
 
-Redpoint validates Redpoint AI against the following Azure OpenAI chat deployment. Treat it as a tested reference, not a hard requirement — match it where your region allows, or substitute a comparable GA GPT‑5.x model from the lists above.
+Redpoint validates Redpoint AI against the following Azure OpenAI chat deployment. Treat it as a tested reference, not a hard requirement: match it where your region allows, or substitute a comparable GA GPT‑5.x model from the lists above.
 
 | Setting | Tested value |
 |:--------|:-------------|
