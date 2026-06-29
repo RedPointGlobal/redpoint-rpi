@@ -98,7 +98,7 @@ Re-running Update AI Model frequently, or on very large definitions, increases A
 | RPI services running | The build and rule-generation jobs run server-side, not in the desktop client. The **Integration API** (or client) *submits* the job; the **Execution Service** *executes* it, with the **Node Manager** assigning the work. All three must be running, and the Execution Service must have the NLP configuration so it can reach Azure (see Step 3, "What the chart wires"). |
 | CLI tooling | `az` (Azure CLI) and `helm`. |
 
-> Azure OpenAI model availability and version strings vary by region and change over time. Choose a supported chat model that is available in your region. The examples below use placeholders for version strings; substitute the version Azure offers you.
+> Azure OpenAI model availability, version strings, and deployment types vary by region and change over time. Choose a supported chat model available in your region — see [Region availability for Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability). The examples below deploy the tested `gpt-5.1` / `2025-11-13` (Global Standard); substitute the model and version Azure offers in your region. Step 2 lists the full tested deployment.
 
 </details>
 
@@ -117,7 +117,7 @@ OPENAI="rpi-openai-001"               # Azure OpenAI (Cognitive Services) accoun
 SEARCH="rpi-aisearch-001"             # Azure AI Search service
 STORAGE="rpiaistore001"               # Storage account (3-24 lowercase alphanumeric)
 CONTAINER="redpoint-ai"               # Blob container
-CHAT_DEPLOYMENT="gpt-5.2"             # your chat model deployment name
+CHAT_DEPLOYMENT="gpt-5.1"             # your chat model deployment name
 EMBED_DEPLOYMENT="text-embedding-ada-002"
 
 # resource group
@@ -133,8 +133,8 @@ az cognitiveservices account create \
 az cognitiveservices account deployment create \
   -n "$OPENAI" -g "$RG" \
   --deployment-name "$CHAT_DEPLOYMENT" \
-  --model-name "gpt-5.2" --model-version "<region-available-version>" \
-  --model-format OpenAI --sku-capacity 1 --sku-name "Standard"
+  --model-name "gpt-5.1" --model-version "2025-11-13" \
+  --model-format OpenAI --sku-capacity 150 --sku-name "GlobalStandard"
 
 # embeddings model deployment
 az cognitiveservices account deployment create \
@@ -164,9 +164,9 @@ param openAiName string
 param searchName string
 param storageName string
 param containerName string = 'redpoint-ai'
-param chatDeploymentName string = 'gpt-5.2'
-param chatModelName string = 'gpt-5.2'
-param chatModelVersion string                 // region-available version
+param chatDeploymentName string = 'gpt-5.1'
+param chatModelName string = 'gpt-5.1'
+param chatModelVersion string = '2025-11-13'  // tested value; verify region availability
 param embedDeploymentName string = 'text-embedding-ada-002'
 param embedModelVersion string                // region-available version
 
@@ -181,7 +181,7 @@ resource openai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 resource chat 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openai
   name: chatDeploymentName
-  sku: { name: 'Standard', capacity: 1 }
+  sku: { name: 'GlobalStandard', capacity: 150 }   // tested: Global Standard, 150k TPM
   properties: {
     model: { format: 'OpenAI', name: chatModelName, version: chatModelVersion }
   }
@@ -223,7 +223,7 @@ output searchEndpoint string = 'https://${searchName}.search.windows.net'
 ```bash
 az deployment group create -g "$RG" -f redpoint-ai.bicep \
   -p openAiName="$OPENAI" searchName="$SEARCH" storageName="$STORAGE" \
-     chatModelVersion="<region-available-version>" \
+     chatModelVersion="2025-11-13" \
      embedModelVersion="<region-available-version>"
 ```
 
@@ -234,11 +234,27 @@ az deployment group create -g "$RG" -f redpoint-ai.bicep \
 
 ### Azure OpenAI model deployments
 
-Deploy one chat model and the embeddings model. Supported chat model:
+Deploy one chat model and the embeddings model.
 
-- `GPT-5.2`
+**Chat model.** Redpoint AI works with the current GPT‑5.x chat models. Model names, versions, deployment types, and regional availability change over time, so deploy a model that is generally available **in your Azure region**. Check Azure's lists before deploying:
 
-The embeddings model is `text-embedding-ada-002`, which produces 1536-dimension vectors.
+- [Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure) — the supported models and their version strings.
+- [Region availability for Foundry Models sold by Azure](https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability) — which models and deployment types are offered in each region.
+
+Redpoint validates Redpoint AI against the following Azure OpenAI chat deployment. Treat it as a tested reference, not a hard requirement — match it where your region allows, or substitute a comparable GA GPT‑5.x model from the lists above.
+
+| Setting | Tested value |
+|:--------|:-------------|
+| Model name | `gpt-5.1` |
+| Model version | `2025-11-13` |
+| Deployment type | Global Standard |
+| Content filter | DefaultV2 |
+| Capacity | 150 (×1,000 TPM) |
+| Rate limit | 150,000 TPM |
+
+> Capacity is the deployment's tokens-per-minute allowance in thousands, so `150` provisions a 150,000 TPM rate limit; size it for your throughput. If the tested model, version, or the Global Standard deployment type is not offered in your region, pick the closest GA GPT‑5.x option the region-availability page lists.
+
+**Embeddings model.** `text-embedding-ada-002`, which produces 1536-dimension vectors.
 
 The deployment name you choose for the chat model is the value you set in `redpointAI.naturalLanguage.ChatGptEngine`. The embeddings deployment name is the value you set in `redpointAI.modelStorage.EmbeddingsModel`.
 
@@ -281,7 +297,7 @@ redpointAI:
   naturalLanguage:
     ApiBase: https://<your-openai-name>.openai.azure.com/   # Azure OpenAI endpoint
     ApiVersion: 2023-07-01-preview                          # Azure OpenAI API version
-    ChatGptEngine: gpt-5.2                                  # chat model deployment name
+    ChatGptEngine: gpt-5.1                                  # chat model deployment name
     ChatGptTemp: 0.5                                        # 0.0 (deterministic) to 2.0 (creative)
   cognitiveSearch:
     SearchEndpoint: https://<your-search-name>.search.windows.net
@@ -423,7 +439,7 @@ redpointAI:
   naturalLanguage:
     ApiBase: https://acme-rpi-openai.openai.azure.com/
     ApiVersion: 2023-07-01-preview
-    ChatGptEngine: gpt-5.2        # chat model deployment name
+    ChatGptEngine: gpt-5.1        # chat model deployment name
     ChatGptTemp: 0.5
   cognitiveSearch:
     SearchEndpoint: https://acme-rpi-search.search.windows.net
