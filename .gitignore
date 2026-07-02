@@ -20,3 +20,4 @@ deploy/terraform/examples/*/.terraform/
 deploy/terraform/examples/*/.terraform.lock.hcl
 .Identifier
 .identifier
+Zone.Identifier
